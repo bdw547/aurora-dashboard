@@ -1663,6 +1663,12 @@ lvgl:
             height: 120
             styles: st_glass
             pad_all: 0
+            clickable: true
+            on_click:
+              - homeassistant.action:
+                  action: light.toggle
+                  data:
+                    entity_id: light.living_room_main
             widgets:
               - label: { id: ic_living_light_living_room_main, text: "\U000F0335", x: 14, y: 12, text_font: f_icon, text_color: 0x4A4F5A }
               - label: { text: "Main Light", x: 14, y: 46, text_font: f_body, text_color: 0xEEF0F6 }
@@ -1733,6 +1739,12 @@ lvgl:
             height: 120
             styles: st_glass
             pad_all: 0
+            clickable: true
+            on_click:
+              - homeassistant.action:
+                  action: light.toggle
+                  data:
+                    entity_id: light.kitchen_kitchen
             widgets:
               - label: { id: ic_kitchen_light_kitchen_kitchen, text: "\U000F0335", x: 14, y: 12, text_font: f_icon, text_color: 0x4A4F5A }
               - label: { text: "Kitchen Lights", x: 14, y: 46, text_font: f_body, text_color: 0xEEF0F6 }
@@ -1784,6 +1796,12 @@ lvgl:
             height: 120
             styles: st_glass
             pad_all: 0
+            clickable: true
+            on_click:
+              - homeassistant.action:
+                  action: light.toggle
+                  data:
+                    entity_id: light.office_shelves
             widgets:
               - label: { id: ic_office_light_office_shelves, text: "\U000F0335", x: 14, y: 12, text_font: f_icon, text_color: 0x4A4F5A }
               - label: { text: "Shelves", x: 14, y: 46, text_font: f_body, text_color: 0xEEF0F6 }
@@ -1814,6 +1832,12 @@ lvgl:
             height: 120
             styles: st_glass
             pad_all: 0
+            clickable: true
+            on_click:
+              - homeassistant.action:
+                  action: light.toggle
+                  data:
+                    entity_id: light.office_main_lights
             widgets:
               - label: { id: ic_office_light_office_main_lights, text: "\U000F0335", x: 14, y: 12, text_font: f_icon, text_color: 0x4A4F5A }
               - label: { text: "Main Lights", x: 14, y: 46, text_font: f_body, text_color: 0xEEF0F6 }
@@ -1844,6 +1868,12 @@ lvgl:
             height: 120
             styles: st_glass
             pad_all: 0
+            clickable: true
+            on_click:
+              - homeassistant.action:
+                  action: light.toggle
+                  data:
+                    entity_id: light.office_desk_lamp
             widgets:
               - label: { id: ic_office_light_office_desk_lamp, text: "\U000F0335", x: 14, y: 12, text_font: f_icon, text_color: 0x4A4F5A }
               - label: { text: "Desk Lamp", x: 14, y: 46, text_font: f_body, text_color: 0xEEF0F6 }
@@ -1914,6 +1944,12 @@ lvgl:
             height: 120
             styles: st_glass
             pad_all: 0
+            clickable: true
+            on_click:
+              - homeassistant.action:
+                  action: light.toggle
+                  data:
+                    entity_id: light.reading_lamp
             widgets:
               - label: { id: ic_master_light_reading_lamp, text: "\U000F0335", x: 14, y: 12, text_font: f_icon, text_color: 0x4A4F5A }
               - label: { text: "Reading Lamp", x: 14, y: 46, text_font: f_body, text_color: 0xEEF0F6 }
@@ -1944,6 +1980,12 @@ lvgl:
             height: 120
             styles: st_glass
             pad_all: 0
+            clickable: true
+            on_click:
+              - homeassistant.action:
+                  action: light.toggle
+                  data:
+                    entity_id: light.master_bedroom_ceiling_fan_light
             widgets:
               - label: { id: ic_master_light_master_bedroom_ceiling_fan_light, text: "\U000F0335", x: 14, y: 12, text_font: f_icon, text_color: 0x4A4F5A }
               - label: { text: "Ceiling Light", x: 14, y: 46, text_font: f_body, text_color: 0xEEF0F6 }
@@ -1995,6 +2037,12 @@ lvgl:
             height: 120
             styles: st_glass
             pad_all: 0
+            clickable: true
+            on_click:
+              - homeassistant.action:
+                  action: light.toggle
+                  data:
+                    entity_id: light.outdoor_patio_back_porch_lights
             widgets:
               - label: { id: ic_exterior_light_outdoor_patio_back_porch_lights, text: "\U000F0335", x: 14, y: 12, text_font: f_icon, text_color: 0x4A4F5A }
               - label: { text: "Patio Lights", x: 14, y: 46, text_font: f_body, text_color: 0xEEF0F6 }
