@@ -324,49 +324,107 @@ lvgl:
           pad_all: 0
           widgets:
             - button:
+                id: nav_home
                 align: top_mid
-                y: 54
-                width: 60
-                height: 60
+                y: 50
+                width: 64
+                height: 64
+                bg_color: 0x2ED5B8
                 widgets: [label: { text: "󰋜", align: center, text_font: f_icon, text_color: $c_text } ]
-                on_click: [lvgl.page.show: page_home]
+                on_click:
+                  - lvgl.page.show: page_home
+                  - lvgl.widget.update: { id: nav_home, bg_color: 0x10121A }
+                  - lvgl.widget.update: { id: nav_lights, bg_color: 0x10121A }
+                  - lvgl.widget.update: { id: nav_climate, bg_color: 0x10121A }
+                  - lvgl.widget.update: { id: nav_media, bg_color: 0x10121A }
+                  - lvgl.widget.update: { id: nav_security, bg_color: 0x10121A }
+                  - lvgl.widget.update: { id: nav_network, bg_color: 0x10121A }
+                  - lvgl.widget.update: { id: nav_home, bg_color: 0x2ED5B8 }
             - button:
+                id: nav_lights
                 align: top_mid
-                y: 124
-                width: 60
-                height: 60
-                bg_grad_color: $c_purple
-                bg_color: $c_teal
-                widgets: [label: { text: "󰌵", align: center, text_font: f_icon, text_color: $c_bg } ]
-                on_click: [lvgl.page.show: page_lights]
+                y: 122
+                width: 64
+                height: 64
+                bg_color: 0x10121A
+                widgets: [label: { text: "󰌵", align: center, text_font: f_icon, text_color: $c_text } ]
+                on_click:
+                  - lvgl.page.show: page_lights
+                  - lvgl.widget.update: { id: nav_home, bg_color: 0x10121A }
+                  - lvgl.widget.update: { id: nav_lights, bg_color: 0x10121A }
+                  - lvgl.widget.update: { id: nav_climate, bg_color: 0x10121A }
+                  - lvgl.widget.update: { id: nav_media, bg_color: 0x10121A }
+                  - lvgl.widget.update: { id: nav_security, bg_color: 0x10121A }
+                  - lvgl.widget.update: { id: nav_network, bg_color: 0x10121A }
+                  - lvgl.widget.update: { id: nav_lights, bg_color: 0x2ED5B8 }
             - button:
+                id: nav_climate
                 align: top_mid
                 y: 194
-                width: 60
-                height: 60
+                width: 64
+                height: 64
+                bg_color: 0x10121A
                 widgets: [label: { text: "󰎓", align: center, text_font: f_icon, text_color: $c_text } ]
-                on_click: [lvgl.page.show: page_climate]
+                on_click:
+                  - lvgl.page.show: page_climate
+                  - lvgl.widget.update: { id: nav_home, bg_color: 0x10121A }
+                  - lvgl.widget.update: { id: nav_lights, bg_color: 0x10121A }
+                  - lvgl.widget.update: { id: nav_climate, bg_color: 0x10121A }
+                  - lvgl.widget.update: { id: nav_media, bg_color: 0x10121A }
+                  - lvgl.widget.update: { id: nav_security, bg_color: 0x10121A }
+                  - lvgl.widget.update: { id: nav_network, bg_color: 0x10121A }
+                  - lvgl.widget.update: { id: nav_climate, bg_color: 0x2ED5B8 }
             - button:
+                id: nav_media
                 align: top_mid
-                y: 264
-                width: 60
-                height: 60
+                y: 266
+                width: 64
+                height: 64
+                bg_color: 0x10121A
                 widgets: [label: { text: "󰝚", align: center, text_font: f_icon, text_color: $c_text } ]
-                on_click: [lvgl.page.show: page_media]
+                on_click:
+                  - lvgl.page.show: page_media
+                  - lvgl.widget.update: { id: nav_home, bg_color: 0x10121A }
+                  - lvgl.widget.update: { id: nav_lights, bg_color: 0x10121A }
+                  - lvgl.widget.update: { id: nav_climate, bg_color: 0x10121A }
+                  - lvgl.widget.update: { id: nav_media, bg_color: 0x10121A }
+                  - lvgl.widget.update: { id: nav_security, bg_color: 0x10121A }
+                  - lvgl.widget.update: { id: nav_network, bg_color: 0x10121A }
+                  - lvgl.widget.update: { id: nav_media, bg_color: 0x2ED5B8 }
             - button:
+                id: nav_security
                 align: top_mid
-                y: 334
-                width: 60
-                height: 60
+                y: 338
+                width: 64
+                height: 64
+                bg_color: 0x10121A
                 widgets: [label: { text: "󰚊", align: center, text_font: f_icon, text_color: $c_text } ]
-                on_click: [lvgl.page.show: page_security]
+                on_click:
+                  - lvgl.page.show: page_security
+                  - lvgl.widget.update: { id: nav_home, bg_color: 0x10121A }
+                  - lvgl.widget.update: { id: nav_lights, bg_color: 0x10121A }
+                  - lvgl.widget.update: { id: nav_climate, bg_color: 0x10121A }
+                  - lvgl.widget.update: { id: nav_media, bg_color: 0x10121A }
+                  - lvgl.widget.update: { id: nav_security, bg_color: 0x10121A }
+                  - lvgl.widget.update: { id: nav_network, bg_color: 0x10121A }
+                  - lvgl.widget.update: { id: nav_security, bg_color: 0x2ED5B8 }
             - button:
+                id: nav_network
                 align: top_mid
-                y: 404
-                width: 60
-                height: 60
+                y: 410
+                width: 64
+                height: 64
+                bg_color: 0x10121A
                 widgets: [label: { text: "󰤨", align: center, text_font: f_icon, text_color: $c_text } ]
-                on_click: [lvgl.page.show: page_network]
+                on_click:
+                  - lvgl.page.show: page_network
+                  - lvgl.widget.update: { id: nav_home, bg_color: 0x10121A }
+                  - lvgl.widget.update: { id: nav_lights, bg_color: 0x10121A }
+                  - lvgl.widget.update: { id: nav_climate, bg_color: 0x10121A }
+                  - lvgl.widget.update: { id: nav_media, bg_color: 0x10121A }
+                  - lvgl.widget.update: { id: nav_security, bg_color: 0x10121A }
+                  - lvgl.widget.update: { id: nav_network, bg_color: 0x10121A }
+                  - lvgl.widget.update: { id: nav_network, bg_color: 0x2ED5B8 }
       - label:
           id: lbl_ssid
           text: "no network"
