@@ -149,6 +149,18 @@ online_image:
           src: art_image
     on_error:
       - logger.log: "ART: download error"
+  - id: art_big
+    url: "https://i.scdn.co/image/ab67616d0000b273000000000000000000000000.jpg"
+    format: JPEG
+    type: RGB565
+    resize: 260x260
+    update_interval: never
+    on_download_finished:
+      - lvgl.image.update:
+          id: lbl_home_art
+          src: art_big
+    on_error:
+      - logger.log: "ART big: error"
 
 image:
   - id: img_aurora_bg
@@ -246,6 +258,7 @@ font:
       - "\U000F04B9"  # sofa
       - "\U000F0210"  # fan
       - "\U000F06A5"  # power-plug
+      - "\U000F0599"  # weather-sunny
 
 # --- Live HA state (selected light = Living Room for v1) ---
 sensor:
@@ -287,6 +300,10 @@ sensor:
               char b[16]; snprintf(b, sizeof(b), "%.0f°", x); return std::string(b);
         - lvgl.label.update:
             id: lbl_home_temp
+            text: !lambda |-
+              char b[16]; snprintf(b, sizeof(b), "%.0f°", x); return std::string(b);
+        - lvgl.label.update:
+            id: lbl_home_temp_big
             text: !lambda |-
               char b[16]; snprintf(b, sizeof(b), "%.0f°", x); return std::string(b);
   - platform: homeassistant
@@ -557,6 +574,13 @@ text_sensor:
               for (size_t i = 0; i < r.size(); i++) { if (r[i] == '-' || r[i] == '_') r[i] = ' '; }
               if (!r.empty()) r[0] = toupper(r[0]);
               return r;
+        - lvgl.label.update:
+            id: lbl_home_cond
+            text: !lambda |-
+              std::string r = x;
+              for (size_t i = 0; i < r.size(); i++) { if (r[i] == '-' || r[i] == '_') r[i] = ' '; }
+              if (!r.empty()) r[0] = toupper(r[0]);
+              return r;
   - platform: homeassistant
     id: ha_spotify_source
     entity_id: media_player.spotifyplus_ben_walton
@@ -619,8 +643,10 @@ text_sensor:
               lambda: 'return x == std::string("playing");'
             then:
               - lvgl.label.update: { id: ic_playpause, text: "\U000F03E4" }
+              - lvgl.label.update: { id: ic_home_playpause, text: "\U000F03E4" }
             else:
               - lvgl.label.update: { id: ic_playpause, text: "\U000F040A" }
+              - lvgl.label.update: { id: ic_home_playpause, text: "\U000F040A" }
         - script.execute: np_update
   - platform: homeassistant
     id: ha_media_title
@@ -651,6 +677,10 @@ text_sensor:
             id: art_image
             url: !lambda 'return x;'
         - component.update: art_image
+        - online_image.set_url:
+            id: art_big
+            url: !lambda 'return x;'
+        - component.update: art_big
   - platform: homeassistant
     id: ha_presence
     entity_id: person.ben
@@ -661,6 +691,9 @@ text_sensor:
             text: !lambda 'return x == "home" ? std::string("Ben · Home") : std::string("Ben · Away");'
         - lvgl.label.update:
             id: lbl_home_presence
+            text: !lambda 'return x == "home" ? std::string("Home") : std::string("Away");'
+        - lvgl.label.update:
+            id: lbl_home_presence2
             text: !lambda 'return x == "home" ? std::string("Home") : std::string("Away");'
   # On-panel WiFi/connection indicator
   - platform: wifi_info
@@ -809,10 +842,12 @@ text_sensor:
               lambda: 'return x == std::string("locked");'
             then:
               - lvgl.label.update: { id: lbl_front_lock_state, text: "Locked", text_color: 0x2ED5B8 }
+              - lvgl.label.update: { id: lbl_home_lock_front, text: "Locked", text_color: 0x2ED5B8 }
               - lvgl.widget.update: { id: btn_front_lock, bg_color: 0x2ED5B8 }
               - lvgl.widget.update: { id: btn_front_unlock, bg_color: 0x161B24 }
             else:
               - lvgl.label.update: { id: lbl_front_lock_state, text: "Unlocked", text_color: 0xFF9F6B }
+              - lvgl.label.update: { id: lbl_home_lock_front, text: "Unlocked", text_color: 0xFF9F6B }
               - lvgl.widget.update: { id: btn_front_lock, bg_color: 0x161B24 }
               - lvgl.widget.update: { id: btn_front_unlock, bg_color: 0xFF9F6B }
   - platform: homeassistant
@@ -825,10 +860,12 @@ text_sensor:
               lambda: 'return x == std::string("locked");'
             then:
               - lvgl.label.update: { id: lbl_back_lock_state, text: "Locked", text_color: 0x2ED5B8 }
+              - lvgl.label.update: { id: lbl_home_lock_back, text: "Locked", text_color: 0x2ED5B8 }
               - lvgl.widget.update: { id: btn_back_lock, bg_color: 0x2ED5B8 }
               - lvgl.widget.update: { id: btn_back_unlock, bg_color: 0x161B24 }
             else:
               - lvgl.label.update: { id: lbl_back_lock_state, text: "Unlocked", text_color: 0xFF9F6B }
+              - lvgl.label.update: { id: lbl_home_lock_back, text: "Unlocked", text_color: 0xFF9F6B }
               - lvgl.widget.update: { id: btn_back_lock, bg_color: 0x161B24 }
               - lvgl.widget.update: { id: btn_back_unlock, bg_color: 0xFF9F6B }
 
@@ -1029,6 +1066,12 @@ interval:
             int h = t.hour % 12; if (h == 0) h = 12;
             char c[8]; snprintf(c, sizeof(c), "%d:%02d", h, t.minute); return std::string(c);
       - lvgl.label.update:
+          id: lbl_ampm
+          text: !lambda |-
+            auto t = id(ha_time).now();
+            if (!t.is_valid()) return std::string("");
+            return std::string(t.hour < 12 ? "AM" : "PM");
+      - lvgl.label.update:
           id: lbl_greeting
           text: !lambda |-
             auto t = id(ha_time).now();
@@ -1171,97 +1214,166 @@ lvgl:
         - lvgl.widget.update: { id: nav_network, bg_color: 0x10121A }
       widgets:
         - image: { src: img_aurora_bg, x: 0, y: 0 }
-        - label: { id: lbl_clock, text: "--:--", x: 100, y: 22, text_font: f_display, text_color: 0xEEF0F6 }
-        - label: { id: lbl_greeting, text: "Welcome home, Ben", x: 102, y: 90, text_font: f_body, text_color: 0x8A8F9E }
+        - label: { id: lbl_clock, text: "--:--", x: 96, y: 8, text_font: f_display, text_color: 0xEEF0F6 }
+        - label: { id: lbl_ampm, text: "", x: 250, y: 42, text_font: f_title, text_color: 0x8A8F9E }
+        - label: { id: lbl_greeting, text: "Welcome home, Ben", x: 100, y: 84, text_font: f_body, text_color: 0x8A8F9E }
         - obj:
-            x: 100
-            y: 132
+            x: 600
+            y: 22
             width: 150
-            height: 86
+            height: 40
             styles: st_glass
+            pad_all: 0
             widgets:
-              - label: { text: "OUTDOOR", x: 2, y: 0, text_font: f_small, text_color: 0x8A8F9E }
-              - label: { id: lbl_home_temp, text: "--", x: 2, y: 30, text_font: f_title, text_color: 0xEEF0F6 }
+              - label: { text: "\U000F0599", x: 12, align: left_mid, text_font: f_icon, text_color: 0xFFCE54 }
+              - label: { id: lbl_home_temp, text: "--", x: 48, align: left_mid, text_font: f_body, text_color: 0xEEF0F6 }
         - obj:
-            x: 262
-            y: 132
-            width: 200
-            height: 86
+            x: 758
+            y: 22
+            width: 118
+            height: 40
             styles: st_glass
+            pad_all: 0
             widgets:
-              - label: { text: "PRESENCE", x: 2, y: 0, text_font: f_small, text_color: 0x8A8F9E }
-              - label: { id: lbl_home_presence, text: "--", x: 2, y: 30, text_font: f_title, text_color: 0x2ED5B8 }
+              - obj: { x: 14, align: left_mid, width: 8, height: 8, radius: 4, bg_color: 0x2ED5B8, border_width: 0 }
+              - label: { id: lbl_home_presence, text: "--", x: 30, align: left_mid, text_font: f_small, text_color: 0xEEF0F6 }
         - obj:
-            x: 474
-            y: 132
-            width: 398
-            height: 86
-            styles: st_glass
-            widgets:
-              - label: { text: "NOW PLAYING", x: 2, y: 0, text_font: f_small, text_color: 0x8A8F9E }
-              - label: { id: lbl_home_np, text: "Nothing playing", x: 2, y: 26, text_font: f_body, text_color: 0xEEF0F6 }
-              - label: { id: lbl_home_np_artist, text: "", x: 2, y: 54, text_font: f_small, text_color: 0x8A8F9E }
-        - label: { text: "QUICK CONTROLS", x: 100, y: 250, text_font: f_small, text_color: 0x8A8F9E }
-        - obj:
-            x: 100
-            y: 286
+            x: 884
+            y: 22
             width: 130
-            height: 130
+            height: 40
+            styles: st_glass
+            pad_all: 0
+            widgets:
+              - label: { text: "\U000F033E", x: 12, align: left_mid, text_font: f_icon, text_color: 0x2ED5B8 }
+              - label: { text: "Secured", x: 46, align: left_mid, text_font: f_small, text_color: 0xEEF0F6 }
+        - obj:
+            x: 96
+            y: 124
+            width: 300
+            height: 452
             styles: st_glass
             pad_all: 0
             clickable: true
-            widgets:
-              - label: { text: "\U000F0335", align: top_mid, y: 24, text_font: f_icon, text_color: 0x2ED5B8 }
-              - label: { text: "Lights", align: bottom_mid, y: -18, text_font: f_small, text_color: 0xEEF0F6 }
-            on_click: [lvgl.page.show: page_lights]
-        - obj:
-            x: 250
-            y: 286
-            width: 130
-            height: 130
-            styles: st_glass
-            pad_all: 0
-            clickable: true
-            widgets:
-              - label: { text: "\U000F075A", align: top_mid, y: 24, text_font: f_icon, text_color: 0x2ED5B8 }
-              - label: { text: "Media", align: bottom_mid, y: -18, text_font: f_small, text_color: 0xEEF0F6 }
             on_click: [lvgl.page.show: page_media]
-        - obj:
-            x: 400
-            y: 286
-            width: 130
-            height: 130
-            styles: st_glass
-            pad_all: 0
-            clickable: true
             widgets:
-              - label: { text: "\U000F0393", align: top_mid, y: 24, text_font: f_icon, text_color: 0x2ED5B8 }
-              - label: { text: "Climate", align: bottom_mid, y: -18, text_font: f_small, text_color: 0xEEF0F6 }
+              - obj: { x: 18, y: 22, width: 8, height: 8, radius: 4, bg_color: 0x2ED5B8, border_width: 0 }
+              - label: { text: "PLAYING", x: 34, y: 16, text_font: f_small, text_color: 0x2ED5B8 }
+              - obj: { x: 20, y: 44, width: 260, height: 260, radius: 16, bg_color: 0x7B6CFF, border_width: 0 }
+              - image: { id: lbl_home_art, src: art_big, x: 20, y: 44 }
+              - label: { id: lbl_home_np, text: "Nothing playing", x: 20, y: 316, width: 264, long_mode: dot, text_font: f_title, text_color: 0xEEF0F6 }
+              - label: { id: lbl_home_np_artist, text: "", x: 20, y: 350, width: 264, long_mode: dot, text_font: f_body, text_color: 0x8A8F9E }
+              - button:
+                  x: 40
+                  y: 394
+                  width: 50
+                  height: 50
+                  bg_color: 0x161B24
+                  widgets: [label: { text: "\U000F04AE", align: center, text_font: f_icon, text_color: 0xEEF0F6 }]
+                  on_click:
+                    - homeassistant.action: { action: media_player.media_previous_track, data: { entity_id: media_player.spotifyplus_ben_walton } }
+              - button:
+                  x: 118
+                  y: 386
+                  width: 64
+                  height: 64
+                  radius: 32
+                  bg_color: 0x2ED5B8
+                  bg_grad_color: 0x7B6CFF
+                  widgets: [label: { id: ic_home_playpause, text: "\U000F040A", align: center, text_font: f_icon, text_color: 0x08090D }]
+                  on_click:
+                    - homeassistant.action: { action: media_player.media_play_pause, data: { entity_id: media_player.spotifyplus_ben_walton } }
+              - button:
+                  x: 210
+                  y: 394
+                  width: 50
+                  height: 50
+                  bg_color: 0x161B24
+                  widgets: [label: { text: "\U000F04AD", align: center, text_font: f_icon, text_color: 0xEEF0F6 }]
+                  on_click:
+                    - homeassistant.action: { action: media_player.media_next_track, data: { entity_id: media_player.spotifyplus_ben_walton } }
+        - obj:
+            x: 412
+            y: 124
+            width: 288
+            height: 218
+            styles: st_glass
+            clickable: true
             on_click: [lvgl.page.show: page_climate]
-        - obj:
-            x: 550
-            y: 286
-            width: 130
-            height: 130
-            styles: st_glass
-            pad_all: 0
-            clickable: true
             widgets:
-              - label: { text: "\U000F068A", align: top_mid, y: 24, text_font: f_icon, text_color: 0x2ED5B8 }
-              - label: { text: "Security", align: bottom_mid, y: -18, text_font: f_small, text_color: 0xEEF0F6 }
+              - label: { text: "CLIMATE", x: 4, y: 2, text_font: f_small, text_color: 0x8A8F9E }
+              - label: { id: lbl_home_temp_big, text: "--", x: 2, y: 44, text_font: f_display, text_color: 0xEEF0F6 }
+              - label: { id: lbl_home_cond, text: "--", x: 4, y: 132, text_font: f_body, text_color: 0x2ED5B8 }
+              - label: { text: "Outdoor", x: 4, y: 162, text_font: f_small, text_color: 0x8A8F9E }
+        - obj:
+            x: 716
+            y: 124
+            width: 288
+            height: 218
+            styles: st_glass
+            clickable: true
+            on_click: [lvgl.page.show: page_lights]
+            widgets:
+              - label: { text: "\U000F0335", x: 8, y: 8, text_font: f_icon, text_color: 0xFFCE54 }
+              - label: { text: "Lights", x: 48, y: 14, text_font: f_title, text_color: 0xEEF0F6 }
+              - label: { text: "Tap to control", x: 8, y: 168, text_font: f_small, text_color: 0x8A8F9E }
+        - obj:
+            x: 412
+            y: 358
+            width: 288
+            height: 218
+            styles: st_glass
+            clickable: true
             on_click: [lvgl.page.show: page_security]
-        - obj:
-            x: 700
-            y: 286
-            width: 130
-            height: 130
-            styles: st_glass
-            pad_all: 0
-            clickable: true
             widgets:
-              - label: { text: "󰒹", align: top_mid, y: 24, text_font: f_icon, text_color: 0x2ED5B8 }
-              - label: { text: "Rooms", align: bottom_mid, y: -18, text_font: f_small, text_color: 0xEEF0F6 }
-            on_click: [lvgl.page.show: page_rooms]
+              - label: { text: "DOORS & SENSORS", x: 4, y: 2, text_font: f_small, text_color: 0x8A8F9E }
+              - label: { text: "Front Door", x: 4, y: 48, text_font: f_body, text_color: 0xEEF0F6 }
+              - label: { id: lbl_home_lock_front, text: "--", x: 4, y: 48, align: top_right, text_font: f_body, text_color: 0x8A8F9E }
+              - label: { text: "Back Door", x: 4, y: 90, text_font: f_body, text_color: 0xEEF0F6 }
+              - label: { id: lbl_home_lock_back, text: "--", x: 4, y: 90, align: top_right, text_font: f_body, text_color: 0x8A8F9E }
+              - label: { text: "Presence", x: 4, y: 132, text_font: f_body, text_color: 0xEEF0F6 }
+              - label: { id: lbl_home_presence2, text: "--", x: 4, y: 132, align: top_right, text_font: f_body, text_color: 0x2ED5B8 }
+        - obj:
+            x: 716
+            y: 358
+            width: 288
+            height: 218
+            styles: st_glass
+            pad_all: 12
+            widgets:
+              - label: { text: "QUICK", x: 4, y: 0, text_font: f_small, text_color: 0x8A8F9E }
+              - button:
+                  x: 0
+                  y: 28
+                  width: 122
+                  height: 64
+                  bg_color: 0x161B24
+                  widgets: [label: { text: "Rooms", align: center, text_font: f_body, text_color: 0xEEF0F6 }]
+                  on_click: [lvgl.page.show: page_rooms]
+              - button:
+                  x: 132
+                  y: 28
+                  width: 122
+                  height: 64
+                  bg_color: 0x161B24
+                  widgets: [label: { text: "Media", align: center, text_font: f_body, text_color: 0xEEF0F6 }]
+                  on_click: [lvgl.page.show: page_media]
+              - button:
+                  x: 0
+                  y: 100
+                  width: 122
+                  height: 64
+                  bg_color: 0x161B24
+                  widgets: [label: { text: "Network", align: center, text_font: f_body, text_color: 0xEEF0F6 }]
+                  on_click: [lvgl.page.show: page_network]
+              - button:
+                  x: 132
+                  y: 100
+                  width: 122
+                  height: 64
+                  bg_color: 0x161B24
+                  widgets: [label: { text: "Library", align: center, text_font: f_body, text_color: 0xEEF0F6 }]
+                  on_click: [lvgl.page.show: page_library]
     - id: page_lights
       bg_opa: 0
       on_load:
