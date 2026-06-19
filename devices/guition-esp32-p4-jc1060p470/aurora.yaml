@@ -118,6 +118,20 @@ touchscreen:
     i2c_id: bus_a
     reset_pin: GPIO22
     interrupt_pin: GPIO21
+    on_touch:
+      - if:
+          condition:
+            lambda: 'return id(g_screen_off);'
+          then:
+            - lambda: 'id(g_screen_off) = false;'
+            - light.turn_on:
+                id: display_backlight
+                brightness: !lambda 'return id(g_bri) / 100.0f;'
+            - if:
+                condition:
+                  lambda: 'return id(g_screensaver);'
+                then:
+                  - lvgl.page.show: page_home
 
 # --- Display (stock mipi_dsi, built-in model) ---
 display:
@@ -259,6 +273,7 @@ font:
       - "\U000F0210"  # fan
       - "\U000F06A5"  # power-plug
       - "\U000F0599"  # weather-sunny
+      - "\U000F0493"  # cog
 
 # --- Live HA state (selected light = Living Room for v1) ---
 sensor:
@@ -695,6 +710,15 @@ text_sensor:
         - lvgl.label.update:
             id: lbl_home_presence2
             text: !lambda 'return x == "home" ? std::string("Home") : std::string("Away");'
+        - if:
+            condition:
+              lambda: 'return id(g_wake_presence) && id(g_screen_off) && x == std::string("home");'
+            then:
+              - lambda: 'id(g_screen_off) = false;'
+              - light.turn_on:
+                  id: display_backlight
+                  brightness: !lambda 'return id(g_bri) / 100.0f;'
+              - lvgl.page.show: page_home
   # On-panel WiFi/connection indicator
   - platform: wifi_info
     ip_address:
@@ -1033,6 +1057,26 @@ globals:
   - id: g_cur_pl_uri
     type: std::string
     restore_value: false
+  - id: g_bri
+    type: int
+    restore_value: true
+    initial_value: '80'
+  - id: g_timeout_ms
+    type: int
+    restore_value: true
+    initial_value: '0'
+  - id: g_wake_presence
+    type: bool
+    restore_value: true
+    initial_value: 'true'
+  - id: g_screensaver
+    type: bool
+    restore_value: true
+    initial_value: 'false'
+  - id: g_screen_off
+    type: bool
+    restore_value: false
+    initial_value: 'false'
 
 script:
   - id: np_update
@@ -1080,6 +1124,21 @@ interval:
             const char* d[] = {"Sun","Mon","Tue","Wed","Thu","Fri","Sat"};
             const char* m[] = {"Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"};
             char c[56]; snprintf(c, sizeof(c), "%s, Ben \u00b7 %s %s %d", g, d[t.day_of_week-1], m[t.month-1], t.day_of_month); return std::string(c);
+      - lvgl.label.update:
+          id: lbl_ss_time
+          text: !lambda |-
+            auto t = id(ha_time).now();
+            if (!t.is_valid()) return std::string("--:--");
+            int h = t.hour % 12; if (h == 0) h = 12;
+            char c[8]; snprintf(c, sizeof(c), "%d:%02d", h, t.minute); return std::string(c);
+      - lvgl.label.update:
+          id: lbl_ss_date
+          text: !lambda |-
+            auto t = id(ha_time).now();
+            if (!t.is_valid()) return std::string("");
+            const char* d[] = {"Sunday","Monday","Tuesday","Wednesday","Thursday","Friday","Saturday"};
+            const char* m[] = {"Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"};
+            char c[48]; snprintf(c, sizeof(c), "%s, %s %d", d[t.day_of_week-1], m[t.month-1], t.day_of_month); return std::string(c);
   - interval: 1s
     then:
       - if:
@@ -1096,6 +1155,21 @@ lvgl:
   byte_order: little_endian
   touchscreens:
     - touchscreen_id: my_touchscreen
+  on_idle:
+    timeout: !lambda 'return id(g_timeout_ms) == 0 ? 86400000 : id(g_timeout_ms);'
+    then:
+      - if:
+          condition:
+            lambda: 'return id(g_timeout_ms) > 0;'
+          then:
+            - lambda: 'id(g_screen_off) = true;'
+            - if:
+                condition:
+                  lambda: 'return id(g_screensaver);'
+                then:
+                  - lvgl.page.show: page_screensaver
+                else:
+                  - light.turn_off: display_backlight
 
   style_definitions:
     - id: st_glass
@@ -1183,6 +1257,15 @@ lvgl:
                 bg_color: 0x10121A
                 widgets: [label: { text: "󰤨", align: center, text_font: f_icon, text_color: $c_text } ]
                 on_click: [lvgl.page.show: page_network]
+            - button:
+                id: nav_settings
+                align: bottom_mid
+                y: -16
+                width: 58
+                height: 58
+                bg_color: 0x10121A
+                widgets: [label: { text: "\U000F0493", align: center, text_font: f_icon, text_color: $c_text } ]
+                on_click: [lvgl.page.show: page_settings]
       - label:
           id: lbl_ssid
           text: "no network"
@@ -1212,6 +1295,7 @@ lvgl:
         - lvgl.widget.update: { id: nav_media, bg_color: 0x10121A }
         - lvgl.widget.update: { id: nav_security, bg_color: 0x10121A }
         - lvgl.widget.update: { id: nav_network, bg_color: 0x10121A }
+        - lvgl.widget.update: { id: nav_settings, bg_color: 0x10121A }
       widgets:
         - image: { src: img_aurora_bg, x: 0, y: 0 }
         - obj:
@@ -1414,6 +1498,7 @@ lvgl:
         - lvgl.widget.update: { id: nav_media, bg_color: 0x10121A }
         - lvgl.widget.update: { id: nav_security, bg_color: 0x10121A }
         - lvgl.widget.update: { id: nav_network, bg_color: 0x10121A }
+        - lvgl.widget.update: { id: nav_settings, bg_color: 0x10121A }
       widgets:
         - image: { src: img_aurora_bg, x: 0, y: 0 }
         - label: { text: "Lights", x: 100, y: 26, text_font: f_title, text_color: 0xEEF0F6 }
@@ -1658,6 +1743,7 @@ lvgl:
         - lvgl.widget.update: { id: nav_media, bg_color: 0x10121A }
         - lvgl.widget.update: { id: nav_security, bg_color: 0x10121A }
         - lvgl.widget.update: { id: nav_network, bg_color: 0x10121A }
+        - lvgl.widget.update: { id: nav_settings, bg_color: 0x10121A }
       widgets:
         - image: { src: img_aurora_bg, x: 0, y: 0 }
         - label: { text: "Climate", x: 100, y: 26, text_font: f_title, text_color: $c_text }
@@ -1704,6 +1790,7 @@ lvgl:
         - lvgl.widget.update: { id: nav_media, bg_color: 0x2ED5B8 }
         - lvgl.widget.update: { id: nav_security, bg_color: 0x10121A }
         - lvgl.widget.update: { id: nav_network, bg_color: 0x10121A }
+        - lvgl.widget.update: { id: nav_settings, bg_color: 0x10121A }
       widgets:
         - image: { src: img_aurora_bg, x: 0, y: 0 }
         - label: { text: "Listening", x: 100, y: 26, text_font: f_title, text_color: $c_text }
@@ -1895,6 +1982,7 @@ lvgl:
         - lvgl.widget.update: { id: nav_media, bg_color: 0x10121A }
         - lvgl.widget.update: { id: nav_security, bg_color: 0x2ED5B8 }
         - lvgl.widget.update: { id: nav_network, bg_color: 0x10121A }
+        - lvgl.widget.update: { id: nav_settings, bg_color: 0x10121A }
       widgets:
         - image: { src: img_aurora_bg, x: 0, y: 0 }
         - label: { text: "Security", x: 100, y: 26, text_font: f_title, text_color: 0xEEF0F6 }
@@ -1967,6 +2055,7 @@ lvgl:
         - lvgl.widget.update: { id: nav_media, bg_color: 0x10121A }
         - lvgl.widget.update: { id: nav_security, bg_color: 0x10121A }
         - lvgl.widget.update: { id: nav_network, bg_color: 0x10121A }
+        - lvgl.widget.update: { id: nav_settings, bg_color: 0x10121A }
       widgets:
         - image: { src: img_aurora_bg, x: 0, y: 0 }
         - label: { text: "Rooms", x: 100, y: 26, text_font: f_title, text_color: 0xEEF0F6 }
@@ -2031,6 +2120,7 @@ lvgl:
         - lvgl.widget.update: { id: nav_media, bg_color: 0x10121A }
         - lvgl.widget.update: { id: nav_security, bg_color: 0x10121A }
         - lvgl.widget.update: { id: nav_network, bg_color: 0x10121A }
+        - lvgl.widget.update: { id: nav_settings, bg_color: 0x10121A }
       widgets:
         - image: { src: img_aurora_bg, x: 0, y: 0 }
         - label: { text: "Living Room", x: 100, y: 26, text_font: f_title, text_color: 0xEEF0F6 }
@@ -2175,6 +2265,7 @@ lvgl:
         - lvgl.widget.update: { id: nav_media, bg_color: 0x10121A }
         - lvgl.widget.update: { id: nav_security, bg_color: 0x10121A }
         - lvgl.widget.update: { id: nav_network, bg_color: 0x10121A }
+        - lvgl.widget.update: { id: nav_settings, bg_color: 0x10121A }
       widgets:
         - image: { src: img_aurora_bg, x: 0, y: 0 }
         - label: { text: "Kitchen", x: 100, y: 26, text_font: f_title, text_color: 0xEEF0F6 }
@@ -2232,6 +2323,7 @@ lvgl:
         - lvgl.widget.update: { id: nav_media, bg_color: 0x10121A }
         - lvgl.widget.update: { id: nav_security, bg_color: 0x10121A }
         - lvgl.widget.update: { id: nav_network, bg_color: 0x10121A }
+        - lvgl.widget.update: { id: nav_settings, bg_color: 0x10121A }
       widgets:
         - image: { src: img_aurora_bg, x: 0, y: 0 }
         - label: { text: "Office", x: 100, y: 26, text_font: f_title, text_color: 0xEEF0F6 }
@@ -2380,6 +2472,7 @@ lvgl:
         - lvgl.widget.update: { id: nav_media, bg_color: 0x10121A }
         - lvgl.widget.update: { id: nav_security, bg_color: 0x10121A }
         - lvgl.widget.update: { id: nav_network, bg_color: 0x10121A }
+        - lvgl.widget.update: { id: nav_settings, bg_color: 0x10121A }
       widgets:
         - image: { src: img_aurora_bg, x: 0, y: 0 }
         - label: { text: "Master", x: 100, y: 26, text_font: f_title, text_color: 0xEEF0F6 }
@@ -2473,6 +2566,7 @@ lvgl:
         - lvgl.widget.update: { id: nav_media, bg_color: 0x10121A }
         - lvgl.widget.update: { id: nav_security, bg_color: 0x10121A }
         - lvgl.widget.update: { id: nav_network, bg_color: 0x10121A }
+        - lvgl.widget.update: { id: nav_settings, bg_color: 0x10121A }
       widgets:
         - image: { src: img_aurora_bg, x: 0, y: 0 }
         - label: { text: "Exterior", x: 100, y: 26, text_font: f_title, text_color: 0xEEF0F6 }
@@ -2542,6 +2636,7 @@ lvgl:
         - lvgl.widget.update: { id: nav_media, bg_color: 0x10121A }
         - lvgl.widget.update: { id: nav_security, bg_color: 0x10121A }
         - lvgl.widget.update: { id: nav_network, bg_color: 0x2ED5B8 }
+        - lvgl.widget.update: { id: nav_settings, bg_color: 0x10121A }
       widgets:
         - image: { src: img_aurora_bg, x: 0, y: 0 }
         - label: { text: "Network", x: 100, y: 26, text_font: f_title, text_color: $c_text }
@@ -2575,6 +2670,7 @@ lvgl:
         - lvgl.widget.update: { id: nav_media, bg_color: 0x2ED5B8 }
         - lvgl.widget.update: { id: nav_security, bg_color: 0x10121A }
         - lvgl.widget.update: { id: nav_network, bg_color: 0x10121A }
+        - lvgl.widget.update: { id: nav_settings, bg_color: 0x10121A }
       widgets:
         - image: { src: img_aurora_bg, x: 0, y: 0 }
         - label: { text: "Library", x: 100, y: 26, text_font: f_title, text_color: $c_text }
@@ -3340,3 +3436,148 @@ lvgl:
                         data:
                           context_uri: !lambda 'return id(g_cur_pl_uri);'
                           position: "49"
+
+    - id: page_screensaver
+      bg_color: 0x000000
+      bg_opa: 100%
+      widgets:
+        - label: { id: lbl_ss_time, text: "--:--", align: center, y: -24, text_font: f_display, text_color: 0xEEF0F6 }
+        - label: { id: lbl_ss_date, text: "", align: center, y: 48, text_font: f_body, text_color: 0x8A8F9E }
+    - id: page_settings
+      bg_opa: 0
+      on_load:
+        - lvgl.widget.update: { id: nav_home, bg_color: 0x10121A }
+        - lvgl.widget.update: { id: nav_rooms, bg_color: 0x10121A }
+        - lvgl.widget.update: { id: nav_lights, bg_color: 0x10121A }
+        - lvgl.widget.update: { id: nav_climate, bg_color: 0x10121A }
+        - lvgl.widget.update: { id: nav_media, bg_color: 0x10121A }
+        - lvgl.widget.update: { id: nav_security, bg_color: 0x10121A }
+        - lvgl.widget.update: { id: nav_network, bg_color: 0x10121A }
+        - lvgl.widget.update: { id: nav_settings, bg_color: 0x2ED5B8 }
+        - lvgl.slider.update: { id: sld_brightness, value: !lambda 'return id(g_bri);' }
+        - lvgl.widget.update: { id: sw_wake, state: { checked: !lambda 'return id(g_wake_presence);' } }
+        - lvgl.widget.update: { id: sw_screensaver, state: { checked: !lambda 'return id(g_screensaver);' } }
+      widgets:
+        - image: { src: img_aurora_bg, x: 0, y: 0 }
+        - label: { text: "Settings", x: 100, y: 26, text_font: f_title, text_color: 0xEEF0F6 }
+        - obj:
+            x: 96
+            y: 84
+            width: 816
+            height: 116
+            styles: st_glass
+            scrollable: false
+            widgets:
+              - label: { text: "DISPLAY BRIGHTNESS", x: 4, y: 0, text_font: f_small, text_color: 0x8A8F9E }
+              - slider:
+                  id: sld_brightness
+                  x: 4
+                  y: 52
+                  width: 784
+                  min_value: 5
+                  max_value: 100
+                  value: 80
+                  on_value:
+                    - light.turn_on:
+                        id: display_backlight
+                        brightness: !lambda 'return x / 100.0f;'
+                    - lambda: 'id(g_bri) = (int) x;'
+        - obj:
+            x: 96
+            y: 216
+            width: 816
+            height: 116
+            styles: st_glass
+            scrollable: false
+            widgets:
+              - label: { text: "SCREEN TIMEOUT", x: 4, y: 0, text_font: f_small, text_color: 0x8A8F9E }
+              - button:
+                  id: to_never
+                  x: 4
+                  y: 46
+                  width: 188
+                  height: 54
+                  bg_color: 0x2ED5B8
+                  scrollable: false
+                  widgets: [label: { text: "Never", align: center, text_font: f_body, text_color: 0x08090D }]
+                  on_click:
+                    - lambda: 'id(g_timeout_ms) = 0;'
+                    - lvgl.widget.update: { id: to_never, bg_color: 0x2ED5B8 }
+                    - lvgl.widget.update: { id: to_1, bg_color: 0x161B24 }
+                    - lvgl.widget.update: { id: to_5, bg_color: 0x161B24 }
+                    - lvgl.widget.update: { id: to_15, bg_color: 0x161B24 }
+              - button:
+                  id: to_1
+                  x: 204
+                  y: 46
+                  width: 188
+                  height: 54
+                  bg_color: 0x161B24
+                  scrollable: false
+                  widgets: [label: { text: "1 min", align: center, text_font: f_body, text_color: 0xEEF0F6 }]
+                  on_click:
+                    - lambda: 'id(g_timeout_ms) = 60000;'
+                    - lvgl.widget.update: { id: to_never, bg_color: 0x161B24 }
+                    - lvgl.widget.update: { id: to_1, bg_color: 0x2ED5B8 }
+                    - lvgl.widget.update: { id: to_5, bg_color: 0x161B24 }
+                    - lvgl.widget.update: { id: to_15, bg_color: 0x161B24 }
+              - button:
+                  id: to_5
+                  x: 404
+                  y: 46
+                  width: 188
+                  height: 54
+                  bg_color: 0x161B24
+                  scrollable: false
+                  widgets: [label: { text: "5 min", align: center, text_font: f_body, text_color: 0xEEF0F6 }]
+                  on_click:
+                    - lambda: 'id(g_timeout_ms) = 300000;'
+                    - lvgl.widget.update: { id: to_never, bg_color: 0x161B24 }
+                    - lvgl.widget.update: { id: to_1, bg_color: 0x161B24 }
+                    - lvgl.widget.update: { id: to_5, bg_color: 0x2ED5B8 }
+                    - lvgl.widget.update: { id: to_15, bg_color: 0x161B24 }
+              - button:
+                  id: to_15
+                  x: 604
+                  y: 46
+                  width: 188
+                  height: 54
+                  bg_color: 0x161B24
+                  scrollable: false
+                  widgets: [label: { text: "15 min", align: center, text_font: f_body, text_color: 0xEEF0F6 }]
+                  on_click:
+                    - lambda: 'id(g_timeout_ms) = 900000;'
+                    - lvgl.widget.update: { id: to_never, bg_color: 0x161B24 }
+                    - lvgl.widget.update: { id: to_1, bg_color: 0x161B24 }
+                    - lvgl.widget.update: { id: to_5, bg_color: 0x161B24 }
+                    - lvgl.widget.update: { id: to_15, bg_color: 0x2ED5B8 }
+        - obj:
+            x: 96
+            y: 348
+            width: 400
+            height: 92
+            styles: st_glass
+            scrollable: false
+            widgets:
+              - label: { text: "Wake on presence", x: 8, align: left_mid, text_font: f_body, text_color: 0xEEF0F6 }
+              - switch:
+                  id: sw_wake
+                  align: right_mid
+                  x: -8
+                  on_value:
+                    - lambda: 'id(g_wake_presence) = x;'
+        - obj:
+            x: 512
+            y: 348
+            width: 400
+            height: 92
+            styles: st_glass
+            scrollable: false
+            widgets:
+              - label: { text: "Screen saver (clock)", x: 8, align: left_mid, text_font: f_body, text_color: 0xEEF0F6 }
+              - switch:
+                  id: sw_screensaver
+                  align: right_mid
+                  x: -8
+                  on_value:
+                    - lambda: 'id(g_screensaver) = x;'
