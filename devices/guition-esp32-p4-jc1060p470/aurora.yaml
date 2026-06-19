@@ -177,6 +177,8 @@ font:
       - "\U000F033E"  # lock
       - "\U000F033F"  # lock-open
       - "\U000F04B9"  # sofa
+      - "\U000F0210"  # fan
+      - "\U000F06A5"  # power-plug
 
 # --- Live HA state (selected light = Living Room for v1) ---
 sensor:
@@ -564,6 +566,139 @@ text_sensor:
               - lvgl.label.update: { id: lbl_back_lock_state, text: "Unlocked", text_color: 0xFF9F6B }
               - lvgl.widget.update: { id: btn_back_lock, bg_color: 0x161B24 }
               - lvgl.widget.update: { id: btn_back_unlock, bg_color: 0xFF9F6B }
+
+  - platform: homeassistant
+    id: ha_room_living_light_living_room_main
+    entity_id: light.living_room_main
+    on_value:
+      then:
+        - if:
+            condition:
+              lambda: 'return x == std::string("on");'
+            then:
+              - lvgl.label.update: { id: ic_living_light_living_room_main, text_color: 0xC8A45D }
+            else:
+              - lvgl.label.update: { id: ic_living_light_living_room_main, text_color: 0x4A4F5A }
+  - platform: homeassistant
+    id: ha_room_living_fan_living_room_pendant
+    entity_id: fan.living_room_pendant
+    on_value:
+      then:
+        - if:
+            condition:
+              lambda: 'return x == std::string("on");'
+            then:
+              - lvgl.label.update: { id: ic_living_fan_living_room_pendant, text_color: 0x2ED5B8 }
+            else:
+              - lvgl.label.update: { id: ic_living_fan_living_room_pendant, text_color: 0x4A4F5A }
+  - platform: homeassistant
+    id: ha_room_kitchen_light_kitchen_kitchen
+    entity_id: light.kitchen_kitchen
+    on_value:
+      then:
+        - if:
+            condition:
+              lambda: 'return x == std::string("on");'
+            then:
+              - lvgl.label.update: { id: ic_kitchen_light_kitchen_kitchen, text_color: 0xC8A45D }
+            else:
+              - lvgl.label.update: { id: ic_kitchen_light_kitchen_kitchen, text_color: 0x4A4F5A }
+  - platform: homeassistant
+    id: ha_room_office_light_office_shelves
+    entity_id: light.office_shelves
+    on_value:
+      then:
+        - if:
+            condition:
+              lambda: 'return x == std::string("on");'
+            then:
+              - lvgl.label.update: { id: ic_office_light_office_shelves, text_color: 0xC8A45D }
+            else:
+              - lvgl.label.update: { id: ic_office_light_office_shelves, text_color: 0x4A4F5A }
+  - platform: homeassistant
+    id: ha_room_office_light_office_main_lights
+    entity_id: light.office_main_lights
+    on_value:
+      then:
+        - if:
+            condition:
+              lambda: 'return x == std::string("on");'
+            then:
+              - lvgl.label.update: { id: ic_office_light_office_main_lights, text_color: 0xC8A45D }
+            else:
+              - lvgl.label.update: { id: ic_office_light_office_main_lights, text_color: 0x4A4F5A }
+  - platform: homeassistant
+    id: ha_room_office_light_office_desk_lamp
+    entity_id: light.office_desk_lamp
+    on_value:
+      then:
+        - if:
+            condition:
+              lambda: 'return x == std::string("on");'
+            then:
+              - lvgl.label.update: { id: ic_office_light_office_desk_lamp, text_color: 0xC8A45D }
+            else:
+              - lvgl.label.update: { id: ic_office_light_office_desk_lamp, text_color: 0x4A4F5A }
+  - platform: homeassistant
+    id: ha_room_office_fan_office_ceiling_fan
+    entity_id: fan.office_ceiling_fan
+    on_value:
+      then:
+        - if:
+            condition:
+              lambda: 'return x == std::string("on");'
+            then:
+              - lvgl.label.update: { id: ic_office_fan_office_ceiling_fan, text_color: 0x2ED5B8 }
+            else:
+              - lvgl.label.update: { id: ic_office_fan_office_ceiling_fan, text_color: 0x4A4F5A }
+  - platform: homeassistant
+    id: ha_room_master_light_reading_lamp
+    entity_id: light.reading_lamp
+    on_value:
+      then:
+        - if:
+            condition:
+              lambda: 'return x == std::string("on");'
+            then:
+              - lvgl.label.update: { id: ic_master_light_reading_lamp, text_color: 0xC8A45D }
+            else:
+              - lvgl.label.update: { id: ic_master_light_reading_lamp, text_color: 0x4A4F5A }
+  - platform: homeassistant
+    id: ha_room_master_light_master_bedroom_ceiling_fan_light
+    entity_id: light.master_bedroom_ceiling_fan_light
+    on_value:
+      then:
+        - if:
+            condition:
+              lambda: 'return x == std::string("on");'
+            then:
+              - lvgl.label.update: { id: ic_master_light_master_bedroom_ceiling_fan_light, text_color: 0xC8A45D }
+            else:
+              - lvgl.label.update: { id: ic_master_light_master_bedroom_ceiling_fan_light, text_color: 0x4A4F5A }
+  - platform: homeassistant
+    id: ha_room_exterior_light_outdoor_patio_back_porch_lights
+    entity_id: light.outdoor_patio_back_porch_lights
+    on_value:
+      then:
+        - if:
+            condition:
+              lambda: 'return x == std::string("on");'
+            then:
+              - lvgl.label.update: { id: ic_exterior_light_outdoor_patio_back_porch_lights, text_color: 0xC8A45D }
+            else:
+              - lvgl.label.update: { id: ic_exterior_light_outdoor_patio_back_porch_lights, text_color: 0x4A4F5A }
+  - platform: homeassistant
+    id: ha_room_exterior_switch_outdoor_patio_putting_green
+    entity_id: switch.outdoor_patio_putting_green
+    on_value:
+      then:
+        - if:
+            condition:
+              lambda: 'return x == std::string("on");'
+            then:
+              - lvgl.label.update: { id: ic_exterior_switch_outdoor_patio_putting_green, text_color: 0x2ED5B8 }
+            else:
+              - lvgl.label.update: { id: ic_exterior_switch_outdoor_patio_putting_green, text_color: 0x4A4F5A }
 
 globals:
   - id: sel_light
@@ -1430,9 +1565,18 @@ lvgl:
             height: 120
             styles: st_glass
             widgets:
-              - label: { text: "\U000F0335", align: top_left, x: 6, y: 6, text_font: f_icon, text_color: 0x2ED5B8 }
+              - label: { id: ic_living_light_living_room_main, text: "\U000F0335", align: top_left, x: 6, y: 6, text_font: f_icon, text_color: 0x4A4F5A }
               - label: { text: "Main Light", align: bottom_left, x: 6, y: -10, text_font: f_body, text_color: 0xEEF0F6 }
-            on_click: [homeassistant.action: { action: light.toggle, data: { entity_id: light.living_room_main } }]
+            on_click:
+              - lambda: 'id(sel_light) = "light.living_room_main";'
+              - lvgl.label.update: { id: lbl_sel_name, text: "Main Light" }
+              - lvgl.arc.update: { id: arc_brightness, value: !lambda 'return id(light_bri)["light.living_room_main"];' }
+              - lvgl.label.update:
+                  id: lbl_bri_pct
+                  text: !lambda |-
+                    char b[8]; snprintf(b, sizeof(b), "%d%%", id(light_bri)["light.living_room_main"]); return std::string(b);
+              - lvgl.widget.update: { id: sw_sel, state: { checked: !lambda 'return id(light_on)["light.living_room_main"];' } }
+              - lvgl.page.show: page_lights
         - button:
             x: 348
             y: 96
@@ -1440,7 +1584,7 @@ lvgl:
             height: 120
             styles: st_glass
             widgets:
-              - label: { text: "\U000F0335", align: top_left, x: 6, y: 6, text_font: f_icon, text_color: 0x2ED5B8 }
+              - label: { id: ic_living_fan_living_room_pendant, text: "\U000F0210", align: top_left, x: 6, y: 6, text_font: f_icon, text_color: 0x4A4F5A }
               - label: { text: "Ceiling Fan", align: bottom_left, x: 6, y: -10, text_font: f_body, text_color: 0xEEF0F6 }
             on_click: [homeassistant.action: { action: fan.toggle, data: { entity_id: fan.living_room_pendant } }]
     - id: page_room_kitchen
@@ -1471,9 +1615,18 @@ lvgl:
             height: 120
             styles: st_glass
             widgets:
-              - label: { text: "\U000F0335", align: top_left, x: 6, y: 6, text_font: f_icon, text_color: 0x2ED5B8 }
+              - label: { id: ic_kitchen_light_kitchen_kitchen, text: "\U000F0335", align: top_left, x: 6, y: 6, text_font: f_icon, text_color: 0x4A4F5A }
               - label: { text: "Kitchen Lights", align: bottom_left, x: 6, y: -10, text_font: f_body, text_color: 0xEEF0F6 }
-            on_click: [homeassistant.action: { action: light.toggle, data: { entity_id: light.kitchen_kitchen } }]
+            on_click:
+              - lambda: 'id(sel_light) = "light.kitchen_kitchen";'
+              - lvgl.label.update: { id: lbl_sel_name, text: "Kitchen Lights" }
+              - lvgl.arc.update: { id: arc_brightness, value: !lambda 'return id(light_bri)["light.kitchen_kitchen"];' }
+              - lvgl.label.update:
+                  id: lbl_bri_pct
+                  text: !lambda |-
+                    char b[8]; snprintf(b, sizeof(b), "%d%%", id(light_bri)["light.kitchen_kitchen"]); return std::string(b);
+              - lvgl.widget.update: { id: sw_sel, state: { checked: !lambda 'return id(light_on)["light.kitchen_kitchen"];' } }
+              - lvgl.page.show: page_lights
     - id: page_room_office
       bg_opa: 0
       on_load:
@@ -1502,9 +1655,18 @@ lvgl:
             height: 120
             styles: st_glass
             widgets:
-              - label: { text: "\U000F0335", align: top_left, x: 6, y: 6, text_font: f_icon, text_color: 0x2ED5B8 }
+              - label: { id: ic_office_light_office_shelves, text: "\U000F0335", align: top_left, x: 6, y: 6, text_font: f_icon, text_color: 0x4A4F5A }
               - label: { text: "Shelves", align: bottom_left, x: 6, y: -10, text_font: f_body, text_color: 0xEEF0F6 }
-            on_click: [homeassistant.action: { action: light.toggle, data: { entity_id: light.office_shelves } }]
+            on_click:
+              - lambda: 'id(sel_light) = "light.office_shelves";'
+              - lvgl.label.update: { id: lbl_sel_name, text: "Shelves" }
+              - lvgl.arc.update: { id: arc_brightness, value: !lambda 'return id(light_bri)["light.office_shelves"];' }
+              - lvgl.label.update:
+                  id: lbl_bri_pct
+                  text: !lambda |-
+                    char b[8]; snprintf(b, sizeof(b), "%d%%", id(light_bri)["light.office_shelves"]); return std::string(b);
+              - lvgl.widget.update: { id: sw_sel, state: { checked: !lambda 'return id(light_on)["light.office_shelves"];' } }
+              - lvgl.page.show: page_lights
         - button:
             x: 348
             y: 96
@@ -1512,9 +1674,18 @@ lvgl:
             height: 120
             styles: st_glass
             widgets:
-              - label: { text: "\U000F0335", align: top_left, x: 6, y: 6, text_font: f_icon, text_color: 0x2ED5B8 }
+              - label: { id: ic_office_light_office_main_lights, text: "\U000F0335", align: top_left, x: 6, y: 6, text_font: f_icon, text_color: 0x4A4F5A }
               - label: { text: "Main Lights", align: bottom_left, x: 6, y: -10, text_font: f_body, text_color: 0xEEF0F6 }
-            on_click: [homeassistant.action: { action: light.toggle, data: { entity_id: light.office_main_lights } }]
+            on_click:
+              - lambda: 'id(sel_light) = "light.office_main_lights";'
+              - lvgl.label.update: { id: lbl_sel_name, text: "Main Lights" }
+              - lvgl.arc.update: { id: arc_brightness, value: !lambda 'return id(light_bri)["light.office_main_lights"];' }
+              - lvgl.label.update:
+                  id: lbl_bri_pct
+                  text: !lambda |-
+                    char b[8]; snprintf(b, sizeof(b), "%d%%", id(light_bri)["light.office_main_lights"]); return std::string(b);
+              - lvgl.widget.update: { id: sw_sel, state: { checked: !lambda 'return id(light_on)["light.office_main_lights"];' } }
+              - lvgl.page.show: page_lights
         - button:
             x: 596
             y: 96
@@ -1522,9 +1693,28 @@ lvgl:
             height: 120
             styles: st_glass
             widgets:
-              - label: { text: "\U000F0335", align: top_left, x: 6, y: 6, text_font: f_icon, text_color: 0x2ED5B8 }
+              - label: { id: ic_office_light_office_desk_lamp, text: "\U000F0335", align: top_left, x: 6, y: 6, text_font: f_icon, text_color: 0x4A4F5A }
               - label: { text: "Desk Lamp", align: bottom_left, x: 6, y: -10, text_font: f_body, text_color: 0xEEF0F6 }
-            on_click: [homeassistant.action: { action: light.toggle, data: { entity_id: light.office_desk_lamp } }]
+            on_click:
+              - lambda: 'id(sel_light) = "light.office_desk_lamp";'
+              - lvgl.label.update: { id: lbl_sel_name, text: "Desk Lamp" }
+              - lvgl.arc.update: { id: arc_brightness, value: !lambda 'return id(light_bri)["light.office_desk_lamp"];' }
+              - lvgl.label.update:
+                  id: lbl_bri_pct
+                  text: !lambda |-
+                    char b[8]; snprintf(b, sizeof(b), "%d%%", id(light_bri)["light.office_desk_lamp"]); return std::string(b);
+              - lvgl.widget.update: { id: sw_sel, state: { checked: !lambda 'return id(light_on)["light.office_desk_lamp"];' } }
+              - lvgl.page.show: page_lights
+        - button:
+            x: 100
+            y: 232
+            width: 232
+            height: 120
+            styles: st_glass
+            widgets:
+              - label: { id: ic_office_fan_office_ceiling_fan, text: "\U000F0210", align: top_left, x: 6, y: 6, text_font: f_icon, text_color: 0x4A4F5A }
+              - label: { text: "Ceiling Fan", align: bottom_left, x: 6, y: -10, text_font: f_body, text_color: 0xEEF0F6 }
+            on_click: [homeassistant.action: { action: fan.toggle, data: { entity_id: fan.office_ceiling_fan } }]
     - id: page_room_master
       bg_opa: 0
       on_load:
@@ -1553,9 +1743,18 @@ lvgl:
             height: 120
             styles: st_glass
             widgets:
-              - label: { text: "\U000F0335", align: top_left, x: 6, y: 6, text_font: f_icon, text_color: 0x2ED5B8 }
+              - label: { id: ic_master_light_reading_lamp, text: "\U000F0335", align: top_left, x: 6, y: 6, text_font: f_icon, text_color: 0x4A4F5A }
               - label: { text: "Reading Lamp", align: bottom_left, x: 6, y: -10, text_font: f_body, text_color: 0xEEF0F6 }
-            on_click: [homeassistant.action: { action: light.toggle, data: { entity_id: light.reading_lamp } }]
+            on_click:
+              - lambda: 'id(sel_light) = "light.reading_lamp";'
+              - lvgl.label.update: { id: lbl_sel_name, text: "Reading Lamp" }
+              - lvgl.arc.update: { id: arc_brightness, value: !lambda 'return id(light_bri)["light.reading_lamp"];' }
+              - lvgl.label.update:
+                  id: lbl_bri_pct
+                  text: !lambda |-
+                    char b[8]; snprintf(b, sizeof(b), "%d%%", id(light_bri)["light.reading_lamp"]); return std::string(b);
+              - lvgl.widget.update: { id: sw_sel, state: { checked: !lambda 'return id(light_on)["light.reading_lamp"];' } }
+              - lvgl.page.show: page_lights
         - button:
             x: 348
             y: 96
@@ -1563,9 +1762,18 @@ lvgl:
             height: 120
             styles: st_glass
             widgets:
-              - label: { text: "\U000F0335", align: top_left, x: 6, y: 6, text_font: f_icon, text_color: 0x2ED5B8 }
+              - label: { id: ic_master_light_master_bedroom_ceiling_fan_light, text: "\U000F0335", align: top_left, x: 6, y: 6, text_font: f_icon, text_color: 0x4A4F5A }
               - label: { text: "Ceiling Light", align: bottom_left, x: 6, y: -10, text_font: f_body, text_color: 0xEEF0F6 }
-            on_click: [homeassistant.action: { action: light.toggle, data: { entity_id: light.master_bedroom_ceiling_fan_light } }]
+            on_click:
+              - lambda: 'id(sel_light) = "light.master_bedroom_ceiling_fan_light";'
+              - lvgl.label.update: { id: lbl_sel_name, text: "Ceiling Light" }
+              - lvgl.arc.update: { id: arc_brightness, value: !lambda 'return id(light_bri)["light.master_bedroom_ceiling_fan_light"];' }
+              - lvgl.label.update:
+                  id: lbl_bri_pct
+                  text: !lambda |-
+                    char b[8]; snprintf(b, sizeof(b), "%d%%", id(light_bri)["light.master_bedroom_ceiling_fan_light"]); return std::string(b);
+              - lvgl.widget.update: { id: sw_sel, state: { checked: !lambda 'return id(light_on)["light.master_bedroom_ceiling_fan_light"];' } }
+              - lvgl.page.show: page_lights
     - id: page_room_exterior
       bg_opa: 0
       on_load:
@@ -1594,9 +1802,18 @@ lvgl:
             height: 120
             styles: st_glass
             widgets:
-              - label: { text: "\U000F0335", align: top_left, x: 6, y: 6, text_font: f_icon, text_color: 0x2ED5B8 }
+              - label: { id: ic_exterior_light_outdoor_patio_back_porch_lights, text: "\U000F0335", align: top_left, x: 6, y: 6, text_font: f_icon, text_color: 0x4A4F5A }
               - label: { text: "Patio Lights", align: bottom_left, x: 6, y: -10, text_font: f_body, text_color: 0xEEF0F6 }
-            on_click: [homeassistant.action: { action: light.toggle, data: { entity_id: light.outdoor_patio_back_porch_lights } }]
+            on_click:
+              - lambda: 'id(sel_light) = "light.outdoor_patio_back_porch_lights";'
+              - lvgl.label.update: { id: lbl_sel_name, text: "Patio Lights" }
+              - lvgl.arc.update: { id: arc_brightness, value: !lambda 'return id(light_bri)["light.outdoor_patio_back_porch_lights"];' }
+              - lvgl.label.update:
+                  id: lbl_bri_pct
+                  text: !lambda |-
+                    char b[8]; snprintf(b, sizeof(b), "%d%%", id(light_bri)["light.outdoor_patio_back_porch_lights"]); return std::string(b);
+              - lvgl.widget.update: { id: sw_sel, state: { checked: !lambda 'return id(light_on)["light.outdoor_patio_back_porch_lights"];' } }
+              - lvgl.page.show: page_lights
         - button:
             x: 348
             y: 96
@@ -1604,7 +1821,7 @@ lvgl:
             height: 120
             styles: st_glass
             widgets:
-              - label: { text: "\U000F0335", align: top_left, x: 6, y: 6, text_font: f_icon, text_color: 0x2ED5B8 }
+              - label: { id: ic_exterior_switch_outdoor_patio_putting_green, text: "\U000F06A5", align: top_left, x: 6, y: 6, text_font: f_icon, text_color: 0x4A4F5A }
               - label: { text: "Putting Green", align: bottom_left, x: 6, y: -10, text_font: f_body, text_color: 0xEEF0F6 }
             on_click: [homeassistant.action: { action: switch.toggle, data: { entity_id: switch.outdoor_patio_putting_green } }]
     - id: page_network
