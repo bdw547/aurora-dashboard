@@ -111,4 +111,4 @@ script:
         data:
           entity_id: media_player.spotifyplus_ben_walton
           context_uri: "{{ context_uri }}"
-          offset: "{{ position | int }}"
+          offset_position: "{{ position | int }}"
