@@ -258,6 +258,22 @@ sensor:
         - lvgl.slider.update:
             id: sld_vol
             value: !lambda 'return x * 100.0f;'
+  - platform: homeassistant
+    id: ha_media_position
+    entity_id: media_player.spotifyplus_ben_walton
+    attribute: media_position
+    on_value:
+      then:
+        - lambda: 'id(np_pos) = (int) x;'
+        - script.execute: np_update
+  - platform: homeassistant
+    id: ha_media_duration
+    entity_id: media_player.spotifyplus_ben_walton
+    attribute: media_duration
+    on_value:
+      then:
+        - lambda: 'id(np_dur) = (int) x;'
+        - script.execute: np_update
 
   - platform: homeassistant
     id: ha_outdoor_temp
@@ -555,6 +571,20 @@ text_sensor:
         - lvgl.widget.update: { id: src_btn_office, bg_color: !lambda 'return x == std::string("Office") ? lv_color_hex(0x2ED5B8) : lv_color_hex(0x161B24);' }
         - lvgl.widget.update: { id: src_btn_patio, bg_color: !lambda 'return x == std::string("Patio") ? lv_color_hex(0x2ED5B8) : lv_color_hex(0x161B24);' }
         - lvgl.widget.update: { id: src_btn_roku, bg_color: !lambda 'return x == std::string("Roku Ultra") ? lv_color_hex(0x2ED5B8) : lv_color_hex(0x161B24);' }
+  - platform: homeassistant
+    id: ha_media_state
+    entity_id: media_player.spotifyplus_ben_walton
+    on_value:
+      then:
+        - lambda: 'id(np_playing) = (x == std::string("playing"));'
+        - if:
+            condition:
+              lambda: 'return x == std::string("playing");'
+            then:
+              - lvgl.label.update: { id: ic_playpause, text: "\U000F03E4" }
+            else:
+              - lvgl.label.update: { id: ic_playpause, text: "\U000F040A" }
+        - script.execute: np_update
   - platform: homeassistant
     id: ha_media_title
     entity_id: media_player.spotifyplus_ben_walton
@@ -911,6 +941,35 @@ globals:
   - id: light_on
     type: std::map<std::string, bool>
     restore_value: false
+  - id: np_pos
+    type: int
+    restore_value: false
+    initial_value: '0'
+  - id: np_dur
+    type: int
+    restore_value: false
+    initial_value: '0'
+  - id: np_playing
+    type: bool
+    restore_value: false
+    initial_value: 'false'
+
+script:
+  - id: np_update
+    then:
+      - lvgl.bar.update:
+          id: bar_progress
+          value: !lambda 'return id(np_dur) > 0 ? (int)(1000.0f * id(np_pos) / id(np_dur)) : 0;'
+      - lvgl.label.update:
+          id: lbl_pos
+          text: !lambda |-
+            int v = id(np_pos); if (v < 0) v = 0;
+            char b[8]; snprintf(b, sizeof(b), "%d:%02d", v / 60, v % 60); return std::string(b);
+      - lvgl.label.update:
+          id: lbl_rem
+          text: !lambda |-
+            int r = id(np_dur) - id(np_pos); if (r < 0) r = 0;
+            char b[10]; snprintf(b, sizeof(b), "-%d:%02d", r / 60, r % 60); return std::string(b);
 
 time:
   - platform: homeassistant
@@ -935,6 +994,14 @@ interval:
             const char* d[] = {"Sun","Mon","Tue","Wed","Thu","Fri","Sat"};
             const char* m[] = {"Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"};
             char c[56]; snprintf(c, sizeof(c), "%s, Ben \u00b7 %s %s %d", g, d[t.day_of_week-1], m[t.month-1], t.day_of_month); return std::string(c);
+  - interval: 1s
+    then:
+      - if:
+          condition:
+            lambda: 'return id(np_playing) && id(np_dur) > 0 && id(np_pos) < id(np_dur);'
+          then:
+            - lambda: 'id(np_pos) += 1;'
+            - script.execute: np_update
 
 lvgl:
   id: main_lvgl
@@ -1468,39 +1535,61 @@ lvgl:
               - image: { id: lbl_np_art, src: art_image, x: 4, y: 4 }
               - label: { id: lbl_np_title, text: "Nothing playing", x: 138, y: 14, text_font: f_title, text_color: $c_text }
               - label: { id: lbl_np_artist, text: "", x: 138, y: 50, text_font: f_body, text_color: $c_text2 }
+              # progress
+              - label: { id: lbl_pos, text: "0:00", x: 138, y: 86, text_font: f_small, text_color: $c_text2 }
+              - label: { id: lbl_rem, text: "-0:00", x: 372, y: 86, text_font: f_small, text_color: $c_text2 }
+              - bar:
+                  id: bar_progress
+                  x: 138
+                  y: 108
+                  width: 286
+                  height: 6
+                  min_value: 0
+                  max_value: 1000
+                  value: 0
+                  radius: 3
+                  bg_color: 0x2A2F3A
+                  border_width: 0
+                  indicator:
+                    bg_color: 0x2ED5B8
+                    radius: 3
+              # transport
               - button:
                   align: bottom_left
                   x: 0
-                  y: -60
-                  width: 70
-                  height: 48
+                  y: -72
+                  width: 78
+                  height: 52
                   widgets: [label: { text: "󰒮", align: center, text_font: f_icon, text_color: $c_text } ]
                   on_click:
                     - homeassistant.action: { action: media_player.media_previous_track, data: { entity_id: media_player.spotifyplus_ben_walton } }
               - button:
                   align: bottom_mid
-                  y: -60
-                  width: 70
-                  height: 48
+                  y: -72
+                  width: 88
+                  height: 52
                   bg_color: $c_teal
                   bg_grad_color: $c_purple
-                  widgets: [label: { text: "󰐊", align: center, text_font: f_icon, text_color: $c_bg } ]
+                  widgets: [label: { id: ic_playpause, text: "󰐊", align: center, text_font: f_icon, text_color: $c_bg } ]
                   on_click:
                     - homeassistant.action: { action: media_player.media_play_pause, data: { entity_id: media_player.spotifyplus_ben_walton } }
               - button:
                   align: bottom_right
                   x: 0
-                  y: -60
-                  width: 70
-                  height: 48
+                  y: -72
+                  width: 78
+                  height: 52
                   widgets: [label: { text: "󰒭", align: center, text_font: f_icon, text_color: $c_text } ]
                   on_click:
                     - homeassistant.action: { action: media_player.media_next_track, data: { entity_id: media_player.spotifyplus_ben_walton } }
+              # volume
+              - label: { text: "󰕾", align: bottom_left, x: 4, y: -16, text_font: f_icon, text_color: $c_text2 }
               - slider:
                   id: sld_vol
-                  align: bottom_mid
-                  y: -10
-                  width: 400
+                  align: bottom_right
+                  x: -4
+                  y: -14
+                  width: 372
                   min_value: 0
                   max_value: 100
                   value: 34
