@@ -572,6 +572,27 @@ text_sensor:
         - lvgl.widget.update: { id: src_btn_patio, bg_color: !lambda 'return x == std::string("Patio") ? lv_color_hex(0x2ED5B8) : lv_color_hex(0x161B24);' }
         - lvgl.widget.update: { id: src_btn_roku, bg_color: !lambda 'return x == std::string("Roku Ultra") ? lv_color_hex(0x2ED5B8) : lv_color_hex(0x161B24);' }
   - platform: homeassistant
+    id: ha_pl_names
+    entity_id: sensor.aurora_spotify_playlists
+    attribute: names
+    on_value:
+      then:
+        - lambda: 'lv_dropdown_set_options(id(dd_playlist)->obj, x.c_str());'
+  - platform: homeassistant
+    id: ha_pl_uris
+    entity_id: sensor.aurora_spotify_playlists
+    attribute: uris
+    on_value:
+      then:
+        - lambda: 'id(g_pl_uris) = x;'
+  - platform: homeassistant
+    id: ha_track_names
+    entity_id: sensor.aurora_spotify_tracks
+    attribute: names
+    on_value:
+      then:
+        - lambda: 'lv_dropdown_set_options(id(dd_tracks)->obj, x.c_str());'
+  - platform: homeassistant
     id: ha_media_state
     entity_id: media_player.spotifyplus_ben_walton
     on_value:
@@ -953,6 +974,12 @@ globals:
     type: bool
     restore_value: false
     initial_value: 'false'
+  - id: g_pl_uris
+    type: std::string
+    restore_value: false
+  - id: g_cur_pl_uri
+    type: std::string
+    restore_value: false
 
 script:
   - id: np_update
@@ -1522,6 +1549,14 @@ lvgl:
       widgets:
         - image: { src: img_aurora_bg, x: 0, y: 0 }
         - label: { text: "Listening", x: 100, y: 26, text_font: f_title, text_color: $c_text }
+        - button:
+            x: 760
+            y: 28
+            width: 112
+            height: 40
+            styles: st_glass
+            widgets: [label: { text: "Library", align: center, text_font: f_small, text_color: $c_text }]
+            on_click: [lvgl.page.show: page_library]
 
         # Now-playing card (SpotifyPlus: media_player.spotifyplus_ben_walton)
         - obj:
@@ -2371,3 +2406,87 @@ lvgl:
               - label: { text: "SYNOLOGY", x: 4, y: 0, text_font: f_small, text_color: $c_text2 }
               - label: { id: lbl_nas_status, text: "--", x: 4, y: 28, text_font: f_body, text_color: $c_text }
               - label: { id: lbl_nas_used, text: "Storage -- used", x: 4, y: 54, text_font: f_body, text_color: $c_text2 }
+
+    - id: page_library
+      bg_opa: 0
+      on_load:
+        - lvgl.widget.update: { id: nav_home, bg_color: 0x10121A }
+        - lvgl.widget.update: { id: nav_rooms, bg_color: 0x10121A }
+        - lvgl.widget.update: { id: nav_lights, bg_color: 0x10121A }
+        - lvgl.widget.update: { id: nav_climate, bg_color: 0x10121A }
+        - lvgl.widget.update: { id: nav_media, bg_color: 0x2ED5B8 }
+        - lvgl.widget.update: { id: nav_security, bg_color: 0x10121A }
+        - lvgl.widget.update: { id: nav_network, bg_color: 0x10121A }
+      widgets:
+        - image: { src: img_aurora_bg, x: 0, y: 0 }
+        - label: { text: "Library", x: 100, y: 26, text_font: f_title, text_color: $c_text }
+        - button:
+            x: 760
+            y: 28
+            width: 112
+            height: 40
+            styles: st_glass
+            widgets: [label: { text: "Back", align: center, text_font: f_small, text_color: $c_text }]
+            on_click: [lvgl.page.show: page_media]
+        - label: { text: "PLAYLIST", x: 100, y: 80, text_font: f_small, text_color: $c_text2 }
+        - dropdown:
+            id: dd_playlist
+            x: 100
+            y: 102
+            width: 500
+            options:
+              - "—"
+            on_value:
+              then:
+                - lambda: |-
+                    int idx = lv_dropdown_get_selected(id(dd_playlist)->obj);
+                    std::string &u = id(g_pl_uris);
+                    int line = 0; size_t start = 0; std::string uri;
+                    for (size_t i = 0; i <= u.size(); i++) {
+                      if (i == u.size() || u[i] == '\n') {
+                        if (line == idx) { uri = u.substr(start, i - start); break; }
+                        line++; start = i + 1;
+                      }
+                    }
+                    id(g_cur_pl_uri) = uri;
+                - homeassistant.action:
+                    action: script.aurora_spotify_load_playlist
+                    data:
+                      playlist_uri: !lambda 'return id(g_cur_pl_uri);'
+        - label: { text: "TRACKS", x: 100, y: 168, text_font: f_small, text_color: $c_text2 }
+        - dropdown:
+            id: dd_tracks
+            x: 100
+            y: 190
+            width: 680
+            options:
+              - "—"
+        - button:
+            x: 100
+            y: 260
+            width: 180
+            height: 56
+            bg_color: $c_teal
+            bg_grad_color: $c_purple
+            widgets: [label: { text: "Play Track", align: center, text_font: f_body, text_color: $c_bg }]
+            on_click:
+              - homeassistant.action:
+                  action: spotifyplus.player_media_play_context
+                  data:
+                    entity_id: media_player.spotifyplus_ben_walton
+                    context_uri: !lambda 'return id(g_cur_pl_uri);'
+                    offset: !lambda |-
+                      char b[8]; snprintf(b, sizeof(b), "%d", lv_dropdown_get_selected(id(dd_tracks)->obj)); return std::string(b);
+        - button:
+            x: 296
+            y: 260
+            width: 180
+            height: 56
+            styles: st_glass
+            widgets: [label: { text: "Play Playlist", align: center, text_font: f_body, text_color: $c_text }]
+            on_click:
+              - homeassistant.action:
+                  action: spotifyplus.player_media_play_context
+                  data:
+                    entity_id: media_player.spotifyplus_ben_walton
+                    context_uri: !lambda 'return id(g_cur_pl_uri);'

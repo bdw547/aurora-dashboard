@@ -1,0 +1,95 @@
+# =====================================================================
+# Aurora panel — Spotify Library data feed (Home Assistant package)
+# =====================================================================
+# Install:
+#   1. Copy to:  <config>/packages/aurora_spotify_library.yaml
+#      (create the `packages/` folder if it doesn't exist)
+#   2. In configuration.yaml add (once):
+#         homeassistant:
+#           packages: !include_dir_named packages
+#   3. Developer Tools -> YAML -> Check Configuration, then Restart HA.
+#   4. Run action `script.aurora_spotify_refresh_playlists` once to populate
+#      the playlist list (and re-run whenever you add playlists).
+#
+# Provides for the panel:
+#   sensor.aurora_spotify_playlists  attr names = "\n"-joined playlist names
+#                                    attr uris  = "\n"-joined matching uris
+#   sensor.aurora_spotify_tracks     attr names = "\n"-joined "Title — Artist"
+#   script.aurora_spotify_load_playlist(playlist_uri)  loads a playlist's tracks
+#
+# Owning entity: media_player.spotifyplus_ben_walton
+# Spotify caps one fetch at 50 items, so lists are limited to ~50.
+#
+# If a list comes back empty, the SpotifyPlus response shape differs from the
+# guess below — run the get_* action in Developer Tools with a response
+# variable and share the YAML so these templates can be corrected.
+# =====================================================================
+
+template:
+  - trigger:
+      - trigger: event
+        event_type: aurora_spotify_playlists_updated
+    sensor:
+      - name: Aurora Spotify Playlists
+        unique_id: aurora_spotify_playlists
+        state: "{{ trigger.event.data.names | count }}"
+        attributes:
+          names: "{{ trigger.event.data.names | join('\n') }}"
+          uris: "{{ trigger.event.data.uris | join('\n') }}"
+
+  - trigger:
+      - trigger: event
+        event_type: aurora_spotify_tracks_updated
+    sensor:
+      - name: Aurora Spotify Tracks
+        unique_id: aurora_spotify_tracks
+        state: "{{ trigger.event.data.names | count }}"
+        attributes:
+          names: "{{ trigger.event.data.names | join('\n') }}"
+
+script:
+  # Fetch the user's playlists and publish names + uris to the panel.
+  aurora_spotify_refresh_playlists:
+    alias: Aurora Spotify - Refresh Playlists
+    sequence:
+      - action: spotifyplus.get_playlist_favorites
+        data:
+          entity_id: media_player.spotifyplus_ben_walton
+          limit: 50
+          limit_total: 50
+          sort_result: true
+        response_variable: pl
+      - variables:
+          items: "{{ pl.result.items if (pl.result is defined and pl.result.items is defined) else pl.result }}"
+      - event: aurora_spotify_playlists_updated
+        event_data:
+          names: "{{ items | map(attribute='name') | list }}"
+          uris: "{{ items | map(attribute='uri') | list }}"
+
+  # Called by the panel when a playlist is selected; loads its tracks.
+  aurora_spotify_load_playlist:
+    alias: Aurora Spotify - Load Playlist Tracks
+    fields:
+      playlist_uri:
+        description: Spotify playlist URI (spotify:playlist:...)
+        example: "spotify:playlist:37i9dQZF1DXcBWIGoYBM5M"
+    sequence:
+      - action: spotifyplus.get_playlist_items
+        data:
+          entity_id: media_player.spotifyplus_ben_walton
+          playlist_id: "{{ playlist_uri }}"
+          limit: 50
+          limit_total: 50
+        response_variable: tr
+      - variables:
+          items: "{{ tr.result.items if (tr.result is defined and tr.result.items is defined) else tr.result }}"
+      - event: aurora_spotify_tracks_updated
+        event_data:
+          names: >-
+            {% set out = namespace(rows=[]) %}
+            {% for it in items %}
+              {% set t = it.track if it.track is defined else it %}
+              {% set artist = (t.artists | map(attribute='name') | join(', ')) if t.artists is defined else '' %}
+              {% set out.rows = out.rows + [ t.name ~ (' — ' ~ artist if artist else '') ] %}
+            {% endfor %}
+            {{ out.rows }}
