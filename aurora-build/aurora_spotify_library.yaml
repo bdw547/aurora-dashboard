@@ -77,7 +77,7 @@ script:
       - action: spotifyplus.get_playlist_items
         data:
           entity_id: media_player.spotifyplus_ben_walton
-          playlist_id: "{{ playlist_uri }}"
+          playlist_id: "{{ playlist_uri.split(':')[-1] }}"
           limit: 50
           limit_total: 50
         response_variable: tr
