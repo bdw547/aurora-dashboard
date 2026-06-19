@@ -176,6 +176,7 @@ font:
       - "\U000F0142"  # chevron-right
       - "\U000F033E"  # lock
       - "\U000F033F"  # lock-open
+      - "\U000F04B9"  # sofa
 
 # --- Live HA state (selected light = Living Room for v1) ---
 sensor:
@@ -634,105 +635,66 @@ lvgl:
             - button:
                 id: nav_home
                 align: top_mid
-                y: 50
-                width: 64
-                height: 64
+                y: 38
+                width: 58
+                height: 58
                 bg_color: 0x2ED5B8
                 widgets: [label: { text: "󰋜", align: center, text_font: f_icon, text_color: $c_text } ]
-                on_click:
-                  - lvgl.page.show: page_home
-                  - lvgl.widget.update: { id: nav_home, bg_color: 0x10121A }
-                  - lvgl.widget.update: { id: nav_lights, bg_color: 0x10121A }
-                  - lvgl.widget.update: { id: nav_climate, bg_color: 0x10121A }
-                  - lvgl.widget.update: { id: nav_media, bg_color: 0x10121A }
-                  - lvgl.widget.update: { id: nav_security, bg_color: 0x10121A }
-                  - lvgl.widget.update: { id: nav_network, bg_color: 0x10121A }
-                  - lvgl.widget.update: { id: nav_home, bg_color: 0x2ED5B8 }
+                on_click: [lvgl.page.show: page_home]
+            - button:
+                id: nav_rooms
+                align: top_mid
+                y: 112
+                width: 58
+                height: 58
+                bg_color: 0x10121A
+                widgets: [label: { text: "󰒹", align: center, text_font: f_icon, text_color: $c_text } ]
+                on_click: [lvgl.page.show: page_rooms]
             - button:
                 id: nav_lights
                 align: top_mid
-                y: 122
-                width: 64
-                height: 64
+                y: 186
+                width: 58
+                height: 58
                 bg_color: 0x10121A
                 widgets: [label: { text: "󰌵", align: center, text_font: f_icon, text_color: $c_text } ]
-                on_click:
-                  - lvgl.page.show: page_lights
-                  - lvgl.widget.update: { id: nav_home, bg_color: 0x10121A }
-                  - lvgl.widget.update: { id: nav_lights, bg_color: 0x10121A }
-                  - lvgl.widget.update: { id: nav_climate, bg_color: 0x10121A }
-                  - lvgl.widget.update: { id: nav_media, bg_color: 0x10121A }
-                  - lvgl.widget.update: { id: nav_security, bg_color: 0x10121A }
-                  - lvgl.widget.update: { id: nav_network, bg_color: 0x10121A }
-                  - lvgl.widget.update: { id: nav_lights, bg_color: 0x2ED5B8 }
+                on_click: [lvgl.page.show: page_lights]
             - button:
                 id: nav_climate
                 align: top_mid
-                y: 194
-                width: 64
-                height: 64
+                y: 260
+                width: 58
+                height: 58
                 bg_color: 0x10121A
                 widgets: [label: { text: "󰎓", align: center, text_font: f_icon, text_color: $c_text } ]
-                on_click:
-                  - lvgl.page.show: page_climate
-                  - lvgl.widget.update: { id: nav_home, bg_color: 0x10121A }
-                  - lvgl.widget.update: { id: nav_lights, bg_color: 0x10121A }
-                  - lvgl.widget.update: { id: nav_climate, bg_color: 0x10121A }
-                  - lvgl.widget.update: { id: nav_media, bg_color: 0x10121A }
-                  - lvgl.widget.update: { id: nav_security, bg_color: 0x10121A }
-                  - lvgl.widget.update: { id: nav_network, bg_color: 0x10121A }
-                  - lvgl.widget.update: { id: nav_climate, bg_color: 0x2ED5B8 }
+                on_click: [lvgl.page.show: page_climate]
             - button:
                 id: nav_media
                 align: top_mid
-                y: 266
-                width: 64
-                height: 64
+                y: 334
+                width: 58
+                height: 58
                 bg_color: 0x10121A
                 widgets: [label: { text: "󰝚", align: center, text_font: f_icon, text_color: $c_text } ]
-                on_click:
-                  - lvgl.page.show: page_media
-                  - lvgl.widget.update: { id: nav_home, bg_color: 0x10121A }
-                  - lvgl.widget.update: { id: nav_lights, bg_color: 0x10121A }
-                  - lvgl.widget.update: { id: nav_climate, bg_color: 0x10121A }
-                  - lvgl.widget.update: { id: nav_media, bg_color: 0x10121A }
-                  - lvgl.widget.update: { id: nav_security, bg_color: 0x10121A }
-                  - lvgl.widget.update: { id: nav_network, bg_color: 0x10121A }
-                  - lvgl.widget.update: { id: nav_media, bg_color: 0x2ED5B8 }
+                on_click: [lvgl.page.show: page_media]
             - button:
                 id: nav_security
                 align: top_mid
-                y: 338
-                width: 64
-                height: 64
+                y: 408
+                width: 58
+                height: 58
                 bg_color: 0x10121A
                 widgets: [label: { text: "󰚊", align: center, text_font: f_icon, text_color: $c_text } ]
-                on_click:
-                  - lvgl.page.show: page_security
-                  - lvgl.widget.update: { id: nav_home, bg_color: 0x10121A }
-                  - lvgl.widget.update: { id: nav_lights, bg_color: 0x10121A }
-                  - lvgl.widget.update: { id: nav_climate, bg_color: 0x10121A }
-                  - lvgl.widget.update: { id: nav_media, bg_color: 0x10121A }
-                  - lvgl.widget.update: { id: nav_security, bg_color: 0x10121A }
-                  - lvgl.widget.update: { id: nav_network, bg_color: 0x10121A }
-                  - lvgl.widget.update: { id: nav_security, bg_color: 0x2ED5B8 }
+                on_click: [lvgl.page.show: page_security]
             - button:
                 id: nav_network
                 align: top_mid
-                y: 410
-                width: 64
-                height: 64
+                y: 482
+                width: 58
+                height: 58
                 bg_color: 0x10121A
                 widgets: [label: { text: "󰤨", align: center, text_font: f_icon, text_color: $c_text } ]
-                on_click:
-                  - lvgl.page.show: page_network
-                  - lvgl.widget.update: { id: nav_home, bg_color: 0x10121A }
-                  - lvgl.widget.update: { id: nav_lights, bg_color: 0x10121A }
-                  - lvgl.widget.update: { id: nav_climate, bg_color: 0x10121A }
-                  - lvgl.widget.update: { id: nav_media, bg_color: 0x10121A }
-                  - lvgl.widget.update: { id: nav_security, bg_color: 0x10121A }
-                  - lvgl.widget.update: { id: nav_network, bg_color: 0x10121A }
-                  - lvgl.widget.update: { id: nav_network, bg_color: 0x2ED5B8 }
+                on_click: [lvgl.page.show: page_network]
       - label:
           id: lbl_ssid
           text: "no network"
@@ -754,6 +716,14 @@ lvgl:
     # ---------- HOME ----------
     - id: page_home
       bg_opa: 0
+      on_load:
+        - lvgl.widget.update: { id: nav_home, bg_color: 0x2ED5B8 }
+        - lvgl.widget.update: { id: nav_rooms, bg_color: 0x10121A }
+        - lvgl.widget.update: { id: nav_lights, bg_color: 0x10121A }
+        - lvgl.widget.update: { id: nav_climate, bg_color: 0x10121A }
+        - lvgl.widget.update: { id: nav_media, bg_color: 0x10121A }
+        - lvgl.widget.update: { id: nav_security, bg_color: 0x10121A }
+        - lvgl.widget.update: { id: nav_network, bg_color: 0x10121A }
       widgets:
         - image: { src: img_aurora_bg, x: 0, y: 0 }
         - label: { id: lbl_clock, text: "--:--", x: 100, y: 24, text_font: f_display, text_color: 0xEEF0F6 }
@@ -861,6 +831,14 @@ lvgl:
               - lvgl.widget.update: { id: nav_security, bg_color: 0x2ED5B8 }
     - id: page_lights
       bg_opa: 0
+      on_load:
+        - lvgl.widget.update: { id: nav_home, bg_color: 0x10121A }
+        - lvgl.widget.update: { id: nav_rooms, bg_color: 0x10121A }
+        - lvgl.widget.update: { id: nav_lights, bg_color: 0x2ED5B8 }
+        - lvgl.widget.update: { id: nav_climate, bg_color: 0x10121A }
+        - lvgl.widget.update: { id: nav_media, bg_color: 0x10121A }
+        - lvgl.widget.update: { id: nav_security, bg_color: 0x10121A }
+        - lvgl.widget.update: { id: nav_network, bg_color: 0x10121A }
       widgets:
         - image: { src: img_aurora_bg, x: 0, y: 0 }
         - label: { text: "Lights", x: 100, y: 26, text_font: f_title, text_color: 0xEEF0F6 }
@@ -1097,6 +1075,14 @@ lvgl:
               - label: { text: "Brightness", align: center, y: 40, text_font: f_small, text_color: 0x8A8F9E }
     - id: page_climate
       bg_opa: 0
+      on_load:
+        - lvgl.widget.update: { id: nav_home, bg_color: 0x10121A }
+        - lvgl.widget.update: { id: nav_rooms, bg_color: 0x10121A }
+        - lvgl.widget.update: { id: nav_lights, bg_color: 0x10121A }
+        - lvgl.widget.update: { id: nav_climate, bg_color: 0x2ED5B8 }
+        - lvgl.widget.update: { id: nav_media, bg_color: 0x10121A }
+        - lvgl.widget.update: { id: nav_security, bg_color: 0x10121A }
+        - lvgl.widget.update: { id: nav_network, bg_color: 0x10121A }
       widgets:
         - image: { src: img_aurora_bg, x: 0, y: 0 }
         - label: { text: "Climate", x: 100, y: 26, text_font: f_title, text_color: $c_text }
@@ -1116,6 +1102,14 @@ lvgl:
     # grouping (media_player.join/unjoin) is a refinement once confirmed.
     - id: page_media
       bg_opa: 0
+      on_load:
+        - lvgl.widget.update: { id: nav_home, bg_color: 0x10121A }
+        - lvgl.widget.update: { id: nav_rooms, bg_color: 0x10121A }
+        - lvgl.widget.update: { id: nav_lights, bg_color: 0x10121A }
+        - lvgl.widget.update: { id: nav_climate, bg_color: 0x10121A }
+        - lvgl.widget.update: { id: nav_media, bg_color: 0x2ED5B8 }
+        - lvgl.widget.update: { id: nav_security, bg_color: 0x10121A }
+        - lvgl.widget.update: { id: nav_network, bg_color: 0x10121A }
       widgets:
         - image: { src: img_aurora_bg, x: 0, y: 0 }
         - label: { text: "Listening", x: 100, y: 26, text_font: f_title, text_color: $c_text }
@@ -1274,6 +1268,14 @@ lvgl:
     # ---------- SECURITY (locks + presence; real entities) ----------
     - id: page_security
       bg_opa: 0
+      on_load:
+        - lvgl.widget.update: { id: nav_home, bg_color: 0x10121A }
+        - lvgl.widget.update: { id: nav_rooms, bg_color: 0x10121A }
+        - lvgl.widget.update: { id: nav_lights, bg_color: 0x10121A }
+        - lvgl.widget.update: { id: nav_climate, bg_color: 0x10121A }
+        - lvgl.widget.update: { id: nav_media, bg_color: 0x10121A }
+        - lvgl.widget.update: { id: nav_security, bg_color: 0x2ED5B8 }
+        - lvgl.widget.update: { id: nav_network, bg_color: 0x10121A }
       widgets:
         - image: { src: img_aurora_bg, x: 0, y: 0 }
         - label: { text: "Security", x: 100, y: 26, text_font: f_title, text_color: 0xEEF0F6 }
@@ -1336,8 +1338,285 @@ lvgl:
             widgets:
               - label: { text: "PRESENCE", x: 4, y: 0, text_font: f_small, text_color: 0x8A8F9E }
               - label: { id: lbl_presence, text: "Ben · Home", x: 4, y: 28, text_font: f_title, text_color: 0x2ED5B8 }
+    - id: page_rooms
+      bg_opa: 0
+      on_load:
+        - lvgl.widget.update: { id: nav_home, bg_color: 0x10121A }
+        - lvgl.widget.update: { id: nav_rooms, bg_color: 0x2ED5B8 }
+        - lvgl.widget.update: { id: nav_lights, bg_color: 0x10121A }
+        - lvgl.widget.update: { id: nav_climate, bg_color: 0x10121A }
+        - lvgl.widget.update: { id: nav_media, bg_color: 0x10121A }
+        - lvgl.widget.update: { id: nav_security, bg_color: 0x10121A }
+        - lvgl.widget.update: { id: nav_network, bg_color: 0x10121A }
+      widgets:
+        - image: { src: img_aurora_bg, x: 0, y: 0 }
+        - label: { text: "Rooms", x: 100, y: 26, text_font: f_title, text_color: 0xEEF0F6 }
+        - label: { text: "Choose a room to control", x: 100, y: 60, text_font: f_small, text_color: 0x8A8F9E }
+        - button:
+            x: 100
+            y: 110
+            width: 772
+            height: 64
+            styles: st_glass
+            widgets:
+              - label: { text: "\U000F04B9", align: left_mid, x: 8, text_font: f_icon, text_color: 0x2ED5B8 }
+              - label: { text: "Living Room", align: left_mid, x: 60, text_font: f_title, text_color: 0xEEF0F6 }
+            on_click: [lvgl.page.show: page_room_living]
+        - button:
+            x: 100
+            y: 188
+            width: 772
+            height: 64
+            styles: st_glass
+            widgets:
+              - label: { text: "\U000F04B9", align: left_mid, x: 8, text_font: f_icon, text_color: 0x2ED5B8 }
+              - label: { text: "Kitchen", align: left_mid, x: 60, text_font: f_title, text_color: 0xEEF0F6 }
+            on_click: [lvgl.page.show: page_room_kitchen]
+        - button:
+            x: 100
+            y: 266
+            width: 772
+            height: 64
+            styles: st_glass
+            widgets:
+              - label: { text: "\U000F04B9", align: left_mid, x: 8, text_font: f_icon, text_color: 0x2ED5B8 }
+              - label: { text: "Office", align: left_mid, x: 60, text_font: f_title, text_color: 0xEEF0F6 }
+            on_click: [lvgl.page.show: page_room_office]
+        - button:
+            x: 100
+            y: 344
+            width: 772
+            height: 64
+            styles: st_glass
+            widgets:
+              - label: { text: "\U000F04B9", align: left_mid, x: 8, text_font: f_icon, text_color: 0x2ED5B8 }
+              - label: { text: "Master", align: left_mid, x: 60, text_font: f_title, text_color: 0xEEF0F6 }
+            on_click: [lvgl.page.show: page_room_master]
+        - button:
+            x: 100
+            y: 422
+            width: 772
+            height: 64
+            styles: st_glass
+            widgets:
+              - label: { text: "\U000F04B9", align: left_mid, x: 8, text_font: f_icon, text_color: 0x2ED5B8 }
+              - label: { text: "Exterior", align: left_mid, x: 60, text_font: f_title, text_color: 0xEEF0F6 }
+            on_click: [lvgl.page.show: page_room_exterior]
+    - id: page_room_living
+      bg_opa: 0
+      on_load:
+        - lvgl.widget.update: { id: nav_home, bg_color: 0x10121A }
+        - lvgl.widget.update: { id: nav_rooms, bg_color: 0x2ED5B8 }
+        - lvgl.widget.update: { id: nav_lights, bg_color: 0x10121A }
+        - lvgl.widget.update: { id: nav_climate, bg_color: 0x10121A }
+        - lvgl.widget.update: { id: nav_media, bg_color: 0x10121A }
+        - lvgl.widget.update: { id: nav_security, bg_color: 0x10121A }
+        - lvgl.widget.update: { id: nav_network, bg_color: 0x10121A }
+      widgets:
+        - image: { src: img_aurora_bg, x: 0, y: 0 }
+        - label: { text: "Living Room", x: 100, y: 26, text_font: f_title, text_color: 0xEEF0F6 }
+        - button:
+            x: 760
+            y: 28
+            width: 112
+            height: 40
+            styles: st_glass
+            widgets: [label: { text: "Rooms", align: center, text_font: f_small, text_color: 0xEEF0F6 }]
+            on_click: [lvgl.page.show: page_rooms]
+        - button:
+            x: 100
+            y: 96
+            width: 232
+            height: 120
+            styles: st_glass
+            widgets:
+              - label: { text: "\U000F0335", align: top_left, x: 6, y: 6, text_font: f_icon, text_color: 0x2ED5B8 }
+              - label: { text: "Main Light", align: bottom_left, x: 6, y: -10, text_font: f_body, text_color: 0xEEF0F6 }
+            on_click: [homeassistant.action: { action: light.toggle, data: { entity_id: light.living_room_main } }]
+        - button:
+            x: 348
+            y: 96
+            width: 232
+            height: 120
+            styles: st_glass
+            widgets:
+              - label: { text: "\U000F0335", align: top_left, x: 6, y: 6, text_font: f_icon, text_color: 0x2ED5B8 }
+              - label: { text: "Ceiling Fan", align: bottom_left, x: 6, y: -10, text_font: f_body, text_color: 0xEEF0F6 }
+            on_click: [homeassistant.action: { action: fan.toggle, data: { entity_id: fan.living_room_pendant } }]
+    - id: page_room_kitchen
+      bg_opa: 0
+      on_load:
+        - lvgl.widget.update: { id: nav_home, bg_color: 0x10121A }
+        - lvgl.widget.update: { id: nav_rooms, bg_color: 0x2ED5B8 }
+        - lvgl.widget.update: { id: nav_lights, bg_color: 0x10121A }
+        - lvgl.widget.update: { id: nav_climate, bg_color: 0x10121A }
+        - lvgl.widget.update: { id: nav_media, bg_color: 0x10121A }
+        - lvgl.widget.update: { id: nav_security, bg_color: 0x10121A }
+        - lvgl.widget.update: { id: nav_network, bg_color: 0x10121A }
+      widgets:
+        - image: { src: img_aurora_bg, x: 0, y: 0 }
+        - label: { text: "Kitchen", x: 100, y: 26, text_font: f_title, text_color: 0xEEF0F6 }
+        - button:
+            x: 760
+            y: 28
+            width: 112
+            height: 40
+            styles: st_glass
+            widgets: [label: { text: "Rooms", align: center, text_font: f_small, text_color: 0xEEF0F6 }]
+            on_click: [lvgl.page.show: page_rooms]
+        - button:
+            x: 100
+            y: 96
+            width: 232
+            height: 120
+            styles: st_glass
+            widgets:
+              - label: { text: "\U000F0335", align: top_left, x: 6, y: 6, text_font: f_icon, text_color: 0x2ED5B8 }
+              - label: { text: "Kitchen Lights", align: bottom_left, x: 6, y: -10, text_font: f_body, text_color: 0xEEF0F6 }
+            on_click: [homeassistant.action: { action: light.toggle, data: { entity_id: light.kitchen_kitchen } }]
+    - id: page_room_office
+      bg_opa: 0
+      on_load:
+        - lvgl.widget.update: { id: nav_home, bg_color: 0x10121A }
+        - lvgl.widget.update: { id: nav_rooms, bg_color: 0x2ED5B8 }
+        - lvgl.widget.update: { id: nav_lights, bg_color: 0x10121A }
+        - lvgl.widget.update: { id: nav_climate, bg_color: 0x10121A }
+        - lvgl.widget.update: { id: nav_media, bg_color: 0x10121A }
+        - lvgl.widget.update: { id: nav_security, bg_color: 0x10121A }
+        - lvgl.widget.update: { id: nav_network, bg_color: 0x10121A }
+      widgets:
+        - image: { src: img_aurora_bg, x: 0, y: 0 }
+        - label: { text: "Office", x: 100, y: 26, text_font: f_title, text_color: 0xEEF0F6 }
+        - button:
+            x: 760
+            y: 28
+            width: 112
+            height: 40
+            styles: st_glass
+            widgets: [label: { text: "Rooms", align: center, text_font: f_small, text_color: 0xEEF0F6 }]
+            on_click: [lvgl.page.show: page_rooms]
+        - button:
+            x: 100
+            y: 96
+            width: 232
+            height: 120
+            styles: st_glass
+            widgets:
+              - label: { text: "\U000F0335", align: top_left, x: 6, y: 6, text_font: f_icon, text_color: 0x2ED5B8 }
+              - label: { text: "Shelves", align: bottom_left, x: 6, y: -10, text_font: f_body, text_color: 0xEEF0F6 }
+            on_click: [homeassistant.action: { action: light.toggle, data: { entity_id: light.office_shelves } }]
+        - button:
+            x: 348
+            y: 96
+            width: 232
+            height: 120
+            styles: st_glass
+            widgets:
+              - label: { text: "\U000F0335", align: top_left, x: 6, y: 6, text_font: f_icon, text_color: 0x2ED5B8 }
+              - label: { text: "Main Lights", align: bottom_left, x: 6, y: -10, text_font: f_body, text_color: 0xEEF0F6 }
+            on_click: [homeassistant.action: { action: light.toggle, data: { entity_id: light.office_main_lights } }]
+        - button:
+            x: 596
+            y: 96
+            width: 232
+            height: 120
+            styles: st_glass
+            widgets:
+              - label: { text: "\U000F0335", align: top_left, x: 6, y: 6, text_font: f_icon, text_color: 0x2ED5B8 }
+              - label: { text: "Desk Lamp", align: bottom_left, x: 6, y: -10, text_font: f_body, text_color: 0xEEF0F6 }
+            on_click: [homeassistant.action: { action: light.toggle, data: { entity_id: light.office_desk_lamp } }]
+    - id: page_room_master
+      bg_opa: 0
+      on_load:
+        - lvgl.widget.update: { id: nav_home, bg_color: 0x10121A }
+        - lvgl.widget.update: { id: nav_rooms, bg_color: 0x2ED5B8 }
+        - lvgl.widget.update: { id: nav_lights, bg_color: 0x10121A }
+        - lvgl.widget.update: { id: nav_climate, bg_color: 0x10121A }
+        - lvgl.widget.update: { id: nav_media, bg_color: 0x10121A }
+        - lvgl.widget.update: { id: nav_security, bg_color: 0x10121A }
+        - lvgl.widget.update: { id: nav_network, bg_color: 0x10121A }
+      widgets:
+        - image: { src: img_aurora_bg, x: 0, y: 0 }
+        - label: { text: "Master", x: 100, y: 26, text_font: f_title, text_color: 0xEEF0F6 }
+        - button:
+            x: 760
+            y: 28
+            width: 112
+            height: 40
+            styles: st_glass
+            widgets: [label: { text: "Rooms", align: center, text_font: f_small, text_color: 0xEEF0F6 }]
+            on_click: [lvgl.page.show: page_rooms]
+        - button:
+            x: 100
+            y: 96
+            width: 232
+            height: 120
+            styles: st_glass
+            widgets:
+              - label: { text: "\U000F0335", align: top_left, x: 6, y: 6, text_font: f_icon, text_color: 0x2ED5B8 }
+              - label: { text: "Reading Lamp", align: bottom_left, x: 6, y: -10, text_font: f_body, text_color: 0xEEF0F6 }
+            on_click: [homeassistant.action: { action: light.toggle, data: { entity_id: light.reading_lamp } }]
+        - button:
+            x: 348
+            y: 96
+            width: 232
+            height: 120
+            styles: st_glass
+            widgets:
+              - label: { text: "\U000F0335", align: top_left, x: 6, y: 6, text_font: f_icon, text_color: 0x2ED5B8 }
+              - label: { text: "Ceiling Light", align: bottom_left, x: 6, y: -10, text_font: f_body, text_color: 0xEEF0F6 }
+            on_click: [homeassistant.action: { action: light.toggle, data: { entity_id: light.master_bedroom_ceiling_fan_light } }]
+    - id: page_room_exterior
+      bg_opa: 0
+      on_load:
+        - lvgl.widget.update: { id: nav_home, bg_color: 0x10121A }
+        - lvgl.widget.update: { id: nav_rooms, bg_color: 0x2ED5B8 }
+        - lvgl.widget.update: { id: nav_lights, bg_color: 0x10121A }
+        - lvgl.widget.update: { id: nav_climate, bg_color: 0x10121A }
+        - lvgl.widget.update: { id: nav_media, bg_color: 0x10121A }
+        - lvgl.widget.update: { id: nav_security, bg_color: 0x10121A }
+        - lvgl.widget.update: { id: nav_network, bg_color: 0x10121A }
+      widgets:
+        - image: { src: img_aurora_bg, x: 0, y: 0 }
+        - label: { text: "Exterior", x: 100, y: 26, text_font: f_title, text_color: 0xEEF0F6 }
+        - button:
+            x: 760
+            y: 28
+            width: 112
+            height: 40
+            styles: st_glass
+            widgets: [label: { text: "Rooms", align: center, text_font: f_small, text_color: 0xEEF0F6 }]
+            on_click: [lvgl.page.show: page_rooms]
+        - button:
+            x: 100
+            y: 96
+            width: 232
+            height: 120
+            styles: st_glass
+            widgets:
+              - label: { text: "\U000F0335", align: top_left, x: 6, y: 6, text_font: f_icon, text_color: 0x2ED5B8 }
+              - label: { text: "Patio Lights", align: bottom_left, x: 6, y: -10, text_font: f_body, text_color: 0xEEF0F6 }
+            on_click: [homeassistant.action: { action: light.toggle, data: { entity_id: light.outdoor_patio_back_porch_lights } }]
+        - button:
+            x: 348
+            y: 96
+            width: 232
+            height: 120
+            styles: st_glass
+            widgets:
+              - label: { text: "\U000F0335", align: top_left, x: 6, y: 6, text_font: f_icon, text_color: 0x2ED5B8 }
+              - label: { text: "Putting Green", align: bottom_left, x: 6, y: -10, text_font: f_body, text_color: 0xEEF0F6 }
+            on_click: [homeassistant.action: { action: switch.toggle, data: { entity_id: switch.outdoor_patio_putting_green } }]
     - id: page_network
       bg_opa: 0
+      on_load:
+        - lvgl.widget.update: { id: nav_home, bg_color: 0x10121A }
+        - lvgl.widget.update: { id: nav_rooms, bg_color: 0x10121A }
+        - lvgl.widget.update: { id: nav_lights, bg_color: 0x10121A }
+        - lvgl.widget.update: { id: nav_climate, bg_color: 0x10121A }
+        - lvgl.widget.update: { id: nav_media, bg_color: 0x10121A }
+        - lvgl.widget.update: { id: nav_security, bg_color: 0x10121A }
+        - lvgl.widget.update: { id: nav_network, bg_color: 0x2ED5B8 }
       widgets:
         - image: { src: img_aurora_bg, x: 0, y: 0 }
         - label: { text: "Network", x: 100, y: 26, text_font: f_title, text_color: $c_text }
