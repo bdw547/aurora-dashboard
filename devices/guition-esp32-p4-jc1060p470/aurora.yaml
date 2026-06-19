@@ -199,6 +199,10 @@ sensor:
             id: lbl_outdoor
             text: !lambda |-
               char b[16]; snprintf(b, sizeof(b), "%.0f°", x); return std::string(b);
+        - lvgl.label.update:
+            id: lbl_home_temp
+            text: !lambda |-
+              char b[16]; snprintf(b, sizeof(b), "%.0f°", x); return std::string(b);
   - platform: wifi_signal
     id: panel_rssi
     update_interval: 30s
@@ -224,7 +228,7 @@ sensor:
     attribute: brightness
     on_value:
       then:
-        - lambda: 'id(light_bri)["light.living_room_main"] = (int) roundf(x / 2.55f);'
+        - lambda: 'id(light_bri)["light.living_room_main"] = ((x == x) ? (int) roundf(x / 2.55f) : 0);'
         - if:
             condition:
               lambda: 'return id(sel_light) == "light.living_room_main";'
@@ -242,7 +246,7 @@ sensor:
     attribute: brightness
     on_value:
       then:
-        - lambda: 'id(light_bri)["light.office_shelves"] = (int) roundf(x / 2.55f);'
+        - lambda: 'id(light_bri)["light.office_shelves"] = ((x == x) ? (int) roundf(x / 2.55f) : 0);'
         - if:
             condition:
               lambda: 'return id(sel_light) == "light.office_shelves";'
@@ -260,7 +264,7 @@ sensor:
     attribute: brightness
     on_value:
       then:
-        - lambda: 'id(light_bri)["light.kitchen_kitchen"] = (int) roundf(x / 2.55f);'
+        - lambda: 'id(light_bri)["light.kitchen_kitchen"] = ((x == x) ? (int) roundf(x / 2.55f) : 0);'
         - if:
             condition:
               lambda: 'return id(sel_light) == "light.kitchen_kitchen";'
@@ -278,7 +282,7 @@ sensor:
     attribute: brightness
     on_value:
       then:
-        - lambda: 'id(light_bri)["light.reading_lamp"] = (int) roundf(x / 2.55f);'
+        - lambda: 'id(light_bri)["light.reading_lamp"] = ((x == x) ? (int) roundf(x / 2.55f) : 0);'
         - if:
             condition:
               lambda: 'return id(sel_light) == "light.reading_lamp";'
@@ -296,7 +300,7 @@ sensor:
     attribute: brightness
     on_value:
       then:
-        - lambda: 'id(light_bri)["light.outdoor_patio_back_porch_lights"] = (int) roundf(x / 2.55f);'
+        - lambda: 'id(light_bri)["light.outdoor_patio_back_porch_lights"] = ((x == x) ? (int) roundf(x / 2.55f) : 0);'
         - if:
             condition:
               lambda: 'return id(sel_light) == "light.outdoor_patio_back_porch_lights";'
@@ -314,7 +318,7 @@ sensor:
     attribute: brightness
     on_value:
       then:
-        - lambda: 'id(light_bri)["light.office_main_lights"] = (int) roundf(x / 2.55f);'
+        - lambda: 'id(light_bri)["light.office_main_lights"] = ((x == x) ? (int) roundf(x / 2.55f) : 0);'
         - if:
             condition:
               lambda: 'return id(sel_light) == "light.office_main_lights";'
@@ -332,7 +336,7 @@ sensor:
     attribute: brightness
     on_value:
       then:
-        - lambda: 'id(light_bri)["light.dining_room_chandelier"] = (int) roundf(x / 2.55f);'
+        - lambda: 'id(light_bri)["light.dining_room_chandelier"] = ((x == x) ? (int) roundf(x / 2.55f) : 0);'
         - if:
             condition:
               lambda: 'return id(sel_light) == "light.dining_room_chandelier";'
@@ -350,7 +354,7 @@ sensor:
     attribute: brightness
     on_value:
       then:
-        - lambda: 'id(light_bri)["light.master_bedroom_ceiling_fan_light"] = (int) roundf(x / 2.55f);'
+        - lambda: 'id(light_bri)["light.master_bedroom_ceiling_fan_light"] = ((x == x) ? (int) roundf(x / 2.55f) : 0);'
         - if:
             condition:
               lambda: 'return id(sel_light) == "light.master_bedroom_ceiling_fan_light";'
@@ -370,6 +374,7 @@ text_sensor:
     on_value:
       then:
         - lvgl.label.update: { id: lbl_np_title, text: !lambda 'return x.empty() ? std::string("Nothing playing") : x;' }
+        - lvgl.label.update: { id: lbl_home_np, text: !lambda 'return x.empty() ? std::string("Nothing playing") : x;' }
   - platform: homeassistant
     id: ha_media_artist
     entity_id: media_player.living_room
@@ -377,6 +382,7 @@ text_sensor:
     on_value:
       then:
         - lvgl.label.update: { id: lbl_np_artist, text: !lambda 'return x;' }
+        - lvgl.label.update: { id: lbl_home_np_artist, text: !lambda 'return x;' }
   - platform: homeassistant
     id: ha_presence
     entity_id: person.ben
@@ -385,6 +391,9 @@ text_sensor:
         - lvgl.label.update:
             id: lbl_presence
             text: !lambda 'return x == "home" ? std::string("Ben · Home") : std::string("Ben · Away");'
+        - lvgl.label.update:
+            id: lbl_home_presence
+            text: !lambda 'return x == "home" ? std::string("Home") : std::string("Away");'
   # On-panel WiFi/connection indicator
   - platform: wifi_info
     ip_address:
@@ -393,10 +402,6 @@ text_sensor:
         then:
           - lvgl.label.update:
               id: lbl_ip
-              text: !lambda |-
-                return x.empty() ? std::string("WiFi: connecting...") : (std::string("IP ") + x);
-          - lvgl.label.update:
-              id: lbl_ip_home
               text: !lambda |-
                 return x.empty() ? std::string("WiFi: connecting...") : (std::string("IP ") + x);
     ssid:
@@ -531,17 +536,33 @@ text_sensor:
     entity_id: lock.front_door
     on_value:
       then:
-        - lvgl.label.update:
-            id: lbl_front_lock_state
-            text: !lambda 'return x == std::string("locked") ? std::string("Locked") : std::string("Unlocked");'
+        - if:
+            condition:
+              lambda: 'return x == std::string("locked");'
+            then:
+              - lvgl.label.update: { id: lbl_front_lock_state, text: "Locked", text_color: 0x2ED5B8 }
+              - lvgl.widget.update: { id: btn_front_lock, bg_color: 0x2ED5B8 }
+              - lvgl.widget.update: { id: btn_front_unlock, bg_color: 0x161B24 }
+            else:
+              - lvgl.label.update: { id: lbl_front_lock_state, text: "Unlocked", text_color: 0xFF9F6B }
+              - lvgl.widget.update: { id: btn_front_lock, bg_color: 0x161B24 }
+              - lvgl.widget.update: { id: btn_front_unlock, bg_color: 0xFF9F6B }
   - platform: homeassistant
     id: ha_lockst_back
     entity_id: lock.back_door
     on_value:
       then:
-        - lvgl.label.update:
-            id: lbl_back_lock_state
-            text: !lambda 'return x == std::string("locked") ? std::string("Locked") : std::string("Unlocked");'
+        - if:
+            condition:
+              lambda: 'return x == std::string("locked");'
+            then:
+              - lvgl.label.update: { id: lbl_back_lock_state, text: "Locked", text_color: 0x2ED5B8 }
+              - lvgl.widget.update: { id: btn_back_lock, bg_color: 0x2ED5B8 }
+              - lvgl.widget.update: { id: btn_back_unlock, bg_color: 0x161B24 }
+            else:
+              - lvgl.label.update: { id: lbl_back_lock_state, text: "Unlocked", text_color: 0xFF9F6B }
+              - lvgl.widget.update: { id: btn_back_lock, bg_color: 0x161B24 }
+              - lvgl.widget.update: { id: btn_back_unlock, bg_color: 0xFF9F6B }
 
 globals:
   - id: sel_light
@@ -554,6 +575,30 @@ globals:
   - id: light_on
     type: std::map<std::string, bool>
     restore_value: false
+
+time:
+  - platform: homeassistant
+    id: ha_time
+
+interval:
+  - interval: 10s
+    then:
+      - lvgl.label.update:
+          id: lbl_clock
+          text: !lambda |-
+            auto t = id(ha_time).now();
+            if (!t.is_valid()) return std::string("--:--");
+            int h = t.hour % 12; if (h == 0) h = 12;
+            char c[8]; snprintf(c, sizeof(c), "%d:%02d", h, t.minute); return std::string(c);
+      - lvgl.label.update:
+          id: lbl_greeting
+          text: !lambda |-
+            auto t = id(ha_time).now();
+            if (!t.is_valid()) return std::string("Welcome home, Ben");
+            const char* g = t.hour < 12 ? "Good morning" : (t.hour < 18 ? "Good afternoon" : "Good evening");
+            const char* d[] = {"Sun","Mon","Tue","Wed","Thu","Fri","Sat"};
+            const char* m[] = {"Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"};
+            char c[56]; snprintf(c, sizeof(c), "%s, Ben \u00b7 %s %s %d", g, d[t.day_of_week-1], m[t.month-1], t.day_of_month); return std::string(c);
 
 lvgl:
   id: main_lvgl
@@ -711,21 +756,109 @@ lvgl:
       bg_opa: 0
       widgets:
         - image: { src: img_aurora_bg, x: 0, y: 0 }
-        - label: { text: "Good evening, Ben", x: 100, y: 28, text_font: f_title, text_color: $c_text }
-        - label: { text: "Aurora · Walton Home", x: 100, y: 62, text_font: f_small, text_color: $c_text2 }
-        - label: { id: lbl_ip_home, text: "WiFi: connecting...", x: 100, y: 92, text_font: f_body, text_color: 0x2ED5B8 }
+        - label: { id: lbl_clock, text: "--:--", x: 100, y: 24, text_font: f_display, text_color: 0xEEF0F6 }
+        - label: { id: lbl_greeting, text: "Welcome home, Ben", x: 102, y: 92, text_font: f_body, text_color: 0x8A8F9E }
         - obj:
-            styles: st_glass
             x: 100
-            y: 124
-            width: 280
-            height: 150
+            y: 134
+            width: 150
+            height: 86
+            styles: st_glass
             widgets:
-              - label: { text: "LIGHTS", x: 4, y: 0, text_font: f_small, text_color: $c_text2 }
-              - label: { text: "Tap to control", x: 4, y: 26, text_font: f_body, text_color: $c_text }
-            on_click: [lvgl.page.show: page_lights]
-
-    # ---------- LIGHTS (fully wired to real entities) ----------
+              - label: { text: "OUTDOOR", x: 2, y: 0, text_font: f_small, text_color: 0x8A8F9E }
+              - label: { id: lbl_home_temp, text: "--", x: 2, y: 30, text_font: f_title, text_color: 0xEEF0F6 }
+        - obj:
+            x: 262
+            y: 134
+            width: 200
+            height: 86
+            styles: st_glass
+            widgets:
+              - label: { text: "PRESENCE", x: 2, y: 0, text_font: f_small, text_color: 0x8A8F9E }
+              - label: { id: lbl_home_presence, text: "--", x: 2, y: 30, text_font: f_title, text_color: 0x2ED5B8 }
+        - obj:
+            x: 474
+            y: 134
+            width: 398
+            height: 86
+            styles: st_glass
+            widgets:
+              - label: { text: "NOW PLAYING", x: 2, y: 0, text_font: f_small, text_color: 0x8A8F9E }
+              - label: { id: lbl_home_np, text: "Nothing playing", x: 2, y: 26, text_font: f_body, text_color: 0xEEF0F6 }
+              - label: { id: lbl_home_np_artist, text: "", x: 2, y: 52, text_font: f_small, text_color: 0x8A8F9E }
+        - label: { text: "QUICK CONTROLS", x: 100, y: 338, text_font: f_small, text_color: 0x8A8F9E }
+        - button:
+            x: 100
+            y: 372
+            width: 104
+            height: 104
+            styles: st_glass
+            widgets:
+              - label: { text: "󰌵", align: top_mid, y: 12, text_font: f_icon, text_color: 0x2ED5B8 }
+              - label: { text: "Lights", align: bottom_mid, y: -12, text_font: f_small, text_color: 0xEEF0F6 }
+            on_click:
+              - lvgl.page.show: page_lights
+              - lvgl.widget.update: { id: nav_home, bg_color: 0x10121A }
+              - lvgl.widget.update: { id: nav_lights, bg_color: 0x10121A }
+              - lvgl.widget.update: { id: nav_climate, bg_color: 0x10121A }
+              - lvgl.widget.update: { id: nav_media, bg_color: 0x10121A }
+              - lvgl.widget.update: { id: nav_security, bg_color: 0x10121A }
+              - lvgl.widget.update: { id: nav_network, bg_color: 0x10121A }
+              - lvgl.widget.update: { id: nav_lights, bg_color: 0x2ED5B8 }
+        - button:
+            x: 220
+            y: 372
+            width: 104
+            height: 104
+            styles: st_glass
+            widgets:
+              - label: { text: "󰝚", align: top_mid, y: 12, text_font: f_icon, text_color: 0x2ED5B8 }
+              - label: { text: "Media", align: bottom_mid, y: -12, text_font: f_small, text_color: 0xEEF0F6 }
+            on_click:
+              - lvgl.page.show: page_media
+              - lvgl.widget.update: { id: nav_home, bg_color: 0x10121A }
+              - lvgl.widget.update: { id: nav_lights, bg_color: 0x10121A }
+              - lvgl.widget.update: { id: nav_climate, bg_color: 0x10121A }
+              - lvgl.widget.update: { id: nav_media, bg_color: 0x10121A }
+              - lvgl.widget.update: { id: nav_security, bg_color: 0x10121A }
+              - lvgl.widget.update: { id: nav_network, bg_color: 0x10121A }
+              - lvgl.widget.update: { id: nav_media, bg_color: 0x2ED5B8 }
+        - button:
+            x: 340
+            y: 372
+            width: 104
+            height: 104
+            styles: st_glass
+            widgets:
+              - label: { text: "󰎓", align: top_mid, y: 12, text_font: f_icon, text_color: 0x2ED5B8 }
+              - label: { text: "Climate", align: bottom_mid, y: -12, text_font: f_small, text_color: 0xEEF0F6 }
+            on_click:
+              - lvgl.page.show: page_climate
+              - lvgl.widget.update: { id: nav_home, bg_color: 0x10121A }
+              - lvgl.widget.update: { id: nav_lights, bg_color: 0x10121A }
+              - lvgl.widget.update: { id: nav_climate, bg_color: 0x10121A }
+              - lvgl.widget.update: { id: nav_media, bg_color: 0x10121A }
+              - lvgl.widget.update: { id: nav_security, bg_color: 0x10121A }
+              - lvgl.widget.update: { id: nav_network, bg_color: 0x10121A }
+              - lvgl.widget.update: { id: nav_climate, bg_color: 0x2ED5B8 }
+        - button:
+            x: 460
+            y: 372
+            width: 104
+            height: 104
+            styles: st_glass
+            widgets:
+              - label: { text: "󰚊", align: top_mid, y: 12, text_font: f_icon, text_color: 0x2ED5B8 }
+              - label: { text: "Security", align: bottom_mid, y: -12, text_font: f_small, text_color: 0xEEF0F6 }
+            on_click:
+              - lvgl.page.show: page_security
+              - lvgl.widget.update: { id: nav_home, bg_color: 0x10121A }
+              - lvgl.widget.update: { id: nav_lights, bg_color: 0x10121A }
+              - lvgl.widget.update: { id: nav_climate, bg_color: 0x10121A }
+              - lvgl.widget.update: { id: nav_media, bg_color: 0x10121A }
+              - lvgl.widget.update: { id: nav_security, bg_color: 0x10121A }
+              - lvgl.widget.update: { id: nav_network, bg_color: 0x10121A }
+              - lvgl.widget.update: { id: nav_security, bg_color: 0x2ED5B8 }
     - id: page_lights
       bg_opa: 0
       widgets:
@@ -1143,70 +1276,66 @@ lvgl:
       bg_opa: 0
       widgets:
         - image: { src: img_aurora_bg, x: 0, y: 0 }
-        - label: { text: "Security", x: 100, y: 26, text_font: f_title, text_color: $c_text }
-
-        # Front Door
+        - label: { text: "Security", x: 100, y: 26, text_font: f_title, text_color: 0xEEF0F6 }
         - obj:
             x: 96
             y: 70
             width: 380
-            height: 150
+            height: 160
             styles: st_glass
             widgets:
-              - label: { text: "Front Door", x: 4, y: 0, text_font: f_title, text_color: $c_text }
-              - label: { id: lbl_front_lock_state, text: "Locked", x: 4, y: 34, text_font: f_body, text_color: $c_teal }
+              - label: { text: "Front Door", x: 4, y: 0, text_font: f_title, text_color: 0xEEF0F6 }
+              - label: { id: lbl_front_lock_state, text: "--", x: 4, y: 38, text_font: f_body, text_color: 0x8A8F9E }
               - button:
+                  id: btn_front_lock
                   align: bottom_left
-                  width: 160
-                  height: 44
-                  styles: st_glass
-                  widgets: [label: { text: "Lock", align: center, text_font: f_body, text_color: $c_text } ]
-                  on_click: [homeassistant.action: { action: lock.lock, data: { entity_id: lock.front_door } } ]
+                  width: 170
+                  height: 46
+                  bg_color: 0x161B24
+                  widgets: [label: { text: "Lock", align: center, text_font: f_body, text_color: 0xEEF0F6 }]
+                  on_click: [homeassistant.action: { action: lock.lock, data: { entity_id: lock.front_door } }]
               - button:
+                  id: btn_front_unlock
                   align: bottom_right
-                  width: 160
-                  height: 44
-                  bg_color: $c_warn
-                  widgets: [label: { text: "Unlock", align: center, text_font: f_body, text_color: $c_bg } ]
-                  on_click: [homeassistant.action: { action: lock.unlock, data: { entity_id: lock.front_door } } ]
-
-        # Back Door
+                  width: 170
+                  height: 46
+                  bg_color: 0x161B24
+                  widgets: [label: { text: "Unlock", align: center, text_font: f_body, text_color: 0xEEF0F6 }]
+                  on_click: [homeassistant.action: { action: lock.unlock, data: { entity_id: lock.front_door } }]
         - obj:
             x: 492
             y: 70
             width: 380
-            height: 150
+            height: 160
             styles: st_glass
             widgets:
-              - label: { text: "Back Door", x: 4, y: 0, text_font: f_title, text_color: $c_text }
-              - label: { id: lbl_back_lock_state, text: "Locked", x: 4, y: 34, text_font: f_body, text_color: $c_teal }
+              - label: { text: "Back Door", x: 4, y: 0, text_font: f_title, text_color: 0xEEF0F6 }
+              - label: { id: lbl_back_lock_state, text: "--", x: 4, y: 38, text_font: f_body, text_color: 0x8A8F9E }
               - button:
+                  id: btn_back_lock
                   align: bottom_left
-                  width: 160
-                  height: 44
-                  styles: st_glass
-                  widgets: [label: { text: "Lock", align: center, text_font: f_body, text_color: $c_text } ]
-                  on_click: [homeassistant.action: { action: lock.lock, data: { entity_id: lock.back_door } } ]
+                  width: 170
+                  height: 46
+                  bg_color: 0x161B24
+                  widgets: [label: { text: "Lock", align: center, text_font: f_body, text_color: 0xEEF0F6 }]
+                  on_click: [homeassistant.action: { action: lock.lock, data: { entity_id: lock.back_door } }]
               - button:
+                  id: btn_back_unlock
                   align: bottom_right
-                  width: 160
-                  height: 44
-                  bg_color: $c_warn
-                  widgets: [label: { text: "Unlock", align: center, text_font: f_body, text_color: $c_bg } ]
-                  on_click: [homeassistant.action: { action: lock.unlock, data: { entity_id: lock.back_door } } ]
-
-        # Presence
+                  width: 170
+                  height: 46
+                  bg_color: 0x161B24
+                  widgets: [label: { text: "Unlock", align: center, text_font: f_body, text_color: 0xEEF0F6 }]
+                  on_click: [homeassistant.action: { action: lock.unlock, data: { entity_id: lock.back_door } }]
         - obj:
             x: 96
-            y: 236
+            y: 246
             width: 776
             height: 90
             styles: st_glass
             widgets:
-              - label: { text: "PRESENCE", x: 4, y: 0, text_font: f_small, text_color: $c_text2 }
-              - label: { id: lbl_presence, text: "Ben · Home", x: 4, y: 28, text_font: f_title, text_color: $c_teal }
-
-    # ---------- NETWORK (stub — UniFi/Synology bindings TODO) ----------
+              - label: { text: "PRESENCE", x: 4, y: 0, text_font: f_small, text_color: 0x8A8F9E }
+              - label: { id: lbl_presence, text: "Ben · Home", x: 4, y: 28, text_font: f_title, text_color: 0x2ED5B8 }
     - id: page_network
       bg_opa: 0
       widgets:
