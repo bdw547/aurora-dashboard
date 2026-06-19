@@ -591,7 +591,23 @@ text_sensor:
     attribute: names
     on_value:
       then:
-        - lambda: 'lv_dropdown_set_options(id(dd_tracks)->obj, x.c_str());'
+        - lambda: |-
+            const std::string &str = x;
+            lv_obj_t* L[50] = { id(sng_lbl_0), id(sng_lbl_1), id(sng_lbl_2), id(sng_lbl_3), id(sng_lbl_4), id(sng_lbl_5), id(sng_lbl_6), id(sng_lbl_7), id(sng_lbl_8), id(sng_lbl_9), id(sng_lbl_10), id(sng_lbl_11), id(sng_lbl_12), id(sng_lbl_13), id(sng_lbl_14), id(sng_lbl_15), id(sng_lbl_16), id(sng_lbl_17), id(sng_lbl_18), id(sng_lbl_19), id(sng_lbl_20), id(sng_lbl_21), id(sng_lbl_22), id(sng_lbl_23), id(sng_lbl_24), id(sng_lbl_25), id(sng_lbl_26), id(sng_lbl_27), id(sng_lbl_28), id(sng_lbl_29), id(sng_lbl_30), id(sng_lbl_31), id(sng_lbl_32), id(sng_lbl_33), id(sng_lbl_34), id(sng_lbl_35), id(sng_lbl_36), id(sng_lbl_37), id(sng_lbl_38), id(sng_lbl_39), id(sng_lbl_40), id(sng_lbl_41), id(sng_lbl_42), id(sng_lbl_43), id(sng_lbl_44), id(sng_lbl_45), id(sng_lbl_46), id(sng_lbl_47), id(sng_lbl_48), id(sng_lbl_49) };
+            lv_obj_t* R[50] = { id(sng_0), id(sng_1), id(sng_2), id(sng_3), id(sng_4), id(sng_5), id(sng_6), id(sng_7), id(sng_8), id(sng_9), id(sng_10), id(sng_11), id(sng_12), id(sng_13), id(sng_14), id(sng_15), id(sng_16), id(sng_17), id(sng_18), id(sng_19), id(sng_20), id(sng_21), id(sng_22), id(sng_23), id(sng_24), id(sng_25), id(sng_26), id(sng_27), id(sng_28), id(sng_29), id(sng_30), id(sng_31), id(sng_32), id(sng_33), id(sng_34), id(sng_35), id(sng_36), id(sng_37), id(sng_38), id(sng_39), id(sng_40), id(sng_41), id(sng_42), id(sng_43), id(sng_44), id(sng_45), id(sng_46), id(sng_47), id(sng_48), id(sng_49) };
+            int idx = 0; size_t st = 0;
+            for (size_t i = 0; i <= str.size() && idx < 50; i++) {
+              if (i == str.size() || str[i] == '\n') {
+                std::string tok = str.substr(st, i - st);
+                if (!tok.empty()) {
+                  lv_label_set_text(L[idx], tok.c_str());
+                  lv_obj_clear_flag(R[idx], LV_OBJ_FLAG_HIDDEN);
+                  idx++;
+                }
+                st = i + 1;
+              }
+            }
+            for (int j = idx; j < 50; j++) lv_obj_add_flag(R[j], LV_OBJ_FLAG_HIDDEN);
   - platform: homeassistant
     id: ha_media_state
     entity_id: media_player.spotifyplus_ben_walton
@@ -2453,39 +2469,732 @@ lvgl:
                     action: script.aurora_spotify_load_playlist
                     data:
                       playlist_uri: !lambda 'return id(g_cur_pl_uri);'
-        - label: { text: "TRACKS", x: 100, y: 168, text_font: f_small, text_color: $c_text2 }
-        - dropdown:
-            id: dd_tracks
-            x: 100
-            y: 190
-            width: 680
-            options:
-              - "—"
         - button:
-            x: 100
-            y: 260
+            x: 620
+            y: 102
             width: 180
-            height: 56
+            height: 44
             bg_color: $c_teal
             bg_grad_color: $c_purple
-            widgets: [label: { text: "Play Track", align: center, text_font: f_body, text_color: $c_bg }]
-            on_click:
-              - homeassistant.action:
-                  action: script.aurora_spotify_play_track
-                  data:
-                    context_uri: !lambda 'return id(g_cur_pl_uri);'
-                    position: !lambda |-
-                      char b[8]; snprintf(b, sizeof(b), "%d", lv_dropdown_get_selected(id(dd_tracks)->obj)); return std::string(b);
-        - button:
-            x: 296
-            y: 260
-            width: 180
-            height: 56
-            styles: st_glass
-            widgets: [label: { text: "Play Playlist", align: center, text_font: f_body, text_color: $c_text }]
+            widgets: [label: { text: "Play Playlist", align: center, text_font: f_body, text_color: $c_bg }]
             on_click:
               - homeassistant.action:
                   action: spotifyplus.player_media_play_context
                   data:
                     entity_id: media_player.spotifyplus_ben_walton
                     context_uri: !lambda 'return id(g_cur_pl_uri);'
+        - label: { text: "TRACKS · tap to play", x: 100, y: 162, text_font: f_small, text_color: $c_text2 }
+        - obj:
+            id: track_list
+            x: 100
+            y: 186
+            width: 824
+            height: 380
+            styles: st_glass
+            scrollable: true
+            pad_all: 8
+            layout:
+              type: flex
+              flex_flow: COLUMN
+              flex_align_main: start
+            widgets:
+              - button:
+                  id: sng_0
+                  width: 808
+                  height: 44
+                  bg_opa: 0
+                  pad_all: 4
+                  hidden: true
+                  widgets: [label: { id: sng_lbl_0, text: "", align: left_mid, text_font: f_body, text_color: $c_text }]
+                  on_click:
+                    - homeassistant.action:
+                        action: script.aurora_spotify_play_track
+                        data:
+                          context_uri: !lambda 'return id(g_cur_pl_uri);'
+                          position: "0"
+              - button:
+                  id: sng_1
+                  width: 808
+                  height: 44
+                  bg_opa: 0
+                  pad_all: 4
+                  hidden: true
+                  widgets: [label: { id: sng_lbl_1, text: "", align: left_mid, text_font: f_body, text_color: $c_text }]
+                  on_click:
+                    - homeassistant.action:
+                        action: script.aurora_spotify_play_track
+                        data:
+                          context_uri: !lambda 'return id(g_cur_pl_uri);'
+                          position: "1"
+              - button:
+                  id: sng_2
+                  width: 808
+                  height: 44
+                  bg_opa: 0
+                  pad_all: 4
+                  hidden: true
+                  widgets: [label: { id: sng_lbl_2, text: "", align: left_mid, text_font: f_body, text_color: $c_text }]
+                  on_click:
+                    - homeassistant.action:
+                        action: script.aurora_spotify_play_track
+                        data:
+                          context_uri: !lambda 'return id(g_cur_pl_uri);'
+                          position: "2"
+              - button:
+                  id: sng_3
+                  width: 808
+                  height: 44
+                  bg_opa: 0
+                  pad_all: 4
+                  hidden: true
+                  widgets: [label: { id: sng_lbl_3, text: "", align: left_mid, text_font: f_body, text_color: $c_text }]
+                  on_click:
+                    - homeassistant.action:
+                        action: script.aurora_spotify_play_track
+                        data:
+                          context_uri: !lambda 'return id(g_cur_pl_uri);'
+                          position: "3"
+              - button:
+                  id: sng_4
+                  width: 808
+                  height: 44
+                  bg_opa: 0
+                  pad_all: 4
+                  hidden: true
+                  widgets: [label: { id: sng_lbl_4, text: "", align: left_mid, text_font: f_body, text_color: $c_text }]
+                  on_click:
+                    - homeassistant.action:
+                        action: script.aurora_spotify_play_track
+                        data:
+                          context_uri: !lambda 'return id(g_cur_pl_uri);'
+                          position: "4"
+              - button:
+                  id: sng_5
+                  width: 808
+                  height: 44
+                  bg_opa: 0
+                  pad_all: 4
+                  hidden: true
+                  widgets: [label: { id: sng_lbl_5, text: "", align: left_mid, text_font: f_body, text_color: $c_text }]
+                  on_click:
+                    - homeassistant.action:
+                        action: script.aurora_spotify_play_track
+                        data:
+                          context_uri: !lambda 'return id(g_cur_pl_uri);'
+                          position: "5"
+              - button:
+                  id: sng_6
+                  width: 808
+                  height: 44
+                  bg_opa: 0
+                  pad_all: 4
+                  hidden: true
+                  widgets: [label: { id: sng_lbl_6, text: "", align: left_mid, text_font: f_body, text_color: $c_text }]
+                  on_click:
+                    - homeassistant.action:
+                        action: script.aurora_spotify_play_track
+                        data:
+                          context_uri: !lambda 'return id(g_cur_pl_uri);'
+                          position: "6"
+              - button:
+                  id: sng_7
+                  width: 808
+                  height: 44
+                  bg_opa: 0
+                  pad_all: 4
+                  hidden: true
+                  widgets: [label: { id: sng_lbl_7, text: "", align: left_mid, text_font: f_body, text_color: $c_text }]
+                  on_click:
+                    - homeassistant.action:
+                        action: script.aurora_spotify_play_track
+                        data:
+                          context_uri: !lambda 'return id(g_cur_pl_uri);'
+                          position: "7"
+              - button:
+                  id: sng_8
+                  width: 808
+                  height: 44
+                  bg_opa: 0
+                  pad_all: 4
+                  hidden: true
+                  widgets: [label: { id: sng_lbl_8, text: "", align: left_mid, text_font: f_body, text_color: $c_text }]
+                  on_click:
+                    - homeassistant.action:
+                        action: script.aurora_spotify_play_track
+                        data:
+                          context_uri: !lambda 'return id(g_cur_pl_uri);'
+                          position: "8"
+              - button:
+                  id: sng_9
+                  width: 808
+                  height: 44
+                  bg_opa: 0
+                  pad_all: 4
+                  hidden: true
+                  widgets: [label: { id: sng_lbl_9, text: "", align: left_mid, text_font: f_body, text_color: $c_text }]
+                  on_click:
+                    - homeassistant.action:
+                        action: script.aurora_spotify_play_track
+                        data:
+                          context_uri: !lambda 'return id(g_cur_pl_uri);'
+                          position: "9"
+              - button:
+                  id: sng_10
+                  width: 808
+                  height: 44
+                  bg_opa: 0
+                  pad_all: 4
+                  hidden: true
+                  widgets: [label: { id: sng_lbl_10, text: "", align: left_mid, text_font: f_body, text_color: $c_text }]
+                  on_click:
+                    - homeassistant.action:
+                        action: script.aurora_spotify_play_track
+                        data:
+                          context_uri: !lambda 'return id(g_cur_pl_uri);'
+                          position: "10"
+              - button:
+                  id: sng_11
+                  width: 808
+                  height: 44
+                  bg_opa: 0
+                  pad_all: 4
+                  hidden: true
+                  widgets: [label: { id: sng_lbl_11, text: "", align: left_mid, text_font: f_body, text_color: $c_text }]
+                  on_click:
+                    - homeassistant.action:
+                        action: script.aurora_spotify_play_track
+                        data:
+                          context_uri: !lambda 'return id(g_cur_pl_uri);'
+                          position: "11"
+              - button:
+                  id: sng_12
+                  width: 808
+                  height: 44
+                  bg_opa: 0
+                  pad_all: 4
+                  hidden: true
+                  widgets: [label: { id: sng_lbl_12, text: "", align: left_mid, text_font: f_body, text_color: $c_text }]
+                  on_click:
+                    - homeassistant.action:
+                        action: script.aurora_spotify_play_track
+                        data:
+                          context_uri: !lambda 'return id(g_cur_pl_uri);'
+                          position: "12"
+              - button:
+                  id: sng_13
+                  width: 808
+                  height: 44
+                  bg_opa: 0
+                  pad_all: 4
+                  hidden: true
+                  widgets: [label: { id: sng_lbl_13, text: "", align: left_mid, text_font: f_body, text_color: $c_text }]
+                  on_click:
+                    - homeassistant.action:
+                        action: script.aurora_spotify_play_track
+                        data:
+                          context_uri: !lambda 'return id(g_cur_pl_uri);'
+                          position: "13"
+              - button:
+                  id: sng_14
+                  width: 808
+                  height: 44
+                  bg_opa: 0
+                  pad_all: 4
+                  hidden: true
+                  widgets: [label: { id: sng_lbl_14, text: "", align: left_mid, text_font: f_body, text_color: $c_text }]
+                  on_click:
+                    - homeassistant.action:
+                        action: script.aurora_spotify_play_track
+                        data:
+                          context_uri: !lambda 'return id(g_cur_pl_uri);'
+                          position: "14"
+              - button:
+                  id: sng_15
+                  width: 808
+                  height: 44
+                  bg_opa: 0
+                  pad_all: 4
+                  hidden: true
+                  widgets: [label: { id: sng_lbl_15, text: "", align: left_mid, text_font: f_body, text_color: $c_text }]
+                  on_click:
+                    - homeassistant.action:
+                        action: script.aurora_spotify_play_track
+                        data:
+                          context_uri: !lambda 'return id(g_cur_pl_uri);'
+                          position: "15"
+              - button:
+                  id: sng_16
+                  width: 808
+                  height: 44
+                  bg_opa: 0
+                  pad_all: 4
+                  hidden: true
+                  widgets: [label: { id: sng_lbl_16, text: "", align: left_mid, text_font: f_body, text_color: $c_text }]
+                  on_click:
+                    - homeassistant.action:
+                        action: script.aurora_spotify_play_track
+                        data:
+                          context_uri: !lambda 'return id(g_cur_pl_uri);'
+                          position: "16"
+              - button:
+                  id: sng_17
+                  width: 808
+                  height: 44
+                  bg_opa: 0
+                  pad_all: 4
+                  hidden: true
+                  widgets: [label: { id: sng_lbl_17, text: "", align: left_mid, text_font: f_body, text_color: $c_text }]
+                  on_click:
+                    - homeassistant.action:
+                        action: script.aurora_spotify_play_track
+                        data:
+                          context_uri: !lambda 'return id(g_cur_pl_uri);'
+                          position: "17"
+              - button:
+                  id: sng_18
+                  width: 808
+                  height: 44
+                  bg_opa: 0
+                  pad_all: 4
+                  hidden: true
+                  widgets: [label: { id: sng_lbl_18, text: "", align: left_mid, text_font: f_body, text_color: $c_text }]
+                  on_click:
+                    - homeassistant.action:
+                        action: script.aurora_spotify_play_track
+                        data:
+                          context_uri: !lambda 'return id(g_cur_pl_uri);'
+                          position: "18"
+              - button:
+                  id: sng_19
+                  width: 808
+                  height: 44
+                  bg_opa: 0
+                  pad_all: 4
+                  hidden: true
+                  widgets: [label: { id: sng_lbl_19, text: "", align: left_mid, text_font: f_body, text_color: $c_text }]
+                  on_click:
+                    - homeassistant.action:
+                        action: script.aurora_spotify_play_track
+                        data:
+                          context_uri: !lambda 'return id(g_cur_pl_uri);'
+                          position: "19"
+              - button:
+                  id: sng_20
+                  width: 808
+                  height: 44
+                  bg_opa: 0
+                  pad_all: 4
+                  hidden: true
+                  widgets: [label: { id: sng_lbl_20, text: "", align: left_mid, text_font: f_body, text_color: $c_text }]
+                  on_click:
+                    - homeassistant.action:
+                        action: script.aurora_spotify_play_track
+                        data:
+                          context_uri: !lambda 'return id(g_cur_pl_uri);'
+                          position: "20"
+              - button:
+                  id: sng_21
+                  width: 808
+                  height: 44
+                  bg_opa: 0
+                  pad_all: 4
+                  hidden: true
+                  widgets: [label: { id: sng_lbl_21, text: "", align: left_mid, text_font: f_body, text_color: $c_text }]
+                  on_click:
+                    - homeassistant.action:
+                        action: script.aurora_spotify_play_track
+                        data:
+                          context_uri: !lambda 'return id(g_cur_pl_uri);'
+                          position: "21"
+              - button:
+                  id: sng_22
+                  width: 808
+                  height: 44
+                  bg_opa: 0
+                  pad_all: 4
+                  hidden: true
+                  widgets: [label: { id: sng_lbl_22, text: "", align: left_mid, text_font: f_body, text_color: $c_text }]
+                  on_click:
+                    - homeassistant.action:
+                        action: script.aurora_spotify_play_track
+                        data:
+                          context_uri: !lambda 'return id(g_cur_pl_uri);'
+                          position: "22"
+              - button:
+                  id: sng_23
+                  width: 808
+                  height: 44
+                  bg_opa: 0
+                  pad_all: 4
+                  hidden: true
+                  widgets: [label: { id: sng_lbl_23, text: "", align: left_mid, text_font: f_body, text_color: $c_text }]
+                  on_click:
+                    - homeassistant.action:
+                        action: script.aurora_spotify_play_track
+                        data:
+                          context_uri: !lambda 'return id(g_cur_pl_uri);'
+                          position: "23"
+              - button:
+                  id: sng_24
+                  width: 808
+                  height: 44
+                  bg_opa: 0
+                  pad_all: 4
+                  hidden: true
+                  widgets: [label: { id: sng_lbl_24, text: "", align: left_mid, text_font: f_body, text_color: $c_text }]
+                  on_click:
+                    - homeassistant.action:
+                        action: script.aurora_spotify_play_track
+                        data:
+                          context_uri: !lambda 'return id(g_cur_pl_uri);'
+                          position: "24"
+              - button:
+                  id: sng_25
+                  width: 808
+                  height: 44
+                  bg_opa: 0
+                  pad_all: 4
+                  hidden: true
+                  widgets: [label: { id: sng_lbl_25, text: "", align: left_mid, text_font: f_body, text_color: $c_text }]
+                  on_click:
+                    - homeassistant.action:
+                        action: script.aurora_spotify_play_track
+                        data:
+                          context_uri: !lambda 'return id(g_cur_pl_uri);'
+                          position: "25"
+              - button:
+                  id: sng_26
+                  width: 808
+                  height: 44
+                  bg_opa: 0
+                  pad_all: 4
+                  hidden: true
+                  widgets: [label: { id: sng_lbl_26, text: "", align: left_mid, text_font: f_body, text_color: $c_text }]
+                  on_click:
+                    - homeassistant.action:
+                        action: script.aurora_spotify_play_track
+                        data:
+                          context_uri: !lambda 'return id(g_cur_pl_uri);'
+                          position: "26"
+              - button:
+                  id: sng_27
+                  width: 808
+                  height: 44
+                  bg_opa: 0
+                  pad_all: 4
+                  hidden: true
+                  widgets: [label: { id: sng_lbl_27, text: "", align: left_mid, text_font: f_body, text_color: $c_text }]
+                  on_click:
+                    - homeassistant.action:
+                        action: script.aurora_spotify_play_track
+                        data:
+                          context_uri: !lambda 'return id(g_cur_pl_uri);'
+                          position: "27"
+              - button:
+                  id: sng_28
+                  width: 808
+                  height: 44
+                  bg_opa: 0
+                  pad_all: 4
+                  hidden: true
+                  widgets: [label: { id: sng_lbl_28, text: "", align: left_mid, text_font: f_body, text_color: $c_text }]
+                  on_click:
+                    - homeassistant.action:
+                        action: script.aurora_spotify_play_track
+                        data:
+                          context_uri: !lambda 'return id(g_cur_pl_uri);'
+                          position: "28"
+              - button:
+                  id: sng_29
+                  width: 808
+                  height: 44
+                  bg_opa: 0
+                  pad_all: 4
+                  hidden: true
+                  widgets: [label: { id: sng_lbl_29, text: "", align: left_mid, text_font: f_body, text_color: $c_text }]
+                  on_click:
+                    - homeassistant.action:
+                        action: script.aurora_spotify_play_track
+                        data:
+                          context_uri: !lambda 'return id(g_cur_pl_uri);'
+                          position: "29"
+              - button:
+                  id: sng_30
+                  width: 808
+                  height: 44
+                  bg_opa: 0
+                  pad_all: 4
+                  hidden: true
+                  widgets: [label: { id: sng_lbl_30, text: "", align: left_mid, text_font: f_body, text_color: $c_text }]
+                  on_click:
+                    - homeassistant.action:
+                        action: script.aurora_spotify_play_track
+                        data:
+                          context_uri: !lambda 'return id(g_cur_pl_uri);'
+                          position: "30"
+              - button:
+                  id: sng_31
+                  width: 808
+                  height: 44
+                  bg_opa: 0
+                  pad_all: 4
+                  hidden: true
+                  widgets: [label: { id: sng_lbl_31, text: "", align: left_mid, text_font: f_body, text_color: $c_text }]
+                  on_click:
+                    - homeassistant.action:
+                        action: script.aurora_spotify_play_track
+                        data:
+                          context_uri: !lambda 'return id(g_cur_pl_uri);'
+                          position: "31"
+              - button:
+                  id: sng_32
+                  width: 808
+                  height: 44
+                  bg_opa: 0
+                  pad_all: 4
+                  hidden: true
+                  widgets: [label: { id: sng_lbl_32, text: "", align: left_mid, text_font: f_body, text_color: $c_text }]
+                  on_click:
+                    - homeassistant.action:
+                        action: script.aurora_spotify_play_track
+                        data:
+                          context_uri: !lambda 'return id(g_cur_pl_uri);'
+                          position: "32"
+              - button:
+                  id: sng_33
+                  width: 808
+                  height: 44
+                  bg_opa: 0
+                  pad_all: 4
+                  hidden: true
+                  widgets: [label: { id: sng_lbl_33, text: "", align: left_mid, text_font: f_body, text_color: $c_text }]
+                  on_click:
+                    - homeassistant.action:
+                        action: script.aurora_spotify_play_track
+                        data:
+                          context_uri: !lambda 'return id(g_cur_pl_uri);'
+                          position: "33"
+              - button:
+                  id: sng_34
+                  width: 808
+                  height: 44
+                  bg_opa: 0
+                  pad_all: 4
+                  hidden: true
+                  widgets: [label: { id: sng_lbl_34, text: "", align: left_mid, text_font: f_body, text_color: $c_text }]
+                  on_click:
+                    - homeassistant.action:
+                        action: script.aurora_spotify_play_track
+                        data:
+                          context_uri: !lambda 'return id(g_cur_pl_uri);'
+                          position: "34"
+              - button:
+                  id: sng_35
+                  width: 808
+                  height: 44
+                  bg_opa: 0
+                  pad_all: 4
+                  hidden: true
+                  widgets: [label: { id: sng_lbl_35, text: "", align: left_mid, text_font: f_body, text_color: $c_text }]
+                  on_click:
+                    - homeassistant.action:
+                        action: script.aurora_spotify_play_track
+                        data:
+                          context_uri: !lambda 'return id(g_cur_pl_uri);'
+                          position: "35"
+              - button:
+                  id: sng_36
+                  width: 808
+                  height: 44
+                  bg_opa: 0
+                  pad_all: 4
+                  hidden: true
+                  widgets: [label: { id: sng_lbl_36, text: "", align: left_mid, text_font: f_body, text_color: $c_text }]
+                  on_click:
+                    - homeassistant.action:
+                        action: script.aurora_spotify_play_track
+                        data:
+                          context_uri: !lambda 'return id(g_cur_pl_uri);'
+                          position: "36"
+              - button:
+                  id: sng_37
+                  width: 808
+                  height: 44
+                  bg_opa: 0
+                  pad_all: 4
+                  hidden: true
+                  widgets: [label: { id: sng_lbl_37, text: "", align: left_mid, text_font: f_body, text_color: $c_text }]
+                  on_click:
+                    - homeassistant.action:
+                        action: script.aurora_spotify_play_track
+                        data:
+                          context_uri: !lambda 'return id(g_cur_pl_uri);'
+                          position: "37"
+              - button:
+                  id: sng_38
+                  width: 808
+                  height: 44
+                  bg_opa: 0
+                  pad_all: 4
+                  hidden: true
+                  widgets: [label: { id: sng_lbl_38, text: "", align: left_mid, text_font: f_body, text_color: $c_text }]
+                  on_click:
+                    - homeassistant.action:
+                        action: script.aurora_spotify_play_track
+                        data:
+                          context_uri: !lambda 'return id(g_cur_pl_uri);'
+                          position: "38"
+              - button:
+                  id: sng_39
+                  width: 808
+                  height: 44
+                  bg_opa: 0
+                  pad_all: 4
+                  hidden: true
+                  widgets: [label: { id: sng_lbl_39, text: "", align: left_mid, text_font: f_body, text_color: $c_text }]
+                  on_click:
+                    - homeassistant.action:
+                        action: script.aurora_spotify_play_track
+                        data:
+                          context_uri: !lambda 'return id(g_cur_pl_uri);'
+                          position: "39"
+              - button:
+                  id: sng_40
+                  width: 808
+                  height: 44
+                  bg_opa: 0
+                  pad_all: 4
+                  hidden: true
+                  widgets: [label: { id: sng_lbl_40, text: "", align: left_mid, text_font: f_body, text_color: $c_text }]
+                  on_click:
+                    - homeassistant.action:
+                        action: script.aurora_spotify_play_track
+                        data:
+                          context_uri: !lambda 'return id(g_cur_pl_uri);'
+                          position: "40"
+              - button:
+                  id: sng_41
+                  width: 808
+                  height: 44
+                  bg_opa: 0
+                  pad_all: 4
+                  hidden: true
+                  widgets: [label: { id: sng_lbl_41, text: "", align: left_mid, text_font: f_body, text_color: $c_text }]
+                  on_click:
+                    - homeassistant.action:
+                        action: script.aurora_spotify_play_track
+                        data:
+                          context_uri: !lambda 'return id(g_cur_pl_uri);'
+                          position: "41"
+              - button:
+                  id: sng_42
+                  width: 808
+                  height: 44
+                  bg_opa: 0
+                  pad_all: 4
+                  hidden: true
+                  widgets: [label: { id: sng_lbl_42, text: "", align: left_mid, text_font: f_body, text_color: $c_text }]
+                  on_click:
+                    - homeassistant.action:
+                        action: script.aurora_spotify_play_track
+                        data:
+                          context_uri: !lambda 'return id(g_cur_pl_uri);'
+                          position: "42"
+              - button:
+                  id: sng_43
+                  width: 808
+                  height: 44
+                  bg_opa: 0
+                  pad_all: 4
+                  hidden: true
+                  widgets: [label: { id: sng_lbl_43, text: "", align: left_mid, text_font: f_body, text_color: $c_text }]
+                  on_click:
+                    - homeassistant.action:
+                        action: script.aurora_spotify_play_track
+                        data:
+                          context_uri: !lambda 'return id(g_cur_pl_uri);'
+                          position: "43"
+              - button:
+                  id: sng_44
+                  width: 808
+                  height: 44
+                  bg_opa: 0
+                  pad_all: 4
+                  hidden: true
+                  widgets: [label: { id: sng_lbl_44, text: "", align: left_mid, text_font: f_body, text_color: $c_text }]
+                  on_click:
+                    - homeassistant.action:
+                        action: script.aurora_spotify_play_track
+                        data:
+                          context_uri: !lambda 'return id(g_cur_pl_uri);'
+                          position: "44"
+              - button:
+                  id: sng_45
+                  width: 808
+                  height: 44
+                  bg_opa: 0
+                  pad_all: 4
+                  hidden: true
+                  widgets: [label: { id: sng_lbl_45, text: "", align: left_mid, text_font: f_body, text_color: $c_text }]
+                  on_click:
+                    - homeassistant.action:
+                        action: script.aurora_spotify_play_track
+                        data:
+                          context_uri: !lambda 'return id(g_cur_pl_uri);'
+                          position: "45"
+              - button:
+                  id: sng_46
+                  width: 808
+                  height: 44
+                  bg_opa: 0
+                  pad_all: 4
+                  hidden: true
+                  widgets: [label: { id: sng_lbl_46, text: "", align: left_mid, text_font: f_body, text_color: $c_text }]
+                  on_click:
+                    - homeassistant.action:
+                        action: script.aurora_spotify_play_track
+                        data:
+                          context_uri: !lambda 'return id(g_cur_pl_uri);'
+                          position: "46"
+              - button:
+                  id: sng_47
+                  width: 808
+                  height: 44
+                  bg_opa: 0
+                  pad_all: 4
+                  hidden: true
+                  widgets: [label: { id: sng_lbl_47, text: "", align: left_mid, text_font: f_body, text_color: $c_text }]
+                  on_click:
+                    - homeassistant.action:
+                        action: script.aurora_spotify_play_track
+                        data:
+                          context_uri: !lambda 'return id(g_cur_pl_uri);'
+                          position: "47"
+              - button:
+                  id: sng_48
+                  width: 808
+                  height: 44
+                  bg_opa: 0
+                  pad_all: 4
+                  hidden: true
+                  widgets: [label: { id: sng_lbl_48, text: "", align: left_mid, text_font: f_body, text_color: $c_text }]
+                  on_click:
+                    - homeassistant.action:
+                        action: script.aurora_spotify_play_track
+                        data:
+                          context_uri: !lambda 'return id(g_cur_pl_uri);'
+                          position: "48"
+              - button:
+                  id: sng_49
+                  width: 808
+                  height: 44
+                  bg_opa: 0
+                  pad_all: 4
+                  hidden: true
+                  widgets: [label: { id: sng_lbl_49, text: "", align: left_mid, text_font: f_body, text_color: $c_text }]
+                  on_click:
+                    - homeassistant.action:
+                        action: script.aurora_spotify_play_track
+                        data:
+                          context_uri: !lambda 'return id(g_cur_pl_uri);'
+                          position: "49"
