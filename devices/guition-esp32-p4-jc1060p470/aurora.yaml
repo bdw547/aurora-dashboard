@@ -3471,9 +3471,9 @@ lvgl:
               - label: { text: "DISPLAY BRIGHTNESS", x: 4, y: 0, text_font: f_small, text_color: 0x8A8F9E }
               - slider:
                   id: sld_brightness
-                  x: 4
-                  y: 52
-                  width: 784
+                  x: 0
+                  y: 48
+                  width: 776
                   min_value: 5
                   max_value: 100
                   value: 80
@@ -3484,19 +3484,19 @@ lvgl:
                     - lambda: 'id(g_bri) = (int) x;'
         - obj:
             x: 96
-            y: 216
+            y: 210
             width: 816
-            height: 116
+            height: 150
             styles: st_glass
             scrollable: false
             widgets:
-              - label: { text: "SCREEN TIMEOUT", x: 4, y: 0, text_font: f_small, text_color: 0x8A8F9E }
+              - label: { text: "SCREEN TIMEOUT", x: 0, y: 0, text_font: f_small, text_color: 0x8A8F9E }
               - button:
                   id: to_never
-                  x: 4
-                  y: 46
-                  width: 188
-                  height: 54
+                  x: 0
+                  y: 44
+                  width: 182
+                  height: 60
                   bg_color: 0x2ED5B8
                   scrollable: false
                   widgets: [label: { text: "Never", align: center, text_font: f_body, text_color: 0x08090D }]
@@ -3508,10 +3508,10 @@ lvgl:
                     - lvgl.widget.update: { id: to_15, bg_color: 0x161B24 }
               - button:
                   id: to_1
-                  x: 204
-                  y: 46
-                  width: 188
-                  height: 54
+                  x: 198
+                  y: 44
+                  width: 182
+                  height: 60
                   bg_color: 0x161B24
                   scrollable: false
                   widgets: [label: { text: "1 min", align: center, text_font: f_body, text_color: 0xEEF0F6 }]
@@ -3523,10 +3523,10 @@ lvgl:
                     - lvgl.widget.update: { id: to_15, bg_color: 0x161B24 }
               - button:
                   id: to_5
-                  x: 404
-                  y: 46
-                  width: 188
-                  height: 54
+                  x: 396
+                  y: 44
+                  width: 182
+                  height: 60
                   bg_color: 0x161B24
                   scrollable: false
                   widgets: [label: { text: "5 min", align: center, text_font: f_body, text_color: 0xEEF0F6 }]
@@ -3538,10 +3538,10 @@ lvgl:
                     - lvgl.widget.update: { id: to_15, bg_color: 0x161B24 }
               - button:
                   id: to_15
-                  x: 604
-                  y: 46
-                  width: 188
-                  height: 54
+                  x: 594
+                  y: 44
+                  width: 182
+                  height: 60
                   bg_color: 0x161B24
                   scrollable: false
                   widgets: [label: { text: "15 min", align: center, text_font: f_body, text_color: 0xEEF0F6 }]
@@ -3553,7 +3553,7 @@ lvgl:
                     - lvgl.widget.update: { id: to_15, bg_color: 0x2ED5B8 }
         - obj:
             x: 96
-            y: 348
+            y: 380
             width: 400
             height: 92
             styles: st_glass
@@ -3568,7 +3568,7 @@ lvgl:
                     - lambda: 'id(g_wake_presence) = x;'
         - obj:
             x: 512
-            y: 348
+            y: 380
             width: 400
             height: 92
             styles: st_glass
