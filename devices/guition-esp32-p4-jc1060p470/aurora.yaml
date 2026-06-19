@@ -1231,7 +1231,7 @@ lvgl:
             widgets:
               - label: { id: lbl_clock, text: "--:--", text_font: f_display, text_color: 0xEEF0F6 }
               - label: { id: lbl_ampm, text: "", text_font: f_title, text_color: 0x8A8F9E, pad_bottom: 8 }
-        - label: { id: lbl_greeting, text: "Welcome home, Ben", x: 100, y: 86, text_font: f_body, text_color: 0x8A8F9E }
+        - label: { id: lbl_greeting, text: "Welcome home, Ben", x: 100, y: 70, text_font: f_body, text_color: 0x8A8F9E }
         - obj:
             x: 600
             y: 24
@@ -1267,7 +1267,7 @@ lvgl:
               - label: { text: "Secured", x: 46, align: left_mid, text_font: f_small, text_color: 0xEEF0F6 }
         - obj:
             x: 96
-            y: 124
+            y: 104
             width: 300
             height: 452
             styles: st_glass
@@ -1316,7 +1316,7 @@ lvgl:
                     - homeassistant.action: { action: media_player.media_next_track, data: { entity_id: media_player.spotifyplus_ben_walton } }
         - obj:
             x: 412
-            y: 124
+            y: 104
             width: 288
             height: 218
             styles: st_glass
@@ -1330,7 +1330,7 @@ lvgl:
               - label: { text: "Outdoor", x: 4, y: 168, text_font: f_small, text_color: 0x8A8F9E }
         - obj:
             x: 716
-            y: 124
+            y: 104
             width: 288
             height: 218
             styles: st_glass
@@ -1343,7 +1343,7 @@ lvgl:
               - label: { text: "Tap to control", x: 8, y: 170, text_font: f_small, text_color: 0x8A8F9E }
         - obj:
             x: 412
-            y: 358
+            y: 338
             width: 288
             height: 218
             styles: st_glass
@@ -1360,7 +1360,7 @@ lvgl:
               - label: { id: lbl_home_presence2, text: "--", x: -4, y: 134, align: top_right, text_font: f_body, text_color: 0x2ED5B8 }
         - obj:
             x: 716
-            y: 358
+            y: 338
             width: 288
             height: 218
             styles: st_glass
