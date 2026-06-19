@@ -154,7 +154,7 @@ font:
   # Material Design Icons (v7.4.47) — nav, transport, controls
   - file: 'https://github.com/Templarian/MaterialDesign-Webfont/raw/v7.4.47/fonts/materialdesignicons-webfont.ttf'
     id: f_icon
-    size: 26
+    size: 30
     bpp: 4
     glyphs:
       - "\U000F02DC"  # home
@@ -325,46 +325,46 @@ lvgl:
           widgets:
             - button:
                 align: top_mid
-                y: 70
-                width: 46
-                height: 46
+                y: 54
+                width: 60
+                height: 60
                 widgets: [label: { text: "󰋜", align: center, text_font: f_icon, text_color: $c_text } ]
                 on_click: [lvgl.page.show: page_home]
             - button:
                 align: top_mid
                 y: 124
-                width: 46
-                height: 46
+                width: 60
+                height: 60
                 bg_grad_color: $c_purple
                 bg_color: $c_teal
                 widgets: [label: { text: "󰌵", align: center, text_font: f_icon, text_color: $c_bg } ]
                 on_click: [lvgl.page.show: page_lights]
             - button:
                 align: top_mid
-                y: 178
-                width: 46
-                height: 46
+                y: 194
+                width: 60
+                height: 60
                 widgets: [label: { text: "󰎓", align: center, text_font: f_icon, text_color: $c_text } ]
                 on_click: [lvgl.page.show: page_climate]
             - button:
                 align: top_mid
-                y: 232
-                width: 46
-                height: 46
+                y: 264
+                width: 60
+                height: 60
                 widgets: [label: { text: "󰝚", align: center, text_font: f_icon, text_color: $c_text } ]
                 on_click: [lvgl.page.show: page_media]
             - button:
                 align: top_mid
-                y: 286
-                width: 46
-                height: 46
+                y: 334
+                width: 60
+                height: 60
                 widgets: [label: { text: "󰚊", align: center, text_font: f_icon, text_color: $c_text } ]
                 on_click: [lvgl.page.show: page_security]
             - button:
                 align: top_mid
-                y: 340
-                width: 46
-                height: 46
+                y: 404
+                width: 60
+                height: 60
                 widgets: [label: { text: "󰤨", align: center, text_font: f_icon, text_color: $c_text } ]
                 on_click: [lvgl.page.show: page_network]
       - label:
@@ -396,7 +396,7 @@ lvgl:
         - obj:
             styles: st_glass
             x: 100
-            y: 100
+            y: 124
             width: 280
             height: 150
             widgets:
