@@ -523,6 +523,20 @@ text_sensor:
               if (!r.empty()) r[0] = toupper(r[0]);
               return r;
   - platform: homeassistant
+    id: ha_spotify_source
+    entity_id: media_player.spotifyplus_ben_walton
+    attribute: source
+    on_value:
+      then:
+        - lvgl.widget.update: { id: src_btn_dining, bg_color: !lambda 'return x == std::string("Dining Room") ? lv_color_hex(0x2ED5B8) : lv_color_hex(0x161B24);' }
+        - lvgl.widget.update: { id: src_btn_gameroom, bg_color: !lambda 'return x == std::string("Gameroom") ? lv_color_hex(0x2ED5B8) : lv_color_hex(0x161B24);' }
+        - lvgl.widget.update: { id: src_btn_johnwick, bg_color: !lambda 'return x == std::string("JOHN-WICK") ? lv_color_hex(0x2ED5B8) : lv_color_hex(0x161B24);' }
+        - lvgl.widget.update: { id: src_btn_kitchen, bg_color: !lambda 'return x == std::string("Kitchen") ? lv_color_hex(0x2ED5B8) : lv_color_hex(0x161B24);' }
+        - lvgl.widget.update: { id: src_btn_living, bg_color: !lambda 'return x == std::string("Living Room") ? lv_color_hex(0x2ED5B8) : lv_color_hex(0x161B24);' }
+        - lvgl.widget.update: { id: src_btn_office, bg_color: !lambda 'return x == std::string("Office") ? lv_color_hex(0x2ED5B8) : lv_color_hex(0x161B24);' }
+        - lvgl.widget.update: { id: src_btn_patio, bg_color: !lambda 'return x == std::string("Patio") ? lv_color_hex(0x2ED5B8) : lv_color_hex(0x161B24);' }
+        - lvgl.widget.update: { id: src_btn_roku, bg_color: !lambda 'return x == std::string("Roku Ultra") ? lv_color_hex(0x2ED5B8) : lv_color_hex(0x161B24);' }
+  - platform: homeassistant
     id: ha_media_title
     entity_id: media_player.spotifyplus_ben_walton
     attribute: media_title
@@ -1464,35 +1478,96 @@ lvgl:
                           entity_id: media_player.spotifyplus_ben_walton
                           volume_level: !lambda 'char b[8]; snprintf(b, sizeof(b), "%.2f", x / 100.0f); return std::string(b);'
 
-        # Speaker zones
-        - label: { text: "SPEAKERS", x: 560, y: 70, text_font: f_small, text_color: $c_text2 }
+        # Spotify source selector (room playback target)
+        - label: { text: "PLAY ON", x: 560, y: 70, text_font: f_small, text_color: $c_text2 }
         - button:
+            id: src_btn_dining
             x: 560
-            y: 92
-            width: 200
-            height: 44
+            y: 96
+            width: 210
+            height: 48
             styles: st_glass
-            pad_all: 10
-            widgets: [label: { text: "Living Room", align: left_mid, text_font: f_body, text_color: $c_text } ]
-            on_click: [homeassistant.action: { action: media_player.media_play_pause, data: { entity_id: media_player.living_room } } ]
+            bg_color: 0x161B24
+            pad_all: 6
+            widgets: [label: { text: "Dining Room", align: center, text_font: f_body, text_color: $c_text } ]
+            on_click: [homeassistant.action: { action: media_player.select_source, data: { entity_id: media_player.spotifyplus_ben_walton, source: "Dining Room" } } ]
         - button:
-            x: 560
-            y: 144
-            width: 200
-            height: 44
+            id: src_btn_gameroom
+            x: 786
+            y: 96
+            width: 210
+            height: 48
             styles: st_glass
-            pad_all: 10
-            widgets: [label: { text: "Kitchen", align: left_mid, text_font: f_body, text_color: $c_text } ]
-            on_click: [homeassistant.action: { action: media_player.media_play_pause, data: { entity_id: media_player.kitchen } } ]
+            bg_color: 0x161B24
+            pad_all: 6
+            widgets: [label: { text: "Gameroom", align: center, text_font: f_body, text_color: $c_text } ]
+            on_click: [homeassistant.action: { action: media_player.select_source, data: { entity_id: media_player.spotifyplus_ben_walton, source: "Gameroom" } } ]
         - button:
+            id: src_btn_johnwick
             x: 560
-            y: 196
-            width: 200
-            height: 44
+            y: 156
+            width: 210
+            height: 48
             styles: st_glass
-            pad_all: 10
-            widgets: [label: { text: "Dining (Juke)", align: left_mid, text_font: f_body, text_color: $c_text } ]
-            on_click: [homeassistant.action: { action: media_player.media_play_pause, data: { entity_id: media_player.living_room_juke_audio_dining_room_zone } } ]
+            bg_color: 0x161B24
+            pad_all: 6
+            widgets: [label: { text: "JOHN-WICK", align: center, text_font: f_body, text_color: $c_text } ]
+            on_click: [homeassistant.action: { action: media_player.select_source, data: { entity_id: media_player.spotifyplus_ben_walton, source: "JOHN-WICK" } } ]
+        - button:
+            id: src_btn_kitchen
+            x: 786
+            y: 156
+            width: 210
+            height: 48
+            styles: st_glass
+            bg_color: 0x161B24
+            pad_all: 6
+            widgets: [label: { text: "Kitchen", align: center, text_font: f_body, text_color: $c_text } ]
+            on_click: [homeassistant.action: { action: media_player.select_source, data: { entity_id: media_player.spotifyplus_ben_walton, source: "Kitchen" } } ]
+        - button:
+            id: src_btn_living
+            x: 560
+            y: 216
+            width: 210
+            height: 48
+            styles: st_glass
+            bg_color: 0x161B24
+            pad_all: 6
+            widgets: [label: { text: "Living Room", align: center, text_font: f_body, text_color: $c_text } ]
+            on_click: [homeassistant.action: { action: media_player.select_source, data: { entity_id: media_player.spotifyplus_ben_walton, source: "Living Room" } } ]
+        - button:
+            id: src_btn_office
+            x: 786
+            y: 216
+            width: 210
+            height: 48
+            styles: st_glass
+            bg_color: 0x161B24
+            pad_all: 6
+            widgets: [label: { text: "Office", align: center, text_font: f_body, text_color: $c_text } ]
+            on_click: [homeassistant.action: { action: media_player.select_source, data: { entity_id: media_player.spotifyplus_ben_walton, source: "Office" } } ]
+        - button:
+            id: src_btn_patio
+            x: 560
+            y: 276
+            width: 210
+            height: 48
+            styles: st_glass
+            bg_color: 0x161B24
+            pad_all: 6
+            widgets: [label: { text: "Patio", align: center, text_font: f_body, text_color: $c_text } ]
+            on_click: [homeassistant.action: { action: media_player.select_source, data: { entity_id: media_player.spotifyplus_ben_walton, source: "Patio" } } ]
+        - button:
+            id: src_btn_roku
+            x: 786
+            y: 276
+            width: 210
+            height: 48
+            styles: st_glass
+            bg_color: 0x161B24
+            pad_all: 6
+            widgets: [label: { text: "Roku Ultra", align: center, text_font: f_body, text_color: $c_text } ]
+            on_click: [homeassistant.action: { action: media_player.select_source, data: { entity_id: media_player.spotifyplus_ben_walton, source: "Roku Ultra" } } ]
 
     # ---------- SECURITY (locks + presence; real entities) ----------
     - id: page_security
