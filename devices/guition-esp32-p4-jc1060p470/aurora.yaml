@@ -131,6 +131,25 @@ display:
     auto_clear_enabled: false
 
 # --- Assets ---
+http_request:
+  verify_ssl: false
+  timeout: 15s
+
+online_image:
+  - id: art_image
+    url: "https://i.scdn.co/image/ab67616d0000b273000000000000000000000000.jpg"
+    format: JPEG
+    type: RGB565
+    resize: 120x120
+    update_interval: never
+    on_download_finished:
+      - logger.log: "ART: download finished"
+      - lvgl.image.update:
+          id: lbl_np_art
+          src: art_image
+    on_error:
+      - logger.log: "ART: download error"
+
 image:
   - id: img_aurora_bg
     file: ../../aurora-build/assets/aurora_bg_1024x600.png
@@ -552,6 +571,19 @@ text_sensor:
       then:
         - lvgl.label.update: { id: lbl_np_artist, text: !lambda 'return x;' }
         - lvgl.label.update: { id: lbl_home_np_artist, text: !lambda 'return x;' }
+  - platform: homeassistant
+    id: ha_art_url
+    entity_id: media_player.spotifyplus_ben_walton
+    attribute: sp_nowplaying_image_url
+    on_value:
+      then:
+        - logger.log:
+            format: "ART url=%s"
+            args: ['x.c_str()']
+        - online_image.set_url:
+            id: art_image
+            url: !lambda 'return x;'
+        - component.update: art_image
   - platform: homeassistant
     id: ha_presence
     entity_id: person.ben
@@ -1433,6 +1465,7 @@ lvgl:
             styles: st_glass
             widgets:
               - obj: { x: 4, y: 4, width: 120, height: 120, radius: 16, bg_color: $c_purple, border_width: 0 }
+              - image: { id: lbl_np_art, src: art_image, x: 4, y: 4 }
               - label: { id: lbl_np_title, text: "Nothing playing", x: 138, y: 14, text_font: f_title, text_color: $c_text }
               - label: { id: lbl_np_artist, text: "", x: 138, y: 50, text_font: f_body, text_color: $c_text2 }
               - button:
