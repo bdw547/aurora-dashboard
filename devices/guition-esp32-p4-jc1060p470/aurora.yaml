@@ -1215,35 +1215,38 @@ lvgl:
       widgets:
         - image: { src: img_aurora_bg, x: 0, y: 0 }
         - label: { id: lbl_clock, text: "--:--", x: 96, y: 8, text_font: f_display, text_color: 0xEEF0F6 }
-        - label: { id: lbl_ampm, text: "", x: 250, y: 42, text_font: f_title, text_color: 0x8A8F9E }
-        - label: { id: lbl_greeting, text: "Welcome home, Ben", x: 100, y: 84, text_font: f_body, text_color: 0x8A8F9E }
+        - label: { id: lbl_ampm, text: "", x: 252, y: 42, text_font: f_title, text_color: 0x8A8F9E }
+        - label: { id: lbl_greeting, text: "Welcome home, Ben", x: 100, y: 86, text_font: f_body, text_color: 0x8A8F9E }
         - obj:
             x: 600
-            y: 22
+            y: 24
             width: 150
             height: 40
             styles: st_glass
             pad_all: 0
+            scrollable: false
             widgets:
               - label: { text: "\U000F0599", x: 12, align: left_mid, text_font: f_icon, text_color: 0xFFCE54 }
-              - label: { id: lbl_home_temp, text: "--", x: 48, align: left_mid, text_font: f_body, text_color: 0xEEF0F6 }
+              - label: { id: lbl_home_temp, text: "--", x: 50, align: left_mid, text_font: f_body, text_color: 0xEEF0F6 }
         - obj:
-            x: 758
-            y: 22
+            x: 760
+            y: 24
             width: 118
             height: 40
             styles: st_glass
             pad_all: 0
+            scrollable: false
             widgets:
-              - obj: { x: 14, align: left_mid, width: 8, height: 8, radius: 4, bg_color: 0x2ED5B8, border_width: 0 }
+              - obj: { x: 14, align: left_mid, width: 8, height: 8, radius: 4, bg_color: 0x2ED5B8, border_width: 0, scrollable: false }
               - label: { id: lbl_home_presence, text: "--", x: 30, align: left_mid, text_font: f_small, text_color: 0xEEF0F6 }
         - obj:
-            x: 884
-            y: 22
-            width: 130
+            x: 888
+            y: 24
+            width: 126
             height: 40
             styles: st_glass
             pad_all: 0
+            scrollable: false
             widgets:
               - label: { text: "\U000F033E", x: 12, align: left_mid, text_font: f_icon, text_color: 0x2ED5B8 }
               - label: { text: "Secured", x: 46, align: left_mid, text_font: f_small, text_color: 0xEEF0F6 }
@@ -1254,41 +1257,45 @@ lvgl:
             height: 452
             styles: st_glass
             pad_all: 0
+            scrollable: false
             clickable: true
             on_click: [lvgl.page.show: page_media]
             widgets:
-              - obj: { x: 18, y: 22, width: 8, height: 8, radius: 4, bg_color: 0x2ED5B8, border_width: 0 }
-              - label: { text: "PLAYING", x: 34, y: 16, text_font: f_small, text_color: 0x2ED5B8 }
-              - obj: { x: 20, y: 44, width: 260, height: 260, radius: 16, bg_color: 0x7B6CFF, border_width: 0 }
-              - image: { id: lbl_home_art, src: art_big, x: 20, y: 44 }
-              - label: { id: lbl_home_np, text: "Nothing playing", x: 20, y: 316, width: 264, long_mode: dot, text_font: f_title, text_color: 0xEEF0F6 }
-              - label: { id: lbl_home_np_artist, text: "", x: 20, y: 350, width: 264, long_mode: dot, text_font: f_body, text_color: 0x8A8F9E }
+              - obj: { x: 20, y: 22, width: 8, height: 8, radius: 4, bg_color: 0x2ED5B8, border_width: 0, scrollable: false }
+              - label: { text: "PLAYING", x: 36, y: 16, text_font: f_small, text_color: 0x2ED5B8 }
+              - obj: { x: 26, y: 44, width: 248, height: 248, radius: 16, bg_color: 0x7B6CFF, border_width: 0, scrollable: false }
+              - image: { id: lbl_home_art, src: art_big, x: 26, y: 44 }
+              - label: { id: lbl_home_np, text: "Nothing playing", x: 26, y: 302, width: 248, long_mode: dot, text_font: f_title, text_color: 0xEEF0F6 }
+              - label: { id: lbl_home_np_artist, text: "", x: 26, y: 334, width: 248, long_mode: dot, text_font: f_body, text_color: 0x8A8F9E }
               - button:
-                  x: 40
-                  y: 394
-                  width: 50
-                  height: 50
+                  x: 50
+                  y: 374
+                  width: 48
+                  height: 48
                   bg_color: 0x161B24
+                  scrollable: false
                   widgets: [label: { text: "\U000F04AE", align: center, text_font: f_icon, text_color: 0xEEF0F6 }]
                   on_click:
                     - homeassistant.action: { action: media_player.media_previous_track, data: { entity_id: media_player.spotifyplus_ben_walton } }
               - button:
                   x: 118
-                  y: 386
+                  y: 366
                   width: 64
                   height: 64
                   radius: 32
                   bg_color: 0x2ED5B8
                   bg_grad_color: 0x7B6CFF
+                  scrollable: false
                   widgets: [label: { id: ic_home_playpause, text: "\U000F040A", align: center, text_font: f_icon, text_color: 0x08090D }]
                   on_click:
                     - homeassistant.action: { action: media_player.media_play_pause, data: { entity_id: media_player.spotifyplus_ben_walton } }
               - button:
-                  x: 210
-                  y: 394
-                  width: 50
-                  height: 50
+                  x: 202
+                  y: 374
+                  width: 48
+                  height: 48
                   bg_color: 0x161B24
+                  scrollable: false
                   widgets: [label: { text: "\U000F04AD", align: center, text_font: f_icon, text_color: 0xEEF0F6 }]
                   on_click:
                     - homeassistant.action: { action: media_player.media_next_track, data: { entity_id: media_player.spotifyplus_ben_walton } }
@@ -1298,41 +1305,44 @@ lvgl:
             width: 288
             height: 218
             styles: st_glass
+            scrollable: false
             clickable: true
             on_click: [lvgl.page.show: page_climate]
             widgets:
               - label: { text: "CLIMATE", x: 4, y: 2, text_font: f_small, text_color: 0x8A8F9E }
-              - label: { id: lbl_home_temp_big, text: "--", x: 2, y: 44, text_font: f_display, text_color: 0xEEF0F6 }
-              - label: { id: lbl_home_cond, text: "--", x: 4, y: 132, text_font: f_body, text_color: 0x2ED5B8 }
-              - label: { text: "Outdoor", x: 4, y: 162, text_font: f_small, text_color: 0x8A8F9E }
+              - label: { id: lbl_home_temp_big, text: "--", x: 2, y: 46, text_font: f_display, text_color: 0xEEF0F6 }
+              - label: { id: lbl_home_cond, text: "--", x: 4, y: 138, text_font: f_body, text_color: 0x2ED5B8 }
+              - label: { text: "Outdoor", x: 4, y: 168, text_font: f_small, text_color: 0x8A8F9E }
         - obj:
             x: 716
             y: 124
             width: 288
             height: 218
             styles: st_glass
+            scrollable: false
             clickable: true
             on_click: [lvgl.page.show: page_lights]
             widgets:
               - label: { text: "\U000F0335", x: 8, y: 8, text_font: f_icon, text_color: 0xFFCE54 }
-              - label: { text: "Lights", x: 48, y: 14, text_font: f_title, text_color: 0xEEF0F6 }
-              - label: { text: "Tap to control", x: 8, y: 168, text_font: f_small, text_color: 0x8A8F9E }
+              - label: { text: "Lights", x: 50, y: 16, text_font: f_title, text_color: 0xEEF0F6 }
+              - label: { text: "Tap to control", x: 8, y: 170, text_font: f_small, text_color: 0x8A8F9E }
         - obj:
             x: 412
             y: 358
             width: 288
             height: 218
             styles: st_glass
+            scrollable: false
             clickable: true
             on_click: [lvgl.page.show: page_security]
             widgets:
               - label: { text: "DOORS & SENSORS", x: 4, y: 2, text_font: f_small, text_color: 0x8A8F9E }
-              - label: { text: "Front Door", x: 4, y: 48, text_font: f_body, text_color: 0xEEF0F6 }
-              - label: { id: lbl_home_lock_front, text: "--", x: 4, y: 48, align: top_right, text_font: f_body, text_color: 0x8A8F9E }
-              - label: { text: "Back Door", x: 4, y: 90, text_font: f_body, text_color: 0xEEF0F6 }
-              - label: { id: lbl_home_lock_back, text: "--", x: 4, y: 90, align: top_right, text_font: f_body, text_color: 0x8A8F9E }
-              - label: { text: "Presence", x: 4, y: 132, text_font: f_body, text_color: 0xEEF0F6 }
-              - label: { id: lbl_home_presence2, text: "--", x: 4, y: 132, align: top_right, text_font: f_body, text_color: 0x2ED5B8 }
+              - label: { text: "Front Door", x: 4, y: 50, text_font: f_body, text_color: 0xEEF0F6 }
+              - label: { id: lbl_home_lock_front, text: "--", x: -4, y: 50, align: top_right, text_font: f_body, text_color: 0x8A8F9E }
+              - label: { text: "Back Door", x: 4, y: 92, text_font: f_body, text_color: 0xEEF0F6 }
+              - label: { id: lbl_home_lock_back, text: "--", x: -4, y: 92, align: top_right, text_font: f_body, text_color: 0x8A8F9E }
+              - label: { text: "Presence", x: 4, y: 134, text_font: f_body, text_color: 0xEEF0F6 }
+              - label: { id: lbl_home_presence2, text: "--", x: -4, y: 134, align: top_right, text_font: f_body, text_color: 0x2ED5B8 }
         - obj:
             x: 716
             y: 358
@@ -1340,38 +1350,43 @@ lvgl:
             height: 218
             styles: st_glass
             pad_all: 12
+            scrollable: false
             widgets:
-              - label: { text: "QUICK", x: 4, y: 0, text_font: f_small, text_color: 0x8A8F9E }
+              - label: { text: "QUICK", x: 2, y: 0, text_font: f_small, text_color: 0x8A8F9E }
               - button:
                   x: 0
-                  y: 28
+                  y: 30
                   width: 122
-                  height: 64
+                  height: 62
                   bg_color: 0x161B24
+                  scrollable: false
                   widgets: [label: { text: "Rooms", align: center, text_font: f_body, text_color: 0xEEF0F6 }]
                   on_click: [lvgl.page.show: page_rooms]
               - button:
                   x: 132
-                  y: 28
+                  y: 30
                   width: 122
-                  height: 64
+                  height: 62
                   bg_color: 0x161B24
+                  scrollable: false
                   widgets: [label: { text: "Media", align: center, text_font: f_body, text_color: 0xEEF0F6 }]
                   on_click: [lvgl.page.show: page_media]
               - button:
                   x: 0
-                  y: 100
+                  y: 102
                   width: 122
-                  height: 64
+                  height: 62
                   bg_color: 0x161B24
+                  scrollable: false
                   widgets: [label: { text: "Network", align: center, text_font: f_body, text_color: 0xEEF0F6 }]
                   on_click: [lvgl.page.show: page_network]
               - button:
                   x: 132
-                  y: 100
+                  y: 102
                   width: 122
-                  height: 64
+                  height: 62
                   bg_color: 0x161B24
+                  scrollable: false
                   widgets: [label: { text: "Library", align: center, text_font: f_body, text_color: 0xEEF0F6 }]
                   on_click: [lvgl.page.show: page_library]
     - id: page_lights
