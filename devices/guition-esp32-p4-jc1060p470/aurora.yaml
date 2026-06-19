@@ -232,7 +232,7 @@ font:
 sensor:
   - platform: homeassistant
     id: ha_media_volume
-    entity_id: media_player.living_room
+    entity_id: media_player.spotifyplus_ben_walton
     attribute: volume_level
     on_value:
       then:
@@ -524,7 +524,7 @@ text_sensor:
               return r;
   - platform: homeassistant
     id: ha_media_title
-    entity_id: media_player.living_room
+    entity_id: media_player.spotifyplus_ben_walton
     attribute: media_title
     on_value:
       then:
@@ -532,7 +532,7 @@ text_sensor:
         - lvgl.label.update: { id: lbl_home_np, text: !lambda 'return x.empty() ? std::string("Nothing playing") : x;' }
   - platform: homeassistant
     id: ha_media_artist
-    entity_id: media_player.living_room
+    entity_id: media_player.spotifyplus_ben_walton
     attribute: media_artist
     on_value:
       then:
@@ -1410,7 +1410,7 @@ lvgl:
         - image: { src: img_aurora_bg, x: 0, y: 0 }
         - label: { text: "Listening", x: 100, y: 26, text_font: f_title, text_color: $c_text }
 
-        # Now-playing card (Sonos: media_player.living_room)
+        # Now-playing card (SpotifyPlus: media_player.spotifyplus_ben_walton)
         - obj:
             x: 96
             y: 70
@@ -1429,7 +1429,7 @@ lvgl:
                   height: 48
                   widgets: [label: { text: "󰒮", align: center, text_font: f_icon, text_color: $c_text } ]
                   on_click:
-                    - homeassistant.action: { action: media_player.media_previous_track, data: { entity_id: media_player.living_room } }
+                    - homeassistant.action: { action: media_player.media_previous_track, data: { entity_id: media_player.spotifyplus_ben_walton } }
               - button:
                   align: bottom_mid
                   y: -60
@@ -1439,7 +1439,7 @@ lvgl:
                   bg_grad_color: $c_purple
                   widgets: [label: { text: "󰐊", align: center, text_font: f_icon, text_color: $c_bg } ]
                   on_click:
-                    - homeassistant.action: { action: media_player.media_play_pause, data: { entity_id: media_player.living_room } }
+                    - homeassistant.action: { action: media_player.media_play_pause, data: { entity_id: media_player.spotifyplus_ben_walton } }
               - button:
                   align: bottom_right
                   x: 0
@@ -1448,7 +1448,7 @@ lvgl:
                   height: 48
                   widgets: [label: { text: "󰒭", align: center, text_font: f_icon, text_color: $c_text } ]
                   on_click:
-                    - homeassistant.action: { action: media_player.media_next_track, data: { entity_id: media_player.living_room } }
+                    - homeassistant.action: { action: media_player.media_next_track, data: { entity_id: media_player.spotifyplus_ben_walton } }
               - slider:
                   id: sld_vol
                   align: bottom_mid
@@ -1461,7 +1461,7 @@ lvgl:
                     - homeassistant.action:
                         action: media_player.volume_set
                         data:
-                          entity_id: media_player.living_room
+                          entity_id: media_player.spotifyplus_ben_walton
                           volume_level: !lambda 'char b[8]; snprintf(b, sizeof(b), "%.2f", x / 100.0f); return std::string(b);'
 
         # Speaker zones
@@ -1493,73 +1493,6 @@ lvgl:
             pad_all: 10
             widgets: [label: { text: "Dining (Juke)", align: left_mid, text_font: f_body, text_color: $c_text } ]
             on_click: [homeassistant.action: { action: media_player.media_play_pause, data: { entity_id: media_player.living_room_juke_audio_dining_room_zone } } ]
-
-        # webOS TV remote (media_player.lg_g3_living_room_2)
-        - label: { text: "LG G3 OLED", x: 790, y: 70, text_font: f_small, text_color: $c_text2 }
-        - button:
-            x: 880
-            y: 150
-            width: 60
-            height: 48
-            styles: st_glass
-            widgets: [label: { text: "󰅃", align: center, text_font: f_icon, text_color: $c_text } ]
-            on_click: [homeassistant.action: { action: webostv.button, data: { entity_id: media_player.lg_g3_living_room_2, button: UP } } ]
-        - button:
-            x: 810
-            y: 206
-            width: 60
-            height: 48
-            styles: st_glass
-            widgets: [label: { text: "󰅁", align: center, text_font: f_icon, text_color: $c_text } ]
-            on_click: [homeassistant.action: { action: webostv.button, data: { entity_id: media_player.lg_g3_living_room_2, button: LEFT } } ]
-        - button:
-            x: 880
-            y: 206
-            width: 60
-            height: 48
-            bg_color: $c_teal
-            widgets: [label: { text: "OK", align: center, text_font: f_body, text_color: $c_bg } ]
-            on_click: [homeassistant.action: { action: webostv.button, data: { entity_id: media_player.lg_g3_living_room_2, button: ENTER } } ]
-        - button:
-            x: 950
-            y: 206
-            width: 60
-            height: 48
-            styles: st_glass
-            widgets: [label: { text: "󰅂", align: center, text_font: f_icon, text_color: $c_text } ]
-            on_click: [homeassistant.action: { action: webostv.button, data: { entity_id: media_player.lg_g3_living_room_2, button: RIGHT } } ]
-        - button:
-            x: 880
-            y: 262
-            width: 60
-            height: 48
-            styles: st_glass
-            widgets: [label: { text: "󰅀", align: center, text_font: f_icon, text_color: $c_text } ]
-            on_click: [homeassistant.action: { action: webostv.button, data: { entity_id: media_player.lg_g3_living_room_2, button: DOWN } } ]
-        - button:
-            x: 810
-            y: 330
-            width: 90
-            height: 44
-            styles: st_glass
-            widgets: [label: { text: "VOL -", align: center, text_font: f_body, text_color: $c_text } ]
-            on_click: [homeassistant.action: { action: media_player.volume_down, data: { entity_id: media_player.lg_g3_living_room_2 } } ]
-        - button:
-            x: 920
-            y: 330
-            width: 90
-            height: 44
-            styles: st_glass
-            widgets: [label: { text: "VOL +", align: center, text_font: f_body, text_color: $c_text } ]
-            on_click: [homeassistant.action: { action: media_player.volume_up, data: { entity_id: media_player.lg_g3_living_room_2 } } ]
-        - button:
-            x: 810
-            y: 384
-            width: 200
-            height: 44
-            styles: st_glass
-            widgets: [label: { text: "Netflix", align: center, text_font: f_body, text_color: $c_text } ]
-            on_click: [homeassistant.action: { action: media_player.select_source, data: { entity_id: media_player.lg_g3_living_room_2, source: "Netflix" } } ]
 
     # ---------- SECURITY (locks + presence; real entities) ----------
     - id: page_security
@@ -1774,6 +1707,74 @@ lvgl:
                   auto_start: false
               - label: { text: "Ceiling Fan", x: 14, y: 86, text_font: f_body, text_color: 0xEEF0F6 }
             on_click: [homeassistant.action: { action: fan.toggle, data: { entity_id: fan.living_room_pendant } }]
+        # ---------- LG G3 OLED remote (moved from Media) ----------
+        # webOS TV remote (media_player.lg_g3_living_room_2)
+        - label: { text: "LG G3 OLED", x: 790, y: 70, text_font: f_small, text_color: $c_text2 }
+        - button:
+            x: 880
+            y: 150
+            width: 60
+            height: 48
+            styles: st_glass
+            widgets: [label: { text: "󰅃", align: center, text_font: f_icon, text_color: $c_text } ]
+            on_click: [homeassistant.action: { action: webostv.button, data: { entity_id: media_player.lg_g3_living_room_2, button: UP } } ]
+        - button:
+            x: 810
+            y: 206
+            width: 60
+            height: 48
+            styles: st_glass
+            widgets: [label: { text: "󰅁", align: center, text_font: f_icon, text_color: $c_text } ]
+            on_click: [homeassistant.action: { action: webostv.button, data: { entity_id: media_player.lg_g3_living_room_2, button: LEFT } } ]
+        - button:
+            x: 880
+            y: 206
+            width: 60
+            height: 48
+            bg_color: $c_teal
+            widgets: [label: { text: "OK", align: center, text_font: f_body, text_color: $c_bg } ]
+            on_click: [homeassistant.action: { action: webostv.button, data: { entity_id: media_player.lg_g3_living_room_2, button: ENTER } } ]
+        - button:
+            x: 950
+            y: 206
+            width: 60
+            height: 48
+            styles: st_glass
+            widgets: [label: { text: "󰅂", align: center, text_font: f_icon, text_color: $c_text } ]
+            on_click: [homeassistant.action: { action: webostv.button, data: { entity_id: media_player.lg_g3_living_room_2, button: RIGHT } } ]
+        - button:
+            x: 880
+            y: 262
+            width: 60
+            height: 48
+            styles: st_glass
+            widgets: [label: { text: "󰅀", align: center, text_font: f_icon, text_color: $c_text } ]
+            on_click: [homeassistant.action: { action: webostv.button, data: { entity_id: media_player.lg_g3_living_room_2, button: DOWN } } ]
+        - button:
+            x: 810
+            y: 330
+            width: 90
+            height: 44
+            styles: st_glass
+            widgets: [label: { text: "VOL -", align: center, text_font: f_body, text_color: $c_text } ]
+            on_click: [homeassistant.action: { action: media_player.volume_down, data: { entity_id: media_player.lg_g3_living_room_2 } } ]
+        - button:
+            x: 920
+            y: 330
+            width: 90
+            height: 44
+            styles: st_glass
+            widgets: [label: { text: "VOL +", align: center, text_font: f_body, text_color: $c_text } ]
+            on_click: [homeassistant.action: { action: media_player.volume_up, data: { entity_id: media_player.lg_g3_living_room_2 } } ]
+        - button:
+            x: 810
+            y: 384
+            width: 200
+            height: 44
+            styles: st_glass
+            widgets: [label: { text: "Netflix", align: center, text_font: f_body, text_color: $c_text } ]
+            on_click: [homeassistant.action: { action: media_player.select_source, data: { entity_id: media_player.lg_g3_living_room_2, source: "Netflix" } } ]
+
     - id: page_room_kitchen
       bg_opa: 0
       on_load:
