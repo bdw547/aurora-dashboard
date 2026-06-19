@@ -60,7 +60,7 @@ script:
           sort_result: true
         response_variable: pl
       - variables:
-          items: "{{ pl.result.items if (pl.result is defined and pl.result.items is defined) else pl.result }}"
+          items: "{{ pl.result['items'] }}"
       - event: aurora_spotify_playlists_updated
         event_data:
           names: "{{ items | map(attribute='name') | list }}"
@@ -82,7 +82,7 @@ script:
           limit_total: 50
         response_variable: tr
       - variables:
-          items: "{{ tr.result.items if (tr.result is defined and tr.result.items is defined) else tr.result }}"
+          items: "{{ tr.result['items'] }}"
       - event: aurora_spotify_tracks_updated
         event_data:
           names: >-
