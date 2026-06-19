@@ -254,6 +254,26 @@ sensor:
             id: lbl_home_temp
             text: !lambda |-
               char b[16]; snprintf(b, sizeof(b), "%.0f°", x); return std::string(b);
+  - platform: homeassistant
+    id: ha_outdoor_humidity
+    entity_id: weather.forecast_home
+    attribute: humidity
+    on_value:
+      then:
+        - lvgl.label.update:
+            id: lbl_clim_humidity
+            text: !lambda |-
+              char b[16]; snprintf(b, sizeof(b), "%.0f%%", x); return std::string(b);
+  - platform: homeassistant
+    id: ha_outdoor_wind
+    entity_id: weather.forecast_home
+    attribute: wind_speed
+    on_value:
+      then:
+        - lvgl.label.update:
+            id: lbl_clim_wind
+            text: !lambda |-
+              char b[24]; snprintf(b, sizeof(b), "%.0f mph", x); return std::string(b);
   - platform: wifi_signal
     id: panel_rssi
     update_interval: 30s
@@ -490,6 +510,18 @@ sensor:
             id: sld_room_exterior_light_outdoor_patio_back_porch_lights
             value: !lambda 'return (x == x) ? (int) roundf(x / 2.55f) : 0;'
 text_sensor:
+  - platform: homeassistant
+    id: ha_outdoor_condition
+    entity_id: weather.forecast_home
+    on_value:
+      then:
+        - lvgl.label.update:
+            id: lbl_clim_condition
+            text: !lambda |-
+              std::string r = x;
+              for (size_t i = 0; i < r.size(); i++) { if (r[i] == '-' || r[i] == '_') r[i] = ' '; }
+              if (!r.empty()) r[0] = toupper(r[0]);
+              return r;
   - platform: homeassistant
     id: ha_media_title
     entity_id: media_player.living_room
@@ -1062,6 +1094,18 @@ lvgl:
               - label: { text: "\U000F068A", align: top_mid, y: 24, text_font: f_icon, text_color: 0x2ED5B8 }
               - label: { text: "Security", align: bottom_mid, y: -18, text_font: f_small, text_color: 0xEEF0F6 }
             on_click: [lvgl.page.show: page_security]
+        - obj:
+            x: 700
+            y: 286
+            width: 130
+            height: 130
+            styles: st_glass
+            pad_all: 0
+            clickable: true
+            widgets:
+              - label: { text: "󰒹", align: top_mid, y: 24, text_font: f_icon, text_color: 0x2ED5B8 }
+              - label: { text: "Rooms", align: bottom_mid, y: -18, text_font: f_small, text_color: 0xEEF0F6 }
+            on_click: [lvgl.page.show: page_rooms]
     - id: page_lights
       bg_opa: 0
       on_load:
@@ -1319,16 +1363,35 @@ lvgl:
       widgets:
         - image: { src: img_aurora_bg, x: 0, y: 0 }
         - label: { text: "Climate", x: 100, y: 26, text_font: f_title, text_color: $c_text }
-        - label: { text: "Read-only · outdoor from weather", x: 100, y: 60, text_font: f_small, text_color: $c_text2 }
+        - label: { text: "Outdoor conditions · weather.forecast_home", x: 100, y: 60, text_font: f_small, text_color: $c_text2 }
         - obj:
-            x: 100
-            y: 110
-            width: 360
-            height: 200
+            x: 96
+            y: 100
+            width: 400
+            height: 330
             styles: st_glass
             widgets:
-              - label: { text: "OUTDOOR", x: 4, y: 0, text_font: f_small, text_color: $c_text2 }
-              - label: { id: lbl_outdoor, text: "--", align: center, text_font: f_display, text_color: $c_text }
+              - label: { text: "OUTDOOR", x: 6, y: 4, text_font: f_small, text_color: $c_text2 }
+              - label: { id: lbl_clim_condition, text: "--", x: 6, y: 28, text_font: f_body, text_color: $c_teal }
+              - label: { id: lbl_outdoor, text: "--", align: center, y: 20, text_font: f_display, text_color: $c_text }
+        - obj:
+            x: 512
+            y: 100
+            width: 360
+            height: 156
+            styles: st_glass
+            widgets:
+              - label: { text: "HUMIDITY", x: 6, y: 4, text_font: f_small, text_color: $c_text2 }
+              - label: { id: lbl_clim_humidity, text: "--", align: center, text_font: f_display, text_color: $c_text }
+        - obj:
+            x: 512
+            y: 274
+            width: 360
+            height: 156
+            styles: st_glass
+            widgets:
+              - label: { text: "WIND", x: 6, y: 4, text_font: f_small, text_color: $c_text2 }
+              - label: { id: lbl_clim_wind, text: "--", align: center, text_font: f_display, text_color: $c_text }
 
     # ---------- MEDIA (Sonos now-playing + zones + webOS TV remote) ----------
     # NOTE: zone buttons call media_play_pause per room for v1; real Sonos
@@ -1463,7 +1526,7 @@ lvgl:
             width: 60
             height: 48
             styles: st_glass
-            widgets: [label: { text: "󰐊", align: center, text_font: f_icon, text_color: $c_text } ]
+            widgets: [label: { text: "󰅂", align: center, text_font: f_icon, text_color: $c_text } ]
             on_click: [homeassistant.action: { action: webostv.button, data: { entity_id: media_player.lg_g3_living_room_2, button: RIGHT } } ]
         - button:
             x: 880
