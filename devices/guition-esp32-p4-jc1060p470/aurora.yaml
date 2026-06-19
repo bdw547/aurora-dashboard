@@ -202,6 +202,35 @@ sensor:
             id: sld_vol
             value: !lambda 'return x * 100.0f;'
 
+  - platform: homeassistant
+    id: ha_outdoor_temp
+    entity_id: weather.forecast_home
+    attribute: temperature
+    on_value:
+      then:
+        - lvgl.label.update:
+            id: lbl_outdoor
+            text: !lambda |-
+              char b[16]; snprintf(b, sizeof(b), "%.0f°", x); return std::string(b);
+  - platform: wifi_signal
+    id: panel_rssi
+    update_interval: 30s
+    on_value:
+      then:
+        - lvgl.label.update:
+            id: lbl_wifi_signal
+            text: !lambda |-
+              char b[16]; snprintf(b, sizeof(b), "%.0f dBm", x); return std::string(b);
+  - platform: homeassistant
+    id: ha_nas_used
+    entity_id: sensor.walton_synology_volume_1_volume_used
+    on_value:
+      then:
+        - lvgl.label.update:
+            id: lbl_nas_used
+            text: !lambda |-
+              char b[28]; snprintf(b, sizeof(b), "Storage %.0f%% used", x); return std::string(b);
+
 text_sensor:
   - platform: homeassistant
     id: ha_lr_state
@@ -255,6 +284,13 @@ text_sensor:
           - lvgl.label.update:
               id: lbl_ssid
               text: !lambda 'return x.empty() ? std::string("no network") : x;'
+
+  - platform: homeassistant
+    id: ha_nas_status
+    entity_id: sensor.walton_synology_volume_1_status
+    on_value:
+      then:
+        - lvgl.label.update: { id: lbl_nas_status, text: !lambda 'return x;' }
 
 lvgl:
   id: main_lvgl
@@ -537,7 +573,16 @@ lvgl:
       widgets:
         - image: { src: img_aurora_bg, x: 0, y: 0 }
         - label: { text: "Climate", x: 100, y: 26, text_font: f_title, text_color: $c_text }
-        - label: { text: "No thermostat entity in HA yet", x: 100, y: 60, text_font: f_small, text_color: $c_text2 }
+        - label: { text: "Read-only · outdoor from weather", x: 100, y: 60, text_font: f_small, text_color: $c_text2 }
+        - obj:
+            x: 100
+            y: 110
+            width: 360
+            height: 200
+            styles: st_glass
+            widgets:
+              - label: { text: "OUTDOOR", x: 4, y: 0, text_font: f_small, text_color: $c_text2 }
+              - label: { id: lbl_outdoor, text: "--", align: center, text_font: f_display, text_color: $c_text }
 
     # ---------- MEDIA (Sonos now-playing + zones + webOS TV remote) ----------
     # NOTE: zone buttons call media_play_pause per room for v1; real Sonos
@@ -773,4 +818,22 @@ lvgl:
       widgets:
         - image: { src: img_aurora_bg, x: 0, y: 0 }
         - label: { text: "Network", x: 100, y: 26, text_font: f_title, text_color: $c_text }
-        - label: { text: "UniFi + Synology stats (next)", x: 100, y: 60, text_font: f_small, text_color: $c_text2 }
+        - obj:
+            x: 100
+            y: 80
+            width: 380
+            height: 90
+            styles: st_glass
+            widgets:
+              - label: { text: "THIS PANEL", x: 4, y: 0, text_font: f_small, text_color: $c_text2 }
+              - label: { id: lbl_wifi_signal, text: "-- dBm", x: 4, y: 30, text_font: f_title, text_color: $c_teal }
+        - obj:
+            x: 100
+            y: 186
+            width: 380
+            height: 120
+            styles: st_glass
+            widgets:
+              - label: { text: "SYNOLOGY", x: 4, y: 0, text_font: f_small, text_color: $c_text2 }
+              - label: { id: lbl_nas_status, text: "--", x: 4, y: 28, text_font: f_body, text_color: $c_text }
+              - label: { id: lbl_nas_used, text: "Storage -- used", x: 4, y: 54, text_font: f_body, text_color: $c_text2 }
