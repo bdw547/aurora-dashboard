@@ -1,0 +1,22 @@
+# =============================================================================
+# DEV CONFIG - Local development entry point (4" S3 square panel)
+# =============================================================================
+# Flash with: esphome run dev.yaml
+# =============================================================================
+
+substitutions:
+  name: "espcontrol-4inch-s3"
+  friendly_name: "EspControl 4inch S3"
+  espcontrol_component_url: "../.."
+  espcontrol_component_ref: "HEAD"
+
+wifi:
+  ssid: !secret wifi_ssid
+  password: !secret wifi_password
+
+packages:
+  espcontrol: !include packages.yaml
+
+web_server:
+  js_url: ""
+  js_include: "../../docs/public/webserver/guition-esp32-s3-4848s040/www.js"

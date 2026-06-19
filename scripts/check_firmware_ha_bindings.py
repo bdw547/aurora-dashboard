@@ -1,0 +1,3305 @@
+#!/usr/bin/env python3
+"""Guard firmware Home Assistant access behind button_grid_ha.h helpers."""
+
+from __future__ import annotations
+
+import argparse
+import json
+import re
+from pathlib import Path
+from tempfile import TemporaryDirectory
+
+
+ROOT = Path(__file__).resolve().parents[1]
+FIRMWARE_DIR = ROOT / "components" / "espcontrol"
+CORE_INFRA_PATH = ROOT / "common" / "device" / "core_infra.yaml"
+API_NAVIGATE_PATH = ROOT / "common" / "device" / "api_navigate.yaml"
+COVER_ART_PATH = ROOT / "common" / "device" / "screen_cover_art.yaml"
+ARTWORK_IMAGE_PATH = ROOT / "components" / "artwork_image" / "artwork_image.cpp"
+BACKLIGHT_PATH = ROOT / "common" / "addon" / "backlight.yaml"
+TIME_ADDON_PATH = ROOT / "common" / "addon" / "time.yaml"
+SUN_CALC_PATH = ROOT / "components" / "espcontrol" / "sun_calc.h"
+S3_DEVICE_PATH = ROOT / "devices" / "guition-esp32-s3-4848s040" / "device" / "device.yaml"
+S3_PACKAGES_PATH = ROOT / "devices" / "guition-esp32-s3-4848s040" / "packages.yaml"
+DEVICE_DEVICE_PATHS = tuple(sorted((ROOT / "devices").glob("*/device/device.yaml")))
+DEVICE_PACKAGE_PATHS = tuple(sorted((ROOT / "devices").glob("*/packages.yaml")))
+CONNECTIVITY_PATHS = (
+    ROOT / "common" / "addon" / "connectivity.yaml",
+    ROOT / "common" / "addon" / "connectivity_deployed.yaml",
+    ROOT / "common" / "addon" / "connectivity_ethernet.yaml",
+)
+
+
+def package_api_navigate_enabled(package_path: Path, root: Path) -> bool:
+    manifest_path = root / "devices" / "manifest.json"
+    if not manifest_path.exists():
+        return True
+    try:
+        slug = package_path.relative_to(root / "devices").parts[0]
+    except (ValueError, IndexError):
+        return True
+    try:
+        manifest = json.loads(manifest_path.read_text(encoding="utf-8"))
+    except json.JSONDecodeError:
+        return True
+    device = manifest.get("devices", {}).get(slug, {})
+    package = device.get("firmware", {}).get("package", {})
+    return bool(package.get("apiNavigateAction", True))
+
+
+HA_BOUNDARY_ALLOWLIST = {
+    "button_grid_ha.h",
+}
+DIRECT_HA_PATTERNS = (
+    (re.compile(r"\bglobal_api_server\b"), "access Home Assistant API through button_grid_ha.h helpers"),
+    (re.compile(r"->send_homeassistant_action\s*\("), "send Home Assistant actions through button_grid_ha.h helpers"),
+    (re.compile(r"->subscribe_home_assistant_state\s*\("), "subscribe to Home Assistant state through button_grid_ha.h helpers"),
+    (re.compile(r"->get_home_assistant_state\s*\("), "get Home Assistant state through button_grid_ha.h helpers"),
+    (re.compile(r"->register_action_response_callback\s*\("), "register action callbacks through button_grid_ha.h helpers"),
+)
+STATE_HELPER_PATTERN = re.compile(
+    r"inline\s+bool\s+ha_subscribe_state\s*\([^)]*\)\s*\{(?P<body>.*?)\n\}",
+    re.DOTALL,
+)
+ATTRIBUTE_HELPER_PATTERN = re.compile(
+    r"inline\s+bool\s+ha_subscribe_attribute\s*\([^)]*\)\s*\{(?P<body>.*?)\n\}",
+    re.DOTALL,
+)
+TODO_GET_ITEMS_HELPER_PATTERN = re.compile(
+    r"inline\s+bool\s+todo_begin_get_items_request\s*\([^)]*\)\s*\{(?P<body>.*?)\n\}",
+    re.DOTALL,
+)
+WEATHER_FORECAST_REQUEST_PATTERN = re.compile(
+    r"inline\s+void\s+request_weather_forecast_entity\s*\([^)]*\)\s*\{(?P<body>.*?)\n\}",
+    re.DOTALL,
+)
+COVER_COMMAND_REQUEST_PATTERN = re.compile(
+    r"inline\s+void\s+send_cover_command_action\s*\([^)]*\)\s*\{(?P<body>.*?)\n\}",
+    re.DOTALL,
+)
+YAML_SCRIPT_PATTERN_TEMPLATE = r"(?ms)^  - id: {script_id}\n(?P<body>.*?)(?=^  - id: |\Z)"
+
+
+def yaml_script_body(text: str, script_id: str) -> str | None:
+    match = re.search(YAML_SCRIPT_PATTERN_TEMPLATE.format(script_id=re.escape(script_id)), text)
+    return match.group("body") if match else None
+
+
+def firmware_ha_binding_errors(firmware_dir: Path, root: Path) -> list[str]:
+    errors: list[str] = []
+    for path in sorted(firmware_dir.glob("button_grid*.h")):
+        if path.name in HA_BOUNDARY_ALLOWLIST:
+            continue
+        for line_no, line in enumerate(path.read_text(encoding="utf-8").splitlines(), start=1):
+            for pattern, message in DIRECT_HA_PATTERNS:
+                if pattern.search(line):
+                    rel = path.relative_to(root)
+                    errors.append(f"{rel}:{line_no}: {message}")
+                    break
+    return errors
+
+
+def firmware_ha_boundary_errors(firmware_dir: Path, root: Path) -> list[str]:
+    path = firmware_dir / "button_grid_ha.h"
+    if not path.exists():
+        return []
+    rel = path.relative_to(root)
+    text = path.read_text(encoding="utf-8")
+    errors: list[str] = []
+
+    state_helper = STATE_HELPER_PATTERN.search(text)
+    if not state_helper:
+        errors.append(f"{rel}: missing ha_subscribe_state helper")
+    elif "heap_available" in state_helper.group("body"):
+        errors.append(f"{rel}: keep core HA state subscriptions off the low-heap guard")
+
+    retry_symbols = (
+        "HaUnavailableStateRetryRef",
+        "ha_unavailable_state_retry_refs",
+        "ha_note_state_retry_result",
+        "ha_retry_unavailable_states",
+        "ha_reset_unavailable_state_retries",
+        "HA_UNAVAILABLE_STATE_RETRY",
+    )
+    if any(symbol in text for symbol in retry_symbols):
+        errors.append(f"{rel}: do not reintroduce unavailable HA state retry polling")
+
+    attribute_helper = ATTRIBUTE_HELPER_PATTERN.search(text)
+    if not attribute_helper:
+        errors.append(f"{rel}: missing ha_subscribe_attribute helper")
+    elif "heap_available" in attribute_helper.group("body"):
+        errors.append(f"{rel}: keep HA metadata attribute subscriptions off the low-heap guard")
+
+    if "ha_cancel_action_response_callback" not in text or "handle_action_response" not in text:
+        errors.append(f"{rel}: expose a helper to cancel stale HA action response callbacks")
+    action_send_match = re.search(
+        r"inline\s+bool\s+ha_action_send\s*\([^)]*\)\s*\{(?P<body>.*?)\n\}",
+        text,
+        re.DOTALL,
+    )
+    if not action_send_match:
+        errors.append(f"{rel}: missing ha_action_send helper")
+    elif "ha_api_state_connected()" not in action_send_match.group("body"):
+        errors.append(f"{rel}: send Home Assistant actions only after state subscription is ready")
+    elif "HA_ACTION_INTERNAL_FREE_MIN_BYTES" not in action_send_match.group("body"):
+        errors.append(f"{rel}: defer Home Assistant actions when S3 internal heap is critically low")
+    if "Home Assistant attribute request" not in text:
+        errors.append(f"{rel}: defer one-off Home Assistant attribute reads when S3 internal heap is critically low")
+
+    return errors
+
+
+def firmware_unavailable_retry_errors(
+    firmware_dir: Path,
+    core_infra_path: Path,
+    root: Path,
+) -> list[str]:
+    config_path = firmware_dir / "button_grid_config.h"
+    errors: list[str] = []
+    if config_path.exists():
+        config_rel = config_path.relative_to(root)
+        config_text = config_path.read_text(encoding="utf-8")
+        bump_match = re.search(
+            r"inline\s+void\s+bump_ha_subscription_generation\s*\([^)]*\)\s*\{(?P<body>.*?)\n\}",
+            config_text,
+            re.DOTALL,
+        )
+        if bump_match and "ha_reset_unavailable_state_retries" in bump_match.group("body"):
+            errors.append(f"{config_rel}: do not reset removed unavailable HA state retries")
+        if "ha_reset_unavailable_state_retries" in config_text:
+            errors.append(f"{config_rel}: do not keep removed unavailable HA state retry helpers")
+
+    if core_infra_path.exists():
+        core_rel = core_infra_path.relative_to(root)
+        core_text = core_infra_path.read_text(encoding="utf-8")
+        if "ha_retry_unavailable_states" in core_text:
+            errors.append(f"{core_rel}: do not retry unavailable HA states after reconnects or during maintenance")
+    return errors
+
+
+def firmware_todo_request_errors(firmware_dir: Path, root: Path) -> list[str]:
+    path = firmware_dir / "button_grid_todo.h"
+    if not path.exists():
+        return []
+    rel = path.relative_to(root)
+    text = path.read_text(encoding="utf-8")
+    errors: list[str] = []
+
+    helper = TODO_GET_ITEMS_HELPER_PATTERN.search(text)
+    if not helper:
+        errors.append(f"{rel}: missing todo_begin_get_items_request helper")
+        return errors
+
+    body = helper.group("body")
+    if '"todo.get_items"' not in body:
+        errors.append(f"{rel}: todo_begin_get_items_request must call todo.get_items")
+    if "wants_response" not in body or "response_template" not in body:
+        errors.append(f"{rel}: todo.get_items requests must capture a compact response template")
+    if "std::string response_template" in body:
+        errors.append(f"{rel}: keep the todo response template alive until after the request is sent")
+    if "TODO_RESPONSE_KEY_MAX_LEN" not in text or "TODO_RESPONSE_SUMMARY_MAX_LEN" not in text:
+        errors.append(f"{rel}: bound todo response text before Home Assistant sends it")
+    if "std::to_string(TODO_RESPONSE_TEXT_MAX_LEN)" not in text or "|length" not in text:
+        errors.append(f"{rel}: cap rendered todo responses before Home Assistant sends them")
+    if 'ha_action_add_data(req, "status"' in body:
+        errors.append(f"{rel}: filter todo items in the response template, not in action data")
+    if "TODO_REQUEST_TIMEOUT_MS" not in text or text.count("todo_cancel_stale_request()") < 2:
+        errors.append(f"{rel}: bound pending todo item requests with a timeout")
+    if "stale_request_cancelled = todo_cancel_stale_request()" not in text:
+        errors.append(f"{rel}: periodically expire stale todo requests while the modal is open")
+    if 'todo_cancel_pending_request("modal closed"' not in text:
+        errors.append(f"{rel}: cancel pending todo item requests when the modal closes")
+    if 'todo_cancel_pending_request("modal closed", false)' not in text:
+        errors.append(f"{rel}: close todo modals without retrying their cancelled request")
+    if '"send failed"' in text and 'ui.waiting_for_ha = true;' not in text:
+        errors.append(f"{rel}: retry todo loads when Home Assistant disconnects during send")
+    pending_match = re.search(
+        r"if\s*\(\s*todo_request_state\(\)\.call_id\s*!=\s*0\s*\)\s*\{(?P<body>.*?)\n\s*\}",
+        text,
+        re.DOTALL,
+    )
+    if not pending_match or "ui.waiting_for_ha = true;" not in pending_match.group("body"):
+        errors.append(f"{rel}: retry todo loads when another todo request is already pending")
+    if text.count("todo_clear_request_state(call_id)") < 2:
+        errors.append(f"{rel}: clear pending todo request state when responses arrive")
+    if "ha_api_state_connected()" not in text:
+        errors.append(f"{rel}: wait for Home Assistant state subscription before todo actions")
+    callback_sections = [text]
+    lite_marker = "#elif defined(ESPCONTROL_TODO_LITE) && ESPCONTROL_TODO_LITE"
+    full_marker = "#else\n\nconstexpr uint32_t TODO_CARD_CTX_MAGIC"
+    if lite_marker in text and full_marker in text:
+        before_lite, lite_and_full = text.split(lite_marker, 1)
+        lite, full = lite_and_full.split(full_marker, 1)
+        callback_sections = [before_lite, lite, full]
+    if any(section.count("ha_register_action_response_callback(") > 1 for section in callback_sections):
+        errors.append(f"{rel}: only todo list loading should register a response callback")
+    return errors
+
+
+def firmware_todo_disconnect_errors(firmware_dir: Path, core_infra_path: Path, root: Path) -> list[str]:
+    todo_path = firmware_dir / "button_grid_todo.h"
+    if not todo_path.exists() or not core_infra_path.exists():
+        return []
+    todo_rel = todo_path.relative_to(root)
+    core_rel = core_infra_path.relative_to(root)
+    todo_text = todo_path.read_text(encoding="utf-8")
+    core_text = core_infra_path.read_text(encoding="utf-8")
+    errors: list[str] = []
+
+    if "todo_cancel_pending_request" not in todo_text:
+        errors.append(f"{todo_rel}: expose a helper to cancel pending todo requests")
+    if "todo_reload_active_modal" not in todo_text:
+        errors.append(f"{todo_rel}: expose a helper to reload an open todo modal after HA reconnects")
+    if "waiting_for_ha" not in todo_text or "todo_retry_waiting_modal" not in todo_text:
+        errors.append(f"{todo_rel}: retry open todo modals that are waiting for Home Assistant")
+    if "ctx->available) return" in todo_text:
+        errors.append(f"{todo_rel}: allow todo modals to open while waiting for Home Assistant availability")
+    if "apply_control_availability(ctx->btn, ctx->btn, ctx->available, false)" not in todo_text:
+        errors.append(f"{todo_rel}: keep todo cards tappable while Home Assistant availability is pending")
+    if "on_client_disconnected:" not in core_text or "todo_cancel_pending_request" not in core_text:
+        errors.append(f"{core_rel}: cancel pending todo requests when the HA API disconnects")
+    if "on_client_connected:" not in core_text or "todo_reload_active_modal" not in core_text:
+        errors.append(f"{core_rel}: retry open todo modals when the HA API reconnects")
+    if "todo_retry_waiting_modal" not in core_text:
+        errors.append(f"{core_rel}: periodically retry todo modals waiting for Home Assistant")
+    return errors
+
+
+def firmware_action_card_availability_errors(firmware_dir: Path, root: Path) -> list[str]:
+    path = firmware_dir / "button_grid_grid.h"
+    if not path.exists():
+        return []
+    rel = path.relative_to(root)
+    text = path.read_text(encoding="utf-8")
+    errors: list[str] = []
+
+    stateless_main_pattern = re.compile(
+        r"std::string\s+state_entity\s*=\s*action_card_state_entity\(p\);"
+        r"(?P<body>.*?)continue;",
+        re.DOTALL,
+    )
+    stateless_subpage_pattern = re.compile(
+        r"std::string\s+state_entity\s*=\s*action_card_state_entity\(sb_cfg\);"
+        r"(?P<body>.*?)ParsedCfg\s+\*ctx\s*=",
+        re.DOTALL,
+    )
+    push_main_pattern = re.compile(
+        r"if\s*\(\s*p\.type\s*==\s*\"push\"\s*\)\s*\{"
+        r"(?P<body>.*?)continue;",
+        re.DOTALL,
+    )
+    push_subpage_pattern = re.compile(
+        r"if\s*\(\s*sb_cfg\.type\s*==\s*\"push\"\s*\)\s*\{"
+        r"(?P<body>.*?)continue;",
+        re.DOTALL,
+    )
+
+    for match in stateless_main_pattern.finditer(text):
+        body = match.group("body")
+        if "else" in body and "register_ha_control_availability(s.btn, s.btn)" in body:
+            errors.append(f"{rel}: keep stateless action cards tappable while Home Assistant availability is pending")
+    for match in stateless_subpage_pattern.finditer(text):
+        body = match.group("body")
+        if "else" in body and "register_ha_control_availability(sub_slot.btn, sub_slot.btn)" in body:
+            errors.append(f"{rel}: keep stateless subpage action cards tappable while Home Assistant availability is pending")
+    for match in push_main_pattern.finditer(text):
+        body = match.group("body")
+        if "register_ha_control_availability(s.btn, s.btn)" in body:
+            errors.append(f"{rel}: keep trigger cards tappable while Home Assistant availability is pending")
+    for match in push_subpage_pattern.finditer(text):
+        body = match.group("body")
+        if "register_ha_control_availability(sb_btn, sb_btn)" in body:
+            errors.append(f"{rel}: keep subpage trigger cards tappable while Home Assistant availability is pending")
+    return errors
+
+
+def firmware_time_reconnect_errors(time_path: Path, root: Path) -> list[str]:
+    if not time_path.exists():
+        return []
+    rel = time_path.relative_to(root)
+    text = time_path.read_text(encoding="utf-8")
+    errors: list[str] = []
+
+    if "id(homeassistant_time).update();" in text.replace(
+        "if (ha_api_state_connected()) id(homeassistant_time).update();", ""
+    ):
+        errors.append(f"{rel}: guard Home Assistant time updates until state subscription is ready")
+    if "on_client_connected:" in text and "ha_api_state_connected()" not in text:
+        errors.append(f"{rel}: wait for Home Assistant state readiness before reconnect time sync")
+    if "on_client_connected:" in text and "delay: 2s" not in text:
+        errors.append(f"{rel}: defer Home Assistant time sync after API reconnect")
+    api_connect_match = re.search(
+        r"(?ms)^api:\n\s+on_client_connected:\n(?P<body>.*?)(?:^#|^select:|^text:|^text_sensor:|^time:|^script:|\Z)",
+        text,
+    )
+    if api_connect_match:
+        api_connect_body = api_connect_match.group("body")
+        if "script.execute: backlight_recalc_sunrise_sunset" not in api_connect_body:
+            errors.append(f"{rel}: recalculate sunrise and sunset after reconnect time sync")
+        if "script.execute: screen_schedule_check" not in api_connect_body:
+            errors.append(f"{rel}: recheck the screen schedule after reconnect time sync")
+    return errors
+
+
+def firmware_ntp_startup_errors(
+    time_path: Path,
+    sun_calc_path: Path,
+    connectivity_paths: tuple[Path, ...],
+    root: Path,
+) -> list[str]:
+    errors: list[str] = []
+    if time_path.exists():
+        rel = time_path.relative_to(root)
+        text = time_path.read_text(encoding="utf-8")
+        boot_section = text.split("# Ask Home Assistant", 1)[0]
+        if "- script.execute: ntp_servers_apply" in boot_section:
+            errors.append(f"{rel}: defer custom NTP server apply until networking has an IP address")
+        if "# NTP server settings" in text:
+            ntp_text_section = text.split("# NTP server settings", 1)[1].split("text_sensor:", 1)[0]
+            if "- script.execute: ntp_servers_apply\n" in ntp_text_section:
+                errors.append(f"{rel}: debounce restored NTP text values before applying SNTP settings")
+            if "id: ntp_servers_apply_after_network" not in text:
+                errors.append(f"{rel}: route NTP server changes through delayed network-ready apply script")
+    if sun_calc_path.exists():
+        rel = sun_calc_path.relative_to(root)
+        text = sun_calc_path.read_text(encoding="utf-8")
+        if "apply_ntp_servers" in text and "App.is_setup_complete()" not in text:
+            errors.append(f"{rel}: skip SNTP reconfiguration until application setup has completed")
+        if (
+            "apply_ntp_servers" in text
+            and "get_ip_addresses().empty()" not in text
+        ):
+            errors.append(f"{rel}: skip SNTP reconfiguration until networking has an IP address")
+    for path in connectivity_paths:
+        if not path.exists():
+            continue
+        rel = path.relative_to(root)
+        text = path.read_text(encoding="utf-8")
+        if "on_connect:" in text and "- script.execute: ntp_servers_apply_after_network" not in text:
+            errors.append(f"{rel}: apply configured NTP servers after network connect")
+    return errors
+
+
+def firmware_weather_request_errors(firmware_dir: Path, root: Path) -> list[str]:
+    path = firmware_dir / "button_grid_config.h"
+    if not path.exists():
+        return []
+    rel = path.relative_to(root)
+    text = path.read_text(encoding="utf-8")
+    errors: list[str] = []
+
+    request = WEATHER_FORECAST_REQUEST_PATTERN.search(text)
+    if not request:
+        errors.append(f"{rel}: missing request_weather_forecast_entity helper")
+        return errors
+    body = request.group("body")
+    if "ha_api_state_connected()" not in body:
+        errors.append(f"{rel}: wait for Home Assistant state subscription before automatic forecast requests")
+    if "low internal heap" not in body:
+        errors.append(f"{rel}: retry automatic forecast requests instead of sending during critically low internal heap")
+    if "ha_cancel_action_response_callback(req.call_id" not in text:
+        errors.append(f"{rel}: cancel forecast response callbacks when sends fail")
+    if (
+        'ha_cancel_action_response_callback(req.call_id, "send failed");' in body
+        and 'weather_forecast_schedule_retry(entity_id, day, "send failed");' not in body
+    ):
+        errors.append(f"{rel}: retry weather forecast sends that fail after callback registration")
+    if "WEATHER_FORECAST_PENDING_MAX" not in text or "weather_forecast_track_pending" not in text:
+        errors.append(f"{rel}: bound pending forecast response callbacks")
+    if "weather_forecast_cancel_pending_requests" not in text:
+        errors.append(f"{rel}: expose a helper to cancel pending forecast callbacks")
+    if (
+        "uint32_t generation = ha_subscription_generation();" not in body
+        or "generation != ha_subscription_generation()" not in body
+    ):
+        errors.append(f"{rel}: ignore stale forecast action responses after dashboard reconfiguration")
+    if "WEATHER_FORECAST_RETRY_DELAY_MS" not in text or "weather_forecast_schedule_retry" not in text:
+        errors.append(f"{rel}: retry failed weather forecast requests later")
+    if (
+        "response if response is defined and response is not none else {}" not in text
+        or "'forecast' in response_data" not in text
+        or "response_data[entity] if entity in response_data else {}" not in text
+    ):
+        errors.append(f"{rel}: accept both direct and entity-keyed Home Assistant forecast response shapes")
+    if (
+        "today_date = now().date()" not in text
+        or "tomorrow_date = (now() + timedelta(days=1)).date()" not in text
+        or "as_datetime(item['datetime'])" not in text
+        or "as_local(item_dt).date()" not in text
+        or "as_datetime(item['date']).date()" not in text
+        or "ns.today if ns.today is not none else (forecasts[0]" not in text
+        or "ns.tomorrow if ns.tomorrow is not none else (forecasts[1]" not in text
+    ):
+        errors.append(f"{rel}: select today/tomorrow weather forecasts by date/datetime before falling back to list order")
+    if (
+        "unit_keys = ['temperature_unit','native_temperature_unit','unit_of_measurement','native_unit_of_measurement','unit']" not in text
+        or "key in entity_response" not in text
+        or "state_attr(entity, 'temperature_unit')" not in text
+        or "state_attr(entity, 'unit_of_measurement')" not in text
+    ):
+        errors.append(f"{rel}: preserve forecast temperature units from response data or weather entity attributes")
+    if (
+        "native_temperature" not in text
+        or "native_templow" not in text
+        or "native_temperature_unit" not in text
+    ):
+        errors.append(f"{rel}: accept native Home Assistant forecast temperature fields and units")
+    if (
+        "max_temperature" not in text
+        or "temperature_max" not in text
+        or "max_temp" not in text
+        or "min_temperature" not in text
+        or "temperature_min" not in text
+        or "min_temp" not in text
+    ):
+        errors.append(f"{rel}: accept max/min weather forecast temperature field aliases")
+    if (
+        "unit_keys" not in text
+        or "today is not none and key in today" not in text
+        or "tomorrow is not none and key in tomorrow" not in text
+    ):
+        errors.append(f"{rel}: preserve forecast temperature units from individual forecast items")
+    if "parse_weather_forecast_temp" in text and "std::isfinite(parsed)" not in text:
+        errors.append(f"{rel}: reject non-finite weather forecast temperatures before rendering")
+    if (
+        "No usable forecast temperatures" in body
+        and 'weather_forecast_schedule_retry(entity_id, day, "no usable forecast temperatures");' not in body
+    ):
+        errors.append(f"{rel}: retry weather forecasts when Home Assistant returns no usable temperatures")
+    if (
+        "weather_forecast_error_is_timeout" not in text
+        or 'find("timed out")' not in text
+        or "apply_weather_forecast_actions_required_for_entity" not in body
+    ):
+        errors.append(f"{rel}: detect Home Assistant forecast timeout errors robustly")
+    return errors
+
+
+def firmware_weather_disconnect_errors(firmware_dir: Path, core_infra_path: Path, root: Path) -> list[str]:
+    config_path = firmware_dir / "button_grid_config.h"
+    if not config_path.exists() or not core_infra_path.exists():
+        return []
+    core_rel = core_infra_path.relative_to(root)
+    config_text = config_path.read_text(encoding="utf-8")
+    core_text = core_infra_path.read_text(encoding="utf-8")
+    errors: list[str] = []
+
+    if "weather_forecast_cancel_pending_requests" in config_text and (
+        "on_client_disconnected:" not in core_text or "weather_forecast_cancel_pending_requests" not in core_text
+    ):
+        errors.append(f"{core_rel}: cancel pending forecast callbacks when the HA API disconnects")
+    return errors
+
+
+def firmware_weather_reconnect_errors(core_infra_path: Path, root: Path) -> list[str]:
+    if not core_infra_path.exists():
+        return []
+    core_rel = core_infra_path.relative_to(root)
+    core_text = core_infra_path.read_text(encoding="utf-8")
+    errors: list[str] = []
+
+    connected_match = re.search(
+        r"(?ms)^  on_client_connected:\n(?P<body>.*?)(?:^  on_client_disconnected:|^interval:|\Z)",
+        core_text,
+    )
+    if not connected_match:
+        errors.append(f"{core_rel}: refresh weather forecasts after Home Assistant reconnects")
+        return errors
+
+    body = connected_match.group("body")
+    for match in re.finditer(r"refresh_weather_forecast_cards\(\);", body):
+        guard_window = body[max(0, match.start() - 160) : match.end()]
+        if "ha_api_state_connected()" not in guard_window:
+            errors.append(f"{core_rel}: wait for Home Assistant state readiness before forecast reconnect refreshes")
+            break
+    if "refresh_weather_forecast_cards();" in body and "delay: 20s" not in body:
+        errors.append(f"{core_rel}: retry weather forecast refresh after slow S3 reconnects")
+    return errors
+
+
+def firmware_cover_request_errors(firmware_dir: Path, core_infra_path: Path, root: Path) -> list[str]:
+    path = firmware_dir / "button_grid_actions.h"
+    if not path.exists() or not core_infra_path.exists():
+        return []
+    rel = path.relative_to(root)
+    core_rel = core_infra_path.relative_to(root)
+    text = path.read_text(encoding="utf-8")
+    core_text = core_infra_path.read_text(encoding="utf-8")
+    errors: list[str] = []
+
+    request = COVER_COMMAND_REQUEST_PATTERN.search(text)
+    if not request:
+        errors.append(f"{rel}: missing send_cover_command_action helper")
+        return errors
+    body = request.group("body")
+    if "cover_stop_track_pending" not in text or "cover_stop_clear_pending" not in text:
+        errors.append(f"{rel}: track pending cover stop callbacks")
+    if "cover_stop_cancel_pending_request" not in text:
+        errors.append(f"{rel}: expose a helper to cancel pending cover stop callbacks")
+    if "cover_stop_tracked" not in body or "ha_cancel_action_response_callback(req.call_id" not in body:
+        errors.append(f"{rel}: cancel cover stop callbacks when sends fail")
+    if "on_client_disconnected:" not in core_text or "cover_stop_cancel_pending_request" not in core_text:
+        errors.append(f"{core_rel}: cancel pending cover stop callbacks when the HA API disconnects")
+    return errors
+
+
+def firmware_cover_art_external_input_errors(path: Path, root: Path) -> list[str]:
+    if not path.exists():
+        return []
+    rel = path.relative_to(root)
+    text = path.read_text(encoding="utf-8")
+    errors: list[str] = []
+    if "cover_art_hide_external_input_enabled" not in text:
+        errors.append(f"{rel}: expose a cover art external-input hide setting")
+    if 'ha_subscribe_attribute(cover_entity, std::string("source"), handle_media_source)' not in text:
+        errors.append(f"{rel}: subscribe to the media player source attribute")
+    if 'ha_get_attribute(cover_entity, std::string("source"), handle_media_source)' not in text:
+        errors.append(f"{rel}: refresh the media player source attribute")
+    if 'next == "TV"' not in text or 'next == "Line-in"' not in text:
+        errors.append(f"{rel}: treat TV and Line-in sources as external inputs")
+    if "cover_art_apply_external_input_policy" not in text:
+        errors.append(f"{rel}: centralize cover art external-input behavior")
+    if "script.stop: cover_art_request_artwork" not in text:
+        errors.append(f"{rel}: stop pending artwork requests while an external input is active")
+    if "id(cover_art_hide_external_input_enabled).state &&" not in text:
+        errors.append(f"{rel}: guard cover art start/download paths when external input hiding is enabled")
+    return errors
+
+
+def firmware_cover_art_stale_image_errors(path: Path, root: Path) -> list[str]:
+    if not path.exists():
+        return []
+    rel = path.relative_to(root)
+    text = path.read_text(encoding="utf-8")
+    errors: list[str] = []
+
+    script_match = re.search(
+        r"(?ms)^  - id: cover_art_show_black_screen\n(?P<body>.*?)(?=^  - id: |\Z)",
+        text,
+    )
+    if not script_match:
+        errors.append(f"{rel}: keep a black fallback for cover art with no current image")
+        return errors
+
+    body = script_match.group("body")
+    if "lvgl.widget.hide: cover_art_image_widget" not in body:
+        errors.append(f"{rel}: hide stale cover art image when the black fallback is shown")
+    if "id(cover_art_loaded_url).empty()" in body:
+        errors.append(f"{rel}: hide stale cover art image even after previous artwork loaded")
+    if "cover_art_error_label" in text or 'text: "Artwork unavailable"' in text:
+        errors.append(f"{rel}: do not show an unavailable cover art message")
+    return errors
+
+
+def firmware_cover_art_refresh_errors(path: Path, root: Path) -> list[str]:
+    if not path.exists():
+        return []
+    rel = path.relative_to(root)
+    text = path.read_text(encoding="utf-8")
+    errors: list[str] = []
+
+    required_state = (
+        ("cover_art_refresh_needed", "track/source metadata changes as stale artwork"),
+        ("cover_art_download_url", "keep source artwork URLs separate from downloader URLs"),
+        ("cover_art_album", "track album names for artwork refresh decisions"),
+    )
+    for token, message in required_state:
+        if token not in text:
+            errors.append(f"{rel}: {message}")
+
+    download_body = yaml_script_body(text, "cover_art_download")
+    if not download_body:
+        errors.append(f"{rel}: missing cover_art_download script")
+    else:
+        if "/api/media_player_proxy/" not in download_body:
+            errors.append(f"{rel}: only cache-bust Home Assistant media proxy artwork URLs")
+        if "?time=" not in download_body or "&time=" not in download_body:
+            errors.append(f"{rel}: add a refresh marker that preserves existing artwork query strings")
+        if "request_update_url(id(cover_art_download_url))" not in download_body:
+            errors.append(f"{rel}: download through the refresh-aware artwork URL")
+        if (
+            "needs_artwork_refresh" not in download_body
+            or "id(cover_art_refresh_needed) || !id(cover_art_image_available)" not in download_body
+        ):
+            errors.append(f"{rel}: refresh Home Assistant media proxy artwork when no image is currently available")
+
+    for script_id in ("cover_art_deferred_download", "cover_art_prepare_download"):
+        body = yaml_script_body(text, script_id)
+        if not body:
+            errors.append(f"{rel}: missing {script_id} script")
+        elif "id(cover_art_refresh_needed)" not in body:
+            errors.append(f"{rel}: let {script_id} refresh unchanged artwork URLs after metadata changes")
+
+    for script_id in ("cover_art_use_cached_artwork", "cover_art_request_artwork"):
+        body = yaml_script_body(text, script_id)
+        if not body:
+            errors.append(f"{rel}: missing {script_id} script")
+        elif (
+            "chosen == id(cover_art_url)" not in body
+            or "!id(cover_art_image_available) || id(cover_art_refresh_needed)" not in body
+        ):
+            errors.append(f"{rel}: do not exit early from {script_id} when stale artwork needs refresh")
+
+    apply_body = yaml_script_body(text, "cover_art_apply_downloaded_image")
+    if not apply_body:
+        errors.append(f"{rel}: missing cover_art_apply_downloaded_image script")
+    else:
+        if "expected_url" not in apply_body or "id(cover_art_download_url)" not in apply_body:
+            errors.append(f"{rel}: accept the refresh-aware downloader URL when artwork finishes")
+        if "id(cover_art_loaded_url) = id(cover_art_url)" not in apply_body:
+            errors.append(f"{rel}: remember the clean source artwork URL after a download")
+        if "id(cover_art_refresh_needed) = false" not in apply_body:
+            errors.append(f"{rel}: clear stale artwork state only after a replacement image applies")
+
+    if text.count("mark_artwork_refresh_needed();") < 4:
+        errors.append(f"{rel}: mark title, artist, album, and source changes as artwork refresh triggers")
+    if 'std::string("media_album_name"), handle_media_album' not in text:
+        errors.append(f"{rel}: subscribe to and refresh the media_album_name attribute")
+    if "id(cover_art_refresh_needed) = true" not in text:
+        errors.append(f"{rel}: set stale artwork state when track/source metadata changes")
+    playback_started_body = yaml_script_body(text, "cover_art_playback_started")
+    if not playback_started_body:
+        errors.append(f"{rel}: missing cover_art_playback_started script")
+    elif (
+        "!id(cover_art_image_available)" not in playback_started_body
+        or "id(cover_art_retry_count) = 0" not in playback_started_body
+        or "id(cover_art_retry_url).clear()" not in playback_started_body
+    ):
+        errors.append(f"{rel}: reset artwork retry state when playback resumes without a visible image")
+    return errors
+
+
+def firmware_cover_art_disable_errors(path: Path, root: Path) -> list[str]:
+    if not path.exists():
+        return []
+    rel = path.relative_to(root)
+    text = path.read_text(encoding="utf-8")
+    errors: list[str] = []
+    body = yaml_script_body(text, "cover_art_disable")
+    if not body:
+        errors.append(f"{rel}: missing cover_art_disable script")
+    elif "switch.turn_off: media_player_sleep_prevention_enabled" not in body:
+        errors.append(f"{rel}: turn off media sleep prevention when cover art is disabled")
+    return errors
+
+
+def firmware_image_card_entity_errors(firmware_dir: Path, root: Path) -> list[str]:
+    path = firmware_dir / "button_grid_image.h"
+    if not path.exists():
+        return []
+    rel = path.relative_to(root)
+    text = path.read_text(encoding="utf-8")
+    errors: list[str] = []
+    if "image_card_entity_supported" not in text:
+        errors.append(f"{rel}: centralize image card entity-domain support")
+    if 'entity_id.rfind("camera.", 0) == 0' not in text:
+        errors.append(f"{rel}: keep camera entities supported by image cards")
+    if 'entity_id.rfind("image.", 0) == 0' not in text:
+        errors.append(f"{rel}: support Home Assistant image entities in image cards")
+    if 'if (!image_card_entity_supported(p.entity))' not in text:
+        errors.append(f"{rel}: use the shared image card entity-domain guard")
+    if "only supports camera entities" in text:
+        errors.append(f"{rel}: do not reject Home Assistant image entities as unavailable")
+    return errors
+
+
+def firmware_image_card_base_url_errors(firmware_dir: Path, root: Path) -> list[str]:
+    path = firmware_dir / "button_grid_image.h"
+    if not path.exists():
+        return []
+    rel = path.relative_to(root)
+    text = path.read_text(encoding="utf-8")
+    errors: list[str] = []
+    if "base_url_provider" not in text:
+        errors.append(f"{rel}: keep image card Home Assistant base URL lookup live")
+    if ("image_card_join_url(image_card_base_url(ctx), raw)" not in text and
+        ("std::string base_url = image_card_base_url(ctx)" not in text or
+         "image_card_join_url(base_url, raw)" not in text)):
+        errors.append(f"{rel}: resolve image card base URL when entity_picture is handled")
+    if 'ctx->base_url = cfg.home_assistant_base_url ? cfg.home_assistant_base_url() : "";' in text:
+        if "ctx->base_url_provider = cfg.home_assistant_base_url" not in text:
+            errors.append(f"{rel}: do not rely only on the startup-time image card base URL")
+    return errors
+
+
+def firmware_image_card_quality_errors(firmware_dir: Path, root: Path) -> list[str]:
+    path = firmware_dir / "button_grid_image.h"
+    if not path.exists():
+        return []
+    rel = path.relative_to(root)
+    text = path.read_text(encoding="utf-8")
+    errors: list[str] = []
+    if "IMAGE_CARD_MODAL_MAX_TARGET_SIDE_PX" not in text:
+        errors.append(f"{rel}: cap high-resolution image card modal downloads")
+    if "IMAGE_CARD_MAX_CONTEXTS = 6" not in text:
+        errors.append(f"{rel}: support six concurrent image cards on P4 displays")
+    if "image_card_limit_target_size" not in text:
+        errors.append(f"{rel}: scale image card modal downloads to a display-appropriate size")
+    if "image_card_memory_available" not in text or "IMAGE_CARD_MEMORY_HEADROOM_BYTES" not in text:
+        errors.append(f"{rel}: check free memory before image-card downloads")
+    if "MALLOC_CAP_SPIRAM" not in text or "external_largest" not in text:
+        errors.append(f"{rel}: include PSRAM in image-card memory checks")
+    if "ctx->image->cancel_update();" not in text:
+        errors.append(f"{rel}: cancel in-flight image downloads before opening image card modals")
+    if "Deferring image refresh while modal is open" not in text:
+        errors.append(f"{rel}: defer image downloads while image card modals are open")
+    if "image_card_clear_widget_source(ui.image_widget)" not in text:
+        errors.append(f"{rel}: detach image sources before deleting image card modals")
+    if (
+        "ctx->image->set_target_size(width, height)" not in text
+        and "image_card_tile_decode_size(width, height, &target_width, &target_height)" not in text
+        and "ctx->image->set_target_size(decode_width, decode_height)" not in text
+    ):
+        errors.append(f"{rel}: set image card download target size before requesting images")
+    if "modal_image" not in text or "image_card_request_modal_source_url" not in text:
+        errors.append(f"{rel}: use a separate modal image downloader for expanded image-card quality")
+    if "ctx->modal_image->request_update_url(ctx->modal_url" not in text:
+        errors.append(f"{rel}: request expanded image-card downloads through the modal downloader")
+    if "image_card_set_widget_source(ui.image_widget, ctx->modal_image)" not in text:
+        errors.append(f"{rel}: swap expanded image cards to the modal-quality image after it downloads")
+    if "ctx->modal_image->release()" not in text:
+        errors.append(f"{rel}: release modal image-card buffers when the modal closes")
+    if 'image_card_set_loading_state(loading, "Too many")' not in text:
+        errors.append(f"{rel}: show a visible image-card limit message when downloaders run out")
+    modal_refresh = re.search(
+        r"inline\s+bool\s+image_card_modal_refresh_supported\s*\(\s*\)\s*\{\s*return\s+true\s*;",
+        text,
+        re.S,
+    )
+    if not modal_refresh:
+        errors.append(f"{rel}: keep modal-quality image refresh enabled on the 4.3-inch P4 screen")
+    if (
+        "image_card_tile_prefetches_modal_quality" not in text
+        or "!control_modal_current_is_jc4880p443_size()" not in text
+    ):
+        errors.append(f"{rel}: keep 4.3-inch P4 tile downloads sized to the tile before modal open")
+    if "Closing image modal" not in text:
+        errors.append(f"{rel}: log image-card modal close events")
+    if "image_card_abort_modal_open" not in text or "modal shell setup failed" not in text:
+        errors.append(f"{rel}: clean up partially-created image card modals")
+    if (
+        "lv_obj_set_size(ui.loading_widget, width, height)" not in text
+        or "lv_obj_align(icon, LV_ALIGN_CENTER" not in text
+        or "LV_ALIGN_OUT_BOTTOM_MID" not in text
+    ):
+        errors.append(f"{rel}: keep image-card modal loading overlay centered")
+    if (
+        "image_card_show_modal_image(ctx, ctx->image)" not in text
+        or "image_card_queue_modal_source_request(ctx)" not in text
+    ):
+        errors.append(f"{rel}: show the cached image-card tile while modal-quality image loads")
+    if "lv_obj_set_style_clip_corner(ui.panel, true, LV_PART_MAIN)" not in text:
+        errors.append(f"{rel}: clip image card modal content to rounded panel corners")
+    if "image_card_apply_corner_clip" not in text:
+        errors.append(f"{rel}: preserve image card rounded corners while pressed")
+    if "image_card_pressed_selector" not in text:
+        errors.append(f"{rel}: apply image card corner clipping to the pressed state")
+    if "image_card_refresh_tile_geometry" not in text or "resized tile" not in text:
+        errors.append(f"{rel}: refresh image-card downloads when card size changes")
+    if "image_card_reset_resized_tile" not in text or "ctx->image->release()" not in text:
+        errors.append(f"{rel}: clear stale image-card tile buffers when card size changes")
+    if "image_card_tile_request_size" not in text:
+        errors.append(f"{rel}: keep small-display image card tile downloads sized to the tile")
+
+    grid_path = firmware_dir / "button_grid_grid.h"
+    if grid_path.exists():
+        grid_rel = grid_path.relative_to(root)
+        grid_text = grid_path.read_text(encoding="utf-8")
+        if "image_card_refresh_tile_geometry(ctx)" not in grid_text:
+            errors.append(f"{grid_rel}: update active image-card geometry during grid refresh")
+    return errors
+
+
+def firmware_image_card_startup_errors(
+    firmware_dir: Path,
+    core_infra_path: Path,
+    root: Path,
+) -> list[str]:
+    path = firmware_dir / "button_grid_image.h"
+    if not path.exists():
+        return []
+    rel = path.relative_to(root)
+    text = path.read_text(encoding="utf-8")
+    errors: list[str] = []
+    if "inline void refresh_image_cards()" not in text:
+        errors.append(f"{rel}: refresh image cards when Home Assistant reconnects")
+    if "IMAGE_CARD_API_RETRY_INTERVAL_MS" not in text:
+        errors.append(f"{rel}: retry image-card startup quickly after Home Assistant API connects")
+    if "if (!ha_api_connected()) return;" not in text:
+        errors.append(f"{rel}: arm image-card refresh from the Home Assistant API connection")
+    if "if (!ha_api_connected())" not in text or "ha_get_attribute(" not in text:
+        errors.append(f"{rel}: request image-card attributes once the Home Assistant API is connected")
+    if '"access_token"' not in text or "image_card_proxy_path_with_token" not in text:
+        errors.append(f"{rel}: load Home Assistant image-card proxy URLs with the entity access token")
+    if '"/api/image_proxy/" + entity_id' not in text or '"/api/camera_proxy/" + entity_id' not in text:
+        errors.append(f"{rel}: fall back to Home Assistant proxy URLs when image-card entity_picture is unavailable")
+    if "Waiting for Home Assistant base URL" not in text:
+        errors.append(f"{rel}: keep image cards loading until the Home Assistant base URL is ready")
+    if "subscribe_image_card_entity_state" not in text or "ha_subscribe_state(" not in text:
+        errors.append(f"{rel}: refresh image cards when the camera/image entity state changes")
+    if "image_card_context_current" not in text or "generation == ha_subscription_generation()" not in text:
+        errors.append(f"{rel}: ignore stale image-card callbacks after grid rebuild")
+    if (
+        "image_card_generation" not in text
+        or "image_card_context_current(ctx, image_card_entity_id, image_card_generation)" not in text
+    ):
+        errors.append(f"{rel}: ignore stale image-card entity_picture callbacks after grid rebuild")
+    if (
+        ("image_card_tile_request_size(width, height" not in text and
+         "image_card_tile_request_size(decode_width, decode_height" not in text)
+        or "image_card_high_quality_request_size" not in text
+    ):
+        errors.append(f"{rel}: request high-quality Home Assistant image card source downloads")
+    if "image_card_sized_url(ctx->source_url, request_width, request_height)" not in text:
+        errors.append(f"{rel}: request bounded Home Assistant image card proxy downloads")
+    if '"/api/camera_proxy/"' not in text or '"/api/image_proxy/"' not in text:
+        errors.append(f"{rel}: recognize Home Assistant camera and image proxy URLs")
+
+    if core_infra_path.exists():
+        core_rel = core_infra_path.relative_to(root)
+        core_text = core_infra_path.read_text(encoding="utf-8")
+        if "is_home_assistant && ha_api_connected()" not in core_text:
+            errors.append(f"{core_rel}: start image-card refresh when Home Assistant API connects")
+        if core_text.count("refresh_image_cards();") < 4:
+            errors.append(f"{core_rel}: refresh image cards through Home Assistant connect retries")
+    return errors
+
+
+def firmware_artwork_image_auth_errors(path: Path, root: Path) -> list[str]:
+    if not path.exists():
+        return []
+    rel = path.relative_to(root)
+    text = path.read_text(encoding="utf-8")
+    errors: list[str] = []
+    if "HTTP_AUTH_TYPE_BASIC" in text:
+        errors.append(
+            f"{rel}: keep local Home Assistant image proxy requests off HTTP Basic auth"
+        )
+    if "config.auth_type = HTTP_AUTH_TYPE_NONE;" not in text:
+        errors.append(f"{rel}: explicitly disable HTTP auth for local artwork requests")
+    if (
+        'container->status_code <= 0 && is_ha_media_proxy_url(url)' not in text
+        or "trying artwork bytes anyway" not in text
+        or "container->status_code = HTTP_CODE_OK;" not in text
+    ):
+        errors.append(f"{rel}: allow Home Assistant media proxy artwork to fall back to image-byte detection")
+    if "download_buffer_.shrink_to(this->download_buffer_initial_size_)" not in text:
+        errors.append(f"{rel}: release oversized artwork download buffers after image requests")
+    return errors
+
+
+def firmware_screensaver_wake_guard_errors(backlight_path: Path, cover_art_path: Path, root: Path) -> list[str]:
+    errors: list[str] = []
+    if backlight_path.exists():
+        rel = backlight_path.relative_to(root)
+        text = backlight_path.read_text(encoding="utf-8")
+        body = yaml_script_body(text, "screensaver_wake")
+        if body is None:
+            errors.append(f"{rel}: missing screensaver_wake script")
+        else:
+            marker = "lambda: 'return id(display_asleep) ||"
+            if marker not in body:
+                errors.append(f"{rel}: keep the normal screensaver wake branch explicit")
+            else:
+                normal_wake_body = body.split(marker, 1)[1]
+                if re.search(
+                    r"id:\s*screensaver_wake_touch_guard_active\s*\n\s*value:\s*'true'",
+                    normal_wake_body,
+                ):
+                    errors.append(f"{rel}: do not block the first button tap after normal screensaver wake")
+                if "script.execute: screensaver_wake_touch_guard_clear" in normal_wake_body:
+                    errors.append(f"{rel}: do not arm a delayed wake guard clear for normal screensaver wake")
+                if "id(screensaver_wake_touch_guard_skip_once) = false" not in normal_wake_body:
+                    errors.append(f"{rel}: consume stale cover art wake guard state during screensaver wake")
+                if not re.search(
+                    r"id:\s*screensaver_wake_touch_guard_active\s*\n\s*value:\s*'false'",
+                    normal_wake_body,
+                ):
+                    errors.append(f"{rel}: clear stale wake guard state during normal screensaver wake")
+
+    if cover_art_path.exists():
+        rel = cover_art_path.relative_to(root)
+        text = cover_art_path.read_text(encoding="utf-8")
+        body = yaml_script_body(text, "cover_art_wake_touch_block")
+        if body is None:
+            errors.append(f"{rel}: missing cover_art_wake_touch_block script")
+        else:
+            if not re.search(r"id:\s*screensaver_wake_touch_guard_active\s*\n\s*value:\s*'true'", body):
+                errors.append(f"{rel}: keep cover art wake taps guarded")
+            if "LV_INDEV_STATE_PRESSED" not in body:
+                errors.append(f"{rel}: keep cover art guard until the wake touch is released")
+            if not re.search(r"id:\s*screensaver_wake_touch_guard_active\s*\n\s*value:\s*'false'", body):
+                errors.append(f"{rel}: clear the cover art wake guard after touch release")
+            if "lvgl.widget.hide: cover_art_wake_touch_guard" not in body:
+                errors.append(f"{rel}: hide the cover art wake touch guard after release")
+    return errors
+
+
+def firmware_clock_screensaver_overlay_errors(backlight_path: Path, root: Path) -> list[str]:
+    errors: list[str] = []
+    if not backlight_path.exists():
+        return errors
+
+    rel = backlight_path.relative_to(root)
+    text = backlight_path.read_text(encoding="utf-8")
+    sleep_body = yaml_script_body(text, "screensaver_sleep_timer")
+    show_body = yaml_script_body(text, "show_clock_view")
+    keep_on_top_body = yaml_script_body(text, "clock_screensaver_keep_on_top")
+
+    if sleep_body is None:
+        errors.append(f"{rel}: missing screensaver_sleep_timer script")
+    else:
+        show_index = sleep_body.find("script.execute: show_clock_view")
+        if show_index == -1:
+            errors.append(f"{rel}: keep clock screensaver activation explicit")
+        else:
+            pre_clock_show = sleep_body[:show_index]
+            cleanup_tokens = (
+                "media_volume_hide_modal();",
+                "climate_control_hide_modal();",
+                "option_select_hide_modal();",
+                "switch_confirmation_hide_modal();",
+                "alarm_pin_hide_modal();",
+                "network_status_hide_modal();",
+                "script.execute: hide_cover_art_view",
+            )
+            if any(token in pre_clock_show for token in cleanup_tokens):
+                errors.append(f"{rel}: let the clock screensaver overlay the existing UI without closing it")
+
+    if show_body is None:
+        errors.append(f"{rel}: missing show_clock_view script")
+    elif (
+        "hide_clock_bar_top_layer_widgets(" not in show_body
+        or "lv_obj_clear_flag(id(clock_screensaver), LV_OBJ_FLAG_HIDDEN);" not in show_body
+        or "lv_obj_move_foreground(id(clock_screensaver));" not in show_body
+    ):
+        errors.append(f"{rel}: raise the clock screensaver above existing top-layer UI")
+
+    if keep_on_top_body is None:
+        errors.append(f"{rel}: missing clock screensaver keep-on-top script")
+    else:
+        required_keep_on_top_tokens = (
+            "if (!id(is_clock_showing)) return;",
+            "hide_clock_bar_top_layer_widgets(",
+            "refresh_screensaver_fullscreen(id(clock_screensaver), id(dim_screensaver_touch_guard));",
+            "lv_obj_move_foreground(id(clock_screensaver));",
+        )
+        if any(token not in keep_on_top_body for token in required_keep_on_top_tokens):
+            errors.append(f"{rel}: keep hiding clock-bar widgets and re-raising the active clock screensaver above overlays")
+        if "lv_obj_clear_flag(id(clock_screensaver), LV_OBJ_FLAG_HIDDEN)" in keep_on_top_body:
+            errors.append(
+                f"{rel}: do not un-hide the clock screensaver in keep-on-top; "
+                "show_clock_view owns widget visibility to avoid premature display during the fade"
+            )
+
+    if (
+        "interval: 1s" not in text
+        or "script.execute: clock_screensaver_keep_on_top" not in text.split("interval:", 1)[-1]
+    ):
+        errors.append(f"{rel}: keep the active clock screensaver above overlays after it starts")
+
+    dimmed_body = yaml_script_body(text, "show_dimmed_view")
+    if dimmed_body is None:
+        errors.append(f"{rel}: missing show_dimmed_view script")
+    elif "lv_obj_move_foreground(id(dim_screensaver_touch_guard))" not in dimmed_body:
+        errors.append(f"{rel}: raise the dim screensaver touch guard above any existing top-layer elements")
+
+    return errors
+
+
+def firmware_screen_schedule_screensaver_overlay_errors(cover_art_path: Path, root: Path) -> list[str]:
+    errors: list[str] = []
+    if not cover_art_path.exists():
+        return errors
+
+    rel = cover_art_path.relative_to(root)
+    text = cover_art_path.read_text(encoding="utf-8")
+    show_body = yaml_script_body(text, "show_cover_art_view")
+
+    if show_body is None:
+        errors.append(f"{rel}: missing show_cover_art_view script")
+    elif "lv_obj_move_foreground(id(cover_art_screensaver))" not in show_body:
+        errors.append(f"{rel}: raise the cover art screensaver above any existing top-layer elements")
+
+    return errors
+
+
+def firmware_screen_schedule_screensaver_override_errors(backlight_path: Path, root: Path) -> list[str]:
+    errors: list[str] = []
+    if not backlight_path.exists():
+        return errors
+
+    rel = backlight_path.relative_to(root)
+    text = backlight_path.read_text(encoding="utf-8")
+
+    idle_body = yaml_script_body(text, "screensaver_idle_check")
+    if idle_body is None:
+        errors.append(f"{rel}: missing screensaver_idle_check script")
+    else:
+        night_index = idle_body.find("screen_schedule_night_active(")
+        mode_index = idle_body.find("return id(screensaver_mode).state")
+        schedule_index = idle_body.find("id(screen_schedule_check).execute();", night_index)
+        if night_index == -1 or schedule_index == -1 or (
+            mode_index != -1 and schedule_index > mode_index
+        ):
+            errors.append(f"{rel}: let the night screen schedule override timer screensaver actions")
+
+    wake_body = yaml_script_body(text, "screensaver_presence_wake")
+    if wake_body is None:
+        errors.append(f"{rel}: missing screensaver_presence_wake script")
+    else:
+        wake_index = wake_body.find("script.execute: screensaver_wake")
+        pre_wake_body = wake_body[:wake_index] if wake_index != -1 else wake_body
+        required_tokens = (
+            "screen_schedule_waiting_for_time(",
+            "screen_schedule_night_active(",
+            "id(screen_schedule_check).execute();",
+        )
+        if wake_index == -1 or any(token not in pre_wake_body for token in required_tokens):
+            errors.append(f"{rel}: let the night screen schedule override sensor screensaver wake")
+        disabled_wake_index = pre_wake_body.rfind("if (!id(schedule_enabled).state) return true;")
+        schedule_check_index = pre_wake_body.find("id(screen_schedule_check).execute();")
+        if disabled_wake_index == -1 or (
+            schedule_check_index != -1 and disabled_wake_index < schedule_check_index
+        ):
+            errors.append(f"{rel}: let sensor screensaver wake when the screen schedule is disabled")
+
+    return errors
+
+
+def firmware_climate_step_errors(firmware_dir: Path, root: Path) -> list[str]:
+    path = firmware_dir / "button_grid_climate.h"
+    if not path.exists():
+        return []
+    rel = path.relative_to(root)
+    text = path.read_text(encoding="utf-8")
+    errors: list[str] = []
+
+    helper = re.search(
+        r"inline\s+int\s+climate_effective_step_tenths\s*\([^)]*\)\s*\{(?P<body>.*?)\n\}",
+        text,
+        re.DOTALL,
+    )
+    if not helper:
+        errors.append(f"{rel}: keep climate temperature changes at a display-appropriate minimum")
+    else:
+        body = helper.group("body")
+        if (
+            "CLIMATE_DEFAULT_STEP_TENTHS" not in body
+            or "CLIMATE_WHOLE_NUMBER_STEP_TENTHS" not in body
+            or "ctx->precision <= 0" not in body
+            or "ctx->step_tenths > minimum" not in body
+        ):
+            errors.append(f"{rel}: keep climate temperature changes at a display-appropriate minimum")
+    if "int step = climate_effective_step_tenths(ctx);" not in text:
+        errors.append(f"{rel}: round climate targets using the display-appropriate minimum step")
+    if "int base = ctx->precision <= 0 ? 0 : ctx->min_tenths;" not in text:
+        errors.append(f"{rel}: round whole-number climate targets to whole-degree boundaries")
+    if "climate_selected_target(ui.active) - ui.active->step_tenths" in text:
+        errors.append(f"{rel}: use the display-appropriate minimum step for the climate minus button")
+    if "climate_selected_target(ui.active) + ui.active->step_tenths" in text:
+        errors.append(f"{rel}: use the display-appropriate minimum step for the climate plus button")
+    return errors
+
+
+def firmware_s3_api_errors(
+    device_path: Path,
+    s3_packages_path: Path,
+    core_infra_path: Path,
+    api_navigate_path: Path,
+    package_paths: tuple[Path, ...],
+    root: Path,
+) -> list[str]:
+    if not device_path.exists():
+        return []
+    rel = device_path.relative_to(root)
+    text = device_path.read_text(encoding="utf-8")
+    errors: list[str] = []
+
+    queue_match = re.search(r"(?m)^\s*max_send_queue:\s*(\d+)\s*$", text)
+    if not queue_match:
+        errors.append(f"{rel}: set an explicit S3 native API send queue")
+    elif int(queue_match.group(1)) < 12:
+        errors.append(f"{rel}: keep the S3 native API send queue high enough for HA reconnect bursts")
+    connections_match = re.search(r"(?m)^\s*max_connections:\s*(\d+)\s*$", text)
+    if not connections_match:
+        errors.append(f"{rel}: set an explicit S3 native API connection pool")
+    elif int(connections_match.group(1)) < 3:
+        errors.append(f"{rel}: keep enough S3 native API slots for HA reconnects after OTA")
+    if "ESPCONTROL_DISABLE_TODO=1" not in text:
+        errors.append(f"{rel}: keep the S3 todo list disabled until its HA action response path is stable")
+
+    if api_navigate_path.exists():
+        api_rel = api_navigate_path.relative_to(root)
+        api_text = api_navigate_path.read_text(encoding="utf-8")
+        if "action: navigate" not in api_text:
+            errors.append(f"{api_rel}: keep the Home Assistant navigate action in the dedicated API package")
+    else:
+        errors.append(f"{api_navigate_path.relative_to(root)}: missing dedicated Home Assistant navigate API package")
+
+    if core_infra_path.exists():
+        core_rel = core_infra_path.relative_to(root)
+        core_text = core_infra_path.read_text(encoding="utf-8")
+        if "action: navigate" in core_text:
+            errors.append(f"{core_rel}: keep the navigate action out of core_infra so S3 can omit it")
+
+    if s3_packages_path.exists():
+        s3_rel = s3_packages_path.relative_to(root)
+        s3_packages = s3_packages_path.read_text(encoding="utf-8")
+        if "api_navigate" in s3_packages or "api_navigate.yaml" in s3_packages:
+            errors.append(f"{s3_rel}: omit the Home Assistant navigate API action on S3")
+
+    for package_path in package_paths:
+        if package_path == s3_packages_path or not package_path.exists():
+            continue
+        if not package_api_navigate_enabled(package_path, root):
+            continue
+        package_rel = package_path.relative_to(root)
+        package_text = package_path.read_text(encoding="utf-8")
+        if "api_navigate" not in package_text or "api_navigate.yaml" not in package_text:
+            errors.append(f"{package_rel}: include the dedicated Home Assistant navigate API package")
+    return errors
+
+
+def firmware_todo_disabled_errors(device_paths: tuple[Path, ...], root: Path) -> list[str]:
+    errors: list[str] = []
+    for path in device_paths:
+        if not path.exists():
+            continue
+        rel = path.relative_to(root)
+        text = path.read_text(encoding="utf-8")
+        if "ESPCONTROL_DISABLE_TODO=1" not in text:
+            errors.append(f"{rel}: keep the todo list disabled on every device")
+    return errors
+
+
+def firmware_connectivity_api_errors(paths: tuple[Path, ...], root: Path) -> list[str]:
+    errors: list[str] = []
+    for path in paths:
+        if not path.exists():
+            continue
+        rel = path.relative_to(root)
+        text = path.read_text(encoding="utf-8")
+        if re.search(r"(?m)^\s*api\.connected:\s*$", text):
+            errors.append(f"{rel}: wait for Home Assistant state subscription, not any API client")
+        if "on_client_connected:" in text and "ha_api_state_connected()" not in text:
+            errors.append(f"{rel}: only navigate after a Home Assistant state connection is ready")
+    return errors
+
+
+def run_scan() -> int:
+    errors = firmware_ha_binding_errors(FIRMWARE_DIR, ROOT)
+    errors.extend(firmware_ha_boundary_errors(FIRMWARE_DIR, ROOT))
+    errors.extend(firmware_todo_request_errors(FIRMWARE_DIR, ROOT))
+    errors.extend(firmware_todo_disconnect_errors(FIRMWARE_DIR, CORE_INFRA_PATH, ROOT))
+    errors.extend(firmware_action_card_availability_errors(FIRMWARE_DIR, ROOT))
+    errors.extend(firmware_time_reconnect_errors(TIME_ADDON_PATH, ROOT))
+    errors.extend(firmware_ntp_startup_errors(TIME_ADDON_PATH, SUN_CALC_PATH, CONNECTIVITY_PATHS, ROOT))
+    errors.extend(firmware_weather_request_errors(FIRMWARE_DIR, ROOT))
+    errors.extend(firmware_weather_disconnect_errors(FIRMWARE_DIR, CORE_INFRA_PATH, ROOT))
+    errors.extend(firmware_weather_reconnect_errors(CORE_INFRA_PATH, ROOT))
+    errors.extend(firmware_unavailable_retry_errors(FIRMWARE_DIR, CORE_INFRA_PATH, ROOT))
+    errors.extend(firmware_cover_request_errors(FIRMWARE_DIR, CORE_INFRA_PATH, ROOT))
+    errors.extend(firmware_cover_art_external_input_errors(COVER_ART_PATH, ROOT))
+    errors.extend(firmware_cover_art_stale_image_errors(COVER_ART_PATH, ROOT))
+    errors.extend(firmware_cover_art_refresh_errors(COVER_ART_PATH, ROOT))
+    errors.extend(firmware_cover_art_disable_errors(COVER_ART_PATH, ROOT))
+    errors.extend(firmware_image_card_entity_errors(FIRMWARE_DIR, ROOT))
+    errors.extend(firmware_image_card_base_url_errors(FIRMWARE_DIR, ROOT))
+    errors.extend(firmware_image_card_quality_errors(FIRMWARE_DIR, ROOT))
+    errors.extend(firmware_image_card_startup_errors(FIRMWARE_DIR, CORE_INFRA_PATH, ROOT))
+    errors.extend(firmware_artwork_image_auth_errors(ARTWORK_IMAGE_PATH, ROOT))
+    errors.extend(firmware_screensaver_wake_guard_errors(BACKLIGHT_PATH, COVER_ART_PATH, ROOT))
+    errors.extend(firmware_clock_screensaver_overlay_errors(BACKLIGHT_PATH, ROOT))
+    errors.extend(firmware_screen_schedule_screensaver_overlay_errors(COVER_ART_PATH, ROOT))
+    errors.extend(firmware_screen_schedule_screensaver_override_errors(BACKLIGHT_PATH, ROOT))
+    errors.extend(firmware_climate_step_errors(FIRMWARE_DIR, ROOT))
+    errors.extend(
+        firmware_s3_api_errors(
+            S3_DEVICE_PATH,
+            S3_PACKAGES_PATH,
+            CORE_INFRA_PATH,
+            API_NAVIGATE_PATH,
+            DEVICE_PACKAGE_PATHS,
+            ROOT,
+        )
+    )
+    errors.extend(firmware_todo_disabled_errors(DEVICE_DEVICE_PATHS, ROOT))
+    errors.extend(firmware_connectivity_api_errors(CONNECTIVITY_PATHS, ROOT))
+    if errors:
+        print("Firmware Home Assistant binding check failed:")
+        for error in errors:
+            print(f"  {error}")
+        return 1
+    print("Firmware Home Assistant binding checks passed.")
+    return 0
+
+
+def expect_errors(name: str, files: dict[str, str], expected: tuple[str, ...]) -> None:
+    with TemporaryDirectory() as tmp:
+        root = Path(tmp)
+        firmware_dir = root / "components" / "espcontrol"
+        firmware_dir.mkdir(parents=True)
+        for filename, text in files.items():
+            (firmware_dir / filename).write_text(text, encoding="utf-8")
+
+        errors = firmware_ha_binding_errors(firmware_dir, root)
+        for item in expected:
+            assert any(item in error for error in errors), f"{name}: missing {item!r} in {errors!r}"
+        if not expected:
+            assert not errors, f"{name}: expected no errors, got {errors!r}"
+
+
+def expect_ha_boundary_errors(name: str, files: dict[str, str], expected: tuple[str, ...]) -> None:
+    with TemporaryDirectory() as tmp:
+        root = Path(tmp)
+        firmware_dir = root / "components" / "espcontrol"
+        firmware_dir.mkdir(parents=True)
+        for filename, text in files.items():
+            (firmware_dir / filename).write_text(text, encoding="utf-8")
+
+        errors = firmware_ha_boundary_errors(firmware_dir, root)
+        for item in expected:
+            assert any(item in error for error in errors), f"{name}: missing {item!r} in {errors!r}"
+        if not expected:
+            assert not errors, f"{name}: expected no errors, got {errors!r}"
+
+
+def expect_unavailable_retry_errors(
+    name: str,
+    config_text: str,
+    core_text: str,
+    expected: tuple[str, ...],
+) -> None:
+    with TemporaryDirectory() as tmp:
+        root = Path(tmp)
+        firmware_dir = root / "components" / "espcontrol"
+        core_path = root / "common" / "device" / "core_infra.yaml"
+        firmware_dir.mkdir(parents=True)
+        core_path.parent.mkdir(parents=True)
+        (firmware_dir / "button_grid_config.h").write_text(config_text, encoding="utf-8")
+        core_path.write_text(core_text, encoding="utf-8")
+
+        errors = firmware_unavailable_retry_errors(firmware_dir, core_path, root)
+        for item in expected:
+            assert any(item in error for error in errors), f"{name}: missing {item!r} in {errors!r}"
+        if not expected:
+            assert not errors, f"{name}: expected no errors, got {errors!r}"
+
+
+def expect_todo_request_errors(name: str, text: str, expected: tuple[str, ...]) -> None:
+    with TemporaryDirectory() as tmp:
+        root = Path(tmp)
+        firmware_dir = root / "components" / "espcontrol"
+        firmware_dir.mkdir(parents=True)
+        (firmware_dir / "button_grid_todo.h").write_text(text, encoding="utf-8")
+
+        errors = firmware_todo_request_errors(firmware_dir, root)
+        for item in expected:
+            assert any(item in error for error in errors), f"{name}: missing {item!r} in {errors!r}"
+        if not expected:
+            assert not errors, f"{name}: expected no errors, got {errors!r}"
+
+
+def expect_todo_disconnect_errors(
+    name: str,
+    todo_text: str,
+    core_text: str,
+    expected: tuple[str, ...],
+) -> None:
+    with TemporaryDirectory() as tmp:
+        root = Path(tmp)
+        firmware_dir = root / "components" / "espcontrol"
+        core_path = root / "common" / "device" / "core_infra.yaml"
+        firmware_dir.mkdir(parents=True)
+        core_path.parent.mkdir(parents=True)
+        (firmware_dir / "button_grid_todo.h").write_text(todo_text, encoding="utf-8")
+        core_path.write_text(core_text, encoding="utf-8")
+
+        errors = firmware_todo_disconnect_errors(firmware_dir, core_path, root)
+        for item in expected:
+            assert any(item in error for error in errors), f"{name}: missing {item!r} in {errors!r}"
+        if not expected:
+            assert not errors, f"{name}: expected no errors, got {errors!r}"
+
+
+def expect_action_card_availability_errors(name: str, text: str, expected: tuple[str, ...]) -> None:
+    with TemporaryDirectory() as tmp:
+        root = Path(tmp)
+        firmware_dir = root / "components" / "espcontrol"
+        firmware_dir.mkdir(parents=True)
+        (firmware_dir / "button_grid_grid.h").write_text(text, encoding="utf-8")
+
+        errors = firmware_action_card_availability_errors(firmware_dir, root)
+        for item in expected:
+            assert any(item in error for error in errors), f"{name}: missing {item!r} in {errors!r}"
+        if not expected:
+            assert not errors, f"{name}: expected no errors, got {errors!r}"
+
+
+def expect_todo_disabled_errors(name: str, files: dict[str, str], expected: tuple[str, ...]) -> None:
+    with TemporaryDirectory() as tmp:
+        root = Path(tmp)
+        paths = []
+        for filename, text in files.items():
+            path = root / filename
+            path.parent.mkdir(parents=True, exist_ok=True)
+            path.write_text(text, encoding="utf-8")
+            paths.append(path)
+
+        errors = firmware_todo_disabled_errors(tuple(paths), root)
+        for item in expected:
+            assert any(item in error for error in errors), f"{name}: missing {item!r} in {errors!r}"
+        if not expected:
+            assert not errors, f"{name}: expected no errors, got {errors!r}"
+
+
+def expect_time_reconnect_errors(name: str, text: str, expected: tuple[str, ...]) -> None:
+    with TemporaryDirectory() as tmp:
+        root = Path(tmp)
+        time_path = root / "common" / "addon" / "time.yaml"
+        time_path.parent.mkdir(parents=True)
+        time_path.write_text(text, encoding="utf-8")
+
+        errors = firmware_time_reconnect_errors(time_path, root)
+        for item in expected:
+            assert any(item in error for error in errors), f"{name}: missing {item!r} in {errors!r}"
+        if not expected:
+            assert not errors, f"{name}: expected no errors, got {errors!r}"
+
+
+def expect_ntp_startup_errors(
+    name: str,
+    time_text: str,
+    sun_calc_text: str,
+    connectivity_text: str,
+    expected: tuple[str, ...],
+) -> None:
+    with TemporaryDirectory() as tmp:
+        root = Path(tmp)
+        time_path = root / "common" / "addon" / "time.yaml"
+        sun_calc_path = root / "components" / "espcontrol" / "sun_calc.h"
+        connectivity_path = root / "common" / "addon" / "connectivity.yaml"
+        time_path.parent.mkdir(parents=True, exist_ok=True)
+        sun_calc_path.parent.mkdir(parents=True, exist_ok=True)
+        connectivity_path.parent.mkdir(parents=True, exist_ok=True)
+        time_path.write_text(time_text, encoding="utf-8")
+        sun_calc_path.write_text(sun_calc_text, encoding="utf-8")
+        connectivity_path.write_text(connectivity_text, encoding="utf-8")
+
+        errors = firmware_ntp_startup_errors(
+            time_path,
+            sun_calc_path,
+            (connectivity_path,),
+            root,
+        )
+        for item in expected:
+            assert any(item in error for error in errors), f"{name}: missing {item!r} in {errors!r}"
+        if not expected:
+            assert not errors, f"{name}: expected no errors, got {errors!r}"
+
+
+def expect_weather_request_errors(name: str, text: str, expected: tuple[str, ...]) -> None:
+    with TemporaryDirectory() as tmp:
+        root = Path(tmp)
+        firmware_dir = root / "components" / "espcontrol"
+        firmware_dir.mkdir(parents=True)
+        (firmware_dir / "button_grid_config.h").write_text(text, encoding="utf-8")
+
+        errors = firmware_weather_request_errors(firmware_dir, root)
+        for item in expected:
+            assert any(item in error for error in errors), f"{name}: missing {item!r} in {errors!r}"
+        if not expected:
+            assert not errors, f"{name}: expected no errors, got {errors!r}"
+
+
+def expect_weather_disconnect_errors(
+    name: str,
+    config_text: str,
+    core_text: str,
+    expected: tuple[str, ...],
+) -> None:
+    with TemporaryDirectory() as tmp:
+        root = Path(tmp)
+        firmware_dir = root / "components" / "espcontrol"
+        core_path = root / "common" / "device" / "core_infra.yaml"
+        firmware_dir.mkdir(parents=True)
+        core_path.parent.mkdir(parents=True)
+        (firmware_dir / "button_grid_config.h").write_text(config_text, encoding="utf-8")
+        core_path.write_text(core_text, encoding="utf-8")
+
+        errors = firmware_weather_disconnect_errors(firmware_dir, core_path, root)
+        for item in expected:
+            assert any(item in error for error in errors), f"{name}: missing {item!r} in {errors!r}"
+        if not expected:
+            assert not errors, f"{name}: expected no errors, got {errors!r}"
+
+
+def expect_weather_reconnect_errors(name: str, core_text: str, expected: tuple[str, ...]) -> None:
+    with TemporaryDirectory() as tmp:
+        root = Path(tmp)
+        core_path = root / "common" / "device" / "core_infra.yaml"
+        core_path.parent.mkdir(parents=True)
+        core_path.write_text(core_text, encoding="utf-8")
+
+        errors = firmware_weather_reconnect_errors(core_path, root)
+        for item in expected:
+            assert any(item in error for error in errors), f"{name}: missing {item!r} in {errors!r}"
+        if not expected:
+            assert not errors, f"{name}: expected no errors, got {errors!r}"
+
+
+def expect_cover_request_errors(
+    name: str,
+    action_text: str,
+    core_text: str,
+    expected: tuple[str, ...],
+) -> None:
+    with TemporaryDirectory() as tmp:
+        root = Path(tmp)
+        firmware_dir = root / "components" / "espcontrol"
+        core_path = root / "common" / "device" / "core_infra.yaml"
+        firmware_dir.mkdir(parents=True)
+        core_path.parent.mkdir(parents=True)
+        (firmware_dir / "button_grid_actions.h").write_text(action_text, encoding="utf-8")
+        core_path.write_text(core_text, encoding="utf-8")
+
+        errors = firmware_cover_request_errors(firmware_dir, core_path, root)
+        for item in expected:
+            assert any(item in error for error in errors), f"{name}: missing {item!r} in {errors!r}"
+        if not expected:
+            assert not errors, f"{name}: expected no errors, got {errors!r}"
+
+
+def expect_cover_art_external_input_errors(name: str, text: str, expected: tuple[str, ...]) -> None:
+    with TemporaryDirectory() as tmp:
+        root = Path(tmp)
+        path = root / "common" / "device" / "screen_cover_art.yaml"
+        path.parent.mkdir(parents=True)
+        path.write_text(text, encoding="utf-8")
+
+        errors = firmware_cover_art_external_input_errors(path, root)
+        for item in expected:
+            assert any(item in error for error in errors), f"{name}: missing {item!r} in {errors!r}"
+        if not expected:
+            assert not errors, f"{name}: expected no errors, got {errors!r}"
+
+
+def expect_cover_art_stale_image_errors(name: str, text: str, expected: tuple[str, ...]) -> None:
+    with TemporaryDirectory() as tmp:
+        root = Path(tmp)
+        path = root / "common" / "device" / "screen_cover_art.yaml"
+        path.parent.mkdir(parents=True)
+        path.write_text(text, encoding="utf-8")
+
+        errors = firmware_cover_art_stale_image_errors(path, root)
+        for item in expected:
+            assert any(item in error for error in errors), f"{name}: missing {item!r} in {errors!r}"
+        if not expected:
+            assert not errors, f"{name}: expected no errors, got {errors!r}"
+
+
+def expect_cover_art_refresh_errors(name: str, text: str, expected: tuple[str, ...]) -> None:
+    with TemporaryDirectory() as tmp:
+        root = Path(tmp)
+        path = root / "common" / "device" / "screen_cover_art.yaml"
+        path.parent.mkdir(parents=True)
+        path.write_text(text, encoding="utf-8")
+
+        errors = firmware_cover_art_refresh_errors(path, root)
+        for item in expected:
+            assert any(item in error for error in errors), f"{name}: missing {item!r} in {errors!r}"
+        if not expected:
+            assert not errors, f"{name}: expected no errors, got {errors!r}"
+
+
+def expect_cover_art_disable_errors(name: str, text: str, expected: tuple[str, ...]) -> None:
+    with TemporaryDirectory() as tmp:
+        root = Path(tmp)
+        path = root / "common" / "device" / "screen_cover_art.yaml"
+        path.parent.mkdir(parents=True)
+        path.write_text(text, encoding="utf-8")
+
+        errors = firmware_cover_art_disable_errors(path, root)
+        for item in expected:
+            assert any(item in error for error in errors), f"{name}: missing {item!r} in {errors!r}"
+        if not expected:
+            assert not errors, f"{name}: expected no errors, got {errors!r}"
+
+
+def expect_image_card_entity_errors(name: str, text: str, expected: tuple[str, ...]) -> None:
+    with TemporaryDirectory() as tmp:
+        root = Path(tmp)
+        firmware_dir = root / "components" / "espcontrol"
+        firmware_dir.mkdir(parents=True)
+        (firmware_dir / "button_grid_image.h").write_text(text, encoding="utf-8")
+
+        errors = firmware_image_card_entity_errors(firmware_dir, root)
+        for item in expected:
+            assert any(item in error for error in errors), f"{name}: missing {item!r} in {errors!r}"
+        if not expected:
+            assert not errors, f"{name}: expected no errors, got {errors!r}"
+
+
+def expect_image_card_base_url_errors(name: str, text: str, expected: tuple[str, ...]) -> None:
+    with TemporaryDirectory() as tmp:
+        root = Path(tmp)
+        firmware_dir = root / "components" / "espcontrol"
+        firmware_dir.mkdir(parents=True)
+        (firmware_dir / "button_grid_image.h").write_text(text, encoding="utf-8")
+
+        errors = firmware_image_card_base_url_errors(firmware_dir, root)
+        for item in expected:
+            assert any(item in error for error in errors), f"{name}: missing {item!r} in {errors!r}"
+        if not expected:
+            assert not errors, f"{name}: expected no errors, got {errors!r}"
+
+
+def expect_image_card_quality_errors(name: str, text: str, expected: tuple[str, ...]) -> None:
+    with TemporaryDirectory() as tmp:
+        root = Path(tmp)
+        firmware_dir = root / "components" / "espcontrol"
+        firmware_dir.mkdir(parents=True)
+        (firmware_dir / "button_grid_image.h").write_text(text, encoding="utf-8")
+
+        errors = firmware_image_card_quality_errors(firmware_dir, root)
+        for item in expected:
+            assert any(item in error for error in errors), f"{name}: missing {item!r} in {errors!r}"
+        if not expected:
+            assert not errors, f"{name}: expected no errors, got {errors!r}"
+
+
+def expect_image_card_startup_errors(
+    name: str,
+    text: str,
+    core_text: str,
+    expected: tuple[str, ...],
+) -> None:
+    with TemporaryDirectory() as tmp:
+        root = Path(tmp)
+        firmware_dir = root / "components" / "espcontrol"
+        core_path = root / "common" / "device" / "core_infra.yaml"
+        firmware_dir.mkdir(parents=True)
+        core_path.parent.mkdir(parents=True)
+        (firmware_dir / "button_grid_image.h").write_text(text, encoding="utf-8")
+        core_path.write_text(core_text, encoding="utf-8")
+
+        errors = firmware_image_card_startup_errors(firmware_dir, core_path, root)
+        for item in expected:
+            assert any(item in error for error in errors), f"{name}: missing {item!r} in {errors!r}"
+        if not expected:
+            assert not errors, f"{name}: expected no errors, got {errors!r}"
+
+
+def expect_screensaver_wake_guard_errors(
+    name: str,
+    backlight_text: str,
+    cover_art_text: str,
+    expected: tuple[str, ...],
+) -> None:
+    with TemporaryDirectory() as tmp:
+        root = Path(tmp)
+        backlight_path = root / "common" / "addon" / "backlight.yaml"
+        cover_art_path = root / "common" / "device" / "screen_cover_art.yaml"
+        backlight_path.parent.mkdir(parents=True)
+        cover_art_path.parent.mkdir(parents=True)
+        backlight_path.write_text(backlight_text, encoding="utf-8")
+        cover_art_path.write_text(cover_art_text, encoding="utf-8")
+
+        errors = firmware_screensaver_wake_guard_errors(backlight_path, cover_art_path, root)
+        for item in expected:
+            assert any(item in error for error in errors), f"{name}: missing {item!r} in {errors!r}"
+        if not expected:
+            assert not errors, f"{name}: expected no errors, got {errors!r}"
+
+
+def expect_clock_screensaver_overlay_errors(name: str, text: str, expected: tuple[str, ...]) -> None:
+    with TemporaryDirectory() as tmp:
+        root = Path(tmp)
+        path = root / "common" / "addon" / "backlight.yaml"
+        path.parent.mkdir(parents=True)
+        path.write_text(text, encoding="utf-8")
+        errors = firmware_clock_screensaver_overlay_errors(path, root)
+        for item in expected:
+            assert any(item in error for error in errors), f"{name}: missing {item!r} in {errors!r}"
+        if not expected:
+            assert not errors, f"{name}: expected no errors, got {errors!r}"
+
+
+def expect_screen_schedule_screensaver_override_errors(
+    name: str,
+    text: str,
+    expected: tuple[str, ...],
+) -> None:
+    with TemporaryDirectory() as tmp:
+        root = Path(tmp)
+        path = root / "common" / "addon" / "backlight.yaml"
+        path.parent.mkdir(parents=True)
+        path.write_text(text, encoding="utf-8")
+        errors = firmware_screen_schedule_screensaver_override_errors(path, root)
+        for item in expected:
+            assert any(item in error for error in errors), f"{name}: missing {item!r} in {errors!r}"
+        if not expected:
+            assert not errors, f"{name}: expected no errors, got {errors!r}"
+
+
+def expect_artwork_image_auth_errors(name: str, text: str, expected: tuple[str, ...]) -> None:
+    with TemporaryDirectory() as tmp:
+        root = Path(tmp)
+        path = root / "components" / "artwork_image" / "artwork_image.cpp"
+        path.parent.mkdir(parents=True)
+        path.write_text(text, encoding="utf-8")
+
+        errors = firmware_artwork_image_auth_errors(path, root)
+        for item in expected:
+            assert any(item in error for error in errors), f"{name}: missing {item!r} in {errors!r}"
+        if not expected:
+            assert not errors, f"{name}: expected no errors, got {errors!r}"
+
+
+def expect_climate_step_errors(name: str, text: str, expected: tuple[str, ...]) -> None:
+    with TemporaryDirectory() as tmp:
+        root = Path(tmp)
+        firmware_dir = root / "components" / "espcontrol"
+        firmware_dir.mkdir(parents=True)
+        (firmware_dir / "button_grid_climate.h").write_text(text, encoding="utf-8")
+
+        errors = firmware_climate_step_errors(firmware_dir, root)
+        for item in expected:
+            assert any(item in error for error in errors), f"{name}: missing {item!r} in {errors!r}"
+        if not expected:
+            assert not errors, f"{name}: expected no errors, got {errors!r}"
+
+
+def expect_s3_api_errors(
+    name: str,
+    text: str,
+    expected: tuple[str, ...],
+    s3_packages_text: str = "packages:\n  device: !include device/device.yaml\n",
+    core_text: str = "api:\n  reboot_timeout: 0s\n",
+    api_navigate_text: str = "api:\n  actions:\n    - action: navigate\n",
+    extra_packages: dict[str, str] | None = None,
+) -> None:
+    with TemporaryDirectory() as tmp:
+        root = Path(tmp)
+        device_path = root / "devices" / "guition-esp32-s3-4848s040" / "device" / "device.yaml"
+        s3_packages_path = root / "devices" / "guition-esp32-s3-4848s040" / "packages.yaml"
+        core_path = root / "common" / "device" / "core_infra.yaml"
+        api_navigate_path = root / "common" / "device" / "api_navigate.yaml"
+        device_path.parent.mkdir(parents=True)
+        core_path.parent.mkdir(parents=True)
+        device_path.write_text(text, encoding="utf-8")
+        s3_packages_path.write_text(s3_packages_text, encoding="utf-8")
+        core_path.write_text(core_text, encoding="utf-8")
+        api_navigate_path.write_text(api_navigate_text, encoding="utf-8")
+        package_paths = [s3_packages_path]
+        for filename, package_text in (extra_packages or {}).items():
+            package_path = root / "devices" / filename / "packages.yaml"
+            package_path.parent.mkdir(parents=True)
+            package_path.write_text(package_text, encoding="utf-8")
+            package_paths.append(package_path)
+
+        errors = firmware_s3_api_errors(
+            device_path,
+            s3_packages_path,
+            core_path,
+            api_navigate_path,
+            tuple(package_paths),
+            root,
+        )
+        for item in expected:
+            assert any(item in error for error in errors), f"{name}: missing {item!r} in {errors!r}"
+        if not expected:
+            assert not errors, f"{name}: expected no errors, got {errors!r}"
+
+
+def expect_connectivity_api_errors(name: str, text: str, expected: tuple[str, ...]) -> None:
+    with TemporaryDirectory() as tmp:
+        root = Path(tmp)
+        path = root / "common" / "addon" / "connectivity.yaml"
+        path.parent.mkdir(parents=True)
+        path.write_text(text, encoding="utf-8")
+
+        errors = firmware_connectivity_api_errors((path,), root)
+        for item in expected:
+            assert any(item in error for error in errors), f"{name}: missing {item!r} in {errors!r}"
+        if not expected:
+            assert not errors, f"{name}: expected no errors, got {errors!r}"
+
+
+def run_self_test() -> int:
+    expect_errors(
+        "direct action send",
+        {"button_grid_actions.h": "esphome::api::global_api_server->send_homeassistant_action(req);\n"},
+        ("access Home Assistant API through button_grid_ha.h helpers",),
+    )
+    expect_errors(
+        "direct state subscription",
+        {"button_grid_media.h": "api->subscribe_home_assistant_state(entity, {}, cb);\n"},
+        ("subscribe to Home Assistant state through button_grid_ha.h helpers",),
+    )
+    expect_errors(
+        "direct state get",
+        {"button_grid_media.h": "api->get_home_assistant_state(entity, {}, cb);\n"},
+        ("get Home Assistant state through button_grid_ha.h helpers",),
+    )
+    expect_errors(
+        "direct callback registration",
+        {"button_grid_alarm.h": "api->register_action_response_callback(id, cb);\n"},
+        ("register action callbacks through button_grid_ha.h helpers",),
+    )
+    expect_errors(
+        "helper boundary",
+        {"button_grid_ha.h": "esphome::api::global_api_server->send_homeassistant_action(req);\n"},
+        (),
+    )
+    expect_errors(
+        "helper use",
+        {"button_grid_media.h": "ha_subscribe_state(entity, cb);\n"},
+        (),
+    )
+    expect_ha_boundary_errors(
+        "missing callback cancel helper",
+        {
+            "button_grid_ha.h": (
+                "inline bool ha_subscribe_state() {\n  return true;\n}\n"
+                "inline bool ha_subscribe_attribute() {\n  return true;\n}\n"
+                "inline bool ha_action_send() {\n  return ha_api_state_connected() && HA_ACTION_INTERNAL_FREE_MIN_BYTES;\n}\n"
+            )
+        },
+        ("expose a helper to cancel stale HA action response callbacks",),
+    )
+    expect_ha_boundary_errors(
+        "action send only checks socket",
+        {
+            "button_grid_ha.h": (
+                "inline bool ha_subscribe_state() {\n  return true;\n}\n"
+                "inline bool ha_subscribe_attribute() {\n  return true;\n}\n"
+                "inline bool ha_cancel_action_response_callback() {\n  handle_action_response(); return true;\n}\n"
+                "inline bool ha_action_send() {\n  return ha_api_connected();\n}\n"
+            )
+        },
+        ("send Home Assistant actions only after state subscription is ready",),
+    )
+    expect_ha_boundary_errors(
+        "unavailable retry helper symbols",
+        {
+            "button_grid_ha.h": (
+                "struct HaUnavailableStateRetryRef {};\n"
+                "inline bool ha_subscribe_state() {\n  return true;\n}\n"
+                "inline bool ha_subscribe_attribute() {\n  return true;\n}\n"
+                "inline bool ha_cancel_action_response_callback() {\n  handle_action_response(); return true;\n}\n"
+                "inline bool ha_action_send() {\n"
+                "  return ha_api_state_connected() && HA_ACTION_INTERNAL_FREE_MIN_BYTES;\n"
+                "}\n"
+            )
+        },
+        ("do not reintroduce unavailable HA state retry polling",),
+    )
+    expect_unavailable_retry_errors(
+        "unavailable retry reset and interval",
+        "inline void bump_ha_subscription_generation() {\n"
+        "  ha_reset_unavailable_state_retries();\n"
+        "  ha_reset_deferred_state_requests();\n"
+        "}\n",
+        "interval:\n"
+        "  - interval: 5s\n"
+        "    then:\n"
+        "      - lambda: |-\n"
+        "          ha_retry_unavailable_states();\n",
+        (
+            "do not reset removed unavailable HA state retries",
+            "do not keep removed unavailable HA state retry helpers",
+            "do not retry unavailable HA states",
+        ),
+    )
+    with TemporaryDirectory() as tmp:
+        root = Path(tmp)
+        firmware_dir = root / "components" / "espcontrol"
+        firmware_dir.mkdir(parents=True)
+        (firmware_dir / "button_grid_todo.h").write_text(
+            'inline bool todo_begin_get_items_request() {\n'
+            '  ha_action_begin(req, "todo.get_items", false, 1, call_id);\n'
+            '  ha_action_add_entity(req, ctx->entity_id);\n'
+            '  return true;\n'
+            '}\n',
+            encoding="utf-8",
+        )
+        errors = firmware_todo_request_errors(firmware_dir, root)
+        assert any("must capture a compact response template" in error for error in errors), errors
+    with TemporaryDirectory() as tmp:
+        root = Path(tmp)
+        firmware_dir = root / "components" / "espcontrol"
+        firmware_dir.mkdir(parents=True)
+        (firmware_dir / "button_grid_todo.h").write_text(
+            'inline bool todo_begin_get_items_request() {\n'
+            '  ha_action_begin(req, "todo.get_items", false, 2, call_id);\n'
+            '  req.wants_response = true;\n'
+            '  req.response_template = response_template;\n'
+            '  ha_action_add_entity(req, ctx->entity_id);\n'
+            '  ha_action_add_data(req, "status", "needs_action");\n'
+            '  return true;\n'
+            '}\n',
+            encoding="utf-8",
+        )
+        errors = firmware_todo_request_errors(firmware_dir, root)
+        assert any("filter todo items in the response template" in error for error in errors), errors
+    with TemporaryDirectory() as tmp:
+        root = Path(tmp)
+        firmware_dir = root / "components" / "espcontrol"
+        firmware_dir.mkdir(parents=True)
+        (firmware_dir / "button_grid_todo.h").write_text(
+            'inline bool todo_begin_get_items_request() {\n'
+            '  ha_action_begin(req, "todo.get_items", false, 1, call_id);\n'
+            '  req.wants_response = true;\n'
+            '  std::string response_template = todo_items_response_template(ctx->entity_id);\n'
+            '  req.response_template = response_template;\n'
+            '  ha_action_add_entity(req, ctx->entity_id);\n'
+            '  return true;\n'
+            '}\n',
+            encoding="utf-8",
+        )
+        errors = firmware_todo_request_errors(firmware_dir, root)
+        assert any("keep the todo response template alive" in error for error in errors), errors
+    with TemporaryDirectory() as tmp:
+        root = Path(tmp)
+        firmware_dir = root / "components" / "espcontrol"
+        firmware_dir.mkdir(parents=True)
+        (firmware_dir / "button_grid_todo.h").write_text(
+            'constexpr int TODO_RESPONSE_KEY_MAX_LEN = 96;\n'
+            'inline bool todo_begin_get_items_request() {\n'
+            '  ha_action_begin(req, "todo.get_items", false, 1, call_id);\n'
+            '  req.wants_response = true;\n'
+            '  req.response_template = response_template;\n'
+            '  ha_action_add_entity(req, ctx->entity_id);\n'
+            '  return true;\n'
+            '}\n',
+            encoding="utf-8",
+        )
+        errors = firmware_todo_request_errors(firmware_dir, root)
+        assert any("bound todo response text" in error for error in errors), errors
+    expect_todo_request_errors(
+        "unbounded rendered todo response",
+        'constexpr int TODO_RESPONSE_KEY_MAX_LEN = 96;\n'
+        'constexpr int TODO_RESPONSE_SUMMARY_MAX_LEN = 80;\n'
+        'constexpr int TODO_RESPONSE_TEXT_MAX_LEN = 1536;\n'
+        'inline bool todo_begin_get_items_request() {\n'
+        '  ha_action_begin(req, "todo.get_items", false, 1, call_id);\n'
+        '  req.wants_response = true;\n'
+        '  req.response_template = response_template;\n'
+        '  ha_action_add_entity(req, ctx->entity_id);\n'
+        '  return true;\n'
+        '}\n',
+        ("cap rendered todo responses",),
+    )
+    expect_todo_request_errors(
+        "unbounded pending todo request",
+        'constexpr int TODO_RESPONSE_KEY_MAX_LEN = 96;\n'
+        'constexpr int TODO_RESPONSE_SUMMARY_MAX_LEN = 80;\n'
+        'inline bool todo_begin_get_items_request() {\n'
+        '  ha_action_begin(req, "todo.get_items", false, 1, call_id);\n'
+        '  req.wants_response = true;\n'
+        '  req.response_template = response_template;\n'
+        '  ha_action_add_entity(req, ctx->entity_id);\n'
+        '  return true;\n'
+        '}\n'
+        'inline void request_todo_items() {\n'
+        '  if (!ha_register_action_response_callback(req.call_id, cb)) return;\n'
+        '}\n',
+        ("bound pending todo item requests with a timeout",),
+    )
+    expect_todo_request_errors(
+        "extra todo response callback",
+        'constexpr int TODO_RESPONSE_KEY_MAX_LEN = 96;\n'
+        'constexpr int TODO_RESPONSE_SUMMARY_MAX_LEN = 80;\n'
+        'constexpr int TODO_REQUEST_TIMEOUT_MS = 15000;\n'
+        'inline void todo_cancel_stale_request() {}\n'
+        'inline bool todo_begin_get_items_request() {\n'
+        '  ha_action_begin(req, "todo.get_items", false, 1, call_id);\n'
+        '  req.wants_response = true;\n'
+        '  req.response_template = response_template;\n'
+        '  ha_action_add_entity(req, ctx->entity_id);\n'
+        '  return true;\n'
+        '}\n'
+        'inline void request_todo_items() {\n'
+        '  todo_cancel_stale_request();\n'
+        '  if (!ha_api_state_connected()) return;\n'
+        '  todo_clear_request_state(call_id);\n'
+        '  todo_clear_request_state(call_id);\n'
+        '  ha_register_action_response_callback(req.call_id, cb);\n'
+        '  ha_register_action_response_callback(other_call_id, cb);\n'
+        '}\n',
+        ("only todo list loading should register a response callback",),
+    )
+    expect_todo_request_errors(
+        "timeout only checked while requesting",
+        'constexpr int TODO_RESPONSE_KEY_MAX_LEN = 96;\n'
+        'constexpr int TODO_RESPONSE_SUMMARY_MAX_LEN = 80;\n'
+        'constexpr int TODO_REQUEST_TIMEOUT_MS = 15000;\n'
+        'inline bool todo_cancel_stale_request() { return false; }\n'
+        'inline bool todo_begin_get_items_request() {\n'
+        '  ha_action_begin(req, "todo.get_items", false, 1, call_id);\n'
+        '  req.wants_response = true;\n'
+        '  req.response_template = response_template;\n'
+        '  ha_action_add_entity(req, ctx->entity_id);\n'
+        '  return true;\n'
+        '}\n'
+        'inline void request_todo_items() {\n'
+        '  todo_cancel_stale_request();\n'
+        '  if (!ha_api_state_connected()) return;\n'
+        '  todo_clear_request_state(call_id);\n'
+        '  todo_clear_request_state(call_id);\n'
+        '  ha_register_action_response_callback(req.call_id, cb);\n'
+        '}\n',
+        ("periodically expire stale todo requests",),
+    )
+    expect_todo_request_errors(
+        "modal close leaves todo request pending",
+        'constexpr int TODO_RESPONSE_KEY_MAX_LEN = 96;\n'
+        'constexpr int TODO_RESPONSE_SUMMARY_MAX_LEN = 80;\n'
+        'constexpr int TODO_REQUEST_TIMEOUT_MS = 15000;\n'
+        'inline bool todo_cancel_stale_request() { return false; }\n'
+        'inline bool todo_begin_get_items_request() {\n'
+        '  ha_action_begin(req, "todo.get_items", false, 1, call_id);\n'
+        '  req.wants_response = true;\n'
+        '  req.response_template = response_template;\n'
+        '  ha_action_add_entity(req, ctx->entity_id);\n'
+        '  return true;\n'
+        '}\n'
+        'inline void todo_modal_hide() {\n'
+        '  ui = TodoModalUi();\n'
+        '}\n'
+        'inline void request_todo_items() {\n'
+        '  todo_cancel_stale_request();\n'
+        '  bool stale_request_cancelled = todo_cancel_stale_request();\n'
+        '  if (!ha_api_state_connected()) return;\n'
+        '  todo_clear_request_state(call_id);\n'
+        '  todo_clear_request_state(call_id);\n'
+        '  ha_register_action_response_callback(req.call_id, cb);\n'
+        '}\n',
+        ("cancel pending todo item requests when the modal closes",),
+    )
+    expect_todo_request_errors(
+        "modal close retries cancelled request",
+        'constexpr int TODO_RESPONSE_KEY_MAX_LEN = 96;\n'
+        'constexpr int TODO_RESPONSE_SUMMARY_MAX_LEN = 80;\n'
+        'constexpr int TODO_REQUEST_TIMEOUT_MS = 15000;\n'
+        'inline bool todo_cancel_stale_request() { return false; }\n'
+        'inline bool todo_begin_get_items_request() {\n'
+        '  ha_action_begin(req, "todo.get_items", false, 1, call_id);\n'
+        '  req.wants_response = true;\n'
+        '  req.response_template = response_template;\n'
+        '  ha_action_add_entity(req, ctx->entity_id);\n'
+        '  return true;\n'
+        '}\n'
+        'inline void todo_modal_hide() {\n'
+        '  todo_cancel_pending_request("modal closed");\n'
+        '  ui = TodoModalUi();\n'
+        '}\n'
+        'inline void request_todo_items() {\n'
+        '  todo_cancel_stale_request();\n'
+        '  bool stale_request_cancelled = todo_cancel_stale_request();\n'
+        '  if (!ha_api_state_connected()) return;\n'
+        '  todo_clear_request_state(call_id);\n'
+        '  todo_clear_request_state(call_id);\n'
+        '  ha_register_action_response_callback(req.call_id, cb);\n'
+        '}\n',
+        ("close todo modals without retrying their cancelled request",),
+    )
+    expect_todo_request_errors(
+        "todo send failed has no retry",
+        'constexpr int TODO_RESPONSE_KEY_MAX_LEN = 96;\n'
+        'constexpr int TODO_RESPONSE_SUMMARY_MAX_LEN = 80;\n'
+        'constexpr int TODO_REQUEST_TIMEOUT_MS = 15000;\n'
+        'inline bool todo_cancel_stale_request() { return false; }\n'
+        'inline bool todo_begin_get_items_request() {\n'
+        '  ha_action_begin(req, "todo.get_items", false, 1, call_id);\n'
+        '  req.wants_response = true;\n'
+        '  req.response_template = response_template;\n'
+        '  ha_action_add_entity(req, ctx->entity_id);\n'
+        '  return true;\n'
+        '}\n'
+        'inline void todo_modal_hide() {\n'
+        '  todo_cancel_pending_request("modal closed");\n'
+        '  ui = TodoModalUi();\n'
+        '}\n'
+        'inline void request_todo_items() {\n'
+        '  todo_cancel_stale_request();\n'
+        '  bool stale_request_cancelled = todo_cancel_stale_request();\n'
+        '  if (!ha_api_state_connected()) return;\n'
+        '  todo_clear_request_state(call_id);\n'
+        '  todo_clear_request_state(call_id);\n'
+        '  ha_register_action_response_callback(req.call_id, cb);\n'
+        '  if (!ha_action_send(req)) {\n'
+        '    todo_cancel_request(req.call_id, "send failed");\n'
+        '    todo_modal_set_status("Could not load");\n'
+        '  }\n'
+        '}\n',
+        ("retry todo loads when Home Assistant disconnects during send",),
+    )
+    expect_todo_request_errors(
+        "pending todo request leaves modal loading",
+        'constexpr int TODO_RESPONSE_KEY_MAX_LEN = 96;\n'
+        'constexpr int TODO_RESPONSE_SUMMARY_MAX_LEN = 80;\n'
+        'constexpr int TODO_REQUEST_TIMEOUT_MS = 15000;\n'
+        'inline bool todo_cancel_stale_request() { return false; }\n'
+        'inline bool todo_begin_get_items_request() {\n'
+        '  ha_action_begin(req, "todo.get_items", false, 1, call_id);\n'
+        '  req.wants_response = true;\n'
+        '  req.response_template = response_template;\n'
+        '  ha_action_add_entity(req, ctx->entity_id);\n'
+        '  return true;\n'
+        '}\n'
+        'inline void todo_modal_hide() {\n'
+        '  todo_cancel_pending_request("modal closed");\n'
+        '  ui = TodoModalUi();\n'
+        '}\n'
+        'inline void request_todo_items() {\n'
+        '  todo_cancel_stale_request();\n'
+        '  bool stale_request_cancelled = todo_cancel_stale_request();\n'
+        '  if (todo_request_state().call_id != 0) {\n'
+        '    return;\n'
+        '  }\n'
+        '  if (!ha_api_state_connected()) return;\n'
+        '  todo_clear_request_state(call_id);\n'
+        '  todo_clear_request_state(call_id);\n'
+        '  ha_register_action_response_callback(req.call_id, cb);\n'
+        '  if (!ha_action_send(req)) {\n'
+        '    todo_cancel_request(req.call_id, "send failed");\n'
+        '    ui.waiting_for_ha = true;\n'
+        '  }\n'
+        '}\n',
+        ("retry todo loads when another todo request is already pending",),
+    )
+    expect_todo_disconnect_errors(
+        "missing disconnect cleanup",
+        "inline void todo_cancel_pending_request(const char *reason) {}\n"
+        "inline void todo_reload_active_modal() {}\n"
+        "inline void todo_retry_waiting_modal() { waiting_for_ha = true; }\n",
+        "api:\n"
+        "  on_client_connected:\n"
+        "    - lambda: todo_reload_active_modal();\n"
+        "interval:\n"
+        "  - interval: 5s\n"
+        "    then:\n"
+        "      - lambda: todo_retry_waiting_modal();\n",
+        ("cancel pending todo requests when the HA API disconnects",),
+    )
+    expect_todo_disconnect_errors(
+        "missing reconnect retry",
+        "inline void todo_cancel_pending_request(const char *reason) {}\n"
+        "inline void todo_reload_active_modal() {}\n"
+        "inline void todo_retry_waiting_modal() { waiting_for_ha = true; }\n",
+        "api:\n"
+        "  on_client_disconnected:\n"
+        "    - lambda: todo_cancel_pending_request(\"api disconnected\");\n"
+        "interval:\n"
+        "  - interval: 5s\n"
+        "    then:\n"
+        "      - lambda: todo_retry_waiting_modal();\n",
+        ("retry open todo modals when the HA API reconnects",),
+    )
+    expect_todo_disconnect_errors(
+        "missing waiting modal retry",
+        "inline void todo_cancel_pending_request(const char *reason) {}\n"
+        "inline void todo_reload_active_modal() {}\n",
+        "api:\n"
+        "  on_client_connected:\n"
+        "    - lambda: todo_reload_active_modal();\n"
+        "  on_client_disconnected:\n"
+        "    - lambda: todo_cancel_pending_request(\"api disconnected\");\n",
+        ("retry open todo modals that are waiting for Home Assistant",),
+    )
+    expect_todo_disconnect_errors(
+        "availability blocks todo modal",
+        "inline void todo_cancel_pending_request(const char *reason) {}\n"
+        "inline void todo_reload_active_modal() {}\n"
+        "inline void todo_retry_waiting_modal() { waiting_for_ha = true; }\n"
+        "inline void todo_card_open_modal(TodoCardCtx *ctx) {\n"
+        "  if (!todo_card_context_valid(ctx) || ctx->entity_id.empty() || !ctx->available) return;\n"
+        "}\n",
+        "api:\n"
+        "  on_client_connected:\n"
+        "    - lambda: todo_reload_active_modal();\n"
+        "  on_client_disconnected:\n"
+        "    - lambda: todo_cancel_pending_request(\"api disconnected\");\n"
+        "interval:\n"
+        "  - interval: 5s\n"
+        "    then:\n"
+        "      - lambda: todo_retry_waiting_modal();\n",
+        ("allow todo modals to open while waiting",),
+    )
+    expect_todo_disconnect_errors(
+        "availability disables todo tap",
+        "inline void todo_cancel_pending_request(const char *reason) {}\n"
+        "inline void todo_reload_active_modal() {}\n"
+        "inline void todo_retry_waiting_modal() { waiting_for_ha = true; }\n"
+        "inline void todo_card_open_modal(TodoCardCtx *ctx) {\n"
+        "  if (!todo_card_context_valid(ctx) || ctx->entity_id.empty()) return;\n"
+        "}\n"
+        "inline void subscribe_todo_state(TodoCardCtx *ctx) {\n"
+        "  apply_control_availability(ctx->btn, ctx->btn, ctx->available);\n"
+        "}\n",
+        "api:\n"
+        "  on_client_connected:\n"
+        "    - lambda: todo_reload_active_modal();\n"
+        "  on_client_disconnected:\n"
+        "    - lambda: todo_cancel_pending_request(\"api disconnected\");\n"
+        "interval:\n"
+        "  - interval: 5s\n"
+        "    then:\n"
+        "      - lambda: todo_retry_waiting_modal();\n",
+        ("keep todo cards tappable",),
+    )
+    expect_action_card_availability_errors(
+        "stateless main action registered for availability",
+        "if (p.type == \"action\") {\n"
+        "  std::string state_entity = action_card_state_entity(p);\n"
+        "  if (!state_entity.empty()) {\n"
+        "    subscribe_action_card_display_state(ctx, state_entity);\n"
+        "  } else {\n"
+        "    register_ha_control_availability(s.btn, s.btn);\n"
+        "  }\n"
+        "  continue;\n"
+        "}\n",
+        ("keep stateless action cards tappable",),
+    )
+    expect_action_card_availability_errors(
+        "stateless subpage action registered for availability",
+        "if (sb_cfg.type == \"action\") {\n"
+        "  std::string state_entity = action_card_state_entity(sb_cfg);\n"
+        "  if (!state_entity.empty()) {\n"
+        "    subscribe_action_card_display_state(action_ctx, state_entity);\n"
+        "  } else {\n"
+        "    register_ha_control_availability(sub_slot.btn, sub_slot.btn);\n"
+        "  }\n"
+        "  ParsedCfg *ctx = new ParsedCfg(sb_cfg);\n"
+        "}\n",
+        ("keep stateless subpage action cards tappable",),
+    )
+    expect_action_card_availability_errors(
+        "stateful action only subscribes display state",
+        "if (p.type == \"action\") {\n"
+        "  std::string state_entity = action_card_state_entity(p);\n"
+        "  if (!state_entity.empty()) {\n"
+        "    subscribe_action_card_display_state(ctx, state_entity);\n"
+        "  }\n"
+        "  continue;\n"
+        "}\n",
+        (),
+    )
+    expect_action_card_availability_errors(
+        "main trigger registered for availability",
+        "if (p.type == \"push\") {\n"
+        "  register_ha_control_availability(s.btn, s.btn);\n"
+        "  continue;\n"
+        "}\n",
+        ("keep trigger cards tappable",),
+    )
+    expect_action_card_availability_errors(
+        "subpage trigger registered for availability",
+        "if (sb_cfg.type == \"push\") {\n"
+        "  register_ha_control_availability(sb_btn, sb_btn);\n"
+        "  std::string push_label = sb_cfg.label.empty() ? espcontrol_i18n(std::string(\"Push\")) : sb_cfg.label;\n"
+        "  continue;\n"
+        "}\n",
+        ("keep subpage trigger cards tappable",),
+    )
+    expect_action_card_availability_errors(
+        "trigger cards stay stateless",
+        "if (p.type == \"push\") continue;\n"
+        "if (sb_cfg.type == \"push\") {\n"
+        "  std::string push_label = sb_cfg.label.empty() ? espcontrol_i18n(std::string(\"Push\")) : sb_cfg.label;\n"
+        "  continue;\n"
+        "}\n",
+        (),
+    )
+    expect_time_reconnect_errors(
+        "home assistant time sync runs on raw api connect",
+        "api:\n"
+        "  on_client_connected:\n"
+        "    - lambda: |-\n"
+        "        id(homeassistant_time).update();\n",
+        (
+            "guard Home Assistant time updates",
+            "wait for Home Assistant state readiness",
+            "defer Home Assistant time sync",
+            "recalculate sunrise and sunset",
+            "recheck the screen schedule",
+        ),
+    )
+    expect_time_reconnect_errors(
+        "home assistant time sync waits for state readiness",
+        "api:\n"
+        "  on_client_connected:\n"
+        "    - delay: 2s\n"
+        "    - lambda: |-\n"
+        "        if (ha_api_state_connected()) id(homeassistant_time).update();\n"
+        "    - delay: 1s\n"
+        "    - script.execute: time_update\n"
+        "    - script.execute: backlight_recalc_sunrise_sunset\n"
+        "    - script.execute: screen_schedule_check\n"
+        "script:\n"
+        "  - id: time_update\n"
+        "    then:\n"
+        "      - lambda: |-\n"
+        "          if (ha_api_state_connected()) id(homeassistant_time).update();\n",
+        (),
+    )
+    expect_ntp_startup_errors(
+        "custom ntp apply runs during boot",
+        "esphome:\n"
+        "  on_boot:\n"
+        "    then:\n"
+        "      - script.execute: ntp_servers_apply\n",
+        "inline void apply_ntp_servers() {\n"
+        "  esp_sntp_init();\n"
+        "}\n",
+        "wifi:\n"
+        "  on_connect:\n"
+        "    - script.execute: network_status_refresh\n",
+        (
+            "defer custom NTP server apply",
+            "skip SNTP reconfiguration until application setup",
+            "skip SNTP reconfiguration",
+            "apply configured NTP servers after network connect",
+        ),
+    )
+    expect_ntp_startup_errors(
+        "custom ntp apply waits for network",
+        "esphome:\n"
+        "  on_boot:\n"
+        "    then:\n"
+        "      - lambda: apply_timezone();\n"
+        "# Ask Home Assistant for time once connected\n"
+        "# NTP server settings\n"
+        "text:\n"
+        "  - platform: template\n"
+        "    on_value:\n"
+        "      then:\n"
+        "        - script.execute: ntp_servers_apply_after_network\n"
+        "text_sensor:\n"
+        "script:\n"
+        "  - id: ntp_servers_apply_after_network\n"
+        "    then:\n"
+        "      - delay: 2s\n"
+        "      - script.execute: ntp_servers_apply\n",
+        "inline void apply_ntp_servers() {\n"
+        "  if (!esphome::App.is_setup_complete()) return;\n"
+        "  if (esphome::network::get_ip_addresses().empty()) return;\n"
+        "  esp_sntp_init();\n"
+        "}\n",
+        "wifi:\n"
+        "  on_connect:\n"
+        "    - script.execute: ntp_servers_apply_after_network\n",
+        (),
+    )
+    expect_weather_request_errors(
+        "weather request during reconnect",
+        "inline void request_weather_forecast_entity() {\n"
+        "  constexpr int WEATHER_FORECAST_PENDING_MAX = 8;\n"
+        "  constexpr uint32_t WEATHER_FORECAST_RETRY_DELAY_MS = 300000;\n"
+        "  weather_forecast_track_pending(req.call_id);\n"
+        "  weather_forecast_cancel_pending_requests();\n"
+        "  weather_forecast_schedule_retry(entity_id, day, \"failed\");\n"
+        "  if (!ha_api_available()) return;\n"
+        "  weather_forecast_schedule_retry(entity_id, day, \"low internal heap\");\n"
+        "  ha_register_action_response_callback(req.call_id, cb);\n"
+        "  ha_action_send(req);\n"
+        "}\n",
+        ("wait for Home Assistant state subscription",),
+    )
+    expect_weather_request_errors(
+        "weather callback leak on send failure",
+        "inline void request_weather_forecast_entity() {\n"
+        "  constexpr int WEATHER_FORECAST_PENDING_MAX = 8;\n"
+        "  constexpr uint32_t WEATHER_FORECAST_RETRY_DELAY_MS = 300000;\n"
+        "  weather_forecast_track_pending(req.call_id);\n"
+        "  weather_forecast_cancel_pending_requests();\n"
+        "  weather_forecast_schedule_retry(entity_id, day, \"failed\");\n"
+        "  if (!ha_api_state_connected()) return;\n"
+        "  weather_forecast_schedule_retry(entity_id, day, \"low internal heap\");\n"
+        "  ha_register_action_response_callback(req.call_id, cb);\n"
+        "  if (!ha_action_send(req)) return;\n"
+        "}\n",
+        ("cancel forecast response callbacks",),
+    )
+    expect_weather_request_errors(
+        "weather send failure missing retry",
+        "inline void request_weather_forecast_entity() {\n"
+        "  constexpr int WEATHER_FORECAST_PENDING_MAX = 8;\n"
+        "  constexpr uint32_t WEATHER_FORECAST_RETRY_DELAY_MS = 300000;\n"
+        "  weather_forecast_track_pending(req.call_id);\n"
+        "  weather_forecast_cancel_pending_requests();\n"
+        "  weather_forecast_schedule_retry(entity_id, day, \"setup failed\");\n"
+        "  if (!ha_api_state_connected()) return;\n"
+        "  weather_forecast_schedule_retry(entity_id, day, \"low internal heap\");\n"
+        "  ha_register_action_response_callback(req.call_id, cb);\n"
+        "  if (!ha_action_send(req)) {\n"
+        "    weather_forecast_clear_pending(req.call_id);\n"
+        "    ha_cancel_action_response_callback(req.call_id, \"send failed\");\n"
+        "    weather_forecast_send_next_queued();\n"
+        "  }\n"
+        "}\n",
+        ("retry weather forecast sends that fail after callback registration",),
+    )
+    expect_weather_request_errors(
+        "weather payload without temperatures missing retry",
+        "inline void request_weather_forecast_entity() {\n"
+        "  constexpr int WEATHER_FORECAST_PENDING_MAX = 8;\n"
+        "  constexpr uint32_t WEATHER_FORECAST_RETRY_DELAY_MS = 300000;\n"
+        "  weather_forecast_track_pending(req.call_id);\n"
+        "  weather_forecast_cancel_pending_requests();\n"
+        "  weather_forecast_schedule_retry(entity_id, day, \"setup failed\");\n"
+        "  if (!ha_api_state_connected()) return;\n"
+        "  weather_forecast_schedule_retry(entity_id, day, \"low internal heap\");\n"
+        "  ha_register_action_response_callback(req.call_id, cb);\n"
+        "  bool valid = false;\n"
+        "  if (!valid) {\n"
+        "    ESP_LOGW(\"weather_forecast\", \"No usable forecast temperatures for %s\", entity_id.c_str());\n"
+        "  }\n"
+        "}\n",
+        ("retry weather forecasts when Home Assistant returns no usable temperatures",),
+    )
+    expect_weather_request_errors(
+        "unbounded weather callbacks",
+        "inline void request_weather_forecast_entity() {\n"
+        "  constexpr uint32_t WEATHER_FORECAST_RETRY_DELAY_MS = 300000;\n"
+        "  weather_forecast_schedule_retry(entity_id, day, \"failed\");\n"
+        "  if (!ha_api_state_connected()) return;\n"
+        "  weather_forecast_schedule_retry(entity_id, day, \"low internal heap\");\n"
+        "  ha_register_action_response_callback(req.call_id, cb);\n"
+        "  ha_cancel_action_response_callback(req.call_id, \"send failed\");\n"
+        "}\n",
+        ("bound pending forecast response callbacks",),
+    )
+    expect_weather_request_errors(
+        "missing delayed weather request retry",
+        "inline void request_weather_forecast_entity() {\n"
+        "  constexpr int WEATHER_FORECAST_PENDING_MAX = 8;\n"
+        "  weather_forecast_track_pending(req.call_id);\n"
+        "  weather_forecast_cancel_pending_requests();\n"
+        "  if (!ha_api_state_connected()) return;\n"
+        "  weather_forecast_schedule_retry(entity_id, day, \"low internal heap\");\n"
+        "  ha_register_action_response_callback(req.call_id, cb);\n"
+        "  ha_cancel_action_response_callback(req.call_id, \"send failed\");\n"
+        "  ha_action_send(req);\n"
+        "}\n",
+        ("retry failed weather forecast requests later",),
+    )
+    expect_weather_request_errors(
+        "missing robust weather timeout detection",
+        "inline void request_weather_forecast_entity() {\n"
+        "  if (!weather_forecast_actions_ready()) return;\n"
+        "  weather_forecast_track_pending(req.call_id);\n"
+        "  weather_forecast_cancel_pending_requests();\n"
+        "  weather_forecast_schedule_retry(entity_id, day, \"low internal heap\");\n"
+        "  weather_forecast_schedule_retry(entity_id, day, \"failed\");\n"
+        "}\n",
+        ("detect Home Assistant forecast timeout errors robustly",),
+    )
+    expect_weather_disconnect_errors(
+        "missing weather disconnect cleanup",
+        "inline void weather_forecast_cancel_pending_requests() {}\n",
+        "api:\n  on_client_connected:\n    - lambda: refresh_weather_forecast_cards();\n",
+        ("cancel pending forecast callbacks when the HA API disconnects",),
+    )
+    expect_weather_reconnect_errors(
+        "unguarded weather reconnect refresh",
+        "api:\n"
+        "  on_client_connected:\n"
+        "    - lambda: |-\n"
+        "        refresh_weather_forecast_cards();\n"
+        "    - delay: 20s\n"
+        "    - lambda: |-\n"
+        "        if (ha_api_state_connected()) refresh_weather_forecast_cards();\n",
+        ("wait for Home Assistant state readiness",),
+    )
+    expect_weather_reconnect_errors(
+        "missing delayed weather reconnect retry",
+        "api:\n"
+        "  on_client_connected:\n"
+        "    - lambda: |-\n"
+        "        if (ha_api_state_connected()) refresh_weather_forecast_cards();\n",
+        ("retry weather forecast refresh",),
+    )
+    expect_weather_reconnect_errors(
+        "guarded weather reconnect refresh with delayed retry",
+        "api:\n"
+        "  on_client_connected:\n"
+        "    - lambda: |-\n"
+        "        if (ha_api_state_connected()) refresh_weather_forecast_cards();\n"
+        "    - delay: 20s\n"
+        "    - lambda: |-\n"
+        "        if (ha_api_state_connected()) refresh_weather_forecast_cards();\n",
+        (),
+    )
+    expect_cover_request_errors(
+        "missing cover callback tracking",
+        "inline void cover_stop_cancel_pending_request() {}\n"
+        "inline void send_cover_command_action() {\n"
+        "  ha_register_action_response_callback(req.call_id, cb);\n"
+        "}\n",
+        "api:\n"
+        "  on_client_disconnected:\n"
+        "    - lambda: cover_stop_cancel_pending_request();\n",
+        ("track pending cover stop callbacks",),
+    )
+    expect_cover_request_errors(
+        "missing cover disconnect cleanup",
+        "inline void cover_stop_track_pending() {}\n"
+        "inline void cover_stop_clear_pending() {}\n"
+        "inline void cover_stop_cancel_pending_request() {}\n"
+        "inline void send_cover_command_action() {\n"
+        "  bool cover_stop_tracked = true;\n"
+        "  ha_cancel_action_response_callback(req.call_id, \"send failed\");\n"
+        "}\n",
+        "api:\n  on_client_connected:\n    - lambda: refresh_weather_forecast_cards();\n",
+        ("cancel pending cover stop callbacks when the HA API disconnects",),
+    )
+    expect_cover_art_external_input_errors(
+        "missing cover art source handling",
+        "script:\n"
+        "  - id: cover_art_request_artwork\n"
+        "    then:\n"
+        "      - lambda: |-\n"
+        "          id(cover_art_hide_external_input_enabled).state && id(cover_art_external_input_active);\n",
+        (
+            "subscribe to the media player source attribute",
+            "treat TV and Line-in sources as external inputs",
+            "stop pending artwork requests",
+        ),
+    )
+    expect_cover_art_external_input_errors(
+        "cover art source handling present",
+        "switch:\n"
+        "  - platform: template\n"
+        "    id: cover_art_hide_external_input_enabled\n"
+        "script:\n"
+        "  - id: cover_art_apply_external_input_policy\n"
+        "    then:\n"
+        "      - script.stop: cover_art_request_artwork\n"
+        "      - lambda: |-\n"
+        "          id(cover_art_hide_external_input_enabled).state && id(cover_art_external_input_active);\n"
+        "          bool external = next == \"TV\" || next == \"Line-in\";\n"
+        "          ha_subscribe_attribute(cover_entity, std::string(\"source\"), handle_media_source);\n"
+        "          ha_get_attribute(cover_entity, std::string(\"source\"), handle_media_source);\n",
+        (),
+    )
+    expect_cover_art_stale_image_errors(
+        "missing black fallback image hide",
+        "script:\n"
+        "  - id: cover_art_show_black_screen\n"
+        "    then:\n"
+        "      - globals.set:\n"
+        "          id: cover_art_image_available\n"
+        "          value: 'false'\n",
+        ("hide stale cover art image when the black fallback is shown",),
+    )
+    expect_cover_art_stale_image_errors(
+        "conditional black fallback image hide",
+        "script:\n"
+        "  - id: cover_art_show_black_screen\n"
+        "    then:\n"
+        "      - if:\n"
+        "          condition:\n"
+        "            lambda: 'return id(cover_art_loaded_url).empty();'\n"
+        "          then:\n"
+        "            - lvgl.widget.hide: cover_art_image_widget\n",
+        ("hide stale cover art image even after previous artwork loaded",),
+    )
+    expect_cover_art_stale_image_errors(
+        "unconditional black fallback image hide",
+        "script:\n"
+        "  - id: cover_art_show_black_screen\n"
+        "    then:\n"
+        "      - lvgl.widget.hide: cover_art_image_widget\n",
+        (),
+    )
+    expect_cover_art_stale_image_errors(
+        "visible unavailable cover art message",
+        "lvgl:\n"
+        "  top_layer:\n"
+        "    widgets:\n"
+        "      - label:\n"
+        "          id: cover_art_error_label\n"
+        "          text: \"Artwork unavailable\"\n"
+        "script:\n"
+        "  - id: cover_art_show_black_screen\n"
+        "    then:\n"
+        "      - lvgl.widget.hide: cover_art_image_widget\n",
+        ("do not show an unavailable cover art message",),
+    )
+    expect_cover_art_refresh_errors(
+        "missing stale cover refresh guard",
+        "script:\n"
+        "  - id: cover_art_download\n"
+        "    then:\n"
+        "      - lambda: |-\n"
+        "          id(cover_art_url);\n",
+        (
+            "track/source metadata changes as stale artwork",
+            "subscribe to and refresh the media_album_name attribute",
+        ),
+    )
+    expect_cover_art_refresh_errors(
+        "stale cover refresh guard present",
+        "globals:\n"
+        "  - id: cover_art_refresh_needed\n"
+        "  - id: cover_art_download_url\n"
+        "  - id: cover_art_album\n"
+        "script:\n"
+        "  - id: cover_art_download\n"
+        "    then:\n"
+        "      - lambda: |-\n"
+        "          if (url.find(\"/api/media_player_proxy/\") != std::string::npos) {\n"
+        "            url += url.find('?') == std::string::npos ? \"?time=\" : \"&time=\";\n"
+        "          }\n"
+        "          const bool needs_artwork_refresh = id(cover_art_refresh_needed) || !id(cover_art_image_available);\n"
+        "          id(cover_art_download_url) = id(cover_art_downloaded_image)->request_update_url(id(cover_art_download_url));\n"
+        "  - id: cover_art_deferred_download\n"
+        "    then:\n"
+        "      - lambda: |-\n"
+        "          id(cover_art_refresh_needed);\n"
+        "  - id: cover_art_prepare_download\n"
+        "    then:\n"
+        "      - lambda: |-\n"
+        "          id(cover_art_refresh_needed);\n"
+        "  - id: cover_art_use_cached_artwork\n"
+        "    then:\n"
+        "      - lambda: |-\n"
+        "          if (chosen == id(cover_art_url)) {\n"
+        "            if (!id(cover_art_image_available) || id(cover_art_refresh_needed)) {}\n"
+        "          }\n"
+        "  - id: cover_art_request_artwork\n"
+        "    then:\n"
+        "      - lambda: |-\n"
+        "          if (chosen == id(cover_art_url)) {\n"
+        "            if (!id(cover_art_image_available) || id(cover_art_refresh_needed)) {}\n"
+        "          }\n"
+        "  - id: cover_art_apply_downloaded_image\n"
+        "    then:\n"
+        "      - lambda: |-\n"
+        "          std::string expected_url = id(cover_art_download_url);\n"
+        "          id(cover_art_loaded_url) = id(cover_art_url);\n"
+        "          id(cover_art_refresh_needed) = false;\n"
+        "  - id: cover_art_playback_started\n"
+        "    then:\n"
+        "      - lambda: |-\n"
+        "          if (!id(cover_art_image_available)) {\n"
+        "            id(cover_art_retry_url).clear();\n"
+        "            id(cover_art_retry_count) = 0;\n"
+        "          }\n"
+        "  - id: cover_art_resubscribe\n"
+        "    then:\n"
+        "      - lambda: |-\n"
+        "          id(cover_art_refresh_needed) = true;\n"
+        "          mark_artwork_refresh_needed();\n"
+        "          mark_artwork_refresh_needed();\n"
+        "          mark_artwork_refresh_needed();\n"
+        "          mark_artwork_refresh_needed();\n"
+        "          ha_subscribe_attribute(cover_entity, std::string(\"media_album_name\"), handle_media_album);\n"
+        "          ha_get_attribute(cover_entity, std::string(\"media_album_name\"), handle_media_album);\n",
+        (),
+    )
+    expect_cover_art_disable_errors(
+        "missing sleep prevention reset when cover art is disabled",
+        "script:\n"
+        "  - id: cover_art_disable\n"
+        "    then:\n"
+        "      - script.stop: cover_art_delay_timer\n",
+        ("turn off media sleep prevention",),
+    )
+    expect_cover_art_disable_errors(
+        "sleep prevention reset when cover art is disabled",
+        "script:\n"
+        "  - id: cover_art_disable\n"
+        "    then:\n"
+        "      - switch.turn_off: media_player_sleep_prevention_enabled\n",
+        (),
+    )
+    expect_image_card_entity_errors(
+        "legacy camera-only image card guard",
+        "inline bool image_card_entity_supported(const std::string &entity_id) {\n"
+        "  return entity_id.rfind(\"camera.\", 0) == 0;\n"
+        "}\n"
+        "if (p.entity.rfind(\"camera.\", 0) != 0) {\n"
+        "  ESP_LOGW(\"image_card\", \"Image card only supports camera entities: %s\", p.entity.c_str());\n"
+        "}\n",
+        (
+            "support Home Assistant image entities in image cards",
+            "use the shared image card entity-domain guard",
+            "do not reject Home Assistant image entities as unavailable",
+        ),
+    )
+    expect_image_card_entity_errors(
+        "camera and image entities accepted",
+        "inline bool image_card_entity_supported(const std::string &entity_id) {\n"
+        "  return entity_id.rfind(\"camera.\", 0) == 0 || entity_id.rfind(\"image.\", 0) == 0;\n"
+        "}\n"
+        "if (!image_card_entity_supported(p.entity)) {\n"
+        "  ESP_LOGW(\"image_card\", \"Image card only supports camera and image entities: %s\", p.entity.c_str());\n"
+        "}\n",
+        (),
+    )
+    expect_image_card_base_url_errors(
+        "image card uses stale startup base URL",
+        "std::string base_url;\n"
+        "inline void image_card_handle_picture(ImageCardCtx *ctx, esphome::StringRef picture) {\n"
+        "  std::string raw = string_ref_limited(picture, 4096);\n"
+        "  std::string url = image_card_join_url(ctx->base_url, raw);\n"
+        "}\n"
+        "ctx->base_url = cfg.home_assistant_base_url ? cfg.home_assistant_base_url() : \"\";\n",
+        (
+            "keep image card Home Assistant base URL lookup live",
+            "resolve image card base URL when entity_picture is handled",
+            "do not rely only on the startup-time image card base URL",
+        ),
+    )
+    expect_image_card_base_url_errors(
+        "image card resolves live base URL",
+        "std::function<std::string()> base_url_provider;\n"
+        "std::string base_url;\n"
+        "inline std::string image_card_base_url(ImageCardCtx *ctx) {\n"
+        "  return ctx->base_url_provider ? ctx->base_url_provider() : ctx->base_url;\n"
+        "}\n"
+        "inline void image_card_handle_picture(ImageCardCtx *ctx, esphome::StringRef picture) {\n"
+        "  std::string raw = string_ref_limited(picture, 4096);\n"
+        "  std::string url = image_card_join_url(image_card_base_url(ctx), raw);\n"
+        "}\n"
+        "ctx->base_url = cfg.home_assistant_base_url ? cfg.home_assistant_base_url() : \"\";\n"
+        "ctx->base_url_provider = cfg.home_assistant_base_url;\n",
+        (),
+    )
+    expect_image_card_quality_errors(
+        "image card modal only scales tile image",
+        "inline void image_card_open_modal(ImageCardCtx *ctx) {\n"
+        "  image_card_set_widget_source(ui.image_widget, ctx->image);\n"
+        "  image_card_apply_modal_geometry(ctx);\n"
+        "}\n",
+        (
+            "cap high-resolution image card modal downloads",
+            "scale image card modal downloads to a display-appropriate size",
+            "cancel in-flight image downloads before opening image card modals",
+            "defer image downloads while image card modals are open",
+            "detach image sources before deleting image card modals",
+            "set image card download target size before requesting images",
+            "use a separate modal image downloader for expanded image-card quality",
+            "request expanded image-card downloads through the modal downloader",
+            "swap expanded image cards to the modal-quality image after it downloads",
+            "release modal image-card buffers when the modal closes",
+            "support six concurrent image cards on P4 displays",
+            "check free memory before image-card downloads",
+            "include PSRAM in image-card memory checks",
+            "show a visible image-card limit message when downloaders run out",
+            "keep modal-quality image refresh enabled on the 4.3-inch P4 screen",
+            "keep 4.3-inch P4 tile downloads sized to the tile before modal open",
+            "log image-card modal close events",
+            "clean up partially-created image card modals",
+            "keep image-card modal loading overlay centered",
+            "show the cached image-card tile while modal-quality image loads",
+            "clip image card modal content to rounded panel corners",
+            "preserve image card rounded corners while pressed",
+            "apply image card corner clipping to the pressed state",
+            "clear stale image-card tile buffers when card size changes",
+            "keep small-display image card tile downloads sized to the tile",
+        ),
+    )
+    expect_image_card_quality_errors(
+        "image card modal requests capped image",
+        "constexpr int IMAGE_CARD_MAX_CONTEXTS = 6;\n"
+        "constexpr int IMAGE_CARD_MODAL_MAX_TARGET_SIDE_PX = 800;\n"
+        "constexpr size_t IMAGE_CARD_MEMORY_HEADROOM_BYTES = 96 * 1024;\n"
+        "inline lv_style_selector_t image_card_pressed_selector() { return LV_STATE_PRESSED; }\n"
+        "inline void image_card_apply_corner_clip(lv_obj_t *obj, lv_coord_t radius) {}\n"
+        "inline bool image_card_memory_available(ImageCardCtx *ctx, const char *stage,\n"
+        "                                        int width, int height) {\n"
+        "  size_t external_largest = heap_caps_get_largest_free_block(MALLOC_CAP_8BIT | MALLOC_CAP_SPIRAM);\n"
+        "  return external_largest > 0;\n"
+        "}\n"
+        "inline bool image_card_modal_refresh_supported() {\n"
+        "  return true;\n"
+        "}\n"
+        "inline bool image_card_tile_prefetches_modal_quality() {\n"
+        "  return image_card_modal_refresh_supported() &&\n"
+        "         !control_modal_current_is_jc4880p443_size();\n"
+        "}\n"
+        "inline void image_card_limit_target_size(lv_coord_t source_width, lv_coord_t source_height,\n"
+        "                                         int *target_width, int *target_height) {}\n"
+        "inline void image_card_layout_modal_loading(ImageCardCtx *ctx) {\n"
+        "  lv_obj_set_size(ui.loading_widget, width, height);\n"
+        "  lv_obj_align(icon, LV_ALIGN_CENTER, 0, -18);\n"
+        "  lv_obj_align_to(label, icon, LV_ALIGN_OUT_BOTTOM_MID, 0, 8);\n"
+        "}\n"
+        "inline void image_card_request_source_url(ImageCardCtx *ctx) {\n"
+        "  ctx->image->set_target_size(width, height);\n"
+        "  image_card_tile_request_size(width, height, &request_width, &request_height);\n"
+        "  ctx->url = image_card_cache_bust_url(image_card_sized_url(ctx->source_url, request_width, request_height));\n"
+        "}\n"
+        "inline void image_card_tile_request_size(lv_coord_t target_width, lv_coord_t target_height,\n"
+        "                                        int *request_width, int *request_height) {\n"
+        "  image_card_high_quality_request_size(target_width, target_height, request_width, request_height);\n"
+        "  image_card_limit_target_size(target_width, target_height, request_width, request_height);\n"
+        "}\n"
+        "inline void image_card_refresh_tile_geometry(ImageCardCtx *ctx) {\n"
+        "  image_card_schedule_source_refresh(ctx, 1, \"resized tile\");\n"
+        "}\n"
+        "inline void image_card_reset_resized_tile(ImageCardCtx *ctx) {\n"
+        "  ctx->image->release();\n"
+        "}\n"
+        "inline void image_card_request_modal_source_url(ImageCardCtx *ctx) {\n"
+        "  ctx->modal_image->request_update_url(ctx->modal_url, max_source_dim);\n"
+        "}\n"
+        "inline void image_card_abort_modal_open(ImageCardCtx *ctx, const char *reason) {\n"
+        "  ESP_LOGW(\"image_card\", \"modal shell setup failed\");\n"
+        "}\n"
+        "inline void image_card_open_modal(ImageCardCtx *ctx) {\n"
+        "  ESP_LOGW(\"image_card\", \"modal shell setup failed\");\n"
+        "  lv_obj_set_style_clip_corner(ui.panel, true, LV_PART_MAIN);\n"
+        "  image_card_show_modal_image(ctx, ctx->image);\n"
+        "  image_card_queue_modal_source_request(ctx);\n"
+        "  image_card_clear_widget_source(ui.image_widget);\n"
+        "  image_card_set_widget_source(ui.image_widget, ctx->modal_image);\n"
+        "  if (image_card_modal_active_for(ctx)) {\n"
+        "    ESP_LOGD(\"image_card\", \"Deferring image refresh while modal is open for %s\", ctx->entity_id.c_str());\n"
+        "  }\n"
+        "  ctx->image->cancel_update();\n"
+        "  ESP_LOGI(\"image_card\", \"Closing image modal for %s\", ctx->entity_id.c_str());\n"
+        "  ctx->modal_image->release();\n"
+        "}\n"
+        "inline bool bind_image_card(BtnSlot &s, const ParsedCfg &p, const GridConfig &cfg,\n"
+        "                            const ThemePalette &palette) {\n"
+        "  lv_obj_t *loading = image_card_loading_widget(widget);\n"
+        "  image_card_set_loading_state(loading, \"Too many\");\n"
+        "  return true;\n"
+        "}\n",
+        (),
+    )
+    expect_image_card_startup_errors(
+        "image card missing startup reconnect refresh",
+        "inline void image_card_request_picture(ImageCardCtx *ctx) {\n"
+        "  bool requested = ha_get_attribute(ctx->entity_id, std::string(\"entity_picture\"), callback);\n"
+        "}\n"
+        "inline void image_card_request_source_url(ImageCardCtx *ctx) {\n"
+        "  ctx->url = image_card_cache_bust_url(ctx->source_url);\n"
+        "}\n",
+        "api:\n"
+        "  on_client_connected:\n"
+        "    - lambda: |-\n"
+        "        refresh_weather_forecast_cards();\n",
+        (
+            "refresh image cards when Home Assistant reconnects",
+            "retry image-card startup quickly after Home Assistant API connects",
+            "arm image-card refresh from the Home Assistant API connection",
+            "request image-card attributes once the Home Assistant API is connected",
+            "refresh image cards when the camera/image entity state changes",
+            "ignore stale image-card callbacks after grid rebuild",
+            "ignore stale image-card entity_picture callbacks after grid rebuild",
+            "request high-quality Home Assistant image card source downloads",
+            "request bounded Home Assistant image card proxy downloads",
+            "recognize Home Assistant camera and image proxy URLs",
+            "start image-card refresh when Home Assistant API connects",
+            "refresh image cards through Home Assistant connect retries",
+        ),
+    )
+    expect_image_card_startup_errors(
+        "image card refreshes on Home Assistant reconnect",
+        "constexpr uint32_t IMAGE_CARD_API_RETRY_INTERVAL_MS = 250;\n"
+        "inline bool image_card_home_assistant_proxy_url(const std::string &url) {\n"
+        "  return url.find(\"/api/camera_proxy/\") != std::string::npos ||\n"
+        "         url.find(\"/api/image_proxy/\") != std::string::npos;\n"
+        "}\n"
+        "inline std::string image_card_entity_proxy_path(const std::string &entity_id) {\n"
+        "  if (entity_id.rfind(\"camera.\", 0) == 0) return \"/api/camera_proxy/\" + entity_id;\n"
+        "  if (entity_id.rfind(\"image.\", 0) == 0) return \"/api/image_proxy/\" + entity_id;\n"
+        "  return \"\";\n"
+        "}\n"
+        "inline void image_card_handle_picture(ImageCardCtx *ctx) {\n"
+        "  ESP_LOGD(\"image_card\", \"Waiting for Home Assistant base URL before loading %s\", ctx->entity_id.c_str());\n"
+        "}\n"
+        "inline void image_card_request_picture(ImageCardCtx *ctx) {\n"
+        "  if (!ha_api_connected()) return;\n"
+        "  ha_get_attribute(ctx->entity_id, std::string(\"access_token\"), callback);\n"
+        "  image_card_proxy_path_with_token(proxy_path, token);\n"
+        "  ha_get_attribute(ctx->entity_id, std::string(\"entity_picture\"), callback);\n"
+        "}\n"
+        "inline bool image_card_context_current(ImageCardCtx *ctx,\n"
+        "                                       const std::string &entity_id,\n"
+        "                                       uint32_t generation) {\n"
+        "  return generation == ha_subscription_generation();\n"
+        "}\n"
+        "inline void subscribe_image_card_entity_state(ImageCardCtx *ctx,\n"
+        "                                              const std::string &entity_id) {\n"
+        "  ha_subscribe_state(entity_id, callback);\n"
+        "}\n"
+        "inline bool bind_image_card(BtnSlot &s, const ParsedCfg &p, const GridConfig &cfg) {\n"
+        "  const std::string image_card_entity_id = p.entity;\n"
+        "  const uint32_t image_card_generation = ha_subscription_generation();\n"
+        "  ha_subscribe_attribute(image_card_entity_id, std::string(\"entity_picture\"), callback);\n"
+        "  image_card_context_current(ctx, image_card_entity_id, image_card_generation);\n"
+        "  return true;\n"
+        "}\n"
+        "inline void image_card_request_source_url(ImageCardCtx *ctx) {\n"
+        "  image_card_tile_request_size(width, height, &request_width, &request_height);\n"
+        "  ctx->url = image_card_cache_bust_url(image_card_sized_url(ctx->source_url, request_width, request_height));\n"
+        "}\n"
+        "inline void image_card_tile_request_size(lv_coord_t target_width, lv_coord_t target_height,\n"
+        "                                        int *request_width, int *request_height) {\n"
+        "  image_card_high_quality_request_size(target_width, target_height, request_width, request_height);\n"
+        "}\n"
+        "inline void refresh_image_cards() {\n"
+        "  if (!ha_api_connected()) return;\n"
+        "  image_card_request_picture(ctx);\n"
+        "}\n",
+        "api:\n"
+        "  on_client_connected:\n"
+        "    - lambda: |-\n"
+        "        if (is_home_assistant && ha_api_connected()) {\n"
+        "        refresh_image_cards();\n"
+        "        }\n"
+        "    - delay: 2s\n"
+        "    - lambda: |-\n"
+        "        refresh_image_cards();\n"
+        "    - delay: 8s\n"
+        "    - lambda: |-\n"
+        "        refresh_image_cards();\n"
+        "    - delay: 20s\n"
+        "    - lambda: |-\n"
+        "        refresh_image_cards();\n",
+        (),
+    )
+    valid_cover_art_wake_guard = (
+        "script:\n"
+        "  - id: cover_art_wake_touch_block\n"
+        "    then:\n"
+        "      - globals.set:\n"
+        "          id: screensaver_wake_touch_guard_active\n"
+        "          value: 'true'\n"
+        "      - wait_until:\n"
+        "          condition:\n"
+        "            lambda: 'return lv_indev_get_state(indev) == LV_INDEV_STATE_PRESSED;'\n"
+        "      - globals.set:\n"
+        "          id: screensaver_wake_touch_guard_active\n"
+        "          value: 'false'\n"
+        "      - lvgl.widget.hide: cover_art_wake_touch_guard\n"
+    )
+    expect_screensaver_wake_guard_errors(
+        "normal wake arms delayed guard",
+        "script:\n"
+        "  - id: screensaver_wake\n"
+        "    then:\n"
+        "      - if:\n"
+        "          condition:\n"
+        "            lambda: 'return id(display_asleep) || id(screen_schedule_asleep);'\n"
+        "          then:\n"
+        "            - globals.set:\n"
+        "                id: screensaver_wake_touch_guard_active\n"
+        "                value: 'true'\n"
+        "            - script.execute: screensaver_wake_touch_guard_clear\n",
+        valid_cover_art_wake_guard,
+        (
+            "do not block the first button tap after normal screensaver wake",
+            "do not arm a delayed wake guard clear for normal screensaver wake",
+        ),
+    )
+    expect_screensaver_wake_guard_errors(
+        "normal wake clears stale guard while cover art remains guarded",
+        "script:\n"
+        "  - id: screensaver_wake\n"
+        "    then:\n"
+        "      - if:\n"
+        "          condition:\n"
+        "            lambda: 'return id(display_asleep) || id(screen_schedule_asleep);'\n"
+        "          then:\n"
+        "            - if:\n"
+        "                condition:\n"
+        "                  lambda: |-\n"
+        "                    bool keep_cover_art_guard = id(cover_art_screensaver_active) && id(screensaver_wake_touch_guard_skip_once);\n"
+        "                    id(screensaver_wake_touch_guard_skip_once) = false;\n"
+        "                    return keep_cover_art_guard;\n"
+        "                else:\n"
+        "                  - globals.set:\n"
+        "                      id: screensaver_wake_touch_guard_active\n"
+        "                      value: 'false'\n",
+        valid_cover_art_wake_guard,
+        (),
+    )
+    expect_clock_screensaver_overlay_errors(
+        "clock screensaver closes active UI before showing",
+        "script:\n"
+        "  - id: screensaver_sleep_timer\n"
+        "    then:\n"
+        "      - lambda: |-\n"
+        "          media_volume_hide_modal();\n"
+        "          climate_control_hide_modal();\n"
+        "      - script.execute: hide_cover_art_view\n"
+        "      - if:\n"
+        "          condition:\n"
+        "            lambda: 'return screensaver_action_clock_mode(id(screensaver_action).current_option());'\n"
+        "          then:\n"
+        "            - script.execute: show_clock_view\n"
+        "  - id: show_clock_view\n"
+        "    then:\n"
+        "      - lambda: |-\n"
+        "          hide_clock_bar_top_layer_widgets(nullptr, 0, nullptr, nullptr);\n"
+        "          lv_obj_clear_flag(id(clock_screensaver), LV_OBJ_FLAG_HIDDEN);\n"
+        "          lv_obj_move_foreground(id(clock_screensaver));\n"
+        "  - id: clock_screensaver_keep_on_top\n"
+        "    then:\n"
+        "      - lambda: |-\n"
+        "          if (!id(is_clock_showing)) return;\n"
+        "          hide_clock_bar_top_layer_widgets(nullptr, 0, nullptr, nullptr);\n"
+        "          refresh_screensaver_fullscreen(id(clock_screensaver), id(dim_screensaver_touch_guard));\n"
+        "          lv_obj_move_foreground(id(clock_screensaver));\n"
+        "  - id: show_dimmed_view\n"
+        "    then:\n"
+        "      - lambda: 'lv_obj_move_foreground(id(dim_screensaver_touch_guard));'\n"
+        "interval:\n"
+        "  - interval: 1s\n"
+        "    then:\n"
+        "      - script.execute: clock_screensaver_keep_on_top\n",
+        ("overlay the existing UI without closing it",),
+    )
+    expect_clock_screensaver_overlay_errors(
+        "clock screensaver overlays active UI",
+        "script:\n"
+        "  - id: screensaver_sleep_timer\n"
+        "    then:\n"
+        "      - if:\n"
+        "          condition:\n"
+        "            lambda: 'return screensaver_action_clock_mode(id(screensaver_action).current_option());'\n"
+        "          then:\n"
+        "            - script.execute: show_clock_view\n"
+        "          else:\n"
+        "            - lambda: |-\n"
+        "                media_volume_hide_modal();\n"
+        "            - script.execute: hide_cover_art_view\n"
+        "  - id: show_clock_view\n"
+        "    then:\n"
+        "      - lambda: |-\n"
+        "          hide_clock_bar_top_layer_widgets(nullptr, 0, nullptr, nullptr);\n"
+        "          lv_obj_clear_flag(id(clock_screensaver), LV_OBJ_FLAG_HIDDEN);\n"
+        "          lv_obj_move_foreground(id(clock_screensaver));\n"
+        "  - id: clock_screensaver_keep_on_top\n"
+        "    then:\n"
+        "      - lambda: |-\n"
+        "          if (!id(is_clock_showing)) return;\n"
+        "          hide_clock_bar_top_layer_widgets(nullptr, 0, nullptr, nullptr);\n"
+        "          refresh_screensaver_fullscreen(id(clock_screensaver), id(dim_screensaver_touch_guard));\n"
+        "          lv_obj_move_foreground(id(clock_screensaver));\n"
+        "  - id: show_dimmed_view\n"
+        "    then:\n"
+        "      - lambda: 'lv_obj_move_foreground(id(dim_screensaver_touch_guard));'\n"
+        "interval:\n"
+        "  - interval: 1s\n"
+        "    then:\n"
+        "      - script.execute: clock_screensaver_keep_on_top\n",
+        (),
+    )
+    expect_clock_screensaver_overlay_errors(
+        "clock screensaver stays behind top layer UI",
+        "script:\n"
+        "  - id: screensaver_sleep_timer\n"
+        "    then:\n"
+        "      - if:\n"
+        "          condition:\n"
+        "            lambda: 'return screensaver_action_clock_mode(id(screensaver_action).current_option());'\n"
+        "          then:\n"
+        "            - script.execute: show_clock_view\n"
+        "  - id: show_clock_view\n"
+        "    then:\n"
+        "      - lvgl.widget.show: clock_screensaver\n",
+        ("raise the clock screensaver above existing top-layer UI",),
+    )
+    valid_schedule_screensaver_override = (
+        "script:\n"
+        "  - id: screensaver_idle_check\n"
+        "    then:\n"
+        "      - if:\n"
+        "          condition:\n"
+        "            lambda: |-\n"
+        "              if (screen_schedule_night_active(\n"
+        "                    id(screen_schedule_trigger).state,\n"
+        "                    id(schedule_enabled).state,\n"
+        "                    id(presence_detected),\n"
+        "                    now.is_valid(),\n"
+        "                    now.is_valid() ? now.hour : 0,\n"
+        "                    (int) id(schedule_on_hour).state,\n"
+        "                    (int) id(schedule_off_hour).state)) {\n"
+        "                id(screen_schedule_check).execute();\n"
+        "                return false;\n"
+        "              }\n"
+        "              return id(screensaver_mode).state == \"timer\";\n"
+        "  - id: screensaver_presence_wake\n"
+        "    then:\n"
+        "      - if:\n"
+        "          condition:\n"
+        "            lambda: |-\n"
+        "              if (screen_schedule_waiting_for_time(\n"
+        "                    id(screen_schedule_trigger).state,\n"
+        "                    id(schedule_enabled).state,\n"
+        "                    now.is_valid()) ||\n"
+        "                  screen_schedule_night_active(\n"
+        "                    id(screen_schedule_trigger).state,\n"
+        "                    id(schedule_enabled).state,\n"
+        "                    id(presence_detected),\n"
+        "                    now.is_valid(),\n"
+        "                    now.is_valid() ? now.hour : 0,\n"
+        "                    (int) id(schedule_on_hour).state,\n"
+        "                    (int) id(schedule_off_hour).state)) {\n"
+        "                id(screen_schedule_check).execute();\n"
+        "                return false;\n"
+        "              }\n"
+        "              return id(screensaver_mode).state == \"sensor\";\n"
+        "          then:\n"
+        "            - if:\n"
+        "                condition:\n"
+        "                  lambda: |-\n"
+        "                    if (!id(schedule_enabled).state) return true;\n"
+        "                    return screen_schedule_normal_active(\n"
+        "                      id(screen_schedule_trigger).state,\n"
+        "                      id(schedule_enabled).state,\n"
+        "                      id(presence_detected),\n"
+        "                      now.is_valid(),\n"
+        "                      now.is_valid() ? now.hour : 0,\n"
+        "                      (int) id(schedule_on_hour).state,\n"
+        "                      (int) id(schedule_off_hour).state);\n"
+        "                then:\n"
+        "            - script.execute: screensaver_wake\n"
+    )
+    expect_screen_schedule_screensaver_override_errors(
+        "night schedule overrides timer and sensor screensaver",
+        valid_schedule_screensaver_override,
+        (),
+    )
+    expect_screen_schedule_screensaver_override_errors(
+        "timer screensaver bypasses night schedule",
+        valid_schedule_screensaver_override.replace(
+            "                id(screen_schedule_check).execute();\n"
+            "                return false;\n"
+            "              }\n"
+            "              return id(screensaver_mode).state == \"timer\";\n",
+            "                std::string mode = id(schedule_mode).current_option();\n"
+            "                if (screen_schedule_clock_mode(mode)) return false;\n"
+            "              }\n"
+            "              return id(screensaver_mode).state == \"timer\";\n",
+            1,
+        ),
+        ("override timer screensaver actions",),
+    )
+    expect_screen_schedule_screensaver_override_errors(
+        "sensor screensaver wake bypasses night schedule",
+        valid_schedule_screensaver_override.replace(
+            "              if (screen_schedule_waiting_for_time(\n"
+            "                    id(screen_schedule_trigger).state,\n"
+            "                    id(schedule_enabled).state,\n"
+            "                    now.is_valid()) ||\n"
+            "                  screen_schedule_night_active(\n"
+            "                    id(screen_schedule_trigger).state,\n"
+            "                    id(schedule_enabled).state,\n"
+            "                    id(presence_detected),\n"
+            "                    now.is_valid(),\n"
+            "                    now.is_valid() ? now.hour : 0,\n"
+            "                    (int) id(schedule_on_hour).state,\n"
+            "                    (int) id(schedule_off_hour).state)) {\n"
+            "                id(screen_schedule_check).execute();\n"
+            "                return false;\n"
+            "              }\n",
+            "",
+            1,
+        ),
+        ("override sensor screensaver wake",),
+    )
+    expect_screen_schedule_screensaver_override_errors(
+        "sensor screensaver wake ignores disabled schedule",
+        valid_schedule_screensaver_override.replace(
+            "                    if (!id(schedule_enabled).state) return true;\n",
+            "",
+            1,
+        ),
+        ("wake when the screen schedule is disabled",),
+    )
+    expect_artwork_image_auth_errors(
+        "local artwork image request uses Basic auth",
+        "std::shared_ptr<http_request::HttpContainer> ArtworkImage::get_local_idf_(\n"
+        "    const std::string &url, const std::vector<http_request::Header> &headers) {\n"
+        "  esp_http_client_config_t config = {};\n"
+        "  config.auth_type = HTTP_AUTH_TYPE_BASIC;\n"
+        "  if (container->status_code <= 0 && is_ha_media_proxy_url(url)) {\n"
+        "    ESP_LOGW(TAG, \"Home Assistant media proxy returned an unknown HTTP status; trying artwork bytes anyway\");\n"
+        "    container->status_code = HTTP_CODE_OK;\n"
+        "  }\n"
+        "}\n",
+        (
+            "keep local Home Assistant image proxy requests off HTTP Basic auth",
+            "explicitly disable HTTP auth for local artwork requests",
+        ),
+    )
+    expect_artwork_image_auth_errors(
+        "local artwork image request disables HTTP auth",
+        "std::shared_ptr<http_request::HttpContainer> ArtworkImage::get_local_idf_(\n"
+        "    const std::string &url, const std::vector<http_request::Header> &headers) {\n"
+        "  esp_http_client_config_t config = {};\n"
+        "  config.auth_type = HTTP_AUTH_TYPE_NONE;\n"
+        "  if (container->status_code <= 0 && is_ha_media_proxy_url(url)) {\n"
+        "    ESP_LOGW(TAG, \"Home Assistant media proxy returned an unknown HTTP status; trying artwork bytes anyway\");\n"
+        "    container->status_code = HTTP_CODE_OK;\n"
+        "  }\n"
+        "}\n"
+        "void ArtworkImage::end_connection_() {\n"
+        "  this->download_buffer_.shrink_to(this->download_buffer_initial_size_);\n"
+        "}\n",
+        (),
+    )
+    expect_artwork_image_auth_errors(
+        "local artwork image request rejects unknown HA media proxy status",
+        "std::shared_ptr<http_request::HttpContainer> ArtworkImage::get_local_idf_(\n"
+        "    const std::string &url, const std::vector<http_request::Header> &headers) {\n"
+        "  esp_http_client_config_t config = {};\n"
+        "  config.auth_type = HTTP_AUTH_TYPE_NONE;\n"
+        "}\n",
+        ("allow Home Assistant media proxy artwork to fall back to image-byte detection",),
+    )
+    expect_climate_step_errors(
+        "climate ignores whole-number display step",
+        "constexpr int CLIMATE_DEFAULT_STEP_TENTHS = 5;\n"
+        "inline int climate_round_to_step(ClimateControlCtx *ctx, int value) {\n"
+        "  int step = ctx->step_tenths;\n"
+        "  int base = ctx->min_tenths;\n"
+        "  return value;\n"
+        "}\n"
+        "inline void climate_control_open_modal(ClimateControlCtx *ctx) {\n"
+        "  climate_selected_target(ui.active) - ui.active->step_tenths;\n"
+        "  climate_selected_target(ui.active) + ui.active->step_tenths;\n"
+        "}\n",
+        (
+            "keep climate temperature changes at a display-appropriate minimum",
+            "round climate targets using the display-appropriate minimum step",
+            "round whole-number climate targets to whole-degree boundaries",
+            "use the display-appropriate minimum step for the climate minus button",
+            "use the display-appropriate minimum step for the climate plus button",
+        ),
+    )
+    expect_climate_step_errors(
+        "climate enforces display-appropriate minimum step",
+        "constexpr int CLIMATE_DEFAULT_STEP_TENTHS = 5;\n"
+        "constexpr int CLIMATE_WHOLE_NUMBER_STEP_TENTHS = 10;\n"
+        "inline int climate_effective_step_tenths(ClimateControlCtx *ctx) {\n"
+        "  if (!ctx) return CLIMATE_DEFAULT_STEP_TENTHS;\n"
+        "  int minimum = ctx->precision <= 0 ? CLIMATE_WHOLE_NUMBER_STEP_TENTHS : CLIMATE_DEFAULT_STEP_TENTHS;\n"
+        "  if (ctx->step_tenths > minimum && ctx->step_tenths <= 100)\n"
+        "    return ctx->step_tenths;\n"
+        "  return minimum;\n"
+        "}\n"
+        "inline int climate_round_to_step(ClimateControlCtx *ctx, int value) {\n"
+        "  int step = climate_effective_step_tenths(ctx);\n"
+        "  int base = ctx->precision <= 0 ? 0 : ctx->min_tenths;\n"
+        "  return value + step;\n"
+        "}\n"
+        "inline void climate_control_open_modal(ClimateControlCtx *ctx) {\n"
+        "  climate_selected_target(ui.active) - climate_effective_step_tenths(ui.active);\n"
+        "  climate_selected_target(ui.active) + climate_effective_step_tenths(ui.active);\n"
+        "}\n",
+        (),
+    )
+    expect_s3_api_errors(
+        "low S3 API queue",
+        "api:\n  max_connections: 3\n  max_send_queue: 8\n",
+        ("keep the S3 native API send queue high enough",),
+    )
+    expect_s3_api_errors(
+        "low S3 API connections",
+        "api:\n  max_connections: 2\n  max_send_queue: 12\n",
+        ("keep enough S3 native API slots",),
+    )
+    expect_s3_api_errors(
+        "S3 todo enabled",
+        "esphome:\n  platformio_options:\n    build_flags:\n"
+        "      - \"-DESPCONTROL_TODO_LITE=1\"\n"
+        "api:\n  max_connections: 3\n  max_send_queue: 12\n",
+        ("keep the S3 todo list disabled",),
+    )
+    expect_todo_disabled_errors(
+        "todo enabled on one device",
+        {
+            "devices/a/device/device.yaml": "esphome:\n  platformio_options:\n    build_flags:\n"
+            "      - \"-DESPCONTROL_DISABLE_TODO=1\"\n",
+            "devices/b/device/device.yaml": "esphome:\n  platformio_options:\n    build_flags:\n"
+            "      - \"-DESPCONTROL_TODO_LITE=1\"\n",
+        },
+        ("keep the todo list disabled",),
+    )
+    expect_todo_disabled_errors(
+        "todo disabled on all devices",
+        {
+            "devices/a/device/device.yaml": "esphome:\n  platformio_options:\n    build_flags:\n"
+            "      - \"-DESPCONTROL_DISABLE_TODO=1\"\n",
+            "devices/b/device/device.yaml": "esphome:\n  platformio_options:\n    build_flags:\n"
+            "      - \"-DESPCONTROL_DISABLE_TODO=1\"\n",
+        },
+        (),
+    )
+    expect_s3_api_errors(
+        "S3 includes navigate API package",
+        "esphome:\n  platformio_options:\n    build_flags:\n"
+        "      - \"-DESPCONTROL_DISABLE_TODO=1\"\n"
+        "api:\n  max_connections: 3\n  max_send_queue: 12\n",
+        ("omit the Home Assistant navigate API action on S3",),
+        s3_packages_text="packages:\n  api_navigate: !include ../../common/device/api_navigate.yaml\n",
+    )
+    expect_s3_api_errors(
+        "navigate action left in shared core",
+        "esphome:\n  platformio_options:\n    build_flags:\n"
+        "      - \"-DESPCONTROL_DISABLE_TODO=1\"\n"
+        "api:\n  max_connections: 3\n  max_send_queue: 12\n",
+        ("keep the navigate action out of core_infra",),
+        core_text="api:\n  actions:\n    - action: navigate\n",
+    )
+    expect_s3_api_errors(
+        "P4 package missing navigate API package",
+        "esphome:\n  platformio_options:\n    build_flags:\n"
+        "      - \"-DESPCONTROL_DISABLE_TODO=1\"\n"
+        "api:\n  max_connections: 3\n  max_send_queue: 12\n",
+        ("include the dedicated Home Assistant navigate API package",),
+        extra_packages={"esp32-p4-86": "packages:\n  device: !include device/device.yaml\n"},
+    )
+    expect_connectivity_api_errors(
+        "raw api connected navigation",
+        "wifi:\n"
+        "  on_connect:\n"
+        "    - if:\n"
+        "        condition:\n"
+        "          api.connected:\n"
+        "api:\n"
+        "  on_client_connected:\n"
+        "    - script.execute: navigate_after_api\n",
+        ("wait for Home Assistant state subscription", "only navigate after a Home Assistant state connection"),
+    )
+    expect_connectivity_api_errors(
+        "home assistant state connected navigation",
+        "wifi:\n"
+        "  on_connect:\n"
+        "    - if:\n"
+        "        condition:\n"
+        "          lambda: 'return ha_api_state_connected();'\n"
+        "api:\n"
+        "  on_client_connected:\n"
+        "    - delay: 2s\n"
+        "    - if:\n"
+        "        condition:\n"
+        "          lambda: 'return ha_api_state_connected();'\n",
+        (),
+    )
+    print("Firmware Home Assistant binding self-tests passed.")
+    return 0
+
+
+def main() -> int:
+    parser = argparse.ArgumentParser(description=__doc__)
+    parser.add_argument("--self-test", action="store_true", help="run guardrail self-tests")
+    args = parser.parse_args()
+    return run_self_test() if args.self_test else run_scan()
+
+
+if __name__ == "__main__":
+    raise SystemExit(main())

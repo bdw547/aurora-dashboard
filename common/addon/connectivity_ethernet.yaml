@@ -1,0 +1,89 @@
+# =============================================================================
+# CONNECTIVITY - Ethernet page navigation
+# =============================================================================
+# Handles wired network connectivity and navigates between screens based on
+# connection state using lvgl.page.show. This is an Ethernet-only package and
+# must not be included with the WiFi package.
+# =============================================================================
+
+ethernet:
+  type: IP101
+  mdc_pin: GPIO31
+  mdio_pin: GPIO52
+  power_pin: GPIO51
+  clk:
+    mode: CLK_EXT_IN
+    pin: GPIO50
+  phy_addr: 1
+  on_connect:
+    - script.execute: ntp_servers_apply_after_network
+    - script.stop: setup_screen_dim
+    - lambda: |-
+        ESP_LOGI("connectivity", "Ethernet connected (%lu ms)", millis());
+        lv_label_set_text(id(loading_status_label), espcontrol_i18n("Connected"));
+    - delay: 200ms
+    - if:
+        condition:
+          lambda: 'return ha_api_state_connected();'
+        then:
+          - script.execute: navigate_after_api
+        else:
+          - if:
+              condition:
+                lambda: 'return id(button_order).state.empty();'
+              then:
+                - script.execute: clock_bar_hide
+                - lvgl.page.show: ha_setup_page
+                - script.execute: setup_screen_dim
+              else:
+                - script.execute: navigate_after_api
+  on_disconnect:
+    - if:
+        condition:
+          lambda: 'return !id(boot_grace_period);'
+        then:
+          - script.execute: clock_bar_hide
+          - lvgl.page.show: ethernet_setup_page
+          - script.execute: setup_screen_dim
+
+api:
+  on_client_connected:
+    - delay: 2s
+    - if:
+        condition:
+          lambda: 'return ha_api_state_connected();'
+        then:
+          - if:
+              condition:
+                lambda: 'return lv_scr_act() == id(ha_setup_page)->obj;'
+              then:
+                - script.stop: setup_screen_dim
+                - script.execute: clock_bar_hide
+                - lvgl.page.show: ha_actions_page
+              else:
+                - script.execute: navigate_after_api
+
+script:
+  - id: navigate_after_api
+    mode: restart
+    then:
+      - script.stop: setup_screen_dim
+      - if:
+          condition:
+            lambda: 'return !id(button_order).state.empty();'
+          then:
+            - lvgl.page.show: main_page
+            - script.execute: clock_bar_apply
+            - script.execute: screensaver_idle_check
+          else:
+            - lambda: |-
+                auto ips = ethernet::global_eth_component->get_ip_addresses();
+                if (!ips.empty()) {
+                  char ip_buf[esphome::network::IP_ADDRESS_BUFFER_SIZE];
+                  ips[0].str_to(ip_buf);
+                  std::string url = "http://" + std::string(ip_buf);
+                  lv_label_set_text(id(setup_ip_label), url.c_str());
+                }
+            - script.execute: clock_bar_hide
+            - lvgl.page.show: button_setup_page
+            - script.execute: setup_screen_dim

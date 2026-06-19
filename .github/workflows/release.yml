@@ -1,0 +1,269 @@
+name: Build Release
+
+on:
+  release:
+    types: [published]
+  workflow_dispatch:
+    inputs:
+      release_tag:
+        description: Existing release tag to build and upload assets for
+        required: false
+        type: string
+
+permissions:
+  contents: write
+
+env:
+  FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
+  ESPHOME_VERSION: 2026.6.0
+  ESPCONTROL_DOCKER_BUILD_CACHE_KEEP: 2GB
+
+jobs:
+  preflight:
+    name: Product Preflight
+    runs-on: self-hosted
+    steps:
+      - name: Prepare self-hosted workspace
+        run: |
+          rm -rf "${GITHUB_WORKSPACE:?}/"* "${GITHUB_WORKSPACE:?}/".[!.]* "${GITHUB_WORKSPACE:?}/"..?* 2>/dev/null ||
+            sudo rm -rf "${GITHUB_WORKSPACE:?}/"* "${GITHUB_WORKSPACE:?}/".[!.]* "${GITHUB_WORKSPACE:?}/"..?*
+
+      - uses: actions/checkout@v7.0.0
+      - run: git sparse-checkout disable || true
+
+      - uses: actions/setup-node@v6
+        with:
+          node-version: 24
+
+      - name: Install dependencies
+        run: |
+          NPM_CACHE="${HOME}/.cache/espcontrol-actions/npm"
+          mkdir -p "${NPM_CACHE}"
+          npm ci --prefer-offline --cache "${NPM_CACHE}"
+          bash scripts/prune_actions_cache.sh "${NPM_CACHE}" 512 --strategy reset
+
+      - name: Run release preflight
+        run: npm run check:release-preflight
+
+  device-matrix:
+    name: Prepare Device Matrix
+    needs: preflight
+    runs-on: self-hosted
+    outputs:
+      matrix: ${{ steps.matrix.outputs.matrix }}
+    steps:
+      - name: Prepare self-hosted workspace
+        run: |
+          rm -rf "${GITHUB_WORKSPACE:?}/"* "${GITHUB_WORKSPACE:?}/".[!.]* "${GITHUB_WORKSPACE:?}/"..?* 2>/dev/null ||
+            sudo rm -rf "${GITHUB_WORKSPACE:?}/"* "${GITHUB_WORKSPACE:?}/".[!.]* "${GITHUB_WORKSPACE:?}/"..?*
+
+      - uses: actions/checkout@v7.0.0
+
+      - name: Generate device matrix
+        id: matrix
+        run: |
+          MATRIX=$(python3 scripts/device_matrix.py release)
+          echo "matrix=${MATRIX}" >> "$GITHUB_OUTPUT"
+
+  build-firmware:
+    name: Build ${{ matrix.slug }}
+    needs: device-matrix
+    runs-on: self-hosted
+    strategy:
+      fail-fast: false
+      max-parallel: 2
+      matrix: ${{ fromJSON(needs.device-matrix.outputs.matrix) }}
+    steps:
+      - name: Prepare self-hosted workspace
+        run: |
+          rm -rf "${GITHUB_WORKSPACE:?}/"* "${GITHUB_WORKSPACE:?}/".[!.]* "${GITHUB_WORKSPACE:?}/"..?* 2>/dev/null ||
+            sudo rm -rf "${GITHUB_WORKSPACE:?}/"* "${GITHUB_WORKSPACE:?}/".[!.]* "${GITHUB_WORKSPACE:?}/"..?*
+
+      - uses: actions/checkout@v7.0.0
+        with:
+          path: espcontrol-${{ matrix.slug }}
+      - run: git sparse-checkout disable || true
+        working-directory: espcontrol-${{ matrix.slug }}
+
+      - name: Select Docker command
+        run: |
+          if docker info >/dev/null 2>&1; then
+            echo "DOCKER=docker" >> "$GITHUB_ENV"
+          elif sudo -n docker info >/dev/null 2>&1; then
+            echo "DOCKER=sudo docker" >> "$GITHUB_ENV"
+          else
+            echo "::error::Docker is not available to the self-hosted runner user"
+            exit 1
+          fi
+
+      - name: Reclaim runner disk
+        working-directory: espcontrol-${{ matrix.slug }}
+        run: bash scripts/reclaim_actions_disk.sh
+
+      - name: Prepare isolated ESPHome cache
+        working-directory: espcontrol-${{ matrix.slug }}
+        run: |
+          RUN_CACHE_ROOT="${RUNNER_TEMP}/espcontrol-esphome/${{ github.run_id }}-${{ github.run_attempt }}/${{ matrix.slug }}"
+          PLATFORMIO_CACHE="${RUN_CACHE_ROOT}/platformio-${ESPHOME_VERSION}"
+          BUILD_CACHE="${RUN_CACHE_ROOT}/build"
+          rm -rf "${RUN_CACHE_ROOT}"
+          mkdir -p "${PLATFORMIO_CACHE}" "${BUILD_CACHE}" builds
+          export PLATFORMIO_CACHE
+          python3 - <<'PY'
+          import json
+          import os
+          import shutil
+          from pathlib import Path
+
+          cache_root = Path(os.environ["PLATFORMIO_CACHE"])
+          package_roots = [cache_root / "platformio" / "packages", cache_root / "packages"]
+          for packages in package_roots:
+              if not packages.is_dir():
+                  continue
+              for metadata in packages.glob("*/.piopm"):
+                  try:
+                      with metadata.open(encoding="utf-8") as handle:
+                          json.load(handle)
+                  except Exception as exc:
+                      package_dir = metadata.parent
+                      print(f"Removing corrupted PlatformIO package cache: {package_dir} ({exc})")
+                      shutil.rmtree(package_dir, ignore_errors=True)
+          PY
+          rm -rf .esphome
+          rm -rf builds/.esphome
+          echo "RUN_CACHE_ROOT=${RUN_CACHE_ROOT}" >> "$GITHUB_ENV"
+          echo "PLATFORMIO_CACHE=${PLATFORMIO_CACHE}" >> "$GITHUB_ENV"
+          echo "BUILD_CACHE=${BUILD_CACHE}" >> "$GITHUB_ENV"
+
+      - name: Pull ESPHome image
+        working-directory: espcontrol-${{ matrix.slug }}
+        run: |
+          ESPHOME_IMAGE="ghcr.io/esphome/esphome:${ESPHOME_VERSION}"
+          LOCK_FILE="/tmp/espcontrol-esphome-image.lock"
+          if command -v flock >/dev/null 2>&1; then
+            flock "${LOCK_FILE}" ${DOCKER} pull "${ESPHOME_IMAGE}"
+          else
+            ${DOCKER} pull "${ESPHOME_IMAGE}"
+          fi
+          echo "ESPHOME_IMAGE=${ESPHOME_IMAGE}" >> "$GITHUB_ENV"
+
+      - name: Compile firmware
+        working-directory: espcontrol-${{ matrix.slug }}
+        env:
+          VERSION: ${{ inputs.release_tag || github.event.release.tag_name || github.ref_name }}
+        run: >-
+          ${DOCKER} run --rm
+          --user "$(id -u):$(id -g)"
+          -e HOME=/config
+          -e PLATFORMIO_CORE_DIR=/config/.esphome/platformio
+          -e PLATFORMIO_SETTING_ENABLE_TELEMETRY=false
+          -v "${PWD}:/config"
+          -v "${PLATFORMIO_CACHE}:/config/.esphome"
+          -v "${BUILD_CACHE}:/config/builds/.esphome"
+          "${ESPHOME_IMAGE}"
+          -s firmware_version "${VERSION}"
+          compile /config/builds/${{ matrix.slug }}.factory.yaml
+
+      - name: Collect firmware files and generate manifest
+        id: firmware
+        run: |
+          FIRMWARE_FACTORY=$(find "${BUILD_CACHE}/build" -name firmware.factory.bin -print -quit 2>/dev/null || true)
+          mkdir -p output
+
+          if [ -z "${FIRMWARE_FACTORY}" ] || [ ! -f "${FIRMWARE_FACTORY}" ]; then
+            echo "::error::Firmware compilation failed — factory binary not found"
+            exit 1
+          fi
+
+          BUILD_DIR=$(dirname "${FIRMWARE_FACTORY}")
+          cp "${BUILD_DIR}/firmware.factory.bin" output/${{ matrix.slug }}.factory.bin
+          cp "${BUILD_DIR}/firmware.bin" output/${{ matrix.slug }}.ota.bin
+
+          VERSION="${{ inputs.release_tag || github.event.release.tag_name || github.ref_name }}"
+          python3 espcontrol-${{ matrix.slug }}/scripts/firmware_release.py manifest \
+            --slug "${{ matrix.slug }}" \
+            --chip "${{ matrix.chip }}" \
+            --version "${VERSION}" \
+            --factory "output/${{ matrix.slug }}.factory.bin" \
+            --ota "output/${{ matrix.slug }}.ota.bin" \
+            --out "output/${{ matrix.slug }}.manifest.json"
+          python3 espcontrol-${{ matrix.slug }}/scripts/firmware_release.py verify-files \
+            --slug "${{ matrix.slug }}" \
+            --version "${VERSION}" \
+            --manifest "output/${{ matrix.slug }}.manifest.json" \
+            --factory "output/${{ matrix.slug }}.factory.bin" \
+            --ota "output/${{ matrix.slug }}.ota.bin"
+
+      - name: Upload firmware artifact
+        uses: actions/upload-artifact@v7
+        with:
+          name: firmware-${{ matrix.slug }}
+          path: output/
+
+      - name: Clean firmware caches
+        if: always()
+        working-directory: espcontrol-${{ matrix.slug }}
+        run: |
+          if [ -z "${RUN_CACHE_ROOT:-}" ] || [ -z "${BUILD_CACHE:-}" ] || [ -z "${PLATFORMIO_CACHE:-}" ]; then
+            echo "No firmware cache paths were prepared."
+            exit 0
+          fi
+          rm -rf "${RUN_CACHE_ROOT}"
+          bash scripts/reclaim_actions_disk.sh
+
+  publish:
+    name: Publish to Release
+    if: github.event_name == 'release' || inputs.release_tag != ''
+    needs: build-firmware
+    runs-on: self-hosted
+    steps:
+      - name: Download all firmware artifacts
+        uses: actions/download-artifact@v8
+        with:
+          pattern: firmware-*
+          merge-multiple: true
+          path: firmware
+
+      - name: Upload firmware to release
+        env:
+          GH_TOKEN: ${{ github.token }}
+          RELEASE_ID: ${{ github.event.release.id }}
+          RELEASE_TAG: ${{ inputs.release_tag || github.event.release.tag_name || github.ref_name }}
+        run: |
+          if [ -z "${RELEASE_ID}" ]; then
+            RELEASE_JSON=$(curl -fsSL \
+              -H "Authorization: Bearer ${GH_TOKEN}" \
+              -H "Accept: application/vnd.github+json" \
+              "https://api.github.com/repos/${GITHUB_REPOSITORY}/releases/tags/${RELEASE_TAG}")
+            RELEASE_ID=$(printf '%s' "${RELEASE_JSON}" | jq -r '.id')
+          fi
+
+          API_URL="https://api.github.com/repos/${GITHUB_REPOSITORY}/releases/${RELEASE_ID}"
+          UPLOAD_URL="https://uploads.github.com/repos/${GITHUB_REPOSITORY}/releases/${RELEASE_ID}/assets"
+          ASSET_API_URL="https://api.github.com/repos/${GITHUB_REPOSITORY}/releases/assets"
+          ASSETS_JSON=$(curl -fsSL \
+            -H "Authorization: Bearer ${GH_TOKEN}" \
+            -H "Accept: application/vnd.github+json" \
+            "${API_URL}/assets")
+
+          for FILE in firmware/*; do
+            NAME=$(basename "${FILE}")
+            EXISTING_ID=$(printf '%s' "${ASSETS_JSON}" | jq -r --arg name "${NAME}" \
+              '.[] | select(.name == $name) | .id' | head -n 1)
+            if [ -n "${EXISTING_ID}" ]; then
+              curl -fsSL \
+                -X DELETE \
+                -H "Authorization: Bearer ${GH_TOKEN}" \
+                -H "Accept: application/vnd.github+json" \
+                "${ASSET_API_URL}/${EXISTING_ID}"
+            fi
+
+            curl -fsSL \
+              -X POST \
+              -H "Authorization: Bearer ${GH_TOKEN}" \
+              -H "Accept: application/vnd.github+json" \
+              -H "Content-Type: application/octet-stream" \
+              --data-binary @"${FILE}" \
+              "${UPLOAD_URL}?name=${NAME}" \
+              -o /dev/null
+          done

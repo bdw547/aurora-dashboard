@@ -1,0 +1,207 @@
+# =============================================================================
+# AURORA — Theme + Lights screen (REFERENCE SCAFFOLD)
+# =============================================================================
+# STATUS: reference, NOT yet compiled or integrated. It encodes the Aurora
+# design tokens + the Lights screen as ESPHome/LVGL so the real build is fast.
+# Integration: per 02-implementation-blueprint.md, the panel's display+LVGL are
+# initialized inside espcontrol's component, so this becomes the device's
+# lvgl `pages:` content (Route A) or part of a standalone mipi_dsi+lvgl config
+# (Route B). Bindings target the real entities in 03-entity-bindings.md.
+# =============================================================================
+
+# ---- Baked aurora background (live blur isn't possible on LVGL) -------------
+image:
+  - id: img_aurora_bg
+    file: aurora-build/assets/aurora_bg_1024x600.png
+    type: RGB565
+    resize: 1024x600
+
+# ---- Sora font roles (consolidated to limit flash) --------------------------
+font:
+  - file: "gfonts://Sora@600"
+    id: f_display
+    size: 52
+    glyphs: "0123456789%°"
+  - file: "gfonts://Sora@600"
+    id: f_title
+    size: 24
+  - file: "gfonts://Sora@500"
+    id: f_body
+    size: 14
+  - file: "gfonts://Sora@500"
+    id: f_small
+    size: 12
+  - file: "gfonts://Sora@600"
+    id: f_micro
+    size: 11
+
+# ---- Live state from Home Assistant (selected = Living Room for scaffold) ----
+sensor:
+  - platform: homeassistant
+    id: ha_lr_brightness
+    entity_id: light.living_room_main
+    attribute: brightness          # 0-255
+    on_value:
+      then:
+        - lvgl.arc.update: { id: arc_brightness, value: !lambda 'return x / 2.55;' }
+        - lvgl.label.update:
+            id: lbl_brightness_pct
+            text: !lambda |-
+              char b[8]; snprintf(b, sizeof(b), "%d%%", (int) roundf(x / 2.55f)); return std::string(b);
+
+text_sensor:
+  - platform: homeassistant
+    id: ha_lr_state
+    entity_id: light.living_room_main
+    on_value:
+      then:
+        - if:
+            condition: { lambda: 'return x == "on";' }
+            then: [lvgl.widget.update: { id: sw_sel_toggle, state: { checked: true } }]
+            else: [lvgl.widget.update: { id: sw_sel_toggle, state: { checked: false } }]
+
+lvgl:
+  # --- Reusable styles (Aurora tokens) ---------------------------------------
+  style_definitions:
+    - id: st_glass            # glassy card (solid translucent over baked bg)
+      bg_color: 0x141720
+      bg_opa: 235
+      border_color: 0x2A2E38
+      border_width: 1
+      radius: 22
+      pad_all: 22
+    - id: st_listrow
+      bg_opa: 0
+      radius: 14
+      pad_all: 12
+      border_width: 0
+    - id: st_listrow_sel
+      bg_color: 0x20242E
+      bg_opa: 160
+      border_color: 0x363B47
+      border_width: 1
+
+  pages:
+    - id: lights_page
+      bg_opa: 0
+      widgets:
+        # Baked aurora background
+        - image: { src: img_aurora_bg, align: top_left, x: 0, y: 0 }
+
+        # ----- Left column: title + light list -----
+        - label: { text: "Lights", x: 100, y: 26, text_font: f_title, text_color: 0xEEF0F6 }
+        - label: { text: "Tap a light to control", x: 100, y: 60, text_font: f_small, text_color: 0x8A8F9E }
+
+        # List rows (8 featured lights). Each row taps to toggle its entity.
+        # NOTE: full design re-binds the right panel to the *selected* row via a
+        # global + lambdas; scaffold wires taps to per-entity toggle for clarity.
+        - obj:
+            align: top_left
+            x: 96
+            y: 92
+            width: 266
+            height: 470
+            styles: st_glass
+            bg_opa: 0
+            border_width: 0
+            pad_all: 0
+            layout: { type: flex, flex_flow: column }
+            widgets:
+              - button:
+                  styles: st_listrow_sel
+                  width: 266
+                  height: 56
+                  widgets:
+                    - obj: { width: 11, height: 11, radius: 6, bg_color: 0xFFD9A0, align: left_mid, x: 6, border_width: 0 }
+                    - label: { text: "Living Room", align: left_mid, x: 26, y: -8, text_font: f_body, text_color: 0xEEF0F6 }
+                    - label: { text: "Living Room", align: left_mid, x: 26, y: 10, text_font: f_micro, text_color: 0x6E727E }
+                    - label: { id: lbl_lr_bri, text: "74%", align: right_mid, x: -8, text_font: f_body, text_color: 0xC3CAD6 }
+                  on_click:
+                    - homeassistant.action: { action: light.toggle, data: { entity_id: light.living_room_main } }
+              # --- repeat row pattern for the other 7 featured lights ---
+              # office_shelves / kitchen_kitchen / reading_lamp /
+              # outdoor_patio_back_porch_lights / office_main_lights /
+              # dining_room_chandelier / master_bedroom_ceiling_fan_light
+              # (omitted here for brevity; identical structure, swap label/dot/entity)
+
+        # ----- Right glass panel: detail for selected light -----
+        - obj:
+            align: top_left
+            x: 386
+            y: 26
+            width: 612
+            height: 548
+            styles: st_glass
+            widgets:
+              - label: { text: "Living Room", x: 6, y: 2, text_font: f_title, text_color: 0xEEF0F6 }
+              - label: { text: "Living Room", x: 6, y: 34, text_font: f_small, text_color: 0x8A8F9E }
+
+              # On/off toggle (accent when on)
+              - switch:
+                  id: sw_sel_toggle
+                  align: top_right
+                  x: -6
+                  y: 4
+                  checked: true
+                  on_click:
+                    - homeassistant.action: { action: light.toggle, data: { entity_id: light.living_room_main } }
+
+              # Brightness arc ring (270°, starts at 135° like the design)
+              - arc:
+                  id: arc_brightness
+                  align: center
+                  y: -10
+                  width: 212
+                  height: 212
+                  min_value: 0
+                  max_value: 100
+                  value: 74
+                  start_angle: 135
+                  end_angle: 45
+                  arc_width: 14
+                  arc_rounded: true
+                  indicator: { arc_color: 0xFFD9A0, arc_width: 14, arc_rounded: true }
+                  arc_color: 0x2A2E38
+                  adjustable: true
+                  on_value:
+                    - homeassistant.action:
+                        action: light.turn_on
+                        data:
+                          entity_id: light.living_room_main
+                          brightness_pct: !lambda 'return (int) x;'
+              - label: { id: lbl_brightness_pct, text: "74%", align: center, y: -22, text_font: f_display, text_color: 0xEEF0F6 }
+              - label: { text: "Brightness", align: center, y: 28, text_font: f_small, text_color: 0x8A8F9E }
+
+              # Brightness slider
+              - slider:
+                  id: sld_brightness
+                  align: bottom_mid
+                  y: -150
+                  width: 540
+                  min_value: 0
+                  max_value: 100
+                  value: 74
+                  on_release:
+                    - homeassistant.action:
+                        action: light.turn_on
+                        data:
+                          entity_id: light.living_room_main
+                          brightness_pct: !lambda 'return (int) id(sld_brightness).get_value();'
+
+              # COLOR swatches (only meaningful for color-capable bulbs)
+              - label: { text: "COLOR", align: bottom_left, x: 6, y: -96, text_font: f_micro, text_color: 0x8A8F9E }
+              # 8 swatch buttons (#FFD9A0 #FF9F6B #FF6B8A #B06BFF #7B6CFF #53AAFF #2ED5B8 #FFF3DF)
+              # each: small round button, on_click -> light.turn_on rgb_color: [r,g,b]
+              # (scaffold shows first swatch; replicate for the rest)
+              - button:
+                  align: bottom_left
+                  x: 6
+                  y: -52
+                  width: 34
+                  height: 34
+                  widgets: [ obj: { width: 34, height: 34, radius: 17, bg_color: 0xFFD9A0, border_width: 0 } ]
+                  on_click:
+                    - homeassistant.action:
+                        action: light.turn_on
+                        data: { entity_id: light.living_room_main }
+                        data_template: { rgb_color: "[255,217,160]" }

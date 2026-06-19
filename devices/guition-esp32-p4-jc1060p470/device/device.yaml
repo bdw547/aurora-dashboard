@@ -1,0 +1,355 @@
+# =============================================================================
+# DEVICE - Guition ESP32-P4 JC1060P470 hardware definition
+# =============================================================================
+# Pin assignments, peripherals, and platform config for the 7" touch panel.
+# Includes the ESP32-P4 main SoC, MIPI DSI display, GT911 capacitive
+# touchscreen, and backlight PWM.
+# =============================================================================
+
+substitutions:
+  espcontrol_component_url: "https://github.com/jtenniswood/espcontrol"
+  espcontrol_component_ref: "main"
+
+# ---------------------------------------------------------------------------
+# ESP32-P4 platform (16MB flash, ESP-IDF framework)
+# ---------------------------------------------------------------------------
+esp32:
+  variant: esp32p4
+  flash_size: 16MB
+  cpu_frequency: 360MHZ
+  engineering_sample: true
+  framework:
+    type: esp-idf
+    version: 5.5.2
+    # pioarduino 55.03.38-1 pulls tool-esptoolpy 5.2.0, which can install
+    # incompletely in ESPHome containers and then fail while creating .bin files.
+    platform_version: 55.03.37
+    advanced:
+      enable_idf_experimental_features: true
+      execute_from_psram: true
+      disable_vfs_support_termios: false
+      disable_vfs_support_select: false
+      disable_vfs_support_dir: false
+    sdkconfig_options:
+      CONFIG_SDMMC_HOST_DEFAULT: "y"
+      CONFIG_COMPILER_OPTIMIZATION_SIZE: "y"
+      # HTTPS firmware checks need more stack on ESP32-P4; the default main
+      # task stack can trip the stack protector during mbedTLS setup.
+      CONFIG_ESP_MAIN_TASK_STACK_SIZE: "8192"
+      CONFIG_MBEDTLS_EXTERNAL_MEM_ALLOC: "y"
+      # Native OTA can block loopTask while ESP-IDF erases the alternate app
+      # partition on this panel. Use the ESP-IDF maximum so the flash
+      # erase/prep step can finish before data upload continues.
+      CONFIG_ESP_TASK_WDT_TIMEOUT_S: "60"
+      # ESPHome 2026.5 / ESP-IDF 5.5.2 can make ESP-Hosted preallocate a
+      # large internal DMA buffer pool before ESPHome starts. On P4 display
+      # builds this can fail with "HS_MP: mempool create failed: no mem" and
+      # trigger OTA rollback, so use dynamic buffers and keep hosted task
+      # stacks in PSRAM.
+      CONFIG_ESP_HOSTED_USE_MEMPOOL: "n"
+      CONFIG_ESP_HOSTED_DFLT_TASK_FROM_SPIRAM: "y"
+      CONFIG_FREERTOS_THREAD_LOCAL_STORAGE_POINTERS: "1"
+      CONFIG_LOG_DEFAULT_LEVEL: "2"
+
+# ---------------------------------------------------------------------------
+# External component
+# ---------------------------------------------------------------------------
+external_components:
+  - source:
+      type: git
+      url: ${espcontrol_component_url}
+      ref: ${espcontrol_component_ref}
+      path: components
+    components: [espcontrol, web_server_idf, artwork_image]
+    refresh: 1s
+
+espcontrol:
+
+# ---------------------------------------------------------------------------
+# ESPHome core (device name from substitutions)
+# ---------------------------------------------------------------------------
+esphome:
+  name: ${name}
+  friendly_name: ${friendly_name}
+  platformio_options:
+    build_flags:
+      - "-Wno-deprecated-declarations"
+      - "-DESPCONTROL_DISABLE_TODO=1"
+      # Force PlatformIO to rebuild cached ESPHome objects after the 2026.5
+      # core/scheduler/watchdog changes; stale 2026.4 objects can boot-loop.
+      - "-DESPCONTROL_ESPHOME_2026_5_REBUILD=1"
+      # Separate marker for the JC1060P470 boot-loop fix so ESPHome cannot
+      # silently reuse the earlier 10:42 build that still crashes.
+      - "-DESPCONTROL_JC1060P470_BOOTFIX_20260522=1"
+      # Rebuild marker for the JC1060P470 OTA flash erase watchdog increase.
+      - "-DESPCONTROL_JC1060P470_OTA_WDT_20260526=1"
+    build_src_flags:
+      - "-Wno-literal-suffix"
+  on_boot:
+    - priority: 260
+      then:
+        - if:
+            condition:
+              lambda: |-
+                #ifdef USE_ESP32_CRASH_HANDLER
+                return esphome::esp32::crash_handler_has_data();
+                #else
+                return false;
+                #endif
+            then:
+              - lambda: |-
+                  #ifdef USE_ESP32_CRASH_HANDLER
+                  esphome::esp32::crash_handler_clear();
+                  #endif
+                  id(jc1060p470_safe_mode).mark_successful();
+                  global_preferences->sync();
+                  ESP_LOGW("jc1060p470", "Cleared saved crash report before API logging; rebooting once");
+              - delay: 500ms
+              - lambda: |-
+                  App.safe_reboot();
+    - priority: 250
+      then:
+        - lambda: |-
+            ESP_LOGI("jc1060p470", "Bootfix marker 2026-05-22 active");
+    - priority: -50
+      then:
+        - lambda: |-
+            if (id(button_on_color).state == "000000" &&
+                id(button_off_color).state == "FFFFFF" &&
+                id(sensor_card_color).state == "FFFFFF") {
+              auto on = id(button_on_color).make_call();
+              on.set_value("FF8C00");
+              on.perform();
+
+              auto off = id(button_off_color).make_call();
+              off.set_value("313131");
+              off.perform();
+
+              auto sensor = id(sensor_card_color).make_call();
+              sensor.set_value("212121");
+              sensor.perform();
+
+              global_preferences->sync();
+              ESP_LOGI("jc1060p470", "Reset e-paper color defaults to color display colors");
+            }
+    - priority: -100
+      then:
+        - lambda: 'id(screen_rotation_ready) = true;'
+        - script.execute: apply_screen_rotation
+
+# ---------------------------------------------------------------------------
+# PSRAM (video frame buffer memory)
+# ---------------------------------------------------------------------------
+psram:
+  mode: hex
+  speed: 200MHz
+
+# ---------------------------------------------------------------------------
+# OTA updates (ESPHome native + HTTP-based)
+# ---------------------------------------------------------------------------
+ota:
+  - platform: esphome
+    on_begin:
+      then:
+        - script.execute: show_update_writing
+        - script.wait: show_update_writing
+    on_end:
+      then:
+        - globals.set:
+            id: firmware_update_complete_pending
+            value: 'true'
+        - lambda: 'global_preferences->sync();'
+    on_error:
+      then:
+        - script.execute: show_update_failed
+  - platform: http_request
+    on_begin:
+      then:
+        - script.execute: show_update_writing
+        - script.wait: show_update_writing
+    on_end:
+      then:
+        - globals.set:
+            id: firmware_update_complete_pending
+            value: 'true'
+        - lambda: 'global_preferences->sync();'
+    on_error:
+      then:
+        - script.execute: show_update_failed
+
+safe_mode:
+  id: jc1060p470_safe_mode
+
+# ---------------------------------------------------------------------------
+# Shared infrastructure (API, logging, web server, restart button)
+# ---------------------------------------------------------------------------
+packages:
+  core_infra: !include ../../../common/device/core_infra.yaml
+
+# ---------------------------------------------------------------------------
+# Power management (LDO channels for DSI PHY and SD card)
+# ---------------------------------------------------------------------------
+esp_ldo:
+  - channel: 3
+    id: dsi_phy_enable
+    voltage: 2.5V
+    adjustable: True
+  - channel: 4
+    id: sd_card_power
+    voltage: 2.7V
+    adjustable: True
+
+# ---------------------------------------------------------------------------
+# Backlight (LEDC PWM output + monochromatic light entity)
+# ---------------------------------------------------------------------------
+output:
+  - platform: ledc
+    pin: GPIO23
+    id: gpio_backlight_pwm
+    frequency: ${backlight_pwm_frequency}
+
+light:
+  - platform: monochromatic
+    output: gpio_backlight_pwm
+    name: Display Backlight
+    icon: mdi:lightbulb-on
+    id: display_backlight
+    restore_mode: RESTORE_DEFAULT_ON
+    default_transition_length: 0s
+    gamma_correct: 1.0
+    on_turn_on:
+      then:
+        - if:
+            condition:
+              lambda: |-
+                auto now = panel_time_or_fallback(id(panel_time).now(), id(homeassistant_time).now());
+                return (id(screen_schedule_asleep) &&
+                        !id(schedule_mode_clock)) ||
+                       screen_schedule_waiting_for_time(
+                         id(screen_schedule_trigger).state,
+                         id(schedule_enabled).state,
+                         now.is_valid());
+            then:
+              - script.execute: backlight_force_display_off
+            else:
+              - if:
+                  condition:
+                    lambda: 'return id(screensaver_display_off_active);'
+                  then:
+                    - script.execute: screensaver_wake
+    on_turn_off:
+      then:
+        - if:
+            condition:
+              lambda: |-
+                return !id(display_asleep) &&
+                       !id(screen_schedule_asleep) &&
+                       !id(screensaver_display_off_active) &&
+                       !id(screensaver_dimmed_active);
+            then:
+              - script.execute: screen_schedule_manual_sleep
+
+# ---------------------------------------------------------------------------
+# I2C bus and touchscreen (GT911 capacitive, wakes screensaver on touch)
+# ---------------------------------------------------------------------------
+i2c:
+  - id: bus_a
+    sda: GPIO07
+    scl: GPIO08
+    frequency: 400kHz
+    sda_pullup_enabled: False
+    scl_pullup_enabled: False
+
+i2c_device:
+  - id: i2cdev1
+    address: 0x18
+  - id: i2cdev2
+    address: 0x32
+  - id: i2cdev3
+    address: 0x36
+  - id: i2cdev4
+    address: 0x40
+
+touchscreen:
+  - platform: gt911
+    id: my_touchscreen
+    display: my_display
+    i2c_id: bus_a
+    reset_pin: GPIO22
+    interrupt_pin: GPIO21
+    on_touch:
+      - script.execute: screensaver_wake
+
+# ---------------------------------------------------------------------------
+# Display (7" 1024x600 MIPI DSI panel)
+# ---------------------------------------------------------------------------
+display:
+  - platform: mipi_dsi
+    id: my_display
+    model: JC1060P470
+    color_order: RGB
+    reset_pin:
+      number: GPIO05
+    update_interval: never
+    auto_clear_enabled: false
+
+# ---------------------------------------------------------------------------
+# LVGL base (display binding, must be before any page definitions)
+# ---------------------------------------------------------------------------
+lvgl:
+  id: main_lvgl
+  displays: my_display
+  rotation: 180
+  byte_order: little_endian
+  touchscreens:
+    - touchscreen_id: my_touchscreen
+      long_press_time: 3s
+
+script:
+  - id: apply_screen_rotation
+    then:
+      - if:
+          condition:
+            lambda: 'return id(screen_rotation_select).current_option() == "90";'
+          then:
+            - lvgl.display.set_rotation: 270
+          else:
+            - if:
+                condition:
+                  lambda: 'return id(screen_rotation_select).current_option() == "180";'
+                then:
+                  - lvgl.display.set_rotation: 0
+                else:
+                  - if:
+                      condition:
+                        lambda: 'return id(screen_rotation_select).current_option() == "270";'
+                      then:
+                        - lvgl.display.set_rotation: 90
+                      else:
+                        - lvgl.display.set_rotation: 180
+      - script.execute: cover_art_apply_responsive_layout
+
+select:
+  - platform: template
+    name: "${entity_screen_rotation}"
+    internal: true
+    disabled_by_default: true
+    id: screen_rotation_select
+    entity_category: config
+    icon: "mdi:screen-rotation"
+    optimistic: true
+    restore_value: true
+    initial_option: "180"
+    options:
+      - "0"
+      - "90"
+      - "180"
+      - "270"
+    on_value:
+      then:
+        - if:
+            condition:
+              lambda: 'return id(screen_rotation_ready);'
+            then:
+              - script.execute: apply_screen_rotation
+              - script.execute: refresh_button_grid

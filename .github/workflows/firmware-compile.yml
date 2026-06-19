@@ -1,0 +1,187 @@
+name: Firmware Compile
+
+on:
+  workflow_dispatch:
+
+env:
+  FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
+  ESPHOME_VERSION: 2026.6.0
+  ESPCONTROL_DOCKER_BUILD_CACHE_KEEP: 2GB
+
+permissions:
+  contents: read
+  pull-requests: read
+
+concurrency:
+  group: firmware-compile-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  detect-changes:
+    name: Detect Firmware Changes
+    runs-on: ubuntu-latest
+    outputs:
+      compile_required: ${{ steps.filter.outputs.compile_required }}
+    steps:
+      - name: Check changed files
+        id: filter
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          if [ "${{ github.event_name }}" != "pull_request" ]; then
+            echo "compile_required=true" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+
+          gh api \
+            "repos/${{ github.repository }}/pulls/${{ github.event.pull_request.number }}/files" \
+            --paginate \
+            --jq '.[].filename' > changed-files.txt
+
+          if grep -Eq '^(\.github/workflows/(firmware-compile|nightly-firmware|release)\.yml|common/.*|components/.*|devices/.*|builds/.*|src/webserver/.*|docs/public/webserver/.*|scripts/(build|device_matrix|device_profiles|generate_device_slots)\.py|package(-lock)?\.json)$' changed-files.txt; then
+            echo "compile_required=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "compile_required=false" >> "$GITHUB_OUTPUT"
+          fi
+
+  device-matrix:
+    name: Prepare Device Matrix
+    needs: detect-changes
+    if: needs.detect-changes.outputs.compile_required == 'true'
+    runs-on: ubuntu-latest
+    outputs:
+      matrix: ${{ steps.matrix.outputs.matrix }}
+    steps:
+      - uses: actions/checkout@v7.0.0
+        with:
+          sparse-checkout: |
+            common/assets/*.yaml
+            devices/manifest.json
+            devices/*/device/fonts.yaml
+            scripts/device_matrix.py
+            scripts/device_profiles.py
+          sparse-checkout-cone-mode: false
+
+      - name: Generate device matrix
+        id: matrix
+        run: |
+          MATRIX=$(python3 scripts/device_matrix.py pr)
+          echo "matrix=${MATRIX}" >> "$GITHUB_OUTPUT"
+
+  compile:
+    name: Compile Firmware (${{ matrix.slug }})
+    needs: [detect-changes, device-matrix]
+    if: needs.detect-changes.outputs.compile_required == 'true'
+    runs-on: self-hosted
+    strategy:
+      fail-fast: false
+      # Keep self-hosted firmware compiles serialized without using a job-level
+      # concurrency group. GitHub Actions only allows one running and one
+      # pending job per concurrency group, so sharing one group across matrix
+      # children cancels queued device builds before they run.
+      max-parallel: 1
+      matrix: ${{ fromJSON(needs.device-matrix.outputs.matrix) }}
+    steps:
+      - name: Prepare self-hosted workspace
+        run: |
+          rm -rf "${GITHUB_WORKSPACE:?}/"* "${GITHUB_WORKSPACE:?}/".[!.]* "${GITHUB_WORKSPACE:?}/"..?* 2>/dev/null ||
+            sudo rm -rf "${GITHUB_WORKSPACE:?}/"* "${GITHUB_WORKSPACE:?}/".[!.]* "${GITHUB_WORKSPACE:?}/"..?*
+
+      - uses: actions/checkout@v7.0.0
+        with:
+          path: espcontrol-${{ matrix.slug }}
+
+      - run: git sparse-checkout disable || true
+        working-directory: espcontrol-${{ matrix.slug }}
+
+      - name: Select Docker command
+        run: |
+          if docker info >/dev/null 2>&1; then
+            echo "DOCKER=docker" >> "$GITHUB_ENV"
+          elif sudo -n docker info >/dev/null 2>&1; then
+            echo "DOCKER=sudo docker" >> "$GITHUB_ENV"
+          else
+            echo "::error::Docker is not available to the self-hosted runner user"
+            exit 1
+          fi
+
+      - name: Reclaim runner disk
+        working-directory: espcontrol-${{ matrix.slug }}
+        run: bash scripts/reclaim_actions_disk.sh
+
+      - name: Prepare isolated ESPHome cache
+        working-directory: espcontrol-${{ matrix.slug }}
+        run: |
+          RUN_CACHE_ROOT="${RUNNER_TEMP}/espcontrol-esphome/${{ github.run_id }}-${{ github.run_attempt }}/${{ matrix.slug }}"
+          PLATFORMIO_CACHE="${RUN_CACHE_ROOT}/platformio-${ESPHOME_VERSION}"
+          BUILD_CACHE="${RUN_CACHE_ROOT}/build"
+          rm -rf "${RUN_CACHE_ROOT}"
+          mkdir -p "${PLATFORMIO_CACHE}" "${BUILD_CACHE}" builds
+          rm -rf .esphome
+          rm -rf builds/.esphome
+          echo "RUN_CACHE_ROOT=${RUN_CACHE_ROOT}" >> "$GITHUB_ENV"
+          echo "PLATFORMIO_CACHE=${PLATFORMIO_CACHE}" >> "$GITHUB_ENV"
+          echo "BUILD_CACHE=${BUILD_CACHE}" >> "$GITHUB_ENV"
+
+      - name: Pull ESPHome image
+        working-directory: espcontrol-${{ matrix.slug }}
+        run: |
+          ESPHOME_IMAGE="ghcr.io/esphome/esphome:${ESPHOME_VERSION}"
+          LOCK_FILE="/tmp/espcontrol-esphome-image.lock"
+          if command -v flock >/dev/null 2>&1; then
+            flock "${LOCK_FILE}" ${DOCKER} pull "${ESPHOME_IMAGE}"
+          else
+            ${DOCKER} pull "${ESPHOME_IMAGE}"
+          fi
+          echo "ESPHOME_IMAGE=${ESPHOME_IMAGE}" >> "$GITHUB_ENV"
+
+      - name: Compile firmware
+        working-directory: espcontrol-${{ matrix.slug }}
+        run: >-
+          ${DOCKER} run --rm
+          --user "$(id -u):$(id -g)"
+          -e HOME=/config
+          -e PLATFORMIO_CORE_DIR=/config/.esphome/platformio
+          -e PLATFORMIO_SETTING_ENABLE_TELEMETRY=false
+          -v "${PWD}:/config"
+          -v "${PLATFORMIO_CACHE}:/config/.esphome"
+          -v "${BUILD_CACHE}:/config/builds/.esphome"
+          "${ESPHOME_IMAGE}"
+          compile /config/builds/${{ matrix.slug }}.factory.yaml
+
+      - name: Clean firmware caches
+        if: always()
+        working-directory: espcontrol-${{ matrix.slug }}
+        run: |
+          if [ -z "${RUN_CACHE_ROOT:-}" ] || [ -z "${BUILD_CACHE:-}" ] || [ -z "${PLATFORMIO_CACHE:-}" ]; then
+            echo "No firmware cache paths were prepared."
+            exit 0
+          fi
+          rm -rf "${RUN_CACHE_ROOT}"
+          bash scripts/reclaim_actions_disk.sh
+
+  firmware-compile-gate:
+    name: Firmware Compile Gate
+    needs: [detect-changes, device-matrix, compile]
+    if: always()
+    runs-on: ubuntu-latest
+    steps:
+      - name: Verify firmware compile result
+        run: |
+          if [ "${{ needs.detect-changes.result }}" != "success" ]; then
+            echo "::error::Could not determine whether firmware compile is required."
+            exit 1
+          fi
+
+          if [ "${{ needs.detect-changes.outputs.compile_required }}" != "true" ]; then
+            echo "No firmware compile required for this change."
+            exit 0
+          fi
+
+          if [ "${{ needs.device-matrix.result }}" != "success" ] ||
+             [ "${{ needs.compile.result }}" != "success" ]; then
+            echo "::error::Required firmware compile jobs did not pass."
+            echo "Prepare Device Matrix: ${{ needs.device-matrix.result }}"
+            echo "Compile Firmware: ${{ needs.compile.result }}"
+            exit 1
+          fi

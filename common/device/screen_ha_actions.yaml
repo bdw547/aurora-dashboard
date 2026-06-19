@@ -1,0 +1,100 @@
+# =============================================================================
+# SCREEN: HOME ASSISTANT ACTIONS
+# =============================================================================
+# Shown after the API client connects. Reminds the user to allow the device
+# to perform Home Assistant actions. The user taps Done to continue.
+# =============================================================================
+
+lvgl:
+  pages:
+    - id: ha_actions_page
+      bg_color: 0x000000
+      scrollable: false
+      pad_all: 0
+      widgets:
+        - obj:
+            width: $screen_width
+            height: $screen_height
+            bg_opa: 0%
+            border_width: 0
+            pad_all: 0
+            scrollable: false
+            clickable: true
+            on_press:
+              then:
+                - script.stop: setup_screen_dim
+                - light.turn_on:
+                    id: display_backlight
+                    brightness: 90%
+                - script.execute: setup_screen_dim
+            widgets:
+              - obj:
+                  align: center
+                  width: $content_width
+                  height: SIZE_CONTENT
+                  bg_opa: 0%
+                  border_width: 0
+                  pad_all: 0
+                  scrollable: false
+                  clickable: false
+                  layout:
+                    type: flex
+                    flex_flow: COLUMN
+                    flex_align_main: center
+                    flex_align_cross: center
+                    pad_row: $setup_pad_row
+                  widgets:
+                    - label:
+                        text_font: $setup_icon_font_id
+                        text: $icon_home_assistant
+                        text_color: 0xFFFFFF
+                        text_align: center
+                    - label:
+                        id: ha_actions_title
+                        text: ""
+                        text_font: $setup_title_font_id
+                        text_color: 0xFFFFFF
+                        width: $content_width
+                        text_align: center
+                    - label:
+                        id: ha_actions_instructions
+                        text: ""
+                        text_font: $setup_body_font_id
+                        text_color: 0xB0B0B0
+                        width: $content_width
+                        text_align: center
+                    - label:
+                        id: ha_actions_help
+                        text: ""
+                        text_font: $setup_body_font_id
+                        text_color: 0xB0B0B0
+                        width: $content_width
+                        text_align: center
+                    - button:
+                        width: $setup_action_button_width
+                        height: $setup_action_button_height
+                        bg_color: 0x333333
+                        radius: $setup_action_button_radius
+                        shadow_width: 0
+                        on_click:
+                          then:
+                            - script.execute: navigate_after_api
+                        widgets:
+                          - label:
+                              id: ha_actions_done_label
+                              align: center
+                              text: ""
+                              text_font: $setup_body_font_id
+                              text_color: 0xFFFFFF
+
+script:
+  - id: ha_actions_text_refresh
+    mode: restart
+    then:
+      - lambda: |-
+          lv_label_set_text(id(ha_actions_title), espcontrol_i18n("Home Assistant"));
+          lv_label_set_text(
+              id(ha_actions_instructions),
+              espcontrol_i18n("Allow this device to perform\nHome Assistant actions"));
+          lv_label_set_text(id(ha_actions_help), espcontrol_i18n("See the install guide for help"));
+          lv_label_set_text(id(ha_actions_done_label), espcontrol_i18n("Done"));

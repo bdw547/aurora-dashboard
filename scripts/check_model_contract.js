@@ -1,0 +1,275 @@
+#!/usr/bin/env node
+"use strict";
+
+const assert = require("assert");
+const fs = require("fs");
+const path = require("path");
+const vm = require("vm");
+
+const ROOT = path.resolve(__dirname, "..");
+const MODEL_JS = path.join(ROOT, "src", "webserver", "modules", "model_generated.js");
+const COMPAT_FIXTURES = path.join(ROOT, "compatibility", "fixtures", "product_compatibility.json");
+
+function loadModel() {
+  const sandbox = {};
+  sandbox.window = sandbox;
+  vm.createContext(sandbox);
+  vm.runInContext(fs.readFileSync(MODEL_JS, "utf8"), sandbox, { filename: MODEL_JS });
+  assert(sandbox.EspControlModel, "EspControlModel was not exported");
+  return sandbox.EspControlModel;
+}
+
+const model = loadModel();
+const fixtures = JSON.parse(fs.readFileSync(COMPAT_FIXTURES, "utf8"));
+const current = fixtures.current;
+
+function plain(value) {
+  return JSON.parse(JSON.stringify(value));
+}
+
+assert.deepStrictEqual(plain(model.parseGridOrder("1,2d,3w", 8, 4)), {
+  grid: [1, 2, 3, -1, 0, -1, 0, 0],
+  sizes: { 2: 2, 3: 3 },
+}, "grid order parsing preserves size tokens and spans");
+assert.strictEqual(
+  model.serializeGridOrder([1, 2, 3, -1, 0, -1, 0, 0], { 2: 2, 3: 3 }),
+  "1,2d,3w",
+  "grid serialization preserves sparse spanned layout"
+);
+const currentLayout = model.parseGridOrder(current.layoutImport.order, 20, 5);
+assert.deepStrictEqual(
+  plain(currentLayout.grid.slice(0, current.layoutImport.expectedGridPrefix.length)),
+  current.layoutImport.expectedGridPrefix,
+  "current fixture cross-device layout import grid parses in the model"
+);
+assert.deepStrictEqual(
+  plain(currentLayout.sizes),
+  current.layoutImport.expectedSizes,
+  "current fixture cross-device layout import sizes parse in the model"
+);
+
+assert.deepStrictEqual(plain(model.parseSubpageOrder("1,B=Return%3AHome,2d")), {
+  order: ["1", "B", "2d"],
+  backLabel: "Return:Home",
+}, "subpage order parsing decodes back labels");
+const subpageGrid = model.buildSubpageGrid({
+  order: ["1", "B", "2w"],
+  buttons: [{ label: "One" }, { label: "Two" }],
+  sizes: {},
+}, 8, 4);
+assert.deepStrictEqual(plain(subpageGrid.grid), [1, -2, 2, -1, 0, 0, 0, 0], "subpage grid includes explicit back button");
+assert.deepStrictEqual(plain(subpageGrid.sizes), { 2: 3 }, "subpage grid preserves button sizes");
+assert.deepStrictEqual(
+  plain(
+    model.serializeSubpageGrid(subpageGrid.grid, subpageGrid.sizes, "Return"),
+  ),
+  ["1", "B=Return", "2w"],
+  "subpage grid serializes back label and size tokens"
+);
+assert.deepStrictEqual(plain(model.parseRawSubpageConfig(
+  "~1,B|M,media_player.living,Living,Speaker,,play_pause,,,",
+  (code) => ({ M: "media" }[code] || code)
+)), {
+  order: ["1", "B"],
+  buttons: [{
+    type: "media",
+    entity: "media_player.living",
+    label: "Living",
+    icon: "Speaker",
+    icon_on: "Auto",
+    sensor: "play_pause",
+    unit: "",
+    precision: "",
+    options: "",
+  }],
+  backLabel: "Back",
+}, "raw compact subpage parsing decodes fields and type codes");
+assert.strictEqual(
+  model.legacySubpageFieldsSafe([["scene.movie", "Movie"], ["bad|entity"]]),
+  false,
+  "legacy subpage field safety rejects pipe characters"
+);
+assert.strictEqual(
+  model.serializeLegacySubpageConfig(["1", "B"], [["scene.movie", "Movie", "Flash"]]),
+  "1,B|scene.movie:Movie:Flash",
+  "legacy subpage serialization assembles field groups"
+);
+assert.strictEqual(
+  model.serializeCompactSubpageConfig(["1", "B"], [["A", "scene.movie", "Movie", "Flash"]]),
+  "~1,B|A,scene.movie,Movie,Flash",
+  "compact subpage serialization assembles field groups"
+);
+assert.strictEqual(
+  model.chooseSerializedSubpageConfig(["1", "B"], 1, "1,B|scene.movie:Movie", "~1,B|A,scene.movie,Movie"),
+  "1,B|scene.movie:Movie",
+  "subpage serialization chooses the shorter compatible format"
+);
+const structuredSubpageSource = {
+  order: ["2d", "3w", "Bt", "1"],
+  buttons: [
+    { entity: "scene.movie", label: "Movie", icon: "Flash", icon_on: "Auto", sensor: "scene.turn_on", unit: "", type: "action", precision: "", options: "state_entity=light.living" },
+    { entity: "media_player.living", label: "Living", icon: "Auto", icon_on: "Auto", sensor: "play_pause", unit: "", type: "media", precision: "state", options: "" },
+    { entity: "climate.hallway", label: "Hallway", icon: "Thermostat", icon_on: "Radiator", sensor: "", unit: "", type: "climate", precision: "1", options: "number_display=icon" },
+    { entity: "", label: "Temp", icon: "Thermometer", icon_on: "Auto", sensor: "sensor.hallway_temperature", unit: "\u00B0C", type: "sensor", precision: "1", options: "large_numbers" },
+    { entity: "", label: "", icon: "Auto", icon_on: "Auto", sensor: "", unit: "", type: "", precision: "", options: "" },
+  ],
+  backLabel: "Return Home",
+};
+const structuredSubpageObject = model.structuredSubpageFromParsed(structuredSubpageSource);
+assert.deepStrictEqual(plain(structuredSubpageObject), {
+  order: ["2d", "3w", "Bt", "1"],
+  back_label: "Return Home",
+  buttons: structuredSubpageSource.buttons,
+}, "structured subpage export preserves readable order, back label, and buttons");
+assert.deepStrictEqual(
+  plain(model.parseStructuredSubpageConfig(structuredSubpageObject)),
+  plain(structuredSubpageSource),
+  "structured subpage import round-trips action, media, climate, sensor, and empty buttons"
+);
+assert.deepStrictEqual(plain(model.parseStructuredSubpageConfig({
+  order: ["B=Encoded%20Back", "1"],
+  buttons: [{ label: "Partial" }],
+})), {
+  order: ["B", "1"],
+  buttons: [{
+    entity: "",
+    label: "Partial",
+    icon: "Auto",
+    icon_on: "Auto",
+    sensor: "",
+    unit: "",
+    type: "",
+    precision: "",
+    options: "",
+  }],
+  backLabel: "Encoded Back",
+}, "structured subpage import defaults missing card fields and decodes legacy back labels");
+
+const layoutPlan = model.planBackupButtonLayout([
+  { entity: "light.kitchen", label: "Kitchen" },
+  { entity: "weather.home", label: "Weather", type: "weather" },
+  { entity: "climate.hall", label: "Hall", type: "climate" },
+  {},
+], "2w,1,3", 2, 4);
+assert.strictEqual(layoutPlan.importedCount, 4, "backup layout records source slot count");
+assert.deepStrictEqual(plain(layoutPlan.slotMap), { 1: 2, 2: 1 }, "backup layout maps old slots to new slots");
+assert.strictEqual(layoutPlan.button_order, "1w", "backup layout serializes adapted order");
+assert.deepStrictEqual(plain(layoutPlan.importedSizes), { 1: 3 }, "backup layout keeps fitting size tokens");
+assert.strictEqual(layoutPlan.buttons[0].entity, "weather.home", "backup layout follows saved order first");
+assert.strictEqual(layoutPlan.buttons[1].entity, "light.kitchen", "backup layout fills target slots in order");
+
+assert.strictEqual(model.normalizeTemperatureUnit("fahrenheit"), "\u00B0F", "temperature unit normalization");
+assert.strictEqual(model.normalizeScheduleWakeTimeout(1), 10, "wake timeout minimum");
+assert.strictEqual(model.normalizeScheduleClockBrightness(0), 10, "schedule clock brightness fallback");
+assert.deepStrictEqual(
+  plain(model.normalizeBackupScreenSettings({
+    brightness_day: "88",
+    brightness_night: "55",
+    automatic_brightness: false,
+    brightness_dawn_time: "5:30",
+    brightness_dusk_time: "21:05",
+    schedule_enabled: true,
+    schedule_on_hour: 7,
+    schedule_off_hour: 22,
+    schedule_mode: "clock",
+    schedule_wake_timeout: 30,
+  }, {
+    scheduleWakeBrightness: 70,
+    scheduleDimmedBrightness: 12,
+    scheduleClockBrightness: 40,
+    scheduleClockTextColor: "ABCDEF",
+  })),
+  {
+    brightnessDayVal: 88,
+    brightnessNightVal: 55,
+    automaticBrightnessEnabled: false,
+    brightnessDawnTime: "05:30",
+    brightnessDuskTime: "21:05",
+    scheduleTrigger: "time",
+    scheduleEnabled: true,
+    scheduleOnHour: 7,
+    scheduleOffHour: 22,
+    scheduleMode: "clock",
+    scheduleWakeTimeout: 30,
+    scheduleWakeBrightness: 70,
+    scheduleDimmedBrightness: 12,
+    scheduleClockBrightness: 40,
+    scheduleClockTextColor: "ABCDEF",
+  },
+  "backup screen settings normalize with current-value fallbacks"
+);
+
+const panelSettings = model.normalizeBackupPanelSettings({
+  temperature_unit: "centigrade",
+  outdoor_temp_enable: false,
+  clock_bar_temperature_entities: "sensor.porch_temperature",
+  clock_bar_time: false,
+  network_status_icon: false,
+  language: "it",
+  clock_format: "24h",
+  ntp_server_1: "pool.ntp.org",
+  screensaver_mode: "timer",
+  screensaver_action: "Screen Dimmed",
+  cover_art_hide_external_input: true,
+  clock_brightness_day: 44,
+  clock_brightness_night: 22,
+  screen_rotation: "90",
+}, {
+  timezone: "UTC (GMT+0)",
+  language: "en",
+  clockFormat: "12h",
+  clockFormatOptions: ["12h", "24h"],
+  ntpDefaults: ["0.pool.ntp.org", "1.pool.ntp.org", "2.pool.ntp.org"],
+  ntpServer1: "0.pool.ntp.org",
+  ntpServer2: "1.pool.ntp.org",
+  ntpServer3: "2.pool.ntp.org",
+  screenRotationOptions: ["0", "90", "180", "270"],
+});
+assert.strictEqual(panelSettings.temperatureUnit, "\u00B0C", "panel temperature unit normalizes");
+assert.strictEqual(panelSettings.outdoorTempEnable, false, "panel clock bar temperature visibility imports");
+assert.deepStrictEqual(plain(panelSettings.clockBarTemperatureEntities), ["sensor.porch_temperature"], "panel clock bar temperature entity imports");
+assert.strictEqual(panelSettings.clockBarTime, false, "panel clock bar time imports");
+assert.strictEqual(panelSettings.networkStatusIcon, false, "panel clock bar network status imports");
+assert.strictEqual(panelSettings.language, "it", "panel language imports");
+assert.strictEqual(panelSettings.clockFormat, "24h", "panel clock format validates against options");
+assert.strictEqual(panelSettings.ntpServer1, "pool.ntp.org", "panel NTP server imports");
+assert.strictEqual(panelSettings.screensaverMode, "timer", "panel screensaver mode imports");
+assert.strictEqual(panelSettings.screensaverAction, "dim", "panel screensaver action imports");
+assert.strictEqual(panelSettings.coverArtHideExternalInput, true, "panel cover art external-input setting imports");
+assert.strictEqual(
+  model.normalizeBackupPanelSettings({
+    media_player_sleep_prevention_entity: "media_player.living",
+  }, {
+    timezone: "UTC (GMT+0)",
+    language: "en",
+    clockFormat: "12h",
+    clockFormatOptions: ["12h", "24h"],
+    ntpDefaults: ["0.pool.ntp.org", "1.pool.ntp.org", "2.pool.ntp.org"],
+    ntpServer1: "0.pool.ntp.org",
+    ntpServer2: "1.pool.ntp.org",
+    ntpServer3: "2.pool.ntp.org",
+    screenRotationOptions: ["0", "90", "180", "270"],
+  }).coverArtMediaPlayerEntity,
+  "media_player.living",
+  "legacy sleep prevention media player imports into cover art media player"
+);
+assert.strictEqual(panelSettings.clockBrightnessDay, 44, "panel day clock brightness imports");
+assert.strictEqual(panelSettings.clockBrightnessNight, 22, "panel night clock brightness imports");
+assert.strictEqual(panelSettings.subpageChevron, true, "panel subpage chevron defaults on");
+assert.strictEqual(panelSettings.screenRotation, "90", "panel rotation validates against options");
+
+const legacyPanelSettings = model.normalizeBackupPanelSettings({}, {
+  timezone: "UTC (GMT+0)",
+  language: "en",
+  clockFormat: "12h",
+  clockFormatOptions: ["12h", "24h"],
+  ntpDefaults: ["0.pool.ntp.org", "1.pool.ntp.org", "2.pool.ntp.org"],
+  ntpServer1: "0.pool.ntp.org",
+  ntpServer2: "1.pool.ntp.org",
+  ntpServer3: "2.pool.ntp.org",
+  screenRotationOptions: ["0", "90", "180", "270"],
+});
+assert.strictEqual(legacyPanelSettings.clockBarTime, true, "legacy panel settings default clock bar time on");
+assert.strictEqual(legacyPanelSettings.coverArtHideExternalInput, true, "legacy panel settings default cover art external-input setting on");
+
+console.log("Model contract tests passed.");

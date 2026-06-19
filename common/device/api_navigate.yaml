@@ -1,0 +1,19 @@
+# =============================================================================
+# API NAVIGATE ACTION - Home Assistant-driven page navigation
+# =============================================================================
+# Kept outside core_infra so low-memory device profiles can omit this custom
+# API action without losing the normal Home Assistant state/action pipeline.
+# =============================================================================
+
+api:
+  actions:
+    - action: navigate
+      variables:
+        target: string
+      then:
+        - script.execute: screensaver_wake
+        - script.wait: screensaver_wake
+        - lambda: |-
+            espcontrol_navigate(target, id(main_page)->obj);
+        - script.execute: screensaver_idle_check
+        - script.execute: home_screen_idle_check

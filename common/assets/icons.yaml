@@ -1,0 +1,20 @@
+# =============================================================================
+# ICONS - Shared Material Design icon substitutions
+# =============================================================================
+# http://materialdesignicons.com/cdn/7.4.47/
+# Font declarations live in each device font file so every device can expose the
+# same generic style IDs at device-specific sizes without duplicate shared fonts.
+# =============================================================================
+
+substitutions:
+  icon_wifi_startup: "\U000F05A9"
+  icon_wifi: "\U000F0928"
+  icon_ethernet: "\U000F0200"
+  icon_cog: "\U000F0493"
+  icon_home_assistant: "\U000F07D0"
+  icon_progress_clock: "\U000F0996"
+  icon_check: "\U000F012C"
+  icon_chevron_left: "\U000F0141"
+  icon_chevron_right: "\U000F0142"
+  icon_image_card_loading: "\U000F02E9"
+  icon_image_card_unavailable: "\U000F02ED"

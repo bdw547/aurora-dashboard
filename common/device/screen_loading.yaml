@@ -1,0 +1,150 @@
+# =============================================================================
+# SCREEN: LOADING
+# =============================================================================
+# Boot screen. Must be the first page included in packages.yaml so LVGL
+# shows it at startup. on_boot updates status text; after a grace period,
+# if WiFi is not connected, switches to wifi_setup_page.
+# =============================================================================
+
+globals:
+  - id: boot_grace_period
+    type: bool
+    initial_value: 'true'
+
+lvgl:
+  pages:
+    - id: loading_page
+      bg_color: 0x000000
+      scrollable: false
+      widgets:
+        - obj:
+            align: center
+            width: $content_width
+            height: SIZE_CONTENT
+            bg_opa: 0%
+            border_width: 0
+            pad_all: 0
+            scrollable: false
+            layout:
+              type: flex
+              flex_flow: COLUMN
+              flex_align_main: center
+              flex_align_cross: center
+              pad_row: $setup_loading_pad_row
+            widgets:
+              - label:
+                  id: loading_status_icon
+                  text_font: $setup_icon_font_id
+                  text: $icon_wifi_startup
+                  text_color: 0xFFFFFF
+                  text_align: center
+              - label:
+                  id: loading_status_title
+                  text: ""
+                  text_font: $setup_title_font_id
+                  text_color: 0xFFFFFF
+                  width: $content_width
+                  text_align: center
+              - label:
+                  id: loading_status_label
+                  text: ""
+                  text_font: $setup_body_font_id
+                  text_color: 0xB0B0B0
+                  width: $content_width
+                  text_align: center
+              # Hidden slider ensures LVGL compiles lv_slider for dynamic use
+              - slider:
+                  hidden: true
+                  width: 0
+                  height: 0
+              # Hidden arc ensures LVGL compiles lv_arc for modal controls.
+              - arc:
+                  hidden: true
+                  width: 0
+                  height: 0
+    - id: screen_off_page
+      bg_color: 0x000000
+      scrollable: false
+
+esphome:
+  on_boot:
+    - priority: -200
+      then:
+        - lvgl.resume:
+        - script.execute: clock_bar_hide
+        - lambda: |-
+            lv_label_set_text(id(loading_status_title), espcontrol_i18n("Starting up"));
+            lv_label_set_text(id(loading_status_label), espcontrol_i18n("Booting"));
+        - lvgl.page.show: loading_page
+        - delay: 100ms
+        - if:
+            condition:
+              and:
+                - not:
+                    wifi.connected:
+                - lambda: 'return !wifi::global_wifi_component->has_sta();'
+            then:
+              - globals.set:
+                  id: display_asleep
+                  value: 'false'
+              - globals.set:
+                  id: screen_schedule_asleep
+                  value: 'false'
+              - globals.set:
+                  id: screensaver_display_off_active
+                  value: 'false'
+              - globals.set:
+                  id: screensaver_dimmed_active
+                  value: 'false'
+              - lambda: |-
+                  lv_label_set_text(id(loading_status_icon), "${icon_wifi}");
+                  lv_label_set_text(id(loading_status_title), espcontrol_i18n("WiFi Setup"));
+                  std::string msg = std::string(espcontrol_i18n("Connect to WiFi")) +
+                                    "\n${friendly_name}\n" +
+                                    espcontrol_i18n("Open 192.168.4.1");
+                  lv_label_set_text(id(loading_status_label), msg.c_str());
+        - if:
+            condition:
+              lambda: |-
+                return wifi::global_wifi_component->has_sta() &&
+                       (id(screen_schedule_asleep) ||
+                        screen_schedule_waiting_for_time(
+                          id(screen_schedule_trigger).state,
+                          id(schedule_enabled).state,
+                          panel_time_or_fallback(id(panel_time).now(), id(homeassistant_time).now()).is_valid()));
+            then:
+              # Expected on boot when schedule logic says the panel should
+              # remain dark, or while time is not ready enough to decide.
+              - script.execute: backlight_force_display_off
+            else:
+              - light.turn_on:
+                  id: display_backlight
+                  brightness: 90%
+                  transition_length: 500ms
+    - priority: -100
+      then:
+        - if:
+            condition:
+              lambda: 'return wifi::global_wifi_component->has_sta();'
+            then:
+              - lambda: |-
+                  lv_label_set_text(id(loading_status_label), espcontrol_i18n("Connecting to WiFi"));
+              - delay: 5s
+              - lambda: 'id(boot_grace_period) = false;'
+              - if:
+                  condition:
+                    and:
+                      - wifi.connected:
+                      - lambda: 'return lv_scr_act() == id(loading_page)->obj;'
+                  then:
+                    - script.execute: navigate_after_api
+                  else:
+                    - if:
+                        condition:
+                          not:
+                            wifi.connected:
+                        then:
+                          - script.execute: wifi_reconnect_flow
+            else:
+              - lambda: 'id(boot_grace_period) = false;'
+              - script.execute: wifi_show_hotspot_setup

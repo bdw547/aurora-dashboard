@@ -1,0 +1,88 @@
+# =============================================================================
+# NETWORK - Connectivity diagnostics exposed to Home Assistant
+# =============================================================================
+# Online status, uptime, WiFi signal strength (dB + %), and IP address.
+# All sensors are diagnostic; signal dB is internal (used to derive %).
+# =============================================================================
+
+# ---------------------------------------------------------------------------
+# Online status (binary_sensor)
+# ---------------------------------------------------------------------------
+binary_sensor:
+  - platform: status
+    name: "Online"
+    id: ink_ha_connected
+    icon: mdi:check-network
+
+script:
+  - id: network_status_refresh
+    mode: restart
+    then:
+      - lambda: |-
+          network_status_set_wifi_icon(id(network_status_icon_label),
+                                       id(wifi_strength_percent).state,
+                                       wifi::global_wifi_component != nullptr &&
+                                         wifi::global_wifi_component->is_connected());
+
+  - id: network_status_open_info
+    mode: single
+    then:
+      - lambda: |-
+          network_status_open_modal(
+            "${friendly_name}",
+            network_status_ip_address(),
+            "${firmware_version}",
+            id(${media_title_font})->get_lv_font(),
+            id(${icon_font})->get_lv_font());
+
+# ---------------------------------------------------------------------------
+# Uptime and WiFi signal sensors
+# ---------------------------------------------------------------------------
+sensor:
+  - platform: uptime
+    name: "Uptime Sensor"
+    id: uptime_sensor
+    entity_category: diagnostic
+    internal: true
+
+  # Raw dBm value (internal, feeds the percentage copy below)
+  - platform: wifi_signal
+    name: "Wifi Signal dB"
+    id: wifi_signal_db
+    update_interval: 60s
+    entity_category: "diagnostic"
+    internal: true
+
+  # Converted to 0-100% for easier reading in HA
+  - platform: copy
+    source_id: wifi_signal_db
+    name: "${entity_wifi_strength}"
+    id: wifi_strength_percent
+    filters:
+      - lambda: return min(max(2 * (x + 100.0), 0.0), 100.0);
+    unit_of_measurement: "%"
+    icon: mdi:wifi
+    entity_category: "diagnostic"
+    device_class: ""
+    on_value:
+      then:
+        - script.execute: network_status_refresh
+
+# ---------------------------------------------------------------------------
+# IP address (text_sensor)
+# ---------------------------------------------------------------------------
+text_sensor:
+  - platform: template
+    name: "${entity_network_transport}"
+    id: network_transport_sensor
+    icon: mdi:wifi
+    entity_category: diagnostic
+    internal: true
+    update_interval: 60s
+    lambda: |-
+      return {"wifi"};
+
+  - platform: wifi_info
+    ip_address:
+      name: IP Address
+      icon: mdi:ip-network

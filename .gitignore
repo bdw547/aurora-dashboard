@@ -1,0 +1,25 @@
+.DS_Store
+.cache/
+.worktrees/
+node_modules/
+docs/.vitepress/cache/
+docs/.vitepress/dist/
+.esphome/
+__pycache__/
+builds/.esphome/
+
+# Local ESPHome/Wi-Fi credentials must never be committed.
+secrets.yaml
+secrets.yml
+*.secrets.yaml
+*.secrets.yml
+wifi_secrets*.yaml
+wifi-secrets*.yaml
+
+# Temporary local ESPHome entry points used when flashing PR builds.
+devices/*/dev-pr*.yaml
+
+# local build/deps (do not commit)
+.venv/
+.esphome/
+build/

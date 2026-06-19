@@ -1,0 +1,776 @@
+# =============================================================================
+# AURORA — standalone custom dashboard firmware for Guition JC1060P470
+# =============================================================================
+# Self-contained ESPHome config (stock components only): reuses the proven
+# hardware bring-up (mipi_dsi JC1060P470 display, GT911 touch, ESP32-C6 hosted
+# WiFi) WITHOUT espcontrol's button-grid component, and renders the custom
+# Aurora UI wired to real Home Assistant entities.
+# Flash first via esptool-js (browser), then OTA. secrets.yaml supplies wifi.
+# =============================================================================
+substitutions:
+  name: "aurora-panel"
+  friendly_name: "Aurora Panel"
+  # Aurora palette
+  c_bg: "0x08090D"
+  c_card: "0x141720"
+  c_hair: "0x2A2E38"
+  c_text: "0xEEF0F6"
+  c_text2: "0x8A8F9E"
+  c_text3: "0x6E727E"
+  c_teal: "0x2ED5B8"
+  c_purple: "0x7B6CFF"
+  c_warn: "0xFF9F6B"
+
+esphome:
+  name: ${name}
+  friendly_name: ${friendly_name}
+  on_boot:
+    # Static `rotation:` is a no-op on this DSI panel; rotate at runtime late.
+    - priority: -100
+      then:
+        - lvgl.display.set_rotation: 0
+
+esp32:
+  variant: esp32p4
+  flash_size: 16MB
+  cpu_frequency: 360MHZ
+  engineering_sample: true
+  framework:
+    type: esp-idf
+    version: 5.5.2
+    platform_version: 55.03.37
+    advanced:
+      enable_idf_experimental_features: true
+      execute_from_psram: true
+    # Board-specific options carried over from the proven stock firmware.
+    # The ESP_HOSTED mempool/SPIRAM + stack settings are required or the C6
+    # WiFi init fails ("HS_MP: mempool create failed: no mem") and boot-loops.
+    sdkconfig_options:
+      CONFIG_SDMMC_HOST_DEFAULT: "y"
+      CONFIG_COMPILER_OPTIMIZATION_SIZE: "y"
+      CONFIG_ESP_MAIN_TASK_STACK_SIZE: "8192"
+      CONFIG_MBEDTLS_EXTERNAL_MEM_ALLOC: "y"
+      CONFIG_ESP_TASK_WDT_TIMEOUT_S: "60"
+      CONFIG_ESP_HOSTED_USE_MEMPOOL: "n"
+      CONFIG_ESP_HOSTED_DFLT_TASK_FROM_SPIRAM: "y"
+      CONFIG_FREERTOS_THREAD_LOCAL_STORAGE_POINTERS: "1"
+      CONFIG_LOG_DEFAULT_LEVEL: "2"
+
+psram:
+  mode: hex
+  speed: 200MHz
+
+# Internal LDO powering the MIPI-DSI PHY (required by the P4 DSI display)
+esp_ldo:
+  - channel: 3
+    id: dsi_phy_enable
+    voltage: 2.5V
+
+# ESP32-C6 hosted WiFi/BLE over SDIO
+esp32_hosted:
+  variant: esp32c6
+  reset_pin: GPIO54
+  cmd_pin: GPIO19
+  clk_pin: GPIO18
+  d0_pin: GPIO14
+  d1_pin: GPIO15
+  d2_pin: GPIO16
+  d3_pin: GPIO17
+  active_high: true
+  sdio_frequency: 20MHz
+
+wifi:
+  ssid: !secret wifi_ssid
+  password: !secret wifi_password
+
+api:
+ota:
+  - platform: esphome
+logger:
+  level: INFO
+
+# --- Backlight ---
+output:
+  - platform: ledc
+    pin: GPIO23
+    id: gpio_backlight_pwm
+    frequency: 1000Hz
+light:
+  - platform: monochromatic
+    output: gpio_backlight_pwm
+    name: Display Backlight
+    id: display_backlight
+    restore_mode: RESTORE_DEFAULT_ON
+    default_transition_length: 0s
+
+# --- I2C + GT911 touch ---
+i2c:
+  - id: bus_a
+    sda: GPIO07
+    scl: GPIO08
+    frequency: 400kHz
+    sda_pullup_enabled: false
+    scl_pullup_enabled: false
+touchscreen:
+  - platform: gt911
+    id: my_touchscreen
+    display: my_display
+    i2c_id: bus_a
+    reset_pin: GPIO22
+    interrupt_pin: GPIO21
+
+# --- Display (stock mipi_dsi, built-in model) ---
+display:
+  - platform: mipi_dsi
+    id: my_display
+    model: JC1060P470
+    color_order: RGB
+    reset_pin:
+      number: GPIO05
+    update_interval: never
+    auto_clear_enabled: false
+
+# --- Assets ---
+image:
+  - id: img_aurora_bg
+    file: ../../aurora-build/assets/aurora_bg_1024x600.png
+    type: RGB565
+    resize: 1024x600
+
+font:
+  - file: "gfonts://Sora@600"
+    id: f_display
+    size: 52
+    glyphs: "0123456789%°:"
+  - file: "gfonts://Sora@600"
+    id: f_title
+    size: 24
+  - file: "gfonts://Sora@500"
+    id: f_body
+    size: 14
+  - file: "gfonts://Sora@500"
+    id: f_small
+    size: 12
+  # Material Design Icons (v7.4.47) — nav, transport, controls
+  - file: 'https://github.com/Templarian/MaterialDesign-Webfont/raw/v7.4.47/fonts/materialdesignicons-webfont.ttf'
+    id: f_icon
+    size: 26
+    bpp: 4
+    glyphs:
+      - "\U000F02DC"  # home
+      - "\U000F0335"  # lightbulb
+      - "\U000F0336"  # lightbulb-outline
+      - "\U000F0393"  # thermostat
+      - "\U000F075A"  # music
+      - "\U000F068A"  # shield-home
+      - "\U000F0928"  # wifi
+      - "\U000F040A"  # play
+      - "\U000F03E4"  # pause
+      - "\U000F04AD"  # skip-next
+      - "\U000F04AE"  # skip-previous
+      - "\U000F057E"  # volume-high
+      - "\U000F0502"  # television
+      - "\U000F0143"  # chevron-up
+      - "\U000F0140"  # chevron-down
+      - "\U000F0141"  # chevron-left
+      - "\U000F0142"  # chevron-right
+      - "\U000F033E"  # lock
+      - "\U000F033F"  # lock-open
+
+# --- Live HA state (selected light = Living Room for v1) ---
+sensor:
+  - platform: homeassistant
+    id: ha_lr_brightness
+    entity_id: light.living_room_main
+    attribute: brightness
+    on_value:
+      then:
+        - lvgl.arc.update:
+            id: arc_brightness
+            value: !lambda 'return x / 2.55f;'
+        - lvgl.label.update:
+            id: lbl_brightness_pct
+            text: !lambda |-
+              char b[8]; snprintf(b, sizeof(b), "%d%%", (int) roundf(x / 2.55f)); return std::string(b);
+  - platform: homeassistant
+    id: ha_media_volume
+    entity_id: media_player.living_room
+    attribute: volume_level
+    on_value:
+      then:
+        - lvgl.slider.update:
+            id: sld_vol
+            value: !lambda 'return x * 100.0f;'
+
+text_sensor:
+  - platform: homeassistant
+    id: ha_lr_state
+    entity_id: light.living_room_main
+    on_value:
+      then:
+        - lvgl.widget.update:
+            id: sw_sel
+            state:
+              checked: !lambda 'return x == "on";'
+  - platform: homeassistant
+    id: ha_media_title
+    entity_id: media_player.living_room
+    attribute: media_title
+    on_value:
+      then:
+        - lvgl.label.update: { id: lbl_np_title, text: !lambda 'return x.empty() ? std::string("Nothing playing") : x;' }
+  - platform: homeassistant
+    id: ha_media_artist
+    entity_id: media_player.living_room
+    attribute: media_artist
+    on_value:
+      then:
+        - lvgl.label.update: { id: lbl_np_artist, text: !lambda 'return x;' }
+  - platform: homeassistant
+    id: ha_presence
+    entity_id: person.ben
+    on_value:
+      then:
+        - lvgl.label.update:
+            id: lbl_presence
+            text: !lambda 'return x == "home" ? std::string("Ben · Home") : std::string("Ben · Away");'
+  # On-panel WiFi/connection indicator
+  - platform: wifi_info
+    ip_address:
+      id: wifi_ip
+      on_value:
+        then:
+          - lvgl.label.update:
+              id: lbl_ip
+              text: !lambda |-
+                return x.empty() ? std::string("WiFi: connecting...") : (std::string("IP ") + x);
+          - lvgl.label.update:
+              id: lbl_ip_home
+              text: !lambda |-
+                return x.empty() ? std::string("WiFi: connecting...") : (std::string("IP ") + x);
+    ssid:
+      id: wifi_ssid_ts
+      on_value:
+        then:
+          - lvgl.label.update:
+              id: lbl_ssid
+              text: !lambda 'return x.empty() ? std::string("no network") : x;'
+
+lvgl:
+  id: main_lvgl
+  displays: my_display
+  rotation: 180
+  byte_order: little_endian
+  touchscreens:
+    - touchscreen_id: my_touchscreen
+
+  style_definitions:
+    - id: st_glass
+      bg_color: $c_card
+      bg_opa: 92%
+      border_color: $c_hair
+      border_width: 1
+      radius: 22
+      pad_all: 20
+
+  # Persistent left nav rail + clock on every page
+  top_layer:
+    widgets:
+      - obj:
+          x: 0
+          y: 0
+          width: 74
+          height: 600
+          bg_color: 0x10121A
+          bg_opa: 78%
+          border_width: 0
+          radius: 0
+          pad_all: 0
+          widgets:
+            - button:
+                align: top_mid
+                y: 70
+                width: 46
+                height: 46
+                widgets: [label: { text: "󰋜", align: center, text_font: f_icon, text_color: $c_text } ]
+                on_click: [lvgl.page.show: page_home]
+            - button:
+                align: top_mid
+                y: 124
+                width: 46
+                height: 46
+                bg_grad_color: $c_purple
+                bg_color: $c_teal
+                widgets: [label: { text: "󰌵", align: center, text_font: f_icon, text_color: $c_bg } ]
+                on_click: [lvgl.page.show: page_lights]
+            - button:
+                align: top_mid
+                y: 178
+                width: 46
+                height: 46
+                widgets: [label: { text: "󰎓", align: center, text_font: f_icon, text_color: $c_text } ]
+                on_click: [lvgl.page.show: page_climate]
+            - button:
+                align: top_mid
+                y: 232
+                width: 46
+                height: 46
+                widgets: [label: { text: "󰝚", align: center, text_font: f_icon, text_color: $c_text } ]
+                on_click: [lvgl.page.show: page_media]
+            - button:
+                align: top_mid
+                y: 286
+                width: 46
+                height: 46
+                widgets: [label: { text: "󰚊", align: center, text_font: f_icon, text_color: $c_text } ]
+                on_click: [lvgl.page.show: page_security]
+            - button:
+                align: top_mid
+                y: 340
+                width: 46
+                height: 46
+                widgets: [label: { text: "󰤨", align: center, text_font: f_icon, text_color: $c_text } ]
+                on_click: [lvgl.page.show: page_network]
+      - label:
+          id: lbl_ssid
+          text: "no network"
+          align: bottom_right
+          x: -10
+          y: -26
+          text_font: f_small
+          text_color: 0x8A8F9E
+      - label:
+          id: lbl_ip
+          text: "WiFi: connecting..."
+          align: bottom_right
+          x: -10
+          y: -8
+          text_font: f_small
+          text_color: 0x2ED5B8
+
+  pages:
+    # ---------- HOME ----------
+    - id: page_home
+      bg_opa: 0
+      widgets:
+        - image: { src: img_aurora_bg, x: 0, y: 0 }
+        - label: { text: "Good evening, Ben", x: 100, y: 28, text_font: f_title, text_color: $c_text }
+        - label: { text: "Aurora · Walton Home", x: 100, y: 62, text_font: f_small, text_color: $c_text2 }
+        - label: { id: lbl_ip_home, text: "WiFi: connecting...", x: 100, y: 92, text_font: f_body, text_color: 0x2ED5B8 }
+        - obj:
+            styles: st_glass
+            x: 100
+            y: 100
+            width: 280
+            height: 150
+            widgets:
+              - label: { text: "LIGHTS", x: 4, y: 0, text_font: f_small, text_color: $c_text2 }
+              - label: { text: "Tap to control", x: 4, y: 26, text_font: f_body, text_color: $c_text }
+            on_click: [lvgl.page.show: page_lights]
+
+    # ---------- LIGHTS (fully wired to real entities) ----------
+    - id: page_lights
+      bg_opa: 0
+      widgets:
+        - image: { src: img_aurora_bg, x: 0, y: 0 }
+        - label: { text: "Lights", x: 100, y: 26, text_font: f_title, text_color: $c_text }
+        - label: { text: "Tap a light to control", x: 100, y: 60, text_font: f_small, text_color: $c_text2 }
+
+        # Left list (Living Room row shown; others follow same pattern)
+        - button:
+            x: 96
+            y: 92
+            width: 266
+            height: 56
+            styles: st_glass
+            pad_all: 12
+            widgets:
+              - obj: { width: 11, height: 11, radius: 6, bg_color: 0xFFD9A0, align: left_mid, x: 4, border_width: 0 }
+              - label: { text: "Living Room", align: left_mid, x: 24, text_font: f_body, text_color: $c_text }
+              - label: { text: "74%", align: right_mid, x: -4, text_font: f_body, text_color: $c_text2 }
+            on_click:
+              - homeassistant.action:
+                  action: light.toggle
+                  data: { entity_id: light.living_room_main }
+        - button:
+            x: 96
+            y: 154
+            width: 266
+            height: 56
+            styles: st_glass
+            pad_all: 12
+            widgets:
+              - obj: { width: 11, height: 11, radius: 6, bg_color: 0x7B6CFF, align: left_mid, x: 4, border_width: 0 }
+              - label: { text: "Office Shelves", align: left_mid, x: 24, text_font: f_body, text_color: 0xEEF0F6 }
+            on_click:
+              - homeassistant.action:
+                  action: light.toggle
+                  data: { entity_id: light.office_shelves }
+        - button:
+            x: 96
+            y: 216
+            width: 266
+            height: 56
+            styles: st_glass
+            pad_all: 12
+            widgets:
+              - obj: { width: 11, height: 11, radius: 6, bg_color: 0xFFF3DF, align: left_mid, x: 4, border_width: 0 }
+              - label: { text: "Kitchen", align: left_mid, x: 24, text_font: f_body, text_color: 0xEEF0F6 }
+            on_click:
+              - homeassistant.action:
+                  action: light.toggle
+                  data: { entity_id: light.kitchen_kitchen }
+        - button:
+            x: 96
+            y: 278
+            width: 266
+            height: 56
+            styles: st_glass
+            pad_all: 12
+            widgets:
+              - obj: { width: 11, height: 11, radius: 6, bg_color: 0xFF9F6B, align: left_mid, x: 4, border_width: 0 }
+              - label: { text: "Reading Lamp", align: left_mid, x: 24, text_font: f_body, text_color: 0xEEF0F6 }
+            on_click:
+              - homeassistant.action:
+                  action: light.toggle
+                  data: { entity_id: light.reading_lamp }
+        - button:
+            x: 96
+            y: 340
+            width: 266
+            height: 56
+            styles: st_glass
+            pad_all: 12
+            widgets:
+              - obj: { width: 11, height: 11, radius: 6, bg_color: 0x2ED5B8, align: left_mid, x: 4, border_width: 0 }
+              - label: { text: "Patio Lights", align: left_mid, x: 24, text_font: f_body, text_color: 0xEEF0F6 }
+            on_click:
+              - homeassistant.action:
+                  action: light.toggle
+                  data: { entity_id: light.outdoor_patio_back_porch_lights }
+        - button:
+            x: 96
+            y: 402
+            width: 266
+            height: 56
+            styles: st_glass
+            pad_all: 12
+            widgets:
+              - obj: { width: 11, height: 11, radius: 6, bg_color: 0xCFE6FF, align: left_mid, x: 4, border_width: 0 }
+              - label: { text: "Office Main", align: left_mid, x: 24, text_font: f_body, text_color: 0xEEF0F6 }
+            on_click:
+              - homeassistant.action:
+                  action: light.toggle
+                  data: { entity_id: light.office_main_lights }
+        - button:
+            x: 96
+            y: 464
+            width: 266
+            height: 56
+            styles: st_glass
+            pad_all: 12
+            widgets:
+              - obj: { width: 11, height: 11, radius: 6, bg_color: 0xFFDCA8, align: left_mid, x: 4, border_width: 0 }
+              - label: { text: "Dining Chandelier", align: left_mid, x: 24, text_font: f_body, text_color: 0xEEF0F6 }
+            on_click:
+              - homeassistant.action:
+                  action: light.toggle
+                  data: { entity_id: light.dining_room_chandelier }
+        - button:
+            x: 96
+            y: 526
+            width: 266
+            height: 56
+            styles: st_glass
+            pad_all: 12
+            widgets:
+              - obj: { width: 11, height: 11, radius: 6, bg_color: 0xFFE6C0, align: left_mid, x: 4, border_width: 0 }
+              - label: { text: "Master Ceiling", align: left_mid, x: 24, text_font: f_body, text_color: 0xEEF0F6 }
+            on_click:
+              - homeassistant.action:
+                  action: light.toggle
+                  data: { entity_id: light.master_bedroom_ceiling_fan_light }
+
+        # Right detail panel
+        - obj:
+            x: 386
+            y: 26
+            width: 612
+            height: 548
+            styles: st_glass
+            widgets:
+              - label: { text: "Living Room", x: 4, y: 0, text_font: f_title, text_color: $c_text }
+              - switch:
+                  id: sw_sel
+                  align: top_right
+                  x: -4
+                  y: 2
+                  on_click:
+                    - homeassistant.action:
+                        action: light.toggle
+                        data: { entity_id: light.living_room_main }
+              - arc:
+                  id: arc_brightness
+                  align: center
+                  y: -10
+                  width: 212
+                  height: 212
+                  min_value: 0
+                  max_value: 100
+                  value: 74
+                  arc_width: 14
+                  indicator:
+                    arc_color: 0xFFD9A0
+                    arc_width: 14
+                  on_release:
+                    - homeassistant.action:
+                        action: light.turn_on
+                        data:
+                          entity_id: light.living_room_main
+                          brightness_pct: !lambda 'return std::to_string((int) x);'
+              - label: { id: lbl_brightness_pct, text: "74%", align: center, y: -22, text_font: f_display, text_color: $c_text }
+              - label: { text: "Brightness", align: center, y: 30, text_font: f_small, text_color: $c_text2 }
+
+    # ---------- CLIMATE (stub — no climate entity yet) ----------
+    - id: page_climate
+      bg_opa: 0
+      widgets:
+        - image: { src: img_aurora_bg, x: 0, y: 0 }
+        - label: { text: "Climate", x: 100, y: 26, text_font: f_title, text_color: $c_text }
+        - label: { text: "No thermostat entity in HA yet", x: 100, y: 60, text_font: f_small, text_color: $c_text2 }
+
+    # ---------- MEDIA (Sonos now-playing + zones + webOS TV remote) ----------
+    # NOTE: zone buttons call media_play_pause per room for v1; real Sonos
+    # grouping (media_player.join/unjoin) is a refinement once confirmed.
+    - id: page_media
+      bg_opa: 0
+      widgets:
+        - image: { src: img_aurora_bg, x: 0, y: 0 }
+        - label: { text: "Listening", x: 100, y: 26, text_font: f_title, text_color: $c_text }
+
+        # Now-playing card (Sonos: media_player.living_room)
+        - obj:
+            x: 96
+            y: 70
+            width: 440
+            height: 360
+            styles: st_glass
+            widgets:
+              - obj: { x: 4, y: 4, width: 120, height: 120, radius: 16, bg_color: $c_purple, border_width: 0 }
+              - label: { id: lbl_np_title, text: "Nothing playing", x: 138, y: 14, text_font: f_title, text_color: $c_text }
+              - label: { id: lbl_np_artist, text: "", x: 138, y: 50, text_font: f_body, text_color: $c_text2 }
+              - button:
+                  align: bottom_left
+                  x: 0
+                  y: -60
+                  width: 70
+                  height: 48
+                  widgets: [label: { text: "󰒮", align: center, text_font: f_icon, text_color: $c_text } ]
+                  on_click:
+                    - homeassistant.action: { action: media_player.media_previous_track, data: { entity_id: media_player.living_room } }
+              - button:
+                  align: bottom_mid
+                  y: -60
+                  width: 70
+                  height: 48
+                  bg_color: $c_teal
+                  bg_grad_color: $c_purple
+                  widgets: [label: { text: "󰐊", align: center, text_font: f_icon, text_color: $c_bg } ]
+                  on_click:
+                    - homeassistant.action: { action: media_player.media_play_pause, data: { entity_id: media_player.living_room } }
+              - button:
+                  align: bottom_right
+                  x: 0
+                  y: -60
+                  width: 70
+                  height: 48
+                  widgets: [label: { text: "󰒭", align: center, text_font: f_icon, text_color: $c_text } ]
+                  on_click:
+                    - homeassistant.action: { action: media_player.media_next_track, data: { entity_id: media_player.living_room } }
+              - slider:
+                  id: sld_vol
+                  align: bottom_mid
+                  y: -10
+                  width: 400
+                  min_value: 0
+                  max_value: 100
+                  value: 34
+                  on_release:
+                    - homeassistant.action:
+                        action: media_player.volume_set
+                        data:
+                          entity_id: media_player.living_room
+                          volume_level: !lambda 'char b[8]; snprintf(b, sizeof(b), "%.2f", x / 100.0f); return std::string(b);'
+
+        # Speaker zones
+        - label: { text: "SPEAKERS", x: 560, y: 70, text_font: f_small, text_color: $c_text2 }
+        - button:
+            x: 560
+            y: 92
+            width: 200
+            height: 44
+            styles: st_glass
+            pad_all: 10
+            widgets: [label: { text: "Living Room", align: left_mid, text_font: f_body, text_color: $c_text } ]
+            on_click: [homeassistant.action: { action: media_player.media_play_pause, data: { entity_id: media_player.living_room } } ]
+        - button:
+            x: 560
+            y: 144
+            width: 200
+            height: 44
+            styles: st_glass
+            pad_all: 10
+            widgets: [label: { text: "Kitchen", align: left_mid, text_font: f_body, text_color: $c_text } ]
+            on_click: [homeassistant.action: { action: media_player.media_play_pause, data: { entity_id: media_player.kitchen } } ]
+        - button:
+            x: 560
+            y: 196
+            width: 200
+            height: 44
+            styles: st_glass
+            pad_all: 10
+            widgets: [label: { text: "Dining (Juke)", align: left_mid, text_font: f_body, text_color: $c_text } ]
+            on_click: [homeassistant.action: { action: media_player.media_play_pause, data: { entity_id: media_player.living_room_juke_audio_dining_room_zone } } ]
+
+        # webOS TV remote (media_player.lg_g3_living_room_2)
+        - label: { text: "LG G3 OLED", x: 790, y: 70, text_font: f_small, text_color: $c_text2 }
+        - button:
+            x: 880
+            y: 150
+            width: 60
+            height: 48
+            styles: st_glass
+            widgets: [label: { text: "󰅃", align: center, text_font: f_icon, text_color: $c_text } ]
+            on_click: [homeassistant.action: { action: webostv.button, data: { entity_id: media_player.lg_g3_living_room_2, button: UP } } ]
+        - button:
+            x: 810
+            y: 206
+            width: 60
+            height: 48
+            styles: st_glass
+            widgets: [label: { text: "󰅁", align: center, text_font: f_icon, text_color: $c_text } ]
+            on_click: [homeassistant.action: { action: webostv.button, data: { entity_id: media_player.lg_g3_living_room_2, button: LEFT } } ]
+        - button:
+            x: 880
+            y: 206
+            width: 60
+            height: 48
+            bg_color: $c_teal
+            widgets: [label: { text: "OK", align: center, text_font: f_body, text_color: $c_bg } ]
+            on_click: [homeassistant.action: { action: webostv.button, data: { entity_id: media_player.lg_g3_living_room_2, button: ENTER } } ]
+        - button:
+            x: 950
+            y: 206
+            width: 60
+            height: 48
+            styles: st_glass
+            widgets: [label: { text: "󰐊", align: center, text_font: f_icon, text_color: $c_text } ]
+            on_click: [homeassistant.action: { action: webostv.button, data: { entity_id: media_player.lg_g3_living_room_2, button: RIGHT } } ]
+        - button:
+            x: 880
+            y: 262
+            width: 60
+            height: 48
+            styles: st_glass
+            widgets: [label: { text: "󰅀", align: center, text_font: f_icon, text_color: $c_text } ]
+            on_click: [homeassistant.action: { action: webostv.button, data: { entity_id: media_player.lg_g3_living_room_2, button: DOWN } } ]
+        - button:
+            x: 810
+            y: 330
+            width: 90
+            height: 44
+            styles: st_glass
+            widgets: [label: { text: "VOL -", align: center, text_font: f_body, text_color: $c_text } ]
+            on_click: [homeassistant.action: { action: media_player.volume_down, data: { entity_id: media_player.lg_g3_living_room_2 } } ]
+        - button:
+            x: 920
+            y: 330
+            width: 90
+            height: 44
+            styles: st_glass
+            widgets: [label: { text: "VOL +", align: center, text_font: f_body, text_color: $c_text } ]
+            on_click: [homeassistant.action: { action: media_player.volume_up, data: { entity_id: media_player.lg_g3_living_room_2 } } ]
+        - button:
+            x: 810
+            y: 384
+            width: 200
+            height: 44
+            styles: st_glass
+            widgets: [label: { text: "Netflix", align: center, text_font: f_body, text_color: $c_text } ]
+            on_click: [homeassistant.action: { action: media_player.select_source, data: { entity_id: media_player.lg_g3_living_room_2, source: "Netflix" } } ]
+
+    # ---------- SECURITY (locks + presence; real entities) ----------
+    - id: page_security
+      bg_opa: 0
+      widgets:
+        - image: { src: img_aurora_bg, x: 0, y: 0 }
+        - label: { text: "Security", x: 100, y: 26, text_font: f_title, text_color: $c_text }
+
+        # Front Door
+        - obj:
+            x: 96
+            y: 70
+            width: 380
+            height: 150
+            styles: st_glass
+            widgets:
+              - label: { text: "Front Door", x: 4, y: 0, text_font: f_title, text_color: $c_text }
+              - label: { text: "Schlage", x: 4, y: 34, text_font: f_small, text_color: $c_text2 }
+              - button:
+                  align: bottom_left
+                  width: 160
+                  height: 44
+                  styles: st_glass
+                  widgets: [label: { text: "Lock", align: center, text_font: f_body, text_color: $c_text } ]
+                  on_click: [homeassistant.action: { action: lock.lock, data: { entity_id: lock.front_door } } ]
+              - button:
+                  align: bottom_right
+                  width: 160
+                  height: 44
+                  bg_color: $c_warn
+                  widgets: [label: { text: "Unlock", align: center, text_font: f_body, text_color: $c_bg } ]
+                  on_click: [homeassistant.action: { action: lock.unlock, data: { entity_id: lock.front_door } } ]
+
+        # Back Door
+        - obj:
+            x: 492
+            y: 70
+            width: 380
+            height: 150
+            styles: st_glass
+            widgets:
+              - label: { text: "Back Door", x: 4, y: 0, text_font: f_title, text_color: $c_text }
+              - label: { text: "Schlage", x: 4, y: 34, text_font: f_small, text_color: $c_text2 }
+              - button:
+                  align: bottom_left
+                  width: 160
+                  height: 44
+                  styles: st_glass
+                  widgets: [label: { text: "Lock", align: center, text_font: f_body, text_color: $c_text } ]
+                  on_click: [homeassistant.action: { action: lock.lock, data: { entity_id: lock.back_door } } ]
+              - button:
+                  align: bottom_right
+                  width: 160
+                  height: 44
+                  bg_color: $c_warn
+                  widgets: [label: { text: "Unlock", align: center, text_font: f_body, text_color: $c_bg } ]
+                  on_click: [homeassistant.action: { action: lock.unlock, data: { entity_id: lock.back_door } } ]
+
+        # Presence
+        - obj:
+            x: 96
+            y: 236
+            width: 776
+            height: 90
+            styles: st_glass
+            widgets:
+              - label: { text: "PRESENCE", x: 4, y: 0, text_font: f_small, text_color: $c_text2 }
+              - label: { id: lbl_presence, text: "Ben · Home", x: 4, y: 28, text_font: f_title, text_color: $c_teal }
+
+    # ---------- NETWORK (stub — UniFi/Synology bindings TODO) ----------
+    - id: page_network
+      bg_opa: 0
+      widgets:
+        - image: { src: img_aurora_bg, x: 0, y: 0 }
+        - label: { text: "Network", x: 100, y: 26, text_font: f_title, text_color: $c_text }
+        - label: { text: "UniFi + Synology stats (next)", x: 100, y: 60, text_font: f_small, text_color: $c_text2 }

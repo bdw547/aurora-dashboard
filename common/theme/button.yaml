@@ -1,0 +1,51 @@
+# =============================================================================
+# THEME: BUTTON - Sizing, colors, and LVGL style for control buttons
+# =============================================================================
+# Default substitutions for button dimensions and colors, plus the LVGL
+# style definition and theme overrides applied to all buttons on the
+# main page. The "checked" state reflects an entity that is currently on.
+# =============================================================================
+
+# ---------------------------------------------------------------------------
+# Substitutions (styling defaults used by button_widget.yaml)
+# ---------------------------------------------------------------------------
+substitutions:
+  button_on_color: "0xFF8C00"
+  button_on_text_color: "0xFFFFFF"
+  button_text_color: "0xFFFFFF"
+  button_control_color: "0x313131"
+  button_border_color: "0x000000"
+  button_border_width: "0"
+
+lvgl:
+  # ---------------------------------------------------------------------------
+  # Style: "control" (applied to each button via styles: control)
+  # ---------------------------------------------------------------------------
+  style_definitions:
+    - id: control
+      bg_color: $button_control_color
+      border_color: $button_border_color
+      border_width: $button_border_width
+
+  # ---------------------------------------------------------------------------
+  # Theme: global button defaults and checked (on) state
+  # ---------------------------------------------------------------------------
+  theme:
+    button:
+      text_font: $label_font
+      scroll_on_focus: false
+      radius: $radius
+      pad_all: $padding
+      shadow_width: 0
+      text_color: $button_text_color
+      border_color: $button_border_color
+      border_width: $button_border_width
+      pressed:
+        bg_color: $button_on_color
+        border_color: $button_border_color
+        border_width: $button_border_width
+      checked:
+        bg_color: $button_on_color
+        text_color: $button_on_text_color
+        border_color: $button_border_color
+        border_width: $button_border_width

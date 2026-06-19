@@ -1,0 +1,81 @@
+# =============================================================================
+# SCREEN: BUTTON SETUP
+# =============================================================================
+# Shown when WiFi is connected but no button entity is configured.
+# Directs the user to the device web UI to configure their buttons.
+# =============================================================================
+
+lvgl:
+  pages:
+    - id: button_setup_page
+      bg_color: 0x000000
+      scrollable: false
+      widgets:
+        - obj:
+            width: $screen_width
+            height: $screen_height
+            bg_opa: 0%
+            border_width: 0
+            pad_all: 0
+            scrollable: false
+            clickable: true
+            on_press:
+              then:
+                - script.stop: setup_screen_dim
+                - light.turn_on:
+                    id: display_backlight
+                    brightness: 90%
+                - script.execute: setup_screen_dim
+            widgets:
+              - obj:
+                  align: center
+                  width: $content_width
+                  height: SIZE_CONTENT
+                  bg_opa: 0%
+                  border_width: 0
+                  pad_all: 0
+                  scrollable: false
+                  clickable: false
+                  layout:
+                    type: flex
+                    flex_flow: COLUMN
+                    flex_align_main: center
+                    flex_align_cross: center
+                    pad_row: $setup_pad_row
+                  widgets:
+                    - label:
+                        text_font: $setup_icon_font_id
+                        text: $icon_cog
+                        text_color: 0xFFFFFF
+                        text_align: center
+                    - label:
+                        id: button_setup_title
+                        text: ""
+                        text_font: $setup_title_font_id
+                        text_color: 0xFFFFFF
+                        width: $content_width
+                        text_align: center
+                    - label:
+                        id: button_setup_instructions
+                        text: ""
+                        text_font: $setup_body_font_id
+                        text_color: 0xB0B0B0
+                        width: $content_width
+                        text_align: center
+                    - label:
+                        id: setup_ip_label
+                        text: "http://..."
+                        text_font: $setup_title_font_id
+                        text_color: 0xFFFFFF
+                        width: $content_width
+                        text_align: center
+
+script:
+  - id: button_setup_text_refresh
+    mode: restart
+    then:
+      - lambda: |-
+          lv_label_set_text(id(button_setup_title), espcontrol_i18n("Setup"));
+          lv_label_set_text(
+              id(button_setup_instructions),
+              espcontrol_i18n("Open your browser and\nconfigure your display"));

@@ -1,0 +1,100 @@
+{
+  "generatedFrom": "devices/manifest.json",
+  "devices": [
+    {
+      "slug": "guition-esp32-p4-jc1060p470",
+      "installSlug": "guition-esp32-p4-jc1060p470",
+      "name": "Guition JC1060P470",
+      "docsPath": "/screens/jc1060p470",
+      "screenSize": "7 inches",
+      "resolution": "1024 x 600",
+      "orientation": "Landscape",
+      "slots": 15,
+      "grid": {
+        "rows": 3,
+        "cols": 5
+      },
+      "chipFamily": "ESP32-P4",
+      "relays": 0,
+      "rotation": true,
+      "ethernetManualInstall": true,
+      "subpages": true
+    },
+    {
+      "slug": "guition-esp32-p4-jc4880p443",
+      "installSlug": "guition-esp32-p4-jc4880p443",
+      "name": "Guition JC4880P443",
+      "docsPath": "/screens/jc4880p443",
+      "screenSize": "4.3 inches",
+      "resolution": "480 x 800",
+      "orientation": "Portrait",
+      "slots": 6,
+      "grid": {
+        "rows": 3,
+        "cols": 2
+      },
+      "chipFamily": "ESP32-P4",
+      "relays": 0,
+      "rotation": true,
+      "ethernetManualInstall": false,
+      "subpages": true
+    },
+    {
+      "slug": "guition-esp32-p4-jc8012p4a1",
+      "installSlug": "guition-esp32-p4-jc8012p4a1",
+      "name": "Guition JC8012P4A1",
+      "docsPath": "/screens/jc8012p4a1",
+      "screenSize": "10.1 inches",
+      "resolution": "1280 x 800",
+      "orientation": "Landscape",
+      "slots": 20,
+      "grid": {
+        "rows": 4,
+        "cols": 5
+      },
+      "chipFamily": "ESP32-P4",
+      "relays": 0,
+      "rotation": true,
+      "ethernetManualInstall": false,
+      "subpages": true
+    },
+    {
+      "slug": "esp32-p4-86",
+      "installSlug": "esp32-p4-86",
+      "name": "ESP32-P4 86 Panel",
+      "docsPath": "/screens/p4-86",
+      "screenSize": "4 inches",
+      "resolution": "720 x 720",
+      "orientation": "Square",
+      "slots": 9,
+      "grid": {
+        "rows": 3,
+        "cols": 3
+      },
+      "chipFamily": "ESP32-P4",
+      "relays": 2,
+      "rotation": true,
+      "ethernetManualInstall": true,
+      "subpages": true
+    },
+    {
+      "slug": "guition-esp32-s3-4848s040",
+      "installSlug": "guition-esp32-s3-4848s040",
+      "name": "Guition 4848S040",
+      "docsPath": "/screens/4848s040",
+      "screenSize": "4 inches",
+      "resolution": "480 x 480",
+      "orientation": "Square",
+      "slots": 9,
+      "grid": {
+        "rows": 3,
+        "cols": 3
+      },
+      "chipFamily": "ESP32-S3",
+      "relays": 3,
+      "rotation": true,
+      "ethernetManualInstall": false,
+      "subpages": true
+    }
+  ]
+}

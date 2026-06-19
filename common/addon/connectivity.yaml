@@ -1,0 +1,174 @@
+# =============================================================================
+# CONNECTIVITY - WiFi hotspot, page navigation
+# =============================================================================
+# Handles network connectivity and navigates between screens based on
+# connection state using lvgl.page.show.
+#
+# Screen flow (initial setup):
+#   loading → wifi_setup   (if no WiFi)
+#           → ha_setup     (if WiFi OK but HA not connected)
+#           → ha_actions   (allow device to perform HA actions)
+#           → button_setup (if no buttons configured)
+#           → main_page
+# On reboot (buttons already configured):
+#   loading → main_page    (skips setup screens)
+# =============================================================================
+
+esphome:
+  on_boot:
+    priority: 600
+    then:
+      - lambda: |-
+          std::string mac = get_mac_address();
+          std::string compact;
+          for (char c : mac) {
+            if (c != ':' && c != '-') compact.push_back(c);
+          }
+          std::string suffix = compact.length() > 6 ? compact.substr(compact.length() - 6) : compact;
+          if (suffix.empty()) suffix = "SETUP";
+          wifi::WiFiAP ap;
+          ap.set_ssid("ESP_" + suffix);
+          wifi::global_wifi_component->set_ap(ap);
+
+wifi:
+  power_save_mode: none
+  reboot_timeout: 30min
+  ap:
+    # Start the setup hotspot only after short WiFi outages have had time to recover.
+    ap_timeout: 90s
+  on_connect:
+    - script.execute: network_status_refresh
+    - script.execute: ntp_servers_apply_after_network
+    - script.stop: wifi_reconnect_flow
+    - script.stop: setup_screen_dim
+    - lambda: |-
+        ESP_LOGI("connectivity", "WiFi connected (%lu ms)", millis());
+        lv_label_set_text(id(loading_status_label), espcontrol_i18n("Connected"));
+    - delay: 200ms
+    - if:
+        condition:
+          lambda: 'return ha_api_state_connected();'
+        then:
+          - script.execute: navigate_after_api
+        else:
+          - if:
+              condition:
+                lambda: 'return id(button_order).state.empty();'
+              then:
+                - script.execute: clock_bar_hide
+                - lvgl.page.show: ha_setup_page
+                - script.execute: setup_screen_dim
+              else:
+                - script.execute: navigate_after_api
+  on_disconnect:
+    - script.execute: network_status_refresh
+    - if:
+        condition:
+          lambda: 'return !id(boot_grace_period);'
+        then:
+          - script.execute: wifi_reconnect_flow
+
+api:
+  on_client_connected:
+    - delay: 2s
+    - if:
+        condition:
+          lambda: 'return ha_api_state_connected();'
+        then:
+          - if:
+              condition:
+                lambda: 'return lv_scr_act() == id(ha_setup_page)->obj;'
+              then:
+                - script.stop: setup_screen_dim
+                - script.execute: clock_bar_hide
+                - lvgl.page.show: ha_actions_page
+              else:
+                - script.execute: navigate_after_api
+
+script:
+  - id: wifi_show_reconnecting
+    mode: restart
+    then:
+      - script.execute: clock_bar_hide
+      - lambda: |-
+          lv_label_set_text(id(wifi_setup_title), espcontrol_i18n("WiFi Disconnected"));
+          lv_label_set_text(
+              id(wifi_setup_instructions),
+              espcontrol_i18n("Trying to reconnect\nto your saved network"));
+      - lvgl.page.show: wifi_setup_page
+      - script.execute: setup_screen_dim
+
+  - id: wifi_show_hotspot_setup
+    mode: restart
+    then:
+      - lvgl.resume:
+      - globals.set:
+          id: display_asleep
+          value: 'false'
+      - globals.set:
+          id: screen_schedule_asleep
+          value: 'false'
+      - globals.set:
+          id: screensaver_display_off_active
+          value: 'false'
+      - globals.set:
+          id: screensaver_dimmed_active
+          value: 'false'
+      - globals.set:
+          id: backlight_manual_off
+          value: 'false'
+      - script.execute: clock_bar_hide
+      - lambda: |-
+          std::string msg = std::string(espcontrol_i18n("Connect to WiFi")) +
+                            "\n${friendly_name}\n" +
+                            espcontrol_i18n("Open 192.168.4.1");
+          lv_label_set_text(id(wifi_setup_title), espcontrol_i18n("WiFi Setup"));
+          lv_label_set_text(id(wifi_setup_instructions), msg.c_str());
+      - lvgl.page.show: wifi_setup_page
+      - light.turn_on:
+          id: display_backlight
+          brightness: 90%
+          transition_length: 500ms
+      - script.execute: setup_screen_dim
+
+  - id: wifi_reconnect_flow
+    mode: restart
+    then:
+      - delay: 60s
+      - if:
+          condition:
+            not:
+              wifi.connected:
+          then:
+            - script.execute: wifi_show_reconnecting
+            - delay: 30s
+            - if:
+                condition:
+                  not:
+                    wifi.connected:
+                then:
+                  - script.execute: wifi_show_hotspot_setup
+
+  - id: navigate_after_api
+    mode: restart
+    then:
+      - script.stop: setup_screen_dim
+      - if:
+          condition:
+            lambda: 'return !id(button_order).state.empty();'
+          then:
+            - lvgl.page.show: main_page
+            - script.execute: clock_bar_apply
+            - script.execute: screensaver_idle_check
+          else:
+            - lambda: |-
+                auto ips = wifi::global_wifi_component->get_ip_addresses();
+                if (!ips.empty()) {
+                  char ip_buf[esphome::network::IP_ADDRESS_BUFFER_SIZE];
+                  ips[0].str_to(ip_buf);
+                  std::string url = "http://" + std::string(ip_buf);
+                  lv_label_set_text(id(setup_ip_label), url.c_str());
+                }
+            - script.execute: clock_bar_hide
+            - lvgl.page.show: button_setup_page
+            - script.execute: setup_screen_dim
