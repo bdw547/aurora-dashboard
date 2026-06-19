@@ -2471,11 +2471,10 @@ lvgl:
             widgets: [label: { text: "Play Track", align: center, text_font: f_body, text_color: $c_bg }]
             on_click:
               - homeassistant.action:
-                  action: spotifyplus.player_media_play_context
+                  action: script.aurora_spotify_play_track
                   data:
-                    entity_id: media_player.spotifyplus_ben_walton
                     context_uri: !lambda 'return id(g_cur_pl_uri);'
-                    offset: !lambda |-
+                    position: !lambda |-
                       char b[8]; snprintf(b, sizeof(b), "%d", lv_dropdown_get_selected(id(dd_tracks)->obj)); return std::string(b);
         - button:
             x: 296

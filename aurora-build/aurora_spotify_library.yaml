@@ -93,3 +93,22 @@ script:
               {% set out.rows = out.rows + [ t.name ~ (' — ' ~ artist if artist else '') ] %}
             {% endfor %}
             {{ out.rows }}
+
+  # Called by the panel's "Play Track": plays the playlist context starting
+  # at the selected track. Wrapped in a script so 'offset' is rendered as a
+  # native integer (the panel can only send strings over the ESPHome API).
+  aurora_spotify_play_track:
+    alias: Aurora Spotify - Play Track
+    fields:
+      context_uri:
+        description: Playlist/album context URI (spotify:playlist:...)
+        example: "spotify:playlist:7bcaKHOEMf24xY35x6YC5f"
+      position:
+        description: Zero-based track index within the context
+        example: 0
+    sequence:
+      - action: spotifyplus.player_media_play_context
+        data:
+          entity_id: media_player.spotifyplus_ben_walton
+          context_uri: "{{ context_uri }}"
+          offset: "{{ position | int }}"
