@@ -1197,7 +1197,7 @@ lvgl:
             - button:
                 id: nav_home
                 align: top_mid
-                y: 38
+                y: 22
                 width: 58
                 height: 58
                 bg_color: 0x2ED5B8
@@ -1206,7 +1206,7 @@ lvgl:
             - button:
                 id: nav_rooms
                 align: top_mid
-                y: 112
+                y: 92
                 width: 58
                 height: 58
                 bg_color: 0x10121A
@@ -1215,7 +1215,7 @@ lvgl:
             - button:
                 id: nav_lights
                 align: top_mid
-                y: 186
+                y: 162
                 width: 58
                 height: 58
                 bg_color: 0x10121A
@@ -1224,7 +1224,7 @@ lvgl:
             - button:
                 id: nav_climate
                 align: top_mid
-                y: 260
+                y: 232
                 width: 58
                 height: 58
                 bg_color: 0x10121A
@@ -1233,7 +1233,7 @@ lvgl:
             - button:
                 id: nav_media
                 align: top_mid
-                y: 334
+                y: 302
                 width: 58
                 height: 58
                 bg_color: 0x10121A
@@ -1242,7 +1242,7 @@ lvgl:
             - button:
                 id: nav_security
                 align: top_mid
-                y: 408
+                y: 372
                 width: 58
                 height: 58
                 bg_color: 0x10121A
@@ -1251,7 +1251,7 @@ lvgl:
             - button:
                 id: nav_network
                 align: top_mid
-                y: 482
+                y: 442
                 width: 58
                 height: 58
                 bg_color: 0x10121A
@@ -1259,8 +1259,8 @@ lvgl:
                 on_click: [lvgl.page.show: page_network]
             - button:
                 id: nav_settings
-                align: bottom_mid
-                y: -16
+                align: top_mid
+                y: 512
                 width: 58
                 height: 58
                 bg_color: 0x10121A
