@@ -934,11 +934,11 @@ lvgl:
         - lvgl.widget.update: { id: nav_network, bg_color: 0x10121A }
       widgets:
         - image: { src: img_aurora_bg, x: 0, y: 0 }
-        - label: { id: lbl_clock, text: "--:--", x: 100, y: 24, text_font: f_display, text_color: 0xEEF0F6 }
-        - label: { id: lbl_greeting, text: "Welcome home, Ben", x: 102, y: 92, text_font: f_body, text_color: 0x8A8F9E }
+        - label: { id: lbl_clock, text: "--:--", x: 100, y: 22, text_font: f_display, text_color: 0xEEF0F6 }
+        - label: { id: lbl_greeting, text: "Welcome home, Ben", x: 102, y: 90, text_font: f_body, text_color: 0x8A8F9E }
         - obj:
             x: 100
-            y: 134
+            y: 132
             width: 150
             height: 86
             styles: st_glass
@@ -947,7 +947,7 @@ lvgl:
               - label: { id: lbl_home_temp, text: "--", x: 2, y: 30, text_font: f_title, text_color: 0xEEF0F6 }
         - obj:
             x: 262
-            y: 134
+            y: 132
             width: 200
             height: 86
             styles: st_glass
@@ -956,87 +956,63 @@ lvgl:
               - label: { id: lbl_home_presence, text: "--", x: 2, y: 30, text_font: f_title, text_color: 0x2ED5B8 }
         - obj:
             x: 474
-            y: 134
+            y: 132
             width: 398
             height: 86
             styles: st_glass
             widgets:
               - label: { text: "NOW PLAYING", x: 2, y: 0, text_font: f_small, text_color: 0x8A8F9E }
               - label: { id: lbl_home_np, text: "Nothing playing", x: 2, y: 26, text_font: f_body, text_color: 0xEEF0F6 }
-              - label: { id: lbl_home_np_artist, text: "", x: 2, y: 52, text_font: f_small, text_color: 0x8A8F9E }
-        - label: { text: "QUICK CONTROLS", x: 100, y: 338, text_font: f_small, text_color: 0x8A8F9E }
-        - button:
+              - label: { id: lbl_home_np_artist, text: "", x: 2, y: 54, text_font: f_small, text_color: 0x8A8F9E }
+        - label: { text: "QUICK CONTROLS", x: 100, y: 250, text_font: f_small, text_color: 0x8A8F9E }
+        - obj:
             x: 100
-            y: 372
-            width: 104
-            height: 104
+            y: 286
+            width: 130
+            height: 130
             styles: st_glass
+            pad_all: 0
+            clickable: true
             widgets:
-              - label: { text: "󰌵", align: top_mid, y: 12, text_font: f_icon, text_color: 0x2ED5B8 }
-              - label: { text: "Lights", align: bottom_mid, y: -12, text_font: f_small, text_color: 0xEEF0F6 }
-            on_click:
-              - lvgl.page.show: page_lights
-              - lvgl.widget.update: { id: nav_home, bg_color: 0x10121A }
-              - lvgl.widget.update: { id: nav_lights, bg_color: 0x10121A }
-              - lvgl.widget.update: { id: nav_climate, bg_color: 0x10121A }
-              - lvgl.widget.update: { id: nav_media, bg_color: 0x10121A }
-              - lvgl.widget.update: { id: nav_security, bg_color: 0x10121A }
-              - lvgl.widget.update: { id: nav_network, bg_color: 0x10121A }
-              - lvgl.widget.update: { id: nav_lights, bg_color: 0x2ED5B8 }
-        - button:
-            x: 220
-            y: 372
-            width: 104
-            height: 104
+              - label: { text: "\U000F0335", align: top_mid, y: 24, text_font: f_icon, text_color: 0x2ED5B8 }
+              - label: { text: "Lights", align: bottom_mid, y: -18, text_font: f_small, text_color: 0xEEF0F6 }
+            on_click: [lvgl.page.show: page_lights]
+        - obj:
+            x: 250
+            y: 286
+            width: 130
+            height: 130
             styles: st_glass
+            pad_all: 0
+            clickable: true
             widgets:
-              - label: { text: "󰝚", align: top_mid, y: 12, text_font: f_icon, text_color: 0x2ED5B8 }
-              - label: { text: "Media", align: bottom_mid, y: -12, text_font: f_small, text_color: 0xEEF0F6 }
-            on_click:
-              - lvgl.page.show: page_media
-              - lvgl.widget.update: { id: nav_home, bg_color: 0x10121A }
-              - lvgl.widget.update: { id: nav_lights, bg_color: 0x10121A }
-              - lvgl.widget.update: { id: nav_climate, bg_color: 0x10121A }
-              - lvgl.widget.update: { id: nav_media, bg_color: 0x10121A }
-              - lvgl.widget.update: { id: nav_security, bg_color: 0x10121A }
-              - lvgl.widget.update: { id: nav_network, bg_color: 0x10121A }
-              - lvgl.widget.update: { id: nav_media, bg_color: 0x2ED5B8 }
-        - button:
-            x: 340
-            y: 372
-            width: 104
-            height: 104
+              - label: { text: "\U000F075A", align: top_mid, y: 24, text_font: f_icon, text_color: 0x2ED5B8 }
+              - label: { text: "Media", align: bottom_mid, y: -18, text_font: f_small, text_color: 0xEEF0F6 }
+            on_click: [lvgl.page.show: page_media]
+        - obj:
+            x: 400
+            y: 286
+            width: 130
+            height: 130
             styles: st_glass
+            pad_all: 0
+            clickable: true
             widgets:
-              - label: { text: "󰎓", align: top_mid, y: 12, text_font: f_icon, text_color: 0x2ED5B8 }
-              - label: { text: "Climate", align: bottom_mid, y: -12, text_font: f_small, text_color: 0xEEF0F6 }
-            on_click:
-              - lvgl.page.show: page_climate
-              - lvgl.widget.update: { id: nav_home, bg_color: 0x10121A }
-              - lvgl.widget.update: { id: nav_lights, bg_color: 0x10121A }
-              - lvgl.widget.update: { id: nav_climate, bg_color: 0x10121A }
-              - lvgl.widget.update: { id: nav_media, bg_color: 0x10121A }
-              - lvgl.widget.update: { id: nav_security, bg_color: 0x10121A }
-              - lvgl.widget.update: { id: nav_network, bg_color: 0x10121A }
-              - lvgl.widget.update: { id: nav_climate, bg_color: 0x2ED5B8 }
-        - button:
-            x: 460
-            y: 372
-            width: 104
-            height: 104
+              - label: { text: "\U000F0393", align: top_mid, y: 24, text_font: f_icon, text_color: 0x2ED5B8 }
+              - label: { text: "Climate", align: bottom_mid, y: -18, text_font: f_small, text_color: 0xEEF0F6 }
+            on_click: [lvgl.page.show: page_climate]
+        - obj:
+            x: 550
+            y: 286
+            width: 130
+            height: 130
             styles: st_glass
+            pad_all: 0
+            clickable: true
             widgets:
-              - label: { text: "󰚊", align: top_mid, y: 12, text_font: f_icon, text_color: 0x2ED5B8 }
-              - label: { text: "Security", align: bottom_mid, y: -12, text_font: f_small, text_color: 0xEEF0F6 }
-            on_click:
-              - lvgl.page.show: page_security
-              - lvgl.widget.update: { id: nav_home, bg_color: 0x10121A }
-              - lvgl.widget.update: { id: nav_lights, bg_color: 0x10121A }
-              - lvgl.widget.update: { id: nav_climate, bg_color: 0x10121A }
-              - lvgl.widget.update: { id: nav_media, bg_color: 0x10121A }
-              - lvgl.widget.update: { id: nav_security, bg_color: 0x10121A }
-              - lvgl.widget.update: { id: nav_network, bg_color: 0x10121A }
-              - lvgl.widget.update: { id: nav_security, bg_color: 0x2ED5B8 }
+              - label: { text: "\U000F068A", align: top_mid, y: 24, text_font: f_icon, text_color: 0x2ED5B8 }
+              - label: { text: "Security", align: bottom_mid, y: -18, text_font: f_small, text_color: 0xEEF0F6 }
+            on_click: [lvgl.page.show: page_security]
     - id: page_lights
       bg_opa: 0
       on_load:
@@ -1637,13 +1613,14 @@ lvgl:
             width: 232
             height: 120
             styles: st_glass
+            pad_all: 0
             widgets:
-              - label: { id: ic_living_light_living_room_main, text: "\U000F0335", align: top_left, x: 8, y: 8, text_font: f_icon, text_color: 0x4A4F5A }
-              - label: { text: "Main Light", align: top_left, x: 8, y: 60, text_font: f_body, text_color: 0xEEF0F6 }
+              - label: { id: ic_living_light_living_room_main, text: "\U000F0335", x: 14, y: 12, text_font: f_icon, text_color: 0x4A4F5A }
+              - label: { text: "Main Light", x: 14, y: 46, text_font: f_body, text_color: 0xEEF0F6 }
               - slider:
                   id: sld_room_living_light_living_room_main
                   align: bottom_mid
-                  y: -12
+                  y: -14
                   width: 200
                   min_value: 0
                   max_value: 100
@@ -1660,15 +1637,17 @@ lvgl:
                                 brightness_pct: !lambda 'return std::to_string((int) x);'
                         else:
                           - homeassistant.action: { action: light.turn_off, data: { entity_id: light.living_room_main } }
-        - button:
+        - obj:
             x: 348
             y: 96
             width: 232
             height: 120
             styles: st_glass
+            pad_all: 0
+            clickable: true
             widgets:
-              - label: { id: ic_living_fan_living_room_pendant, text: "\U000F0210", align: top_left, x: 8, y: 8, text_font: f_icon, text_color: 0x4A4F5A }
-              - label: { text: "Ceiling Fan", align: bottom_left, x: 8, y: -10, text_font: f_body, text_color: 0xEEF0F6 }
+              - label: { id: ic_living_fan_living_room_pendant, text: "\U000F0210", x: 14, y: 12, text_font: f_icon, text_color: 0x4A4F5A }
+              - label: { text: "Ceiling Fan", x: 14, y: 86, text_font: f_body, text_color: 0xEEF0F6 }
             on_click: [homeassistant.action: { action: fan.toggle, data: { entity_id: fan.living_room_pendant } }]
     - id: page_room_kitchen
       bg_opa: 0
@@ -1697,13 +1676,14 @@ lvgl:
             width: 232
             height: 120
             styles: st_glass
+            pad_all: 0
             widgets:
-              - label: { id: ic_kitchen_light_kitchen_kitchen, text: "\U000F0335", align: top_left, x: 8, y: 8, text_font: f_icon, text_color: 0x4A4F5A }
-              - label: { text: "Kitchen Lights", align: top_left, x: 8, y: 60, text_font: f_body, text_color: 0xEEF0F6 }
+              - label: { id: ic_kitchen_light_kitchen_kitchen, text: "\U000F0335", x: 14, y: 12, text_font: f_icon, text_color: 0x4A4F5A }
+              - label: { text: "Kitchen Lights", x: 14, y: 46, text_font: f_body, text_color: 0xEEF0F6 }
               - slider:
                   id: sld_room_kitchen_light_kitchen_kitchen
                   align: bottom_mid
-                  y: -12
+                  y: -14
                   width: 200
                   min_value: 0
                   max_value: 100
@@ -1747,13 +1727,14 @@ lvgl:
             width: 232
             height: 120
             styles: st_glass
+            pad_all: 0
             widgets:
-              - label: { id: ic_office_light_office_shelves, text: "\U000F0335", align: top_left, x: 8, y: 8, text_font: f_icon, text_color: 0x4A4F5A }
-              - label: { text: "Shelves", align: top_left, x: 8, y: 60, text_font: f_body, text_color: 0xEEF0F6 }
+              - label: { id: ic_office_light_office_shelves, text: "\U000F0335", x: 14, y: 12, text_font: f_icon, text_color: 0x4A4F5A }
+              - label: { text: "Shelves", x: 14, y: 46, text_font: f_body, text_color: 0xEEF0F6 }
               - slider:
                   id: sld_room_office_light_office_shelves
                   align: bottom_mid
-                  y: -12
+                  y: -14
                   width: 200
                   min_value: 0
                   max_value: 100
@@ -1776,13 +1757,14 @@ lvgl:
             width: 232
             height: 120
             styles: st_glass
+            pad_all: 0
             widgets:
-              - label: { id: ic_office_light_office_main_lights, text: "\U000F0335", align: top_left, x: 8, y: 8, text_font: f_icon, text_color: 0x4A4F5A }
-              - label: { text: "Main Lights", align: top_left, x: 8, y: 60, text_font: f_body, text_color: 0xEEF0F6 }
+              - label: { id: ic_office_light_office_main_lights, text: "\U000F0335", x: 14, y: 12, text_font: f_icon, text_color: 0x4A4F5A }
+              - label: { text: "Main Lights", x: 14, y: 46, text_font: f_body, text_color: 0xEEF0F6 }
               - slider:
                   id: sld_room_office_light_office_main_lights
                   align: bottom_mid
-                  y: -12
+                  y: -14
                   width: 200
                   min_value: 0
                   max_value: 100
@@ -1805,13 +1787,14 @@ lvgl:
             width: 232
             height: 120
             styles: st_glass
+            pad_all: 0
             widgets:
-              - label: { id: ic_office_light_office_desk_lamp, text: "\U000F0335", align: top_left, x: 8, y: 8, text_font: f_icon, text_color: 0x4A4F5A }
-              - label: { text: "Desk Lamp", align: top_left, x: 8, y: 60, text_font: f_body, text_color: 0xEEF0F6 }
+              - label: { id: ic_office_light_office_desk_lamp, text: "\U000F0335", x: 14, y: 12, text_font: f_icon, text_color: 0x4A4F5A }
+              - label: { text: "Desk Lamp", x: 14, y: 46, text_font: f_body, text_color: 0xEEF0F6 }
               - slider:
                   id: sld_room_office_light_office_desk_lamp
                   align: bottom_mid
-                  y: -12
+                  y: -14
                   width: 200
                   min_value: 0
                   max_value: 100
@@ -1828,15 +1811,17 @@ lvgl:
                                 brightness_pct: !lambda 'return std::to_string((int) x);'
                         else:
                           - homeassistant.action: { action: light.turn_off, data: { entity_id: light.office_desk_lamp } }
-        - button:
+        - obj:
             x: 100
             y: 232
             width: 232
             height: 120
             styles: st_glass
+            pad_all: 0
+            clickable: true
             widgets:
-              - label: { id: ic_office_fan_office_ceiling_fan, text: "\U000F0210", align: top_left, x: 8, y: 8, text_font: f_icon, text_color: 0x4A4F5A }
-              - label: { text: "Ceiling Fan", align: bottom_left, x: 8, y: -10, text_font: f_body, text_color: 0xEEF0F6 }
+              - label: { id: ic_office_fan_office_ceiling_fan, text: "\U000F0210", x: 14, y: 12, text_font: f_icon, text_color: 0x4A4F5A }
+              - label: { text: "Ceiling Fan", x: 14, y: 86, text_font: f_body, text_color: 0xEEF0F6 }
             on_click: [homeassistant.action: { action: fan.toggle, data: { entity_id: fan.office_ceiling_fan } }]
     - id: page_room_master
       bg_opa: 0
@@ -1865,13 +1850,14 @@ lvgl:
             width: 232
             height: 120
             styles: st_glass
+            pad_all: 0
             widgets:
-              - label: { id: ic_master_light_reading_lamp, text: "\U000F0335", align: top_left, x: 8, y: 8, text_font: f_icon, text_color: 0x4A4F5A }
-              - label: { text: "Reading Lamp", align: top_left, x: 8, y: 60, text_font: f_body, text_color: 0xEEF0F6 }
+              - label: { id: ic_master_light_reading_lamp, text: "\U000F0335", x: 14, y: 12, text_font: f_icon, text_color: 0x4A4F5A }
+              - label: { text: "Reading Lamp", x: 14, y: 46, text_font: f_body, text_color: 0xEEF0F6 }
               - slider:
                   id: sld_room_master_light_reading_lamp
                   align: bottom_mid
-                  y: -12
+                  y: -14
                   width: 200
                   min_value: 0
                   max_value: 100
@@ -1894,13 +1880,14 @@ lvgl:
             width: 232
             height: 120
             styles: st_glass
+            pad_all: 0
             widgets:
-              - label: { id: ic_master_light_master_bedroom_ceiling_fan_light, text: "\U000F0335", align: top_left, x: 8, y: 8, text_font: f_icon, text_color: 0x4A4F5A }
-              - label: { text: "Ceiling Light", align: top_left, x: 8, y: 60, text_font: f_body, text_color: 0xEEF0F6 }
+              - label: { id: ic_master_light_master_bedroom_ceiling_fan_light, text: "\U000F0335", x: 14, y: 12, text_font: f_icon, text_color: 0x4A4F5A }
+              - label: { text: "Ceiling Light", x: 14, y: 46, text_font: f_body, text_color: 0xEEF0F6 }
               - slider:
                   id: sld_room_master_light_master_bedroom_ceiling_fan_light
                   align: bottom_mid
-                  y: -12
+                  y: -14
                   width: 200
                   min_value: 0
                   max_value: 100
@@ -1944,13 +1931,14 @@ lvgl:
             width: 232
             height: 120
             styles: st_glass
+            pad_all: 0
             widgets:
-              - label: { id: ic_exterior_light_outdoor_patio_back_porch_lights, text: "\U000F0335", align: top_left, x: 8, y: 8, text_font: f_icon, text_color: 0x4A4F5A }
-              - label: { text: "Patio Lights", align: top_left, x: 8, y: 60, text_font: f_body, text_color: 0xEEF0F6 }
+              - label: { id: ic_exterior_light_outdoor_patio_back_porch_lights, text: "\U000F0335", x: 14, y: 12, text_font: f_icon, text_color: 0x4A4F5A }
+              - label: { text: "Patio Lights", x: 14, y: 46, text_font: f_body, text_color: 0xEEF0F6 }
               - slider:
                   id: sld_room_exterior_light_outdoor_patio_back_porch_lights
                   align: bottom_mid
-                  y: -12
+                  y: -14
                   width: 200
                   min_value: 0
                   max_value: 100
@@ -1967,15 +1955,17 @@ lvgl:
                                 brightness_pct: !lambda 'return std::to_string((int) x);'
                         else:
                           - homeassistant.action: { action: light.turn_off, data: { entity_id: light.outdoor_patio_back_porch_lights } }
-        - button:
+        - obj:
             x: 348
             y: 96
             width: 232
             height: 120
             styles: st_glass
+            pad_all: 0
+            clickable: true
             widgets:
-              - label: { id: ic_exterior_switch_outdoor_patio_putting_green, text: "\U000F06A5", align: top_left, x: 8, y: 8, text_font: f_icon, text_color: 0x4A4F5A }
-              - label: { text: "Putting Green", align: bottom_left, x: 8, y: -10, text_font: f_body, text_color: 0xEEF0F6 }
+              - label: { id: ic_exterior_switch_outdoor_patio_putting_green, text: "\U000F06A5", x: 14, y: 12, text_font: f_icon, text_color: 0x4A4F5A }
+              - label: { text: "Putting Green", x: 14, y: 86, text_font: f_body, text_color: 0xEEF0F6 }
             on_click: [homeassistant.action: { action: switch.toggle, data: { entity_id: switch.outdoor_patio_putting_green } }]
     - id: page_network
       bg_opa: 0
