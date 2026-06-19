@@ -136,6 +136,54 @@ image:
     file: ../../aurora-build/assets/aurora_bg_1024x600.png
     type: RGB565
     resize: 1024x600
+  - id: fan0
+    file: ../../aurora-build/assets/fan_00.png
+    type: RGB
+    transparency: alpha_channel
+  - id: fan1
+    file: ../../aurora-build/assets/fan_01.png
+    type: RGB
+    transparency: alpha_channel
+  - id: fan2
+    file: ../../aurora-build/assets/fan_02.png
+    type: RGB
+    transparency: alpha_channel
+  - id: fan3
+    file: ../../aurora-build/assets/fan_03.png
+    type: RGB
+    transparency: alpha_channel
+  - id: fan4
+    file: ../../aurora-build/assets/fan_04.png
+    type: RGB
+    transparency: alpha_channel
+  - id: fan5
+    file: ../../aurora-build/assets/fan_05.png
+    type: RGB
+    transparency: alpha_channel
+  - id: fan6
+    file: ../../aurora-build/assets/fan_06.png
+    type: RGB
+    transparency: alpha_channel
+  - id: fan7
+    file: ../../aurora-build/assets/fan_07.png
+    type: RGB
+    transparency: alpha_channel
+  - id: fan8
+    file: ../../aurora-build/assets/fan_08.png
+    type: RGB
+    transparency: alpha_channel
+  - id: fan9
+    file: ../../aurora-build/assets/fan_09.png
+    type: RGB
+    transparency: alpha_channel
+  - id: fan10
+    file: ../../aurora-build/assets/fan_10.png
+    type: RGB
+    transparency: alpha_channel
+  - id: fan11
+    file: ../../aurora-build/assets/fan_11.png
+    type: RGB
+    transparency: alpha_channel
 
 font:
   - file: "gfonts://Sora@600"
@@ -652,18 +700,6 @@ text_sensor:
             else:
               - lvgl.label.update: { id: ic_living_light_living_room_main, text_color: 0x4A4F5A }
   - platform: homeassistant
-    id: ha_room_living_fan_living_room_pendant
-    entity_id: fan.living_room_pendant
-    on_value:
-      then:
-        - if:
-            condition:
-              lambda: 'return x == std::string("on");'
-            then:
-              - lvgl.label.update: { id: ic_living_fan_living_room_pendant, text_color: 0x2ED5B8 }
-            else:
-              - lvgl.label.update: { id: ic_living_fan_living_room_pendant, text_color: 0x4A4F5A }
-  - platform: homeassistant
     id: ha_room_kitchen_light_kitchen_kitchen
     entity_id: light.kitchen_kitchen
     on_value:
@@ -711,18 +747,6 @@ text_sensor:
               - lvgl.label.update: { id: ic_office_light_office_desk_lamp, text_color: 0xC8A45D }
             else:
               - lvgl.label.update: { id: ic_office_light_office_desk_lamp, text_color: 0x4A4F5A }
-  - platform: homeassistant
-    id: ha_room_office_fan_office_ceiling_fan
-    entity_id: fan.office_ceiling_fan
-    on_value:
-      then:
-        - if:
-            condition:
-              lambda: 'return x == std::string("on");'
-            then:
-              - lvgl.label.update: { id: ic_office_fan_office_ceiling_fan, text_color: 0x2ED5B8 }
-            else:
-              - lvgl.label.update: { id: ic_office_fan_office_ceiling_fan, text_color: 0x4A4F5A }
   - platform: homeassistant
     id: ha_room_master_light_reading_lamp
     entity_id: light.reading_lamp
@@ -772,6 +796,31 @@ text_sensor:
             else:
               - lvgl.label.update: { id: ic_exterior_switch_outdoor_patio_putting_green, text_color: 0x4A4F5A }
 
+
+  - platform: homeassistant
+    id: ha_room_living_fan_living_room_pendant
+    entity_id: fan.living_room_pendant
+    on_value:
+      then:
+        - if:
+            condition:
+              lambda: 'return x == std::string("on");'
+            then:
+              - lvgl.animimg.start: animfan_living
+            else:
+              - lvgl.animimg.stop: animfan_living
+  - platform: homeassistant
+    id: ha_room_office_fan_office_ceiling_fan
+    entity_id: fan.office_ceiling_fan
+    on_value:
+      then:
+        - if:
+            condition:
+              lambda: 'return x == std::string("on");'
+            then:
+              - lvgl.animimg.start: animfan_office
+            else:
+              - lvgl.animimg.stop: animfan_office
 
 globals:
   - id: sel_light
@@ -1646,7 +1695,14 @@ lvgl:
             pad_all: 0
             clickable: true
             widgets:
-              - label: { id: ic_living_fan_living_room_pendant, text: "\U000F0210", x: 14, y: 12, text_font: f_icon, text_color: 0x4A4F5A }
+              - animimg:
+                  id: animfan_living
+                  x: 10
+                  y: 10
+                  src: [fan0, fan1, fan2, fan3, fan4, fan5, fan6, fan7, fan8, fan9, fan10, fan11]
+                  duration: 1000ms
+                  repeat_count: forever
+                  auto_start: false
               - label: { text: "Ceiling Fan", x: 14, y: 86, text_font: f_body, text_color: 0xEEF0F6 }
             on_click: [homeassistant.action: { action: fan.toggle, data: { entity_id: fan.living_room_pendant } }]
     - id: page_room_kitchen
@@ -1820,7 +1876,14 @@ lvgl:
             pad_all: 0
             clickable: true
             widgets:
-              - label: { id: ic_office_fan_office_ceiling_fan, text: "\U000F0210", x: 14, y: 12, text_font: f_icon, text_color: 0x4A4F5A }
+              - animimg:
+                  id: animfan_office
+                  x: 10
+                  y: 10
+                  src: [fan0, fan1, fan2, fan3, fan4, fan5, fan6, fan7, fan8, fan9, fan10, fan11]
+                  duration: 1000ms
+                  repeat_count: forever
+                  auto_start: false
               - label: { text: "Ceiling Fan", x: 14, y: 86, text_font: f_body, text_color: 0xEEF0F6 }
             on_click: [homeassistant.action: { action: fan.toggle, data: { entity_id: fan.office_ceiling_fan } }]
     - id: page_room_master
