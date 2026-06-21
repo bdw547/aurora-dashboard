@@ -84,8 +84,40 @@ wifi:
   password: !secret wifi_password
 
 api:
+  on_client_connected:
+    then:
+      - if:
+          condition:
+            lambda: 'return !id(g_booted);'
+          then:
+            - lambda: 'id(g_booted) = true;'
+            - lvgl.label.update: { id: lbl_boot_status, text: "Loading dashboard..." }
+            - delay: 2s
+            - lvgl.page.show: page_home
 ota:
   - platform: esphome
+    on_begin:
+      then:
+        - lvgl.page.show: page_ota
+        - lvgl.bar.update: { id: ota_bar, value: 0 }
+        - lvgl.label.update: { id: ota_pct, text: "0%" }
+        - lvgl.label.update: { id: ota_status, text: "Receiving update..." }
+    on_progress:
+      then:
+        - lvgl.bar.update: { id: ota_bar, value: !lambda 'return (int) x;' }
+        - lvgl.label.update:
+            id: ota_pct
+            text: !lambda 'char b[8]; snprintf(b, sizeof(b), "%d%%", (int) x); return std::string(b);'
+    on_end:
+      then:
+        - lvgl.bar.update: { id: ota_bar, value: 100 }
+        - lvgl.label.update: { id: ota_pct, text: "100%" }
+        - lvgl.label.update: { id: ota_status, text: "Complete! Restarting..." }
+    on_error:
+      then:
+        - lvgl.label.update:
+            id: ota_status
+            text: !lambda 'char b[40]; snprintf(b, sizeof(b), "Update failed (error %d)", (int) x); return std::string(b);'
 logger:
   level: INFO
 
@@ -647,6 +679,8 @@ text_sensor:
               }
             }
             for (int j = idx; j < 50; j++) lv_obj_add_flag(R[j], LV_OBJ_FLAG_HIDDEN);
+            id(g_track_idx) = -1;
+        - script.execute: hl_tracks
   - platform: homeassistant
     id: ha_media_state
     entity_id: media_player.spotifyplus_ben_walton
@@ -1077,8 +1111,82 @@ globals:
     type: bool
     restore_value: false
     initial_value: 'false'
+  - id: g_room
+    type: std::string
+    restore_value: true
+    initial_value: '"Living Room"'
+  - id: g_track_idx
+    type: int
+    restore_value: false
+    initial_value: '-1'
+  - id: g_booted
+    type: bool
+    restore_value: false
+    initial_value: 'false'
 
 script:
+  - id: hl_rooms
+    then:
+      - lvgl.widget.update: { id: src_btn_dining, bg_color: !lambda 'return id(g_room) == std::string("Dining Room") ? lv_color_hex(0x2ED5B8) : lv_color_hex(0x161B24);' }
+      - lvgl.widget.update: { id: src_btn_gameroom, bg_color: !lambda 'return id(g_room) == std::string("Gameroom") ? lv_color_hex(0x2ED5B8) : lv_color_hex(0x161B24);' }
+      - lvgl.widget.update: { id: src_btn_johnwick, bg_color: !lambda 'return id(g_room) == std::string("JOHN-WICK") ? lv_color_hex(0x2ED5B8) : lv_color_hex(0x161B24);' }
+      - lvgl.widget.update: { id: src_btn_kitchen, bg_color: !lambda 'return id(g_room) == std::string("Kitchen") ? lv_color_hex(0x2ED5B8) : lv_color_hex(0x161B24);' }
+      - lvgl.widget.update: { id: src_btn_living, bg_color: !lambda 'return id(g_room) == std::string("Living Room") ? lv_color_hex(0x2ED5B8) : lv_color_hex(0x161B24);' }
+      - lvgl.widget.update: { id: src_btn_office, bg_color: !lambda 'return id(g_room) == std::string("Office") ? lv_color_hex(0x2ED5B8) : lv_color_hex(0x161B24);' }
+      - lvgl.widget.update: { id: src_btn_patio, bg_color: !lambda 'return id(g_room) == std::string("Patio") ? lv_color_hex(0x2ED5B8) : lv_color_hex(0x161B24);' }
+      - lvgl.widget.update: { id: src_btn_roku, bg_color: !lambda 'return id(g_room) == std::string("Roku Ultra") ? lv_color_hex(0x2ED5B8) : lv_color_hex(0x161B24);' }
+  - id: hl_tracks
+    then:
+      - lvgl.label.update: { id: sng_lbl_0, text_color: !lambda 'return id(g_track_idx) == 0 ? lv_color_hex(0x2ED5B8) : lv_color_hex(0xEEF0F6);' }
+      - lvgl.label.update: { id: sng_lbl_1, text_color: !lambda 'return id(g_track_idx) == 1 ? lv_color_hex(0x2ED5B8) : lv_color_hex(0xEEF0F6);' }
+      - lvgl.label.update: { id: sng_lbl_2, text_color: !lambda 'return id(g_track_idx) == 2 ? lv_color_hex(0x2ED5B8) : lv_color_hex(0xEEF0F6);' }
+      - lvgl.label.update: { id: sng_lbl_3, text_color: !lambda 'return id(g_track_idx) == 3 ? lv_color_hex(0x2ED5B8) : lv_color_hex(0xEEF0F6);' }
+      - lvgl.label.update: { id: sng_lbl_4, text_color: !lambda 'return id(g_track_idx) == 4 ? lv_color_hex(0x2ED5B8) : lv_color_hex(0xEEF0F6);' }
+      - lvgl.label.update: { id: sng_lbl_5, text_color: !lambda 'return id(g_track_idx) == 5 ? lv_color_hex(0x2ED5B8) : lv_color_hex(0xEEF0F6);' }
+      - lvgl.label.update: { id: sng_lbl_6, text_color: !lambda 'return id(g_track_idx) == 6 ? lv_color_hex(0x2ED5B8) : lv_color_hex(0xEEF0F6);' }
+      - lvgl.label.update: { id: sng_lbl_7, text_color: !lambda 'return id(g_track_idx) == 7 ? lv_color_hex(0x2ED5B8) : lv_color_hex(0xEEF0F6);' }
+      - lvgl.label.update: { id: sng_lbl_8, text_color: !lambda 'return id(g_track_idx) == 8 ? lv_color_hex(0x2ED5B8) : lv_color_hex(0xEEF0F6);' }
+      - lvgl.label.update: { id: sng_lbl_9, text_color: !lambda 'return id(g_track_idx) == 9 ? lv_color_hex(0x2ED5B8) : lv_color_hex(0xEEF0F6);' }
+      - lvgl.label.update: { id: sng_lbl_10, text_color: !lambda 'return id(g_track_idx) == 10 ? lv_color_hex(0x2ED5B8) : lv_color_hex(0xEEF0F6);' }
+      - lvgl.label.update: { id: sng_lbl_11, text_color: !lambda 'return id(g_track_idx) == 11 ? lv_color_hex(0x2ED5B8) : lv_color_hex(0xEEF0F6);' }
+      - lvgl.label.update: { id: sng_lbl_12, text_color: !lambda 'return id(g_track_idx) == 12 ? lv_color_hex(0x2ED5B8) : lv_color_hex(0xEEF0F6);' }
+      - lvgl.label.update: { id: sng_lbl_13, text_color: !lambda 'return id(g_track_idx) == 13 ? lv_color_hex(0x2ED5B8) : lv_color_hex(0xEEF0F6);' }
+      - lvgl.label.update: { id: sng_lbl_14, text_color: !lambda 'return id(g_track_idx) == 14 ? lv_color_hex(0x2ED5B8) : lv_color_hex(0xEEF0F6);' }
+      - lvgl.label.update: { id: sng_lbl_15, text_color: !lambda 'return id(g_track_idx) == 15 ? lv_color_hex(0x2ED5B8) : lv_color_hex(0xEEF0F6);' }
+      - lvgl.label.update: { id: sng_lbl_16, text_color: !lambda 'return id(g_track_idx) == 16 ? lv_color_hex(0x2ED5B8) : lv_color_hex(0xEEF0F6);' }
+      - lvgl.label.update: { id: sng_lbl_17, text_color: !lambda 'return id(g_track_idx) == 17 ? lv_color_hex(0x2ED5B8) : lv_color_hex(0xEEF0F6);' }
+      - lvgl.label.update: { id: sng_lbl_18, text_color: !lambda 'return id(g_track_idx) == 18 ? lv_color_hex(0x2ED5B8) : lv_color_hex(0xEEF0F6);' }
+      - lvgl.label.update: { id: sng_lbl_19, text_color: !lambda 'return id(g_track_idx) == 19 ? lv_color_hex(0x2ED5B8) : lv_color_hex(0xEEF0F6);' }
+      - lvgl.label.update: { id: sng_lbl_20, text_color: !lambda 'return id(g_track_idx) == 20 ? lv_color_hex(0x2ED5B8) : lv_color_hex(0xEEF0F6);' }
+      - lvgl.label.update: { id: sng_lbl_21, text_color: !lambda 'return id(g_track_idx) == 21 ? lv_color_hex(0x2ED5B8) : lv_color_hex(0xEEF0F6);' }
+      - lvgl.label.update: { id: sng_lbl_22, text_color: !lambda 'return id(g_track_idx) == 22 ? lv_color_hex(0x2ED5B8) : lv_color_hex(0xEEF0F6);' }
+      - lvgl.label.update: { id: sng_lbl_23, text_color: !lambda 'return id(g_track_idx) == 23 ? lv_color_hex(0x2ED5B8) : lv_color_hex(0xEEF0F6);' }
+      - lvgl.label.update: { id: sng_lbl_24, text_color: !lambda 'return id(g_track_idx) == 24 ? lv_color_hex(0x2ED5B8) : lv_color_hex(0xEEF0F6);' }
+      - lvgl.label.update: { id: sng_lbl_25, text_color: !lambda 'return id(g_track_idx) == 25 ? lv_color_hex(0x2ED5B8) : lv_color_hex(0xEEF0F6);' }
+      - lvgl.label.update: { id: sng_lbl_26, text_color: !lambda 'return id(g_track_idx) == 26 ? lv_color_hex(0x2ED5B8) : lv_color_hex(0xEEF0F6);' }
+      - lvgl.label.update: { id: sng_lbl_27, text_color: !lambda 'return id(g_track_idx) == 27 ? lv_color_hex(0x2ED5B8) : lv_color_hex(0xEEF0F6);' }
+      - lvgl.label.update: { id: sng_lbl_28, text_color: !lambda 'return id(g_track_idx) == 28 ? lv_color_hex(0x2ED5B8) : lv_color_hex(0xEEF0F6);' }
+      - lvgl.label.update: { id: sng_lbl_29, text_color: !lambda 'return id(g_track_idx) == 29 ? lv_color_hex(0x2ED5B8) : lv_color_hex(0xEEF0F6);' }
+      - lvgl.label.update: { id: sng_lbl_30, text_color: !lambda 'return id(g_track_idx) == 30 ? lv_color_hex(0x2ED5B8) : lv_color_hex(0xEEF0F6);' }
+      - lvgl.label.update: { id: sng_lbl_31, text_color: !lambda 'return id(g_track_idx) == 31 ? lv_color_hex(0x2ED5B8) : lv_color_hex(0xEEF0F6);' }
+      - lvgl.label.update: { id: sng_lbl_32, text_color: !lambda 'return id(g_track_idx) == 32 ? lv_color_hex(0x2ED5B8) : lv_color_hex(0xEEF0F6);' }
+      - lvgl.label.update: { id: sng_lbl_33, text_color: !lambda 'return id(g_track_idx) == 33 ? lv_color_hex(0x2ED5B8) : lv_color_hex(0xEEF0F6);' }
+      - lvgl.label.update: { id: sng_lbl_34, text_color: !lambda 'return id(g_track_idx) == 34 ? lv_color_hex(0x2ED5B8) : lv_color_hex(0xEEF0F6);' }
+      - lvgl.label.update: { id: sng_lbl_35, text_color: !lambda 'return id(g_track_idx) == 35 ? lv_color_hex(0x2ED5B8) : lv_color_hex(0xEEF0F6);' }
+      - lvgl.label.update: { id: sng_lbl_36, text_color: !lambda 'return id(g_track_idx) == 36 ? lv_color_hex(0x2ED5B8) : lv_color_hex(0xEEF0F6);' }
+      - lvgl.label.update: { id: sng_lbl_37, text_color: !lambda 'return id(g_track_idx) == 37 ? lv_color_hex(0x2ED5B8) : lv_color_hex(0xEEF0F6);' }
+      - lvgl.label.update: { id: sng_lbl_38, text_color: !lambda 'return id(g_track_idx) == 38 ? lv_color_hex(0x2ED5B8) : lv_color_hex(0xEEF0F6);' }
+      - lvgl.label.update: { id: sng_lbl_39, text_color: !lambda 'return id(g_track_idx) == 39 ? lv_color_hex(0x2ED5B8) : lv_color_hex(0xEEF0F6);' }
+      - lvgl.label.update: { id: sng_lbl_40, text_color: !lambda 'return id(g_track_idx) == 40 ? lv_color_hex(0x2ED5B8) : lv_color_hex(0xEEF0F6);' }
+      - lvgl.label.update: { id: sng_lbl_41, text_color: !lambda 'return id(g_track_idx) == 41 ? lv_color_hex(0x2ED5B8) : lv_color_hex(0xEEF0F6);' }
+      - lvgl.label.update: { id: sng_lbl_42, text_color: !lambda 'return id(g_track_idx) == 42 ? lv_color_hex(0x2ED5B8) : lv_color_hex(0xEEF0F6);' }
+      - lvgl.label.update: { id: sng_lbl_43, text_color: !lambda 'return id(g_track_idx) == 43 ? lv_color_hex(0x2ED5B8) : lv_color_hex(0xEEF0F6);' }
+      - lvgl.label.update: { id: sng_lbl_44, text_color: !lambda 'return id(g_track_idx) == 44 ? lv_color_hex(0x2ED5B8) : lv_color_hex(0xEEF0F6);' }
+      - lvgl.label.update: { id: sng_lbl_45, text_color: !lambda 'return id(g_track_idx) == 45 ? lv_color_hex(0x2ED5B8) : lv_color_hex(0xEEF0F6);' }
+      - lvgl.label.update: { id: sng_lbl_46, text_color: !lambda 'return id(g_track_idx) == 46 ? lv_color_hex(0x2ED5B8) : lv_color_hex(0xEEF0F6);' }
+      - lvgl.label.update: { id: sng_lbl_47, text_color: !lambda 'return id(g_track_idx) == 47 ? lv_color_hex(0x2ED5B8) : lv_color_hex(0xEEF0F6);' }
+      - lvgl.label.update: { id: sng_lbl_48, text_color: !lambda 'return id(g_track_idx) == 48 ? lv_color_hex(0x2ED5B8) : lv_color_hex(0xEEF0F6);' }
+      - lvgl.label.update: { id: sng_lbl_49, text_color: !lambda 'return id(g_track_idx) == 49 ? lv_color_hex(0x2ED5B8) : lv_color_hex(0xEEF0F6);' }
   - id: np_update
     then:
       - lvgl.bar.update:
@@ -1284,7 +1392,46 @@ lvgl:
           text_color: 0x2ED5B8
 
   pages:
-    # ---------- HOME ----------
+    - id: page_boot
+      bg_color: 0x08090D
+      bg_opa: 100%
+      widgets:
+        - label: { text: "AURORA", align: center, y: -56, text_font: f_display, text_color: 0x2ED5B8 }
+        - spinner:
+            align: center
+            y: 24
+            width: 56
+            height: 56
+            spin_time: 1000ms
+            arc_length: 60deg
+            arc_color: 0x2A2F3A
+            arc_width: 6
+            indicator:
+              arc_color: 0x2ED5B8
+              arc_width: 6
+        - label: { id: lbl_boot_status, text: "Starting up...", align: center, y: 104, text_font: f_body, text_color: 0x8A8F9E }
+    - id: page_ota
+      bg_color: 0x08090D
+      bg_opa: 100%
+      widgets:
+        - label: { text: "Updating Firmware", align: center, y: -84, text_font: f_title, text_color: 0xEEF0F6 }
+        - bar:
+            id: ota_bar
+            align: center
+            y: -8
+            width: 620
+            height: 18
+            min_value: 0
+            max_value: 100
+            value: 0
+            radius: 9
+            bg_color: 0x2A2F3A
+            border_width: 0
+            indicator:
+              bg_color: 0x2ED5B8
+              radius: 9
+        - label: { id: ota_pct, text: "0%", align: center, y: 30, text_font: f_title, text_color: 0x2ED5B8 }
+        - label: { id: ota_status, text: "Receiving update...", align: center, y: 82, text_font: f_body, text_color: 0x8A8F9E }
     - id: page_home
       bg_opa: 0
       on_load:
@@ -1892,7 +2039,10 @@ lvgl:
             bg_color: 0x161B24
             pad_all: 6
             widgets: [label: { text: "Dining Room", align: center, text_font: f_body, text_color: $c_text } ]
-            on_click: [homeassistant.action: { action: spotifyplus.player_transfer_playback, data: { entity_id: media_player.spotifyplus_ben_walton, device_id: "Dining Room", play: "true" } } ]
+            on_click:
+              - lambda: 'id(g_room) = "Dining Room";'
+              - script.execute: hl_rooms
+              - homeassistant.action: { action: spotifyplus.player_transfer_playback, data: { entity_id: media_player.spotifyplus_ben_walton, device_id: "Dining Room", play: "true" } }
         - button:
             id: src_btn_gameroom
             x: 786
@@ -1903,7 +2053,10 @@ lvgl:
             bg_color: 0x161B24
             pad_all: 6
             widgets: [label: { text: "Gameroom", align: center, text_font: f_body, text_color: $c_text } ]
-            on_click: [homeassistant.action: { action: spotifyplus.player_transfer_playback, data: { entity_id: media_player.spotifyplus_ben_walton, device_id: "Gameroom", play: "true" } } ]
+            on_click:
+              - lambda: 'id(g_room) = "Gameroom";'
+              - script.execute: hl_rooms
+              - homeassistant.action: { action: spotifyplus.player_transfer_playback, data: { entity_id: media_player.spotifyplus_ben_walton, device_id: "Gameroom", play: "true" } }
         - button:
             id: src_btn_johnwick
             x: 560
@@ -1914,7 +2067,10 @@ lvgl:
             bg_color: 0x161B24
             pad_all: 6
             widgets: [label: { text: "JOHN-WICK", align: center, text_font: f_body, text_color: $c_text } ]
-            on_click: [homeassistant.action: { action: spotifyplus.player_transfer_playback, data: { entity_id: media_player.spotifyplus_ben_walton, device_id: "JOHN-WICK", play: "true" } } ]
+            on_click:
+              - lambda: 'id(g_room) = "JOHN-WICK";'
+              - script.execute: hl_rooms
+              - homeassistant.action: { action: spotifyplus.player_transfer_playback, data: { entity_id: media_player.spotifyplus_ben_walton, device_id: "JOHN-WICK", play: "true" } }
         - button:
             id: src_btn_kitchen
             x: 786
@@ -1925,7 +2081,10 @@ lvgl:
             bg_color: 0x161B24
             pad_all: 6
             widgets: [label: { text: "Kitchen", align: center, text_font: f_body, text_color: $c_text } ]
-            on_click: [homeassistant.action: { action: spotifyplus.player_transfer_playback, data: { entity_id: media_player.spotifyplus_ben_walton, device_id: "Kitchen", play: "true" } } ]
+            on_click:
+              - lambda: 'id(g_room) = "Kitchen";'
+              - script.execute: hl_rooms
+              - homeassistant.action: { action: spotifyplus.player_transfer_playback, data: { entity_id: media_player.spotifyplus_ben_walton, device_id: "Kitchen", play: "true" } }
         - button:
             id: src_btn_living
             x: 560
@@ -1936,7 +2095,10 @@ lvgl:
             bg_color: 0x161B24
             pad_all: 6
             widgets: [label: { text: "Living Room", align: center, text_font: f_body, text_color: $c_text } ]
-            on_click: [homeassistant.action: { action: spotifyplus.player_transfer_playback, data: { entity_id: media_player.spotifyplus_ben_walton, device_id: "Living Room", play: "true" } } ]
+            on_click:
+              - lambda: 'id(g_room) = "Living Room";'
+              - script.execute: hl_rooms
+              - homeassistant.action: { action: spotifyplus.player_transfer_playback, data: { entity_id: media_player.spotifyplus_ben_walton, device_id: "Living Room", play: "true" } }
         - button:
             id: src_btn_office
             x: 786
@@ -1947,7 +2109,10 @@ lvgl:
             bg_color: 0x161B24
             pad_all: 6
             widgets: [label: { text: "Office", align: center, text_font: f_body, text_color: $c_text } ]
-            on_click: [homeassistant.action: { action: spotifyplus.player_transfer_playback, data: { entity_id: media_player.spotifyplus_ben_walton, device_id: "Office", play: "true" } } ]
+            on_click:
+              - lambda: 'id(g_room) = "Office";'
+              - script.execute: hl_rooms
+              - homeassistant.action: { action: spotifyplus.player_transfer_playback, data: { entity_id: media_player.spotifyplus_ben_walton, device_id: "Office", play: "true" } }
         - button:
             id: src_btn_patio
             x: 560
@@ -1958,7 +2123,10 @@ lvgl:
             bg_color: 0x161B24
             pad_all: 6
             widgets: [label: { text: "Patio", align: center, text_font: f_body, text_color: $c_text } ]
-            on_click: [homeassistant.action: { action: spotifyplus.player_transfer_playback, data: { entity_id: media_player.spotifyplus_ben_walton, device_id: "Patio", play: "true" } } ]
+            on_click:
+              - lambda: 'id(g_room) = "Patio";'
+              - script.execute: hl_rooms
+              - homeassistant.action: { action: spotifyplus.player_transfer_playback, data: { entity_id: media_player.spotifyplus_ben_walton, device_id: "Patio", play: "true" } }
         - button:
             id: src_btn_roku
             x: 786
@@ -1969,7 +2137,10 @@ lvgl:
             bg_color: 0x161B24
             pad_all: 6
             widgets: [label: { text: "Roku Ultra", align: center, text_font: f_body, text_color: $c_text } ]
-            on_click: [homeassistant.action: { action: spotifyplus.player_transfer_playback, data: { entity_id: media_player.spotifyplus_ben_walton, device_id: "Roku Ultra", play: "true" } } ]
+            on_click:
+              - lambda: 'id(g_room) = "Roku Ultra";'
+              - script.execute: hl_rooms
+              - homeassistant.action: { action: spotifyplus.player_transfer_playback, data: { entity_id: media_player.spotifyplus_ben_walton, device_id: "Roku Ultra", play: "true" } }
 
     # ---------- SECURITY (locks + presence; real entities) ----------
     - id: page_security
@@ -2716,11 +2887,14 @@ lvgl:
             bg_grad_color: $c_purple
             widgets: [label: { text: "Play Playlist", align: center, text_font: f_body, text_color: $c_bg }]
             on_click:
+              - lambda: 'id(g_track_idx) = 0;'
+              - script.execute: hl_tracks
               - homeassistant.action:
                   action: spotifyplus.player_media_play_context
                   data:
                     entity_id: media_player.spotifyplus_ben_walton
                     context_uri: !lambda 'return id(g_cur_pl_uri);'
+                    device_id: !lambda 'return id(g_room);'
         - label: { text: "TRACKS · tap to play", x: 100, y: 162, text_font: f_small, text_color: $c_text2 }
         - obj:
             id: track_list
@@ -2745,11 +2919,14 @@ lvgl:
                   hidden: true
                   widgets: [label: { id: sng_lbl_0, text: "", align: left_mid, text_font: f_body, text_color: $c_text }]
                   on_click:
+                    - lambda: 'id(g_track_idx) = 0;'
+                    - script.execute: hl_tracks
                     - homeassistant.action:
                         action: script.aurora_spotify_play_track
                         data:
                           context_uri: !lambda 'return id(g_cur_pl_uri);'
                           position: "0"
+                          device: !lambda 'return id(g_room);'
               - button:
                   id: sng_1
                   width: 808
@@ -2759,11 +2936,14 @@ lvgl:
                   hidden: true
                   widgets: [label: { id: sng_lbl_1, text: "", align: left_mid, text_font: f_body, text_color: $c_text }]
                   on_click:
+                    - lambda: 'id(g_track_idx) = 1;'
+                    - script.execute: hl_tracks
                     - homeassistant.action:
                         action: script.aurora_spotify_play_track
                         data:
                           context_uri: !lambda 'return id(g_cur_pl_uri);'
                           position: "1"
+                          device: !lambda 'return id(g_room);'
               - button:
                   id: sng_2
                   width: 808
@@ -2773,11 +2953,14 @@ lvgl:
                   hidden: true
                   widgets: [label: { id: sng_lbl_2, text: "", align: left_mid, text_font: f_body, text_color: $c_text }]
                   on_click:
+                    - lambda: 'id(g_track_idx) = 2;'
+                    - script.execute: hl_tracks
                     - homeassistant.action:
                         action: script.aurora_spotify_play_track
                         data:
                           context_uri: !lambda 'return id(g_cur_pl_uri);'
                           position: "2"
+                          device: !lambda 'return id(g_room);'
               - button:
                   id: sng_3
                   width: 808
@@ -2787,11 +2970,14 @@ lvgl:
                   hidden: true
                   widgets: [label: { id: sng_lbl_3, text: "", align: left_mid, text_font: f_body, text_color: $c_text }]
                   on_click:
+                    - lambda: 'id(g_track_idx) = 3;'
+                    - script.execute: hl_tracks
                     - homeassistant.action:
                         action: script.aurora_spotify_play_track
                         data:
                           context_uri: !lambda 'return id(g_cur_pl_uri);'
                           position: "3"
+                          device: !lambda 'return id(g_room);'
               - button:
                   id: sng_4
                   width: 808
@@ -2801,11 +2987,14 @@ lvgl:
                   hidden: true
                   widgets: [label: { id: sng_lbl_4, text: "", align: left_mid, text_font: f_body, text_color: $c_text }]
                   on_click:
+                    - lambda: 'id(g_track_idx) = 4;'
+                    - script.execute: hl_tracks
                     - homeassistant.action:
                         action: script.aurora_spotify_play_track
                         data:
                           context_uri: !lambda 'return id(g_cur_pl_uri);'
                           position: "4"
+                          device: !lambda 'return id(g_room);'
               - button:
                   id: sng_5
                   width: 808
@@ -2815,11 +3004,14 @@ lvgl:
                   hidden: true
                   widgets: [label: { id: sng_lbl_5, text: "", align: left_mid, text_font: f_body, text_color: $c_text }]
                   on_click:
+                    - lambda: 'id(g_track_idx) = 5;'
+                    - script.execute: hl_tracks
                     - homeassistant.action:
                         action: script.aurora_spotify_play_track
                         data:
                           context_uri: !lambda 'return id(g_cur_pl_uri);'
                           position: "5"
+                          device: !lambda 'return id(g_room);'
               - button:
                   id: sng_6
                   width: 808
@@ -2829,11 +3021,14 @@ lvgl:
                   hidden: true
                   widgets: [label: { id: sng_lbl_6, text: "", align: left_mid, text_font: f_body, text_color: $c_text }]
                   on_click:
+                    - lambda: 'id(g_track_idx) = 6;'
+                    - script.execute: hl_tracks
                     - homeassistant.action:
                         action: script.aurora_spotify_play_track
                         data:
                           context_uri: !lambda 'return id(g_cur_pl_uri);'
                           position: "6"
+                          device: !lambda 'return id(g_room);'
               - button:
                   id: sng_7
                   width: 808
@@ -2843,11 +3038,14 @@ lvgl:
                   hidden: true
                   widgets: [label: { id: sng_lbl_7, text: "", align: left_mid, text_font: f_body, text_color: $c_text }]
                   on_click:
+                    - lambda: 'id(g_track_idx) = 7;'
+                    - script.execute: hl_tracks
                     - homeassistant.action:
                         action: script.aurora_spotify_play_track
                         data:
                           context_uri: !lambda 'return id(g_cur_pl_uri);'
                           position: "7"
+                          device: !lambda 'return id(g_room);'
               - button:
                   id: sng_8
                   width: 808
@@ -2857,11 +3055,14 @@ lvgl:
                   hidden: true
                   widgets: [label: { id: sng_lbl_8, text: "", align: left_mid, text_font: f_body, text_color: $c_text }]
                   on_click:
+                    - lambda: 'id(g_track_idx) = 8;'
+                    - script.execute: hl_tracks
                     - homeassistant.action:
                         action: script.aurora_spotify_play_track
                         data:
                           context_uri: !lambda 'return id(g_cur_pl_uri);'
                           position: "8"
+                          device: !lambda 'return id(g_room);'
               - button:
                   id: sng_9
                   width: 808
@@ -2871,11 +3072,14 @@ lvgl:
                   hidden: true
                   widgets: [label: { id: sng_lbl_9, text: "", align: left_mid, text_font: f_body, text_color: $c_text }]
                   on_click:
+                    - lambda: 'id(g_track_idx) = 9;'
+                    - script.execute: hl_tracks
                     - homeassistant.action:
                         action: script.aurora_spotify_play_track
                         data:
                           context_uri: !lambda 'return id(g_cur_pl_uri);'
                           position: "9"
+                          device: !lambda 'return id(g_room);'
               - button:
                   id: sng_10
                   width: 808
@@ -2885,11 +3089,14 @@ lvgl:
                   hidden: true
                   widgets: [label: { id: sng_lbl_10, text: "", align: left_mid, text_font: f_body, text_color: $c_text }]
                   on_click:
+                    - lambda: 'id(g_track_idx) = 10;'
+                    - script.execute: hl_tracks
                     - homeassistant.action:
                         action: script.aurora_spotify_play_track
                         data:
                           context_uri: !lambda 'return id(g_cur_pl_uri);'
                           position: "10"
+                          device: !lambda 'return id(g_room);'
               - button:
                   id: sng_11
                   width: 808
@@ -2899,11 +3106,14 @@ lvgl:
                   hidden: true
                   widgets: [label: { id: sng_lbl_11, text: "", align: left_mid, text_font: f_body, text_color: $c_text }]
                   on_click:
+                    - lambda: 'id(g_track_idx) = 11;'
+                    - script.execute: hl_tracks
                     - homeassistant.action:
                         action: script.aurora_spotify_play_track
                         data:
                           context_uri: !lambda 'return id(g_cur_pl_uri);'
                           position: "11"
+                          device: !lambda 'return id(g_room);'
               - button:
                   id: sng_12
                   width: 808
@@ -2913,11 +3123,14 @@ lvgl:
                   hidden: true
                   widgets: [label: { id: sng_lbl_12, text: "", align: left_mid, text_font: f_body, text_color: $c_text }]
                   on_click:
+                    - lambda: 'id(g_track_idx) = 12;'
+                    - script.execute: hl_tracks
                     - homeassistant.action:
                         action: script.aurora_spotify_play_track
                         data:
                           context_uri: !lambda 'return id(g_cur_pl_uri);'
                           position: "12"
+                          device: !lambda 'return id(g_room);'
               - button:
                   id: sng_13
                   width: 808
@@ -2927,11 +3140,14 @@ lvgl:
                   hidden: true
                   widgets: [label: { id: sng_lbl_13, text: "", align: left_mid, text_font: f_body, text_color: $c_text }]
                   on_click:
+                    - lambda: 'id(g_track_idx) = 13;'
+                    - script.execute: hl_tracks
                     - homeassistant.action:
                         action: script.aurora_spotify_play_track
                         data:
                           context_uri: !lambda 'return id(g_cur_pl_uri);'
                           position: "13"
+                          device: !lambda 'return id(g_room);'
               - button:
                   id: sng_14
                   width: 808
@@ -2941,11 +3157,14 @@ lvgl:
                   hidden: true
                   widgets: [label: { id: sng_lbl_14, text: "", align: left_mid, text_font: f_body, text_color: $c_text }]
                   on_click:
+                    - lambda: 'id(g_track_idx) = 14;'
+                    - script.execute: hl_tracks
                     - homeassistant.action:
                         action: script.aurora_spotify_play_track
                         data:
                           context_uri: !lambda 'return id(g_cur_pl_uri);'
                           position: "14"
+                          device: !lambda 'return id(g_room);'
               - button:
                   id: sng_15
                   width: 808
@@ -2955,11 +3174,14 @@ lvgl:
                   hidden: true
                   widgets: [label: { id: sng_lbl_15, text: "", align: left_mid, text_font: f_body, text_color: $c_text }]
                   on_click:
+                    - lambda: 'id(g_track_idx) = 15;'
+                    - script.execute: hl_tracks
                     - homeassistant.action:
                         action: script.aurora_spotify_play_track
                         data:
                           context_uri: !lambda 'return id(g_cur_pl_uri);'
                           position: "15"
+                          device: !lambda 'return id(g_room);'
               - button:
                   id: sng_16
                   width: 808
@@ -2969,11 +3191,14 @@ lvgl:
                   hidden: true
                   widgets: [label: { id: sng_lbl_16, text: "", align: left_mid, text_font: f_body, text_color: $c_text }]
                   on_click:
+                    - lambda: 'id(g_track_idx) = 16;'
+                    - script.execute: hl_tracks
                     - homeassistant.action:
                         action: script.aurora_spotify_play_track
                         data:
                           context_uri: !lambda 'return id(g_cur_pl_uri);'
                           position: "16"
+                          device: !lambda 'return id(g_room);'
               - button:
                   id: sng_17
                   width: 808
@@ -2983,11 +3208,14 @@ lvgl:
                   hidden: true
                   widgets: [label: { id: sng_lbl_17, text: "", align: left_mid, text_font: f_body, text_color: $c_text }]
                   on_click:
+                    - lambda: 'id(g_track_idx) = 17;'
+                    - script.execute: hl_tracks
                     - homeassistant.action:
                         action: script.aurora_spotify_play_track
                         data:
                           context_uri: !lambda 'return id(g_cur_pl_uri);'
                           position: "17"
+                          device: !lambda 'return id(g_room);'
               - button:
                   id: sng_18
                   width: 808
@@ -2997,11 +3225,14 @@ lvgl:
                   hidden: true
                   widgets: [label: { id: sng_lbl_18, text: "", align: left_mid, text_font: f_body, text_color: $c_text }]
                   on_click:
+                    - lambda: 'id(g_track_idx) = 18;'
+                    - script.execute: hl_tracks
                     - homeassistant.action:
                         action: script.aurora_spotify_play_track
                         data:
                           context_uri: !lambda 'return id(g_cur_pl_uri);'
                           position: "18"
+                          device: !lambda 'return id(g_room);'
               - button:
                   id: sng_19
                   width: 808
@@ -3011,11 +3242,14 @@ lvgl:
                   hidden: true
                   widgets: [label: { id: sng_lbl_19, text: "", align: left_mid, text_font: f_body, text_color: $c_text }]
                   on_click:
+                    - lambda: 'id(g_track_idx) = 19;'
+                    - script.execute: hl_tracks
                     - homeassistant.action:
                         action: script.aurora_spotify_play_track
                         data:
                           context_uri: !lambda 'return id(g_cur_pl_uri);'
                           position: "19"
+                          device: !lambda 'return id(g_room);'
               - button:
                   id: sng_20
                   width: 808
@@ -3025,11 +3259,14 @@ lvgl:
                   hidden: true
                   widgets: [label: { id: sng_lbl_20, text: "", align: left_mid, text_font: f_body, text_color: $c_text }]
                   on_click:
+                    - lambda: 'id(g_track_idx) = 20;'
+                    - script.execute: hl_tracks
                     - homeassistant.action:
                         action: script.aurora_spotify_play_track
                         data:
                           context_uri: !lambda 'return id(g_cur_pl_uri);'
                           position: "20"
+                          device: !lambda 'return id(g_room);'
               - button:
                   id: sng_21
                   width: 808
@@ -3039,11 +3276,14 @@ lvgl:
                   hidden: true
                   widgets: [label: { id: sng_lbl_21, text: "", align: left_mid, text_font: f_body, text_color: $c_text }]
                   on_click:
+                    - lambda: 'id(g_track_idx) = 21;'
+                    - script.execute: hl_tracks
                     - homeassistant.action:
                         action: script.aurora_spotify_play_track
                         data:
                           context_uri: !lambda 'return id(g_cur_pl_uri);'
                           position: "21"
+                          device: !lambda 'return id(g_room);'
               - button:
                   id: sng_22
                   width: 808
@@ -3053,11 +3293,14 @@ lvgl:
                   hidden: true
                   widgets: [label: { id: sng_lbl_22, text: "", align: left_mid, text_font: f_body, text_color: $c_text }]
                   on_click:
+                    - lambda: 'id(g_track_idx) = 22;'
+                    - script.execute: hl_tracks
                     - homeassistant.action:
                         action: script.aurora_spotify_play_track
                         data:
                           context_uri: !lambda 'return id(g_cur_pl_uri);'
                           position: "22"
+                          device: !lambda 'return id(g_room);'
               - button:
                   id: sng_23
                   width: 808
@@ -3067,11 +3310,14 @@ lvgl:
                   hidden: true
                   widgets: [label: { id: sng_lbl_23, text: "", align: left_mid, text_font: f_body, text_color: $c_text }]
                   on_click:
+                    - lambda: 'id(g_track_idx) = 23;'
+                    - script.execute: hl_tracks
                     - homeassistant.action:
                         action: script.aurora_spotify_play_track
                         data:
                           context_uri: !lambda 'return id(g_cur_pl_uri);'
                           position: "23"
+                          device: !lambda 'return id(g_room);'
               - button:
                   id: sng_24
                   width: 808
@@ -3081,11 +3327,14 @@ lvgl:
                   hidden: true
                   widgets: [label: { id: sng_lbl_24, text: "", align: left_mid, text_font: f_body, text_color: $c_text }]
                   on_click:
+                    - lambda: 'id(g_track_idx) = 24;'
+                    - script.execute: hl_tracks
                     - homeassistant.action:
                         action: script.aurora_spotify_play_track
                         data:
                           context_uri: !lambda 'return id(g_cur_pl_uri);'
                           position: "24"
+                          device: !lambda 'return id(g_room);'
               - button:
                   id: sng_25
                   width: 808
@@ -3095,11 +3344,14 @@ lvgl:
                   hidden: true
                   widgets: [label: { id: sng_lbl_25, text: "", align: left_mid, text_font: f_body, text_color: $c_text }]
                   on_click:
+                    - lambda: 'id(g_track_idx) = 25;'
+                    - script.execute: hl_tracks
                     - homeassistant.action:
                         action: script.aurora_spotify_play_track
                         data:
                           context_uri: !lambda 'return id(g_cur_pl_uri);'
                           position: "25"
+                          device: !lambda 'return id(g_room);'
               - button:
                   id: sng_26
                   width: 808
@@ -3109,11 +3361,14 @@ lvgl:
                   hidden: true
                   widgets: [label: { id: sng_lbl_26, text: "", align: left_mid, text_font: f_body, text_color: $c_text }]
                   on_click:
+                    - lambda: 'id(g_track_idx) = 26;'
+                    - script.execute: hl_tracks
                     - homeassistant.action:
                         action: script.aurora_spotify_play_track
                         data:
                           context_uri: !lambda 'return id(g_cur_pl_uri);'
                           position: "26"
+                          device: !lambda 'return id(g_room);'
               - button:
                   id: sng_27
                   width: 808
@@ -3123,11 +3378,14 @@ lvgl:
                   hidden: true
                   widgets: [label: { id: sng_lbl_27, text: "", align: left_mid, text_font: f_body, text_color: $c_text }]
                   on_click:
+                    - lambda: 'id(g_track_idx) = 27;'
+                    - script.execute: hl_tracks
                     - homeassistant.action:
                         action: script.aurora_spotify_play_track
                         data:
                           context_uri: !lambda 'return id(g_cur_pl_uri);'
                           position: "27"
+                          device: !lambda 'return id(g_room);'
               - button:
                   id: sng_28
                   width: 808
@@ -3137,11 +3395,14 @@ lvgl:
                   hidden: true
                   widgets: [label: { id: sng_lbl_28, text: "", align: left_mid, text_font: f_body, text_color: $c_text }]
                   on_click:
+                    - lambda: 'id(g_track_idx) = 28;'
+                    - script.execute: hl_tracks
                     - homeassistant.action:
                         action: script.aurora_spotify_play_track
                         data:
                           context_uri: !lambda 'return id(g_cur_pl_uri);'
                           position: "28"
+                          device: !lambda 'return id(g_room);'
               - button:
                   id: sng_29
                   width: 808
@@ -3151,11 +3412,14 @@ lvgl:
                   hidden: true
                   widgets: [label: { id: sng_lbl_29, text: "", align: left_mid, text_font: f_body, text_color: $c_text }]
                   on_click:
+                    - lambda: 'id(g_track_idx) = 29;'
+                    - script.execute: hl_tracks
                     - homeassistant.action:
                         action: script.aurora_spotify_play_track
                         data:
                           context_uri: !lambda 'return id(g_cur_pl_uri);'
                           position: "29"
+                          device: !lambda 'return id(g_room);'
               - button:
                   id: sng_30
                   width: 808
@@ -3165,11 +3429,14 @@ lvgl:
                   hidden: true
                   widgets: [label: { id: sng_lbl_30, text: "", align: left_mid, text_font: f_body, text_color: $c_text }]
                   on_click:
+                    - lambda: 'id(g_track_idx) = 30;'
+                    - script.execute: hl_tracks
                     - homeassistant.action:
                         action: script.aurora_spotify_play_track
                         data:
                           context_uri: !lambda 'return id(g_cur_pl_uri);'
                           position: "30"
+                          device: !lambda 'return id(g_room);'
               - button:
                   id: sng_31
                   width: 808
@@ -3179,11 +3446,14 @@ lvgl:
                   hidden: true
                   widgets: [label: { id: sng_lbl_31, text: "", align: left_mid, text_font: f_body, text_color: $c_text }]
                   on_click:
+                    - lambda: 'id(g_track_idx) = 31;'
+                    - script.execute: hl_tracks
                     - homeassistant.action:
                         action: script.aurora_spotify_play_track
                         data:
                           context_uri: !lambda 'return id(g_cur_pl_uri);'
                           position: "31"
+                          device: !lambda 'return id(g_room);'
               - button:
                   id: sng_32
                   width: 808
@@ -3193,11 +3463,14 @@ lvgl:
                   hidden: true
                   widgets: [label: { id: sng_lbl_32, text: "", align: left_mid, text_font: f_body, text_color: $c_text }]
                   on_click:
+                    - lambda: 'id(g_track_idx) = 32;'
+                    - script.execute: hl_tracks
                     - homeassistant.action:
                         action: script.aurora_spotify_play_track
                         data:
                           context_uri: !lambda 'return id(g_cur_pl_uri);'
                           position: "32"
+                          device: !lambda 'return id(g_room);'
               - button:
                   id: sng_33
                   width: 808
@@ -3207,11 +3480,14 @@ lvgl:
                   hidden: true
                   widgets: [label: { id: sng_lbl_33, text: "", align: left_mid, text_font: f_body, text_color: $c_text }]
                   on_click:
+                    - lambda: 'id(g_track_idx) = 33;'
+                    - script.execute: hl_tracks
                     - homeassistant.action:
                         action: script.aurora_spotify_play_track
                         data:
                           context_uri: !lambda 'return id(g_cur_pl_uri);'
                           position: "33"
+                          device: !lambda 'return id(g_room);'
               - button:
                   id: sng_34
                   width: 808
@@ -3221,11 +3497,14 @@ lvgl:
                   hidden: true
                   widgets: [label: { id: sng_lbl_34, text: "", align: left_mid, text_font: f_body, text_color: $c_text }]
                   on_click:
+                    - lambda: 'id(g_track_idx) = 34;'
+                    - script.execute: hl_tracks
                     - homeassistant.action:
                         action: script.aurora_spotify_play_track
                         data:
                           context_uri: !lambda 'return id(g_cur_pl_uri);'
                           position: "34"
+                          device: !lambda 'return id(g_room);'
               - button:
                   id: sng_35
                   width: 808
@@ -3235,11 +3514,14 @@ lvgl:
                   hidden: true
                   widgets: [label: { id: sng_lbl_35, text: "", align: left_mid, text_font: f_body, text_color: $c_text }]
                   on_click:
+                    - lambda: 'id(g_track_idx) = 35;'
+                    - script.execute: hl_tracks
                     - homeassistant.action:
                         action: script.aurora_spotify_play_track
                         data:
                           context_uri: !lambda 'return id(g_cur_pl_uri);'
                           position: "35"
+                          device: !lambda 'return id(g_room);'
               - button:
                   id: sng_36
                   width: 808
@@ -3249,11 +3531,14 @@ lvgl:
                   hidden: true
                   widgets: [label: { id: sng_lbl_36, text: "", align: left_mid, text_font: f_body, text_color: $c_text }]
                   on_click:
+                    - lambda: 'id(g_track_idx) = 36;'
+                    - script.execute: hl_tracks
                     - homeassistant.action:
                         action: script.aurora_spotify_play_track
                         data:
                           context_uri: !lambda 'return id(g_cur_pl_uri);'
                           position: "36"
+                          device: !lambda 'return id(g_room);'
               - button:
                   id: sng_37
                   width: 808
@@ -3263,11 +3548,14 @@ lvgl:
                   hidden: true
                   widgets: [label: { id: sng_lbl_37, text: "", align: left_mid, text_font: f_body, text_color: $c_text }]
                   on_click:
+                    - lambda: 'id(g_track_idx) = 37;'
+                    - script.execute: hl_tracks
                     - homeassistant.action:
                         action: script.aurora_spotify_play_track
                         data:
                           context_uri: !lambda 'return id(g_cur_pl_uri);'
                           position: "37"
+                          device: !lambda 'return id(g_room);'
               - button:
                   id: sng_38
                   width: 808
@@ -3277,11 +3565,14 @@ lvgl:
                   hidden: true
                   widgets: [label: { id: sng_lbl_38, text: "", align: left_mid, text_font: f_body, text_color: $c_text }]
                   on_click:
+                    - lambda: 'id(g_track_idx) = 38;'
+                    - script.execute: hl_tracks
                     - homeassistant.action:
                         action: script.aurora_spotify_play_track
                         data:
                           context_uri: !lambda 'return id(g_cur_pl_uri);'
                           position: "38"
+                          device: !lambda 'return id(g_room);'
               - button:
                   id: sng_39
                   width: 808
@@ -3291,11 +3582,14 @@ lvgl:
                   hidden: true
                   widgets: [label: { id: sng_lbl_39, text: "", align: left_mid, text_font: f_body, text_color: $c_text }]
                   on_click:
+                    - lambda: 'id(g_track_idx) = 39;'
+                    - script.execute: hl_tracks
                     - homeassistant.action:
                         action: script.aurora_spotify_play_track
                         data:
                           context_uri: !lambda 'return id(g_cur_pl_uri);'
                           position: "39"
+                          device: !lambda 'return id(g_room);'
               - button:
                   id: sng_40
                   width: 808
@@ -3305,11 +3599,14 @@ lvgl:
                   hidden: true
                   widgets: [label: { id: sng_lbl_40, text: "", align: left_mid, text_font: f_body, text_color: $c_text }]
                   on_click:
+                    - lambda: 'id(g_track_idx) = 40;'
+                    - script.execute: hl_tracks
                     - homeassistant.action:
                         action: script.aurora_spotify_play_track
                         data:
                           context_uri: !lambda 'return id(g_cur_pl_uri);'
                           position: "40"
+                          device: !lambda 'return id(g_room);'
               - button:
                   id: sng_41
                   width: 808
@@ -3319,11 +3616,14 @@ lvgl:
                   hidden: true
                   widgets: [label: { id: sng_lbl_41, text: "", align: left_mid, text_font: f_body, text_color: $c_text }]
                   on_click:
+                    - lambda: 'id(g_track_idx) = 41;'
+                    - script.execute: hl_tracks
                     - homeassistant.action:
                         action: script.aurora_spotify_play_track
                         data:
                           context_uri: !lambda 'return id(g_cur_pl_uri);'
                           position: "41"
+                          device: !lambda 'return id(g_room);'
               - button:
                   id: sng_42
                   width: 808
@@ -3333,11 +3633,14 @@ lvgl:
                   hidden: true
                   widgets: [label: { id: sng_lbl_42, text: "", align: left_mid, text_font: f_body, text_color: $c_text }]
                   on_click:
+                    - lambda: 'id(g_track_idx) = 42;'
+                    - script.execute: hl_tracks
                     - homeassistant.action:
                         action: script.aurora_spotify_play_track
                         data:
                           context_uri: !lambda 'return id(g_cur_pl_uri);'
                           position: "42"
+                          device: !lambda 'return id(g_room);'
               - button:
                   id: sng_43
                   width: 808
@@ -3347,11 +3650,14 @@ lvgl:
                   hidden: true
                   widgets: [label: { id: sng_lbl_43, text: "", align: left_mid, text_font: f_body, text_color: $c_text }]
                   on_click:
+                    - lambda: 'id(g_track_idx) = 43;'
+                    - script.execute: hl_tracks
                     - homeassistant.action:
                         action: script.aurora_spotify_play_track
                         data:
                           context_uri: !lambda 'return id(g_cur_pl_uri);'
                           position: "43"
+                          device: !lambda 'return id(g_room);'
               - button:
                   id: sng_44
                   width: 808
@@ -3361,11 +3667,14 @@ lvgl:
                   hidden: true
                   widgets: [label: { id: sng_lbl_44, text: "", align: left_mid, text_font: f_body, text_color: $c_text }]
                   on_click:
+                    - lambda: 'id(g_track_idx) = 44;'
+                    - script.execute: hl_tracks
                     - homeassistant.action:
                         action: script.aurora_spotify_play_track
                         data:
                           context_uri: !lambda 'return id(g_cur_pl_uri);'
                           position: "44"
+                          device: !lambda 'return id(g_room);'
               - button:
                   id: sng_45
                   width: 808
@@ -3375,11 +3684,14 @@ lvgl:
                   hidden: true
                   widgets: [label: { id: sng_lbl_45, text: "", align: left_mid, text_font: f_body, text_color: $c_text }]
                   on_click:
+                    - lambda: 'id(g_track_idx) = 45;'
+                    - script.execute: hl_tracks
                     - homeassistant.action:
                         action: script.aurora_spotify_play_track
                         data:
                           context_uri: !lambda 'return id(g_cur_pl_uri);'
                           position: "45"
+                          device: !lambda 'return id(g_room);'
               - button:
                   id: sng_46
                   width: 808
@@ -3389,11 +3701,14 @@ lvgl:
                   hidden: true
                   widgets: [label: { id: sng_lbl_46, text: "", align: left_mid, text_font: f_body, text_color: $c_text }]
                   on_click:
+                    - lambda: 'id(g_track_idx) = 46;'
+                    - script.execute: hl_tracks
                     - homeassistant.action:
                         action: script.aurora_spotify_play_track
                         data:
                           context_uri: !lambda 'return id(g_cur_pl_uri);'
                           position: "46"
+                          device: !lambda 'return id(g_room);'
               - button:
                   id: sng_47
                   width: 808
@@ -3403,11 +3718,14 @@ lvgl:
                   hidden: true
                   widgets: [label: { id: sng_lbl_47, text: "", align: left_mid, text_font: f_body, text_color: $c_text }]
                   on_click:
+                    - lambda: 'id(g_track_idx) = 47;'
+                    - script.execute: hl_tracks
                     - homeassistant.action:
                         action: script.aurora_spotify_play_track
                         data:
                           context_uri: !lambda 'return id(g_cur_pl_uri);'
                           position: "47"
+                          device: !lambda 'return id(g_room);'
               - button:
                   id: sng_48
                   width: 808
@@ -3417,11 +3735,14 @@ lvgl:
                   hidden: true
                   widgets: [label: { id: sng_lbl_48, text: "", align: left_mid, text_font: f_body, text_color: $c_text }]
                   on_click:
+                    - lambda: 'id(g_track_idx) = 48;'
+                    - script.execute: hl_tracks
                     - homeassistant.action:
                         action: script.aurora_spotify_play_track
                         data:
                           context_uri: !lambda 'return id(g_cur_pl_uri);'
                           position: "48"
+                          device: !lambda 'return id(g_room);'
               - button:
                   id: sng_49
                   width: 808
@@ -3431,11 +3752,14 @@ lvgl:
                   hidden: true
                   widgets: [label: { id: sng_lbl_49, text: "", align: left_mid, text_font: f_body, text_color: $c_text }]
                   on_click:
+                    - lambda: 'id(g_track_idx) = 49;'
+                    - script.execute: hl_tracks
                     - homeassistant.action:
                         action: script.aurora_spotify_play_track
                         data:
                           context_uri: !lambda 'return id(g_cur_pl_uri);'
                           position: "49"
+                          device: !lambda 'return id(g_room);'
 
     - id: page_screensaver
       bg_color: 0x000000

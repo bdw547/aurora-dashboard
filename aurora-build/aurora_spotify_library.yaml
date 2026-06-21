@@ -106,9 +106,13 @@ script:
       position:
         description: Zero-based track index within the context
         example: 0
+      device:
+        description: Spotify Connect device name (room) to play on; blank = active device
+        example: "Living Room"
     sequence:
       - action: spotifyplus.player_media_play_context
         data:
           entity_id: media_player.spotifyplus_ben_walton
           context_uri: "{{ context_uri }}"
           offset_position: "{{ position | int }}"
+          device_id: "{{ device | default('', true) }}"
