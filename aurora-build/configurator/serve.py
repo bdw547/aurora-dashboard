@@ -80,6 +80,156 @@ def write_bindings(bindings):
     return n
 
 
+# ----- Phase 2: home-screen 2x2 grid builder (drag-and-drop reorder) -----
+HOME_CELLS = [(412, 104), (716, 104), (412, 338), (716, 338)]  # TL, TR, BL, BR
+GRID_START = "# >>> AURORA_HOME_GRID"
+GRID_END = "# <<< AURORA_HOME_GRID"
+
+CARD_META = {
+    "climate": {"name": "Climate", "hint": "Outdoor temp + condition"},
+    "lights":  {"name": "Lights",  "hint": "Tap to control"},
+    "doors":   {"name": "Doors & Sensors", "hint": "Locks + presence"},
+    "quick":   {"name": "Quick",   "hint": "Rooms / Media / Network / Library"},
+}
+
+CARD_TEMPLATES = {
+    "climate": '''        - obj:
+            x: {X}
+            y: {Y}
+            width: 288
+            height: 218
+            styles: st_glass
+            scrollable: false
+            clickable: true
+            on_click: [lvgl.page.show: page_climate]
+            widgets:
+              - label: {{ text: "CLIMATE", x: 4, y: 2, text_font: f_small, text_color: 0x8A8F9E }}
+              - label: {{ id: lbl_home_temp_big, text: "--", x: 2, y: 46, text_font: f_display, text_color: 0xEEF0F6 }}
+              - label: {{ id: lbl_home_cond, text: "--", x: 4, y: 138, text_font: f_body, text_color: 0x2ED5B8 }}
+              - label: {{ text: "Outdoor", x: 4, y: 168, text_font: f_small, text_color: 0x8A8F9E }}
+''',
+    "lights": '''        - obj:
+            x: {X}
+            y: {Y}
+            width: 288
+            height: 218
+            styles: st_glass
+            scrollable: false
+            clickable: true
+            on_click: [lvgl.page.show: page_lights]
+            widgets:
+              - label: {{ text: "\\U000F0335", x: 8, y: 8, text_font: f_icon, text_color: 0xFFCE54 }}
+              - label: {{ text: "Lights", x: 50, y: 16, text_font: f_title, text_color: 0xEEF0F6 }}
+              - label: {{ text: "Tap to control", x: 8, y: 170, text_font: f_small, text_color: 0x8A8F9E }}
+''',
+    "doors": '''        - obj:
+            x: {X}
+            y: {Y}
+            width: 288
+            height: 218
+            styles: st_glass
+            scrollable: false
+            clickable: true
+            on_click: [lvgl.page.show: page_security]
+            widgets:
+              - label: {{ text: "DOORS & SENSORS", x: 4, y: 2, text_font: f_small, text_color: 0x8A8F9E }}
+              - label: {{ text: "Front Door", x: 4, y: 50, text_font: f_body, text_color: 0xEEF0F6 }}
+              - label: {{ id: lbl_home_lock_front, text: "--", x: -4, y: 50, align: top_right, text_font: f_body, text_color: 0x8A8F9E }}
+              - label: {{ text: "Back Door", x: 4, y: 92, text_font: f_body, text_color: 0xEEF0F6 }}
+              - label: {{ id: lbl_home_lock_back, text: "--", x: -4, y: 92, align: top_right, text_font: f_body, text_color: 0x8A8F9E }}
+              - label: {{ text: "Presence", x: 4, y: 134, text_font: f_body, text_color: 0xEEF0F6 }}
+              - label: {{ id: lbl_home_presence2, text: "--", x: -4, y: 134, align: top_right, text_font: f_body, text_color: 0x2ED5B8 }}
+''',
+    "quick": '''        - obj:
+            x: {X}
+            y: {Y}
+            width: 288
+            height: 218
+            styles: st_glass
+            pad_all: 12
+            scrollable: false
+            widgets:
+              - label: {{ text: "QUICK", x: 2, y: 0, text_font: f_small, text_color: 0x8A8F9E }}
+              - button:
+                  x: 0
+                  y: 30
+                  width: 122
+                  height: 62
+                  bg_color: 0x161B24
+                  scrollable: false
+                  widgets: [label: {{ text: "Rooms", align: center, text_font: f_body, text_color: 0xEEF0F6 }}]
+                  on_click: [lvgl.page.show: page_rooms]
+              - button:
+                  x: 132
+                  y: 30
+                  width: 122
+                  height: 62
+                  bg_color: 0x161B24
+                  scrollable: false
+                  widgets: [label: {{ text: "Media", align: center, text_font: f_body, text_color: 0xEEF0F6 }}]
+                  on_click: [lvgl.page.show: page_media]
+              - button:
+                  x: 0
+                  y: 102
+                  width: 122
+                  height: 62
+                  bg_color: 0x161B24
+                  scrollable: false
+                  widgets: [label: {{ text: "Network", align: center, text_font: f_body, text_color: 0xEEF0F6 }}]
+                  on_click: [lvgl.page.show: page_network]
+              - button:
+                  x: 132
+                  y: 102
+                  width: 122
+                  height: 62
+                  bg_color: 0x161B24
+                  scrollable: false
+                  widgets: [label: {{ text: "Library", align: center, text_font: f_body, text_color: 0xEEF0F6 }}]
+                  on_click: [lvgl.page.show: page_library]
+''',
+}
+
+
+def _card_type(block):
+    if "page_climate" in block: return "climate"
+    if "page_lights" in block: return "lights"
+    if "page_security" in block: return "doors"
+    return "quick"
+
+
+def read_home_layout():
+    text = open(YAML, encoding="utf-8").read()
+    region = text.split(GRID_START, 1)[1].split(GRID_END, 1)[0]
+    # split into obj blocks; map each to (cell-index, type) via its x/y
+    blocks = ["        - obj:" + b for b in region.split("        - obj:") if b.strip()]
+    layout = [None, None, None, None]
+    for b in blocks:
+        mx = re.search(r"x:\s*(\d+)", b)
+        my = re.search(r"y:\s*(\d+)", b)
+        if not (mx and my):
+            continue
+        pos = (int(mx.group(1)), int(my.group(1)))
+        if pos in HOME_CELLS:
+            layout[HOME_CELLS.index(pos)] = _card_type(b)
+    # default if anything missing
+    default = ["climate", "lights", "doors", "quick"]
+    return [layout[i] or default[i] for i in range(4)]
+
+
+def write_home_layout(order):
+    if sorted(order) != sorted(CARD_TEMPLATES):
+        raise ValueError("layout must use each of the 4 cards exactly once")
+    text = open(YAML, encoding="utf-8").read()
+    cards = "".join(CARD_TEMPLATES[order[i]].format(X=HOME_CELLS[i][0], Y=HOME_CELLS[i][1])
+                    for i in range(4))
+    head, rest = text.split(GRID_START, 1)
+    _, tail = rest.split(GRID_END, 1)
+    text = (head + GRID_START + " (generated by the configurator — do not hand-edit)\n"
+            + cards + "        " + GRID_END + tail)
+    open(YAML, "w", encoding="utf-8").write(text)
+    return order
+
+
 def ha_entities(url, token):
     req = urllib.request.Request(
         url.rstrip("/") + "/api/states",
@@ -136,6 +286,8 @@ class H(BaseHTTPRequestHandler):
             return self._send(200, PAGE, "text/html")
         if self.path == "/api/slots":
             return self._send(200, json.dumps(read_slots()))
+        if self.path == "/api/home":
+            return self._send(200, json.dumps({"order": read_home_layout(), "meta": CARD_META}))
         if self.path == "/api/flash-status":
             return self._send(200, json.dumps(FLASH))
         return self._send(404, "{}")
@@ -147,6 +299,8 @@ class H(BaseHTTPRequestHandler):
                 return self._send(200, json.dumps(ha_entities(d["url"], d["token"])))
             if self.path == "/api/save":
                 return self._send(200, json.dumps({"saved": write_bindings(d["bindings"])}))
+            if self.path == "/api/home":
+                return self._send(200, json.dumps({"order": write_home_layout(d["order"])}))
             if self.path == "/api/flash":
                 if not FLASH["running"]:
                     threading.Thread(target=flash_job, args=(d["device"],), daemon=True).start()
@@ -177,6 +331,12 @@ button.ghost{background:#10121a;color:var(--text);border:1px solid var(--hair)}
 pre{background:#06070a;border:1px solid var(--hair);border-radius:10px;padding:12px;max-height:240px;overflow:auto;font-size:12px;white-space:pre-wrap}
 .ok{color:var(--teal)}.err{color:#ff6b6b}.muted{color:var(--t2)}
 .grp{font-size:11px;letter-spacing:.08em;color:var(--purple);text-transform:uppercase;margin:16px 0 2px}
+.preview{background:#06070a;border:1px solid var(--hair);border-radius:14px;padding:14px;display:flex;gap:14px}
+.np{width:120px;flex:none;border-radius:12px;background:linear-gradient(135deg,#ff7a4d,#c0277a 55%,#6a2fb5);display:flex;align-items:flex-end;padding:10px;color:#fff;font-size:11px}
+.hgrid{flex:1;display:grid;grid-template-columns:1fr 1fr;grid-template-rows:1fr 1fr;gap:12px}
+.hcell{background:var(--card);border:1px solid var(--hair);border-radius:14px;padding:14px;min-height:96px;cursor:grab;transition:.12s}
+.hcell:hover{border-color:var(--teal)}.hcell.drag{opacity:.4}.hcell.over{border-color:var(--purple);background:#1a1d28}
+.hcell .n{font-weight:600}.hcell .h{color:var(--t2);font-size:12px;margin-top:4px}.hcell .d{color:var(--t2);font-size:11px;margin-top:8px}
 </style></head><body>
 <header><h1><span>Aurora</span> Configurator</h1><div class=sub>Point the panel at your Home Assistant — no code.</div></header>
 <main>
@@ -187,15 +347,27 @@ pre{background:#06070a;border:1px solid var(--hair);border-radius:10px;padding:1
 
 <div class=card id=slotcard style=display:none><h2>2 · Map entities</h2><div id=slots></div></div>
 
-<div class=card id=flashcard style=display:none><h2>3 · Save &amp; flash</h2>
+<div class=card><h2>3 · Home screen layout <span class=muted>(drag the cards to rearrange)</span></h2>
+<div class=preview><div class=np>Now&nbsp;Playing<br><small>(fixed)</small></div><div id=homegrid class=hgrid></div></div></div>
+
+<div class=card id=flashcard><h2>4 · Save &amp; flash</h2>
 <div class=row><div><label>Panel IP address</label><input id=device placeholder="10.0.0.174"></div><div></div></div>
 <div style="margin-top:12px" class=bar><button class=ghost onclick=save()>Save bindings</button><button onclick=flash()>Save &amp; flash panel</button><span id=fmsg class=muted></span></div>
 <pre id=flog style=display:none></pre></div>
 </main>
 <script>
-let SLOTS=[],ENTS=[];
+let SLOTS=[],ENTS=[],HORDER=[],HMETA={};
 async function j(u,o){const r=await fetch(u,o);if(!r.ok)throw new Error((await r.json()).error||r.status);return r.json()}
-async function boot(){SLOTS=await j('/api/slots')}
+async function boot(){SLOTS=await j('/api/slots');loadHome()}
+async function loadHome(){const r=await j('/api/home');HORDER=r.order;HMETA=r.meta;renderHome()}
+function renderHome(){homegrid.innerHTML=HORDER.map((k,i)=>`<div class=hcell draggable=true data-i="${i}"><div class=n>${HMETA[k].name}</div><div class=h>${HMETA[k].hint}</div><div class=d>cell ${i+1}</div></div>`).join('');
+ document.querySelectorAll('.hcell').forEach(c=>{
+  c.ondragstart=e=>{e.dataTransfer.setData('i',c.dataset.i);c.classList.add('drag')};
+  c.ondragend=()=>c.classList.remove('drag');
+  c.ondragover=e=>{e.preventDefault();c.classList.add('over')};
+  c.ondragleave=()=>c.classList.remove('over');
+  c.ondrop=e=>{e.preventDefault();c.classList.remove('over');const a=+e.dataTransfer.getData('i'),b=+c.dataset.i;[HORDER[a],HORDER[b]]=[HORDER[b],HORDER[a]];renderHome()}})}
+async function saveHome(){await j('/api/home',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({order:HORDER})})}
 async function connect(){
  const url=url_.value.trim(),token=token_.value.trim();cmsg.textContent='Loading…';cmsg.className='muted';
  try{ENTS=await j('/api/entities',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({url,token})});
@@ -207,7 +379,7 @@ function render(){let g='',h='';for(const s of SLOTS){if(s.group!=g){g=s.group;h
  slots.innerHTML=h}
 function bindings(){const b={};document.querySelectorAll('#slots select').forEach(x=>b[x.dataset.v]=x.value);return b}
 async function save(){fmsg.className='muted';fmsg.textContent='Saving…';try{const r=await j('/api/save',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({bindings:bindings()})});fmsg.textContent='Saved '+r.saved+' bindings ✓';fmsg.className='ok'}catch(e){fmsg.textContent=e.message;fmsg.className='err'}}
-async function flash(){await save();const device=device_.value.trim();if(!device){fmsg.textContent='Enter the panel IP';fmsg.className='err';return}
+async function flash(){await save();await saveHome();const device=device_.value.trim();if(!device){fmsg.textContent='Enter the panel IP';fmsg.className='err';return}
  flog.style.display='';flog.textContent='';fmsg.textContent='Building + flashing…';fmsg.className='muted';
  await j('/api/flash',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({device})});
  const t=setInterval(async()=>{const s=await j('/api/flash-status');flog.textContent=s.log;flog.scrollTop=flog.scrollHeight;
