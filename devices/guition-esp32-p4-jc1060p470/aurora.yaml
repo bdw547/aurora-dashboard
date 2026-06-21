@@ -82,6 +82,8 @@ esp32_hosted:
 wifi:
   ssid: !secret wifi_ssid
   password: !secret wifi_password
+  fast_connect: true
+  power_save_mode: none
 
 api:
   on_client_connected:
@@ -1511,7 +1513,7 @@ lvgl:
               - label: { text: "PLAYING", x: 36, y: 16, text_font: f_small, text_color: 0x2ED5B8 }
               - obj: { x: 26, y: 44, width: 248, height: 248, radius: 16, bg_color: 0x7B6CFF, border_width: 0, scrollable: false }
               - image: { id: lbl_home_art, src: art_big, x: 26, y: 44 }
-              - label: { id: lbl_home_np, text: "Nothing playing", x: 26, y: 302, width: 248, long_mode: dot, text_font: f_title, text_color: 0xEEF0F6 }
+              - label: { id: lbl_home_np, text: "Nothing playing", x: 26, y: 302, width: 248, long_mode: scroll_circular, text_font: f_title, text_color: 0xEEF0F6 }
               - label: { id: lbl_home_np_artist, text: "", x: 26, y: 334, width: 248, long_mode: dot, text_font: f_body, text_color: 0x8A8F9E }
               - button:
                   x: 50
@@ -1982,7 +1984,7 @@ lvgl:
             widgets:
               - obj: { x: 4, y: 4, width: 120, height: 120, radius: 16, bg_color: $c_purple, border_width: 0 }
               - image: { id: lbl_np_art, src: art_image, x: 4, y: 4 }
-              - label: { id: lbl_np_title, text: "Nothing playing", x: 138, y: 14, text_font: f_title, text_color: $c_text }
+              - label: { id: lbl_np_title, text: "Nothing playing", x: 138, y: 14, width: 286, long_mode: scroll_circular, text_font: f_title, text_color: $c_text }
               - label: { id: lbl_np_artist, text: "", x: 138, y: 50, text_font: f_body, text_color: $c_text2 }
               # progress
               - label: { id: lbl_pos, text: "0:00", x: 138, y: 86, text_font: f_small, text_color: $c_text2 }
