@@ -1892,7 +1892,7 @@ lvgl:
             bg_color: 0x161B24
             pad_all: 6
             widgets: [label: { text: "Dining Room", align: center, text_font: f_body, text_color: $c_text } ]
-            on_click: [homeassistant.action: { action: media_player.select_source, data: { entity_id: media_player.spotifyplus_ben_walton, source: "Dining Room" } } ]
+            on_click: [homeassistant.action: { action: spotifyplus.player_transfer_playback, data: { entity_id: media_player.spotifyplus_ben_walton, device_id: "Dining Room", play: "true" } } ]
         - button:
             id: src_btn_gameroom
             x: 786
@@ -1903,7 +1903,7 @@ lvgl:
             bg_color: 0x161B24
             pad_all: 6
             widgets: [label: { text: "Gameroom", align: center, text_font: f_body, text_color: $c_text } ]
-            on_click: [homeassistant.action: { action: media_player.select_source, data: { entity_id: media_player.spotifyplus_ben_walton, source: "Gameroom" } } ]
+            on_click: [homeassistant.action: { action: spotifyplus.player_transfer_playback, data: { entity_id: media_player.spotifyplus_ben_walton, device_id: "Gameroom", play: "true" } } ]
         - button:
             id: src_btn_johnwick
             x: 560
@@ -1914,7 +1914,7 @@ lvgl:
             bg_color: 0x161B24
             pad_all: 6
             widgets: [label: { text: "JOHN-WICK", align: center, text_font: f_body, text_color: $c_text } ]
-            on_click: [homeassistant.action: { action: media_player.select_source, data: { entity_id: media_player.spotifyplus_ben_walton, source: "JOHN-WICK" } } ]
+            on_click: [homeassistant.action: { action: spotifyplus.player_transfer_playback, data: { entity_id: media_player.spotifyplus_ben_walton, device_id: "JOHN-WICK", play: "true" } } ]
         - button:
             id: src_btn_kitchen
             x: 786
@@ -1925,7 +1925,7 @@ lvgl:
             bg_color: 0x161B24
             pad_all: 6
             widgets: [label: { text: "Kitchen", align: center, text_font: f_body, text_color: $c_text } ]
-            on_click: [homeassistant.action: { action: media_player.select_source, data: { entity_id: media_player.spotifyplus_ben_walton, source: "Kitchen" } } ]
+            on_click: [homeassistant.action: { action: spotifyplus.player_transfer_playback, data: { entity_id: media_player.spotifyplus_ben_walton, device_id: "Kitchen", play: "true" } } ]
         - button:
             id: src_btn_living
             x: 560
@@ -1936,7 +1936,7 @@ lvgl:
             bg_color: 0x161B24
             pad_all: 6
             widgets: [label: { text: "Living Room", align: center, text_font: f_body, text_color: $c_text } ]
-            on_click: [homeassistant.action: { action: media_player.select_source, data: { entity_id: media_player.spotifyplus_ben_walton, source: "Living Room" } } ]
+            on_click: [homeassistant.action: { action: spotifyplus.player_transfer_playback, data: { entity_id: media_player.spotifyplus_ben_walton, device_id: "Living Room", play: "true" } } ]
         - button:
             id: src_btn_office
             x: 786
@@ -1947,7 +1947,7 @@ lvgl:
             bg_color: 0x161B24
             pad_all: 6
             widgets: [label: { text: "Office", align: center, text_font: f_body, text_color: $c_text } ]
-            on_click: [homeassistant.action: { action: media_player.select_source, data: { entity_id: media_player.spotifyplus_ben_walton, source: "Office" } } ]
+            on_click: [homeassistant.action: { action: spotifyplus.player_transfer_playback, data: { entity_id: media_player.spotifyplus_ben_walton, device_id: "Office", play: "true" } } ]
         - button:
             id: src_btn_patio
             x: 560
@@ -1958,7 +1958,7 @@ lvgl:
             bg_color: 0x161B24
             pad_all: 6
             widgets: [label: { text: "Patio", align: center, text_font: f_body, text_color: $c_text } ]
-            on_click: [homeassistant.action: { action: media_player.select_source, data: { entity_id: media_player.spotifyplus_ben_walton, source: "Patio" } } ]
+            on_click: [homeassistant.action: { action: spotifyplus.player_transfer_playback, data: { entity_id: media_player.spotifyplus_ben_walton, device_id: "Patio", play: "true" } } ]
         - button:
             id: src_btn_roku
             x: 786
@@ -1969,7 +1969,7 @@ lvgl:
             bg_color: 0x161B24
             pad_all: 6
             widgets: [label: { text: "Roku Ultra", align: center, text_font: f_body, text_color: $c_text } ]
-            on_click: [homeassistant.action: { action: media_player.select_source, data: { entity_id: media_player.spotifyplus_ben_walton, source: "Roku Ultra" } } ]
+            on_click: [homeassistant.action: { action: spotifyplus.player_transfer_playback, data: { entity_id: media_player.spotifyplus_ben_walton, device_id: "Roku Ultra", play: "true" } } ]
 
     # ---------- SECURITY (locks + presence; real entities) ----------
     - id: page_security
