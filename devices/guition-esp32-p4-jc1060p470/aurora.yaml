@@ -2405,73 +2405,16 @@ lvgl:
                   auto_start: false
               - label: { text: "Ceiling Fan", x: 14, y: 86, text_font: f_body, text_color: 0xEEF0F6 }
             on_click: [homeassistant.action: { action: fan.toggle, data: { entity_id: fan.living_room_pendant } }]
-        # ---------- LG G3 OLED remote (moved from Media) ----------
-        # webOS TV remote (media_player.lg_g3_living_room_2)
-        - label: { text: "LG G3 OLED", x: 790, y: 70, text_font: f_small, text_color: $c_text2 }
         - button:
-            x: 880
-            y: 150
-            width: 60
-            height: 48
+            x: 596
+            y: 96
+            width: 232
+            height: 120
             styles: st_glass
-            widgets: [label: { text: "󰅃", align: center, text_font: f_icon, text_color: $c_text } ]
-            on_click: [homeassistant.action: { action: webostv.button, data: { entity_id: media_player.lg_g3_living_room_2, button: UP } } ]
-        - button:
-            x: 810
-            y: 206
-            width: 60
-            height: 48
-            styles: st_glass
-            widgets: [label: { text: "󰅁", align: center, text_font: f_icon, text_color: $c_text } ]
-            on_click: [homeassistant.action: { action: webostv.button, data: { entity_id: media_player.lg_g3_living_room_2, button: LEFT } } ]
-        - button:
-            x: 880
-            y: 206
-            width: 60
-            height: 48
-            bg_color: $c_teal
-            widgets: [label: { text: "OK", align: center, text_font: f_body, text_color: $c_bg } ]
-            on_click: [homeassistant.action: { action: webostv.button, data: { entity_id: media_player.lg_g3_living_room_2, button: ENTER } } ]
-        - button:
-            x: 950
-            y: 206
-            width: 60
-            height: 48
-            styles: st_glass
-            widgets: [label: { text: "󰅂", align: center, text_font: f_icon, text_color: $c_text } ]
-            on_click: [homeassistant.action: { action: webostv.button, data: { entity_id: media_player.lg_g3_living_room_2, button: RIGHT } } ]
-        - button:
-            x: 880
-            y: 262
-            width: 60
-            height: 48
-            styles: st_glass
-            widgets: [label: { text: "󰅀", align: center, text_font: f_icon, text_color: $c_text } ]
-            on_click: [homeassistant.action: { action: webostv.button, data: { entity_id: media_player.lg_g3_living_room_2, button: DOWN } } ]
-        - button:
-            x: 810
-            y: 330
-            width: 90
-            height: 44
-            styles: st_glass
-            widgets: [label: { text: "VOL -", align: center, text_font: f_body, text_color: $c_text } ]
-            on_click: [homeassistant.action: { action: media_player.volume_down, data: { entity_id: media_player.lg_g3_living_room_2 } } ]
-        - button:
-            x: 920
-            y: 330
-            width: 90
-            height: 44
-            styles: st_glass
-            widgets: [label: { text: "VOL +", align: center, text_font: f_body, text_color: $c_text } ]
-            on_click: [homeassistant.action: { action: media_player.volume_up, data: { entity_id: media_player.lg_g3_living_room_2 } } ]
-        - button:
-            x: 810
-            y: 384
-            width: 200
-            height: 44
-            styles: st_glass
-            widgets: [label: { text: "Netflix", align: center, text_font: f_body, text_color: $c_text } ]
-            on_click: [homeassistant.action: { action: media_player.select_source, data: { entity_id: media_player.lg_g3_living_room_2, source: "Netflix" } } ]
+            widgets:
+              - label: { text: "󰔂", align: top_mid, y: 16, text_font: f_icon, text_color: 0x2ED5B8 }
+              - label: { text: "TV Remote", align: bottom_mid, y: -16, text_font: f_body, text_color: 0xEEF0F6 }
+            on_click: [lvgl.page.show: page_tvremote]
 
     - id: page_room_kitchen
       bg_opa: 0
@@ -3952,3 +3895,210 @@ lvgl:
                   x: -8
                   on_value:
                     - lambda: 'id(g_screensaver) = x;'
+
+    - id: page_tvremote
+      bg_opa: 0
+      on_load:
+        - lvgl.widget.update: { id: nav_home, bg_color: 0x10121A }
+        - lvgl.widget.update: { id: nav_rooms, bg_color: 0x2ED5B8 }
+        - lvgl.widget.update: { id: nav_lights, bg_color: 0x10121A }
+        - lvgl.widget.update: { id: nav_climate, bg_color: 0x10121A }
+        - lvgl.widget.update: { id: nav_media, bg_color: 0x10121A }
+        - lvgl.widget.update: { id: nav_security, bg_color: 0x10121A }
+        - lvgl.widget.update: { id: nav_network, bg_color: 0x10121A }
+        - lvgl.widget.update: { id: nav_settings, bg_color: 0x10121A }
+      widgets:
+        - image: { src: img_aurora_bg, x: 0, y: 0 }
+        - label: { text: "LG G3 OLED Remote", x: 100, y: 26, text_font: f_title, text_color: 0xEEF0F6 }
+        - button:
+            x: 880
+            y: 24
+            width: 124
+            height: 44
+            styles: st_glass
+            widgets: [label: { text: "Back", align: center, text_font: f_small, text_color: 0xEEF0F6 }]
+            on_click: [lvgl.page.show: page_room_living]
+        - button:
+            x: 120
+            y: 100
+            width: 150
+            height: 56
+            styles: st_glass
+            widgets: [label: { text: "Power", align: center, text_font: f_body, text_color: 0xFF9F6B }]
+            on_click: [homeassistant.action: { action: media_player.toggle, data: { entity_id: media_player.lg_g3_living_room_2 } } ]
+        - button:
+            x: 120
+            y: 164
+            width: 150
+            height: 56
+            styles: st_glass
+            widgets: [label: { text: "Home", align: center, text_font: f_body, text_color: 0xEEF0F6 }]
+            on_click: [homeassistant.action: { action: webostv.button, data: { entity_id: media_player.lg_g3_living_room_2, button: HOME } } ]
+        - button:
+            x: 120
+            y: 228
+            width: 150
+            height: 56
+            styles: st_glass
+            widgets: [label: { text: "Back", align: center, text_font: f_body, text_color: 0xEEF0F6 }]
+            on_click: [homeassistant.action: { action: webostv.button, data: { entity_id: media_player.lg_g3_living_room_2, button: BACK } } ]
+        - button:
+            x: 120
+            y: 292
+            width: 150
+            height: 56
+            styles: st_glass
+            widgets: [label: { text: "Exit", align: center, text_font: f_body, text_color: 0xEEF0F6 }]
+            on_click: [homeassistant.action: { action: webostv.button, data: { entity_id: media_player.lg_g3_living_room_2, button: EXIT } } ]
+        - button:
+            x: 120
+            y: 356
+            width: 150
+            height: 56
+            styles: st_glass
+            widgets: [label: { text: "Menu", align: center, text_font: f_body, text_color: 0xEEF0F6 }]
+            on_click: [homeassistant.action: { action: webostv.button, data: { entity_id: media_player.lg_g3_living_room_2, button: MENU } } ]
+        - button:
+            x: 120
+            y: 420
+            width: 150
+            height: 56
+            styles: st_glass
+            widgets: [label: { text: "Info", align: center, text_font: f_body, text_color: 0xEEF0F6 }]
+            on_click: [homeassistant.action: { action: webostv.button, data: { entity_id: media_player.lg_g3_living_room_2, button: INFO } } ]
+        - button:
+            x: 476
+            y: 110
+            width: 84
+            height: 84
+            styles: st_glass
+            widgets: [label: { text: "󰅃", align: center, text_font: f_icon, text_color: 0xEEF0F6 }]
+            on_click: [homeassistant.action: { action: webostv.button, data: { entity_id: media_player.lg_g3_living_room_2, button: UP } } ]
+        - button:
+            x: 382
+            y: 200
+            width: 84
+            height: 84
+            styles: st_glass
+            widgets: [label: { text: "󰅁", align: center, text_font: f_icon, text_color: 0xEEF0F6 }]
+            on_click: [homeassistant.action: { action: webostv.button, data: { entity_id: media_player.lg_g3_living_room_2, button: LEFT } } ]
+        - button:
+            x: 476
+            y: 200
+            width: 84
+            height: 84
+            bg_color: 0x2ED5B8
+            widgets: [label: { text: "OK", align: center, text_font: f_body, text_color: 0x08090D }]
+            on_click: [homeassistant.action: { action: webostv.button, data: { entity_id: media_player.lg_g3_living_room_2, button: ENTER } } ]
+        - button:
+            x: 570
+            y: 200
+            width: 84
+            height: 84
+            styles: st_glass
+            widgets: [label: { text: "󰅂", align: center, text_font: f_icon, text_color: 0xEEF0F6 }]
+            on_click: [homeassistant.action: { action: webostv.button, data: { entity_id: media_player.lg_g3_living_room_2, button: RIGHT } } ]
+        - button:
+            x: 476
+            y: 290
+            width: 84
+            height: 84
+            styles: st_glass
+            widgets: [label: { text: "󰅀", align: center, text_font: f_icon, text_color: 0xEEF0F6 }]
+            on_click: [homeassistant.action: { action: webostv.button, data: { entity_id: media_player.lg_g3_living_room_2, button: DOWN } } ]
+        - button:
+            x: 382
+            y: 392
+            width: 70
+            height: 54
+            styles: st_glass
+            widgets: [label: { text: "REW", align: center, text_font: f_small, text_color: 0xEEF0F6 }]
+            on_click: [homeassistant.action: { action: webostv.button, data: { entity_id: media_player.lg_g3_living_room_2, button: REWIND } } ]
+        - button:
+            x: 458
+            y: 392
+            width: 70
+            height: 54
+            styles: st_glass
+            widgets: [label: { text: "PLAY", align: center, text_font: f_small, text_color: 0xEEF0F6 }]
+            on_click: [homeassistant.action: { action: webostv.button, data: { entity_id: media_player.lg_g3_living_room_2, button: PLAY } } ]
+        - button:
+            x: 534
+            y: 392
+            width: 70
+            height: 54
+            styles: st_glass
+            widgets: [label: { text: "PAUSE", align: center, text_font: f_small, text_color: 0xEEF0F6 }]
+            on_click: [homeassistant.action: { action: webostv.button, data: { entity_id: media_player.lg_g3_living_room_2, button: PAUSE } } ]
+        - button:
+            x: 610
+            y: 392
+            width: 70
+            height: 54
+            styles: st_glass
+            widgets: [label: { text: "STOP", align: center, text_font: f_small, text_color: 0xEEF0F6 }]
+            on_click: [homeassistant.action: { action: webostv.button, data: { entity_id: media_player.lg_g3_living_room_2, button: STOP } } ]
+        - button:
+            x: 686
+            y: 392
+            width: 70
+            height: 54
+            styles: st_glass
+            widgets: [label: { text: "FF", align: center, text_font: f_small, text_color: 0xEEF0F6 }]
+            on_click: [homeassistant.action: { action: webostv.button, data: { entity_id: media_player.lg_g3_living_room_2, button: FASTFORWARD } } ]
+        - button:
+            x: 382
+            y: 456
+            width: 180
+            height: 54
+            styles: st_glass
+            widgets: [label: { text: "Netflix", align: center, text_font: f_body, text_color: 0xEEF0F6 }]
+            on_click: [homeassistant.action: { action: media_player.select_source, data: { entity_id: media_player.lg_g3_living_room_2, source: "Netflix" } } ]
+        - button:
+            x: 576
+            y: 456
+            width: 180
+            height: 54
+            styles: st_glass
+            widgets: [label: { text: "YouTube", align: center, text_font: f_body, text_color: 0xEEF0F6 }]
+            on_click: [homeassistant.action: { action: media_player.select_source, data: { entity_id: media_player.lg_g3_living_room_2, source: "YouTube" } } ]
+        - button:
+            x: 812
+            y: 110
+            width: 172
+            height: 56
+            styles: st_glass
+            widgets: [label: { text: "VOL +", align: center, text_font: f_body, text_color: 0xEEF0F6 }]
+            on_click: [homeassistant.action: { action: webostv.button, data: { entity_id: media_player.lg_g3_living_room_2, button: VOLUMEUP } } ]
+        - button:
+            x: 812
+            y: 174
+            width: 172
+            height: 56
+            styles: st_glass
+            widgets: [label: { text: "MUTE", align: center, text_font: f_body, text_color: 0xEEF0F6 }]
+            on_click: [homeassistant.action: { action: webostv.button, data: { entity_id: media_player.lg_g3_living_room_2, button: MUTE } } ]
+        - button:
+            x: 812
+            y: 238
+            width: 172
+            height: 56
+            styles: st_glass
+            widgets: [label: { text: "VOL -", align: center, text_font: f_body, text_color: 0xEEF0F6 }]
+            on_click: [homeassistant.action: { action: webostv.button, data: { entity_id: media_player.lg_g3_living_room_2, button: VOLUMEDOWN } } ]
+        - button:
+            x: 812
+            y: 318
+            width: 172
+            height: 56
+            styles: st_glass
+            widgets: [label: { text: "CH +", align: center, text_font: f_body, text_color: 0xEEF0F6 }]
+            on_click: [homeassistant.action: { action: webostv.button, data: { entity_id: media_player.lg_g3_living_room_2, button: CHANNELUP } } ]
+        - button:
+            x: 812
+            y: 382
+            width: 172
+            height: 56
+            styles: st_glass
+            widgets: [label: { text: "CH -", align: center, text_font: f_body, text_color: 0xEEF0F6 }]
+            on_click: [homeassistant.action: { action: webostv.button, data: { entity_id: media_player.lg_g3_living_room_2, button: CHANNELDOWN } } ]
