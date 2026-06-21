@@ -17,11 +17,15 @@ import json
 import os
 import re
 import subprocess
+import sys
 import threading
 import urllib.request
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 
 HERE = os.path.dirname(os.path.abspath(__file__))
+# Prefer the esphome from the same venv that launched us; fall back to PATH.
+_VENV_ESPHOME = os.path.join(os.path.dirname(sys.executable), "esphome")
+ESPHOME = _VENV_ESPHOME if os.path.exists(_VENV_ESPHOME) else "esphome"
 YAML = os.path.normpath(os.path.join(
     HERE, "..", "..", "devices", "guition-esp32-p4-jc1060p470", "aurora.yaml"))
 PORT = 8765
@@ -99,7 +103,7 @@ def flash_job(device):
     FLASH.update(running=True, log="", done=False, ok=False)
     try:
         proc = subprocess.Popen(
-            ["esphome", "run", YAML, "--device", device, "--no-logs"],
+            [ESPHOME, "run", YAML, "--device", device, "--no-logs"],
             stdout=subprocess.PIPE, stderr=subprocess.STDOUT, text=True,
             cwd=os.path.join(HERE, "..", ".."))
         for line in proc.stdout:
@@ -177,7 +181,7 @@ pre{background:#06070a;border:1px solid var(--hair);border-radius:10px;padding:1
 <header><h1><span>Aurora</span> Configurator</h1><div class=sub>Point the panel at your Home Assistant — no code.</div></header>
 <main>
 <div class=card><h2>1 · Connect to Home Assistant</h2>
-<div class=row><div><label>HA URL</label><input id=url placeholder="http://homeassistant.local:8123"></div>
+<div class=row><div><label>HA URL <span class=muted>(use the IP, not .local)</span></label><input id=url placeholder="http://10.0.0.50:8123"></div>
 <div><label>Long-lived access token <span class=muted>(HA → profile → bottom)</span></label><input id=token type=password placeholder="paste token"></div></div>
 <div style="margin-top:12px" class=bar><button onclick=connect()>Load my entities</button><span id=cmsg class=muted></span></div></div>
 

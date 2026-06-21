@@ -2,16 +2,10 @@
   "version": "0.0.1",
   "configurations": [
     {
-      "name": "docs-dev",
-      "runtimeExecutable": "npm",
-      "runtimeArgs": ["run", "docs:dev"],
-      "port": 5173
-    },
-    {
-      "name": "docs-preview",
-      "runtimeExecutable": "npm",
-      "runtimeArgs": ["run", "docs:preview"],
-      "port": 4173
+      "name": "aurora-configurator",
+      "runtimeExecutable": ".venv/bin/python3",
+      "runtimeArgs": ["aurora-build/configurator/serve.py"],
+      "port": 8765
     }
   ]
 }
