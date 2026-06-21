@@ -20,6 +20,27 @@ substitutions:
   c_teal: "0x2ED5B8"
   c_purple: "0x7B6CFF"
   c_warn: "0xFF9F6B"
+  # --- Entity bindings (edit these to point Aurora at your Home Assistant) ---
+  ent_light_living: "light.living_room_main"
+  ent_light_kitchen: "light.kitchen_kitchen"
+  ent_light_dining: "light.dining_room_chandelier"
+  ent_light_office_shelves: "light.office_shelves"
+  ent_light_office_main: "light.office_main_lights"
+  ent_light_office_desk: "light.office_desk_lamp"
+  ent_light_reading: "light.reading_lamp"
+  ent_light_master: "light.master_bedroom_ceiling_fan_light"
+  ent_light_patio: "light.outdoor_patio_back_porch_lights"
+  ent_fan_living: "fan.living_room_pendant"
+  ent_fan_office: "fan.office_ceiling_fan"
+  ent_switch_putting_green: "switch.outdoor_patio_putting_green"
+  ent_lock_front: "lock.front_door"
+  ent_lock_back: "lock.back_door"
+  ent_media_spotify: "media_player.spotifyplus_ben_walton"
+  ent_media_tv: "media_player.lg_g3_living_room_2"
+  ent_person: "person.ben"
+  ent_weather: "weather.forecast_home"
+  ent_nas_status: "sensor.walton_synology_volume_1_status"
+  ent_nas_used: "sensor.walton_synology_volume_1_volume_used"
 
 esphome:
   name: ${name}
@@ -313,7 +334,7 @@ font:
 sensor:
   - platform: homeassistant
     id: ha_media_volume
-    entity_id: media_player.spotifyplus_ben_walton
+    entity_id: $ent_media_spotify
     attribute: volume_level
     on_value:
       then:
@@ -322,7 +343,7 @@ sensor:
             value: !lambda 'return x * 100.0f;'
   - platform: homeassistant
     id: ha_media_position
-    entity_id: media_player.spotifyplus_ben_walton
+    entity_id: $ent_media_spotify
     attribute: media_position
     on_value:
       then:
@@ -330,7 +351,7 @@ sensor:
         - script.execute: np_update
   - platform: homeassistant
     id: ha_media_duration
-    entity_id: media_player.spotifyplus_ben_walton
+    entity_id: $ent_media_spotify
     attribute: media_duration
     on_value:
       then:
@@ -339,7 +360,7 @@ sensor:
 
   - platform: homeassistant
     id: ha_outdoor_temp
-    entity_id: weather.forecast_home
+    entity_id: $ent_weather
     attribute: temperature
     on_value:
       then:
@@ -357,7 +378,7 @@ sensor:
               char b[16]; snprintf(b, sizeof(b), "%.0f°", x); return std::string(b);
   - platform: homeassistant
     id: ha_outdoor_humidity
-    entity_id: weather.forecast_home
+    entity_id: $ent_weather
     attribute: humidity
     on_value:
       then:
@@ -367,7 +388,7 @@ sensor:
               char b[16]; snprintf(b, sizeof(b), "%.0f%%", x); return std::string(b);
   - platform: homeassistant
     id: ha_outdoor_wind
-    entity_id: weather.forecast_home
+    entity_id: $ent_weather
     attribute: wind_speed
     on_value:
       then:
@@ -386,7 +407,7 @@ sensor:
               char b[16]; snprintf(b, sizeof(b), "%.0f dBm", x); return std::string(b);
   - platform: homeassistant
     id: ha_nas_used
-    entity_id: sensor.walton_synology_volume_1_volume_used
+    entity_id: $ent_nas_used
     on_value:
       then:
         - lvgl.label.update:
@@ -396,151 +417,151 @@ sensor:
 
   - platform: homeassistant
     id: ha_bri_living_room_main
-    entity_id: light.living_room_main
+    entity_id: $ent_light_living
     attribute: brightness
     on_value:
       then:
-        - lambda: 'id(light_bri)["light.living_room_main"] = ((x == x) ? (int) roundf(x / 2.55f) : 0);'
+        - lambda: 'id(light_bri)["$ent_light_living"] = ((x == x) ? (int) roundf(x / 2.55f) : 0);'
         - if:
             condition:
-              lambda: 'return id(sel_light) == "light.living_room_main";'
+              lambda: 'return id(sel_light) == "$ent_light_living";'
             then:
               - lvgl.arc.update:
                   id: arc_brightness
-                  value: !lambda 'return id(light_bri)["light.living_room_main"];'
+                  value: !lambda 'return id(light_bri)["$ent_light_living"];'
               - lvgl.label.update:
                   id: lbl_bri_pct
                   text: !lambda |-
-                    char b[8]; snprintf(b, sizeof(b), "%d%%", id(light_bri)["light.living_room_main"]); return std::string(b);
+                    char b[8]; snprintf(b, sizeof(b), "%d%%", id(light_bri)["$ent_light_living"]); return std::string(b);
   - platform: homeassistant
     id: ha_bri_office_shelves
-    entity_id: light.office_shelves
+    entity_id: $ent_light_office_shelves
     attribute: brightness
     on_value:
       then:
-        - lambda: 'id(light_bri)["light.office_shelves"] = ((x == x) ? (int) roundf(x / 2.55f) : 0);'
+        - lambda: 'id(light_bri)["$ent_light_office_shelves"] = ((x == x) ? (int) roundf(x / 2.55f) : 0);'
         - if:
             condition:
-              lambda: 'return id(sel_light) == "light.office_shelves";'
+              lambda: 'return id(sel_light) == "$ent_light_office_shelves";'
             then:
               - lvgl.arc.update:
                   id: arc_brightness
-                  value: !lambda 'return id(light_bri)["light.office_shelves"];'
+                  value: !lambda 'return id(light_bri)["$ent_light_office_shelves"];'
               - lvgl.label.update:
                   id: lbl_bri_pct
                   text: !lambda |-
-                    char b[8]; snprintf(b, sizeof(b), "%d%%", id(light_bri)["light.office_shelves"]); return std::string(b);
+                    char b[8]; snprintf(b, sizeof(b), "%d%%", id(light_bri)["$ent_light_office_shelves"]); return std::string(b);
   - platform: homeassistant
     id: ha_bri_kitchen_kitchen
-    entity_id: light.kitchen_kitchen
+    entity_id: $ent_light_kitchen
     attribute: brightness
     on_value:
       then:
-        - lambda: 'id(light_bri)["light.kitchen_kitchen"] = ((x == x) ? (int) roundf(x / 2.55f) : 0);'
+        - lambda: 'id(light_bri)["$ent_light_kitchen"] = ((x == x) ? (int) roundf(x / 2.55f) : 0);'
         - if:
             condition:
-              lambda: 'return id(sel_light) == "light.kitchen_kitchen";'
+              lambda: 'return id(sel_light) == "$ent_light_kitchen";'
             then:
               - lvgl.arc.update:
                   id: arc_brightness
-                  value: !lambda 'return id(light_bri)["light.kitchen_kitchen"];'
+                  value: !lambda 'return id(light_bri)["$ent_light_kitchen"];'
               - lvgl.label.update:
                   id: lbl_bri_pct
                   text: !lambda |-
-                    char b[8]; snprintf(b, sizeof(b), "%d%%", id(light_bri)["light.kitchen_kitchen"]); return std::string(b);
+                    char b[8]; snprintf(b, sizeof(b), "%d%%", id(light_bri)["$ent_light_kitchen"]); return std::string(b);
   - platform: homeassistant
     id: ha_bri_reading_lamp
-    entity_id: light.reading_lamp
+    entity_id: $ent_light_reading
     attribute: brightness
     on_value:
       then:
-        - lambda: 'id(light_bri)["light.reading_lamp"] = ((x == x) ? (int) roundf(x / 2.55f) : 0);'
+        - lambda: 'id(light_bri)["$ent_light_reading"] = ((x == x) ? (int) roundf(x / 2.55f) : 0);'
         - if:
             condition:
-              lambda: 'return id(sel_light) == "light.reading_lamp";'
+              lambda: 'return id(sel_light) == "$ent_light_reading";'
             then:
               - lvgl.arc.update:
                   id: arc_brightness
-                  value: !lambda 'return id(light_bri)["light.reading_lamp"];'
+                  value: !lambda 'return id(light_bri)["$ent_light_reading"];'
               - lvgl.label.update:
                   id: lbl_bri_pct
                   text: !lambda |-
-                    char b[8]; snprintf(b, sizeof(b), "%d%%", id(light_bri)["light.reading_lamp"]); return std::string(b);
+                    char b[8]; snprintf(b, sizeof(b), "%d%%", id(light_bri)["$ent_light_reading"]); return std::string(b);
   - platform: homeassistant
     id: ha_bri_outdoor_patio_back_porch_lights
-    entity_id: light.outdoor_patio_back_porch_lights
+    entity_id: $ent_light_patio
     attribute: brightness
     on_value:
       then:
-        - lambda: 'id(light_bri)["light.outdoor_patio_back_porch_lights"] = ((x == x) ? (int) roundf(x / 2.55f) : 0);'
+        - lambda: 'id(light_bri)["$ent_light_patio"] = ((x == x) ? (int) roundf(x / 2.55f) : 0);'
         - if:
             condition:
-              lambda: 'return id(sel_light) == "light.outdoor_patio_back_porch_lights";'
+              lambda: 'return id(sel_light) == "$ent_light_patio";'
             then:
               - lvgl.arc.update:
                   id: arc_brightness
-                  value: !lambda 'return id(light_bri)["light.outdoor_patio_back_porch_lights"];'
+                  value: !lambda 'return id(light_bri)["$ent_light_patio"];'
               - lvgl.label.update:
                   id: lbl_bri_pct
                   text: !lambda |-
-                    char b[8]; snprintf(b, sizeof(b), "%d%%", id(light_bri)["light.outdoor_patio_back_porch_lights"]); return std::string(b);
+                    char b[8]; snprintf(b, sizeof(b), "%d%%", id(light_bri)["$ent_light_patio"]); return std::string(b);
   - platform: homeassistant
     id: ha_bri_office_main_lights
-    entity_id: light.office_main_lights
+    entity_id: $ent_light_office_main
     attribute: brightness
     on_value:
       then:
-        - lambda: 'id(light_bri)["light.office_main_lights"] = ((x == x) ? (int) roundf(x / 2.55f) : 0);'
+        - lambda: 'id(light_bri)["$ent_light_office_main"] = ((x == x) ? (int) roundf(x / 2.55f) : 0);'
         - if:
             condition:
-              lambda: 'return id(sel_light) == "light.office_main_lights";'
+              lambda: 'return id(sel_light) == "$ent_light_office_main";'
             then:
               - lvgl.arc.update:
                   id: arc_brightness
-                  value: !lambda 'return id(light_bri)["light.office_main_lights"];'
+                  value: !lambda 'return id(light_bri)["$ent_light_office_main"];'
               - lvgl.label.update:
                   id: lbl_bri_pct
                   text: !lambda |-
-                    char b[8]; snprintf(b, sizeof(b), "%d%%", id(light_bri)["light.office_main_lights"]); return std::string(b);
+                    char b[8]; snprintf(b, sizeof(b), "%d%%", id(light_bri)["$ent_light_office_main"]); return std::string(b);
   - platform: homeassistant
     id: ha_bri_dining_room_chandelier
-    entity_id: light.dining_room_chandelier
+    entity_id: $ent_light_dining
     attribute: brightness
     on_value:
       then:
-        - lambda: 'id(light_bri)["light.dining_room_chandelier"] = ((x == x) ? (int) roundf(x / 2.55f) : 0);'
+        - lambda: 'id(light_bri)["$ent_light_dining"] = ((x == x) ? (int) roundf(x / 2.55f) : 0);'
         - if:
             condition:
-              lambda: 'return id(sel_light) == "light.dining_room_chandelier";'
+              lambda: 'return id(sel_light) == "$ent_light_dining";'
             then:
               - lvgl.arc.update:
                   id: arc_brightness
-                  value: !lambda 'return id(light_bri)["light.dining_room_chandelier"];'
+                  value: !lambda 'return id(light_bri)["$ent_light_dining"];'
               - lvgl.label.update:
                   id: lbl_bri_pct
                   text: !lambda |-
-                    char b[8]; snprintf(b, sizeof(b), "%d%%", id(light_bri)["light.dining_room_chandelier"]); return std::string(b);
+                    char b[8]; snprintf(b, sizeof(b), "%d%%", id(light_bri)["$ent_light_dining"]); return std::string(b);
   - platform: homeassistant
     id: ha_bri_master_bedroom_ceiling_fan_light
-    entity_id: light.master_bedroom_ceiling_fan_light
+    entity_id: $ent_light_master
     attribute: brightness
     on_value:
       then:
-        - lambda: 'id(light_bri)["light.master_bedroom_ceiling_fan_light"] = ((x == x) ? (int) roundf(x / 2.55f) : 0);'
+        - lambda: 'id(light_bri)["$ent_light_master"] = ((x == x) ? (int) roundf(x / 2.55f) : 0);'
         - if:
             condition:
-              lambda: 'return id(sel_light) == "light.master_bedroom_ceiling_fan_light";'
+              lambda: 'return id(sel_light) == "$ent_light_master";'
             then:
               - lvgl.arc.update:
                   id: arc_brightness
-                  value: !lambda 'return id(light_bri)["light.master_bedroom_ceiling_fan_light"];'
+                  value: !lambda 'return id(light_bri)["$ent_light_master"];'
               - lvgl.label.update:
                   id: lbl_bri_pct
                   text: !lambda |-
-                    char b[8]; snprintf(b, sizeof(b), "%d%%", id(light_bri)["light.master_bedroom_ceiling_fan_light"]); return std::string(b);
+                    char b[8]; snprintf(b, sizeof(b), "%d%%", id(light_bri)["$ent_light_master"]); return std::string(b);
   - platform: homeassistant
     id: ha_roombri_light_living_room_main
-    entity_id: light.living_room_main
+    entity_id: $ent_light_living
     attribute: brightness
     on_value:
       then:
@@ -549,7 +570,7 @@ sensor:
             value: !lambda 'return (x == x) ? (int) roundf(x / 2.55f) : 0;'
   - platform: homeassistant
     id: ha_roombri_light_kitchen_kitchen
-    entity_id: light.kitchen_kitchen
+    entity_id: $ent_light_kitchen
     attribute: brightness
     on_value:
       then:
@@ -558,7 +579,7 @@ sensor:
             value: !lambda 'return (x == x) ? (int) roundf(x / 2.55f) : 0;'
   - platform: homeassistant
     id: ha_roombri_light_office_shelves
-    entity_id: light.office_shelves
+    entity_id: $ent_light_office_shelves
     attribute: brightness
     on_value:
       then:
@@ -567,7 +588,7 @@ sensor:
             value: !lambda 'return (x == x) ? (int) roundf(x / 2.55f) : 0;'
   - platform: homeassistant
     id: ha_roombri_light_office_main_lights
-    entity_id: light.office_main_lights
+    entity_id: $ent_light_office_main
     attribute: brightness
     on_value:
       then:
@@ -576,7 +597,7 @@ sensor:
             value: !lambda 'return (x == x) ? (int) roundf(x / 2.55f) : 0;'
   - platform: homeassistant
     id: ha_roombri_light_office_desk_lamp
-    entity_id: light.office_desk_lamp
+    entity_id: $ent_light_office_desk
     attribute: brightness
     on_value:
       then:
@@ -585,7 +606,7 @@ sensor:
             value: !lambda 'return (x == x) ? (int) roundf(x / 2.55f) : 0;'
   - platform: homeassistant
     id: ha_roombri_light_reading_lamp
-    entity_id: light.reading_lamp
+    entity_id: $ent_light_reading
     attribute: brightness
     on_value:
       then:
@@ -594,7 +615,7 @@ sensor:
             value: !lambda 'return (x == x) ? (int) roundf(x / 2.55f) : 0;'
   - platform: homeassistant
     id: ha_roombri_light_master_bedroom_ceiling_fan_light
-    entity_id: light.master_bedroom_ceiling_fan_light
+    entity_id: $ent_light_master
     attribute: brightness
     on_value:
       then:
@@ -603,7 +624,7 @@ sensor:
             value: !lambda 'return (x == x) ? (int) roundf(x / 2.55f) : 0;'
   - platform: homeassistant
     id: ha_roombri_light_outdoor_patio_back_porch_lights
-    entity_id: light.outdoor_patio_back_porch_lights
+    entity_id: $ent_light_patio
     attribute: brightness
     on_value:
       then:
@@ -613,7 +634,7 @@ sensor:
 text_sensor:
   - platform: homeassistant
     id: ha_outdoor_condition
-    entity_id: weather.forecast_home
+    entity_id: $ent_weather
     on_value:
       then:
         - lvgl.label.update:
@@ -632,7 +653,7 @@ text_sensor:
               return r;
   - platform: homeassistant
     id: ha_spotify_source
-    entity_id: media_player.spotifyplus_ben_walton
+    entity_id: $ent_media_spotify
     attribute: source
     on_value:
       then:
@@ -685,7 +706,7 @@ text_sensor:
         - script.execute: hl_tracks
   - platform: homeassistant
     id: ha_media_state
-    entity_id: media_player.spotifyplus_ben_walton
+    entity_id: $ent_media_spotify
     on_value:
       then:
         - lambda: 'id(np_playing) = (x == std::string("playing"));'
@@ -701,7 +722,7 @@ text_sensor:
         - script.execute: np_update
   - platform: homeassistant
     id: ha_media_title
-    entity_id: media_player.spotifyplus_ben_walton
+    entity_id: $ent_media_spotify
     attribute: media_title
     on_value:
       then:
@@ -709,7 +730,7 @@ text_sensor:
         - lvgl.label.update: { id: lbl_home_np, text: !lambda 'return x.empty() ? std::string("Nothing playing") : x;' }
   - platform: homeassistant
     id: ha_media_artist
-    entity_id: media_player.spotifyplus_ben_walton
+    entity_id: $ent_media_spotify
     attribute: media_artist
     on_value:
       then:
@@ -717,7 +738,7 @@ text_sensor:
         - lvgl.label.update: { id: lbl_home_np_artist, text: !lambda 'return x;' }
   - platform: homeassistant
     id: ha_art_url
-    entity_id: media_player.spotifyplus_ben_walton
+    entity_id: $ent_media_spotify
     attribute: sp_nowplaying_image_url
     on_value:
       then:
@@ -734,7 +755,7 @@ text_sensor:
         - component.update: art_big
   - platform: homeassistant
     id: ha_presence
-    entity_id: person.ben
+    entity_id: $ent_person
     on_value:
       then:
         - lvgl.label.update:
@@ -775,20 +796,20 @@ text_sensor:
 
   - platform: homeassistant
     id: ha_nas_status
-    entity_id: sensor.walton_synology_volume_1_status
+    entity_id: $ent_nas_status
     on_value:
       then:
         - lvgl.label.update: { id: lbl_nas_status, text: !lambda 'return x;' }
 
   - platform: homeassistant
     id: ha_st_living_room_main
-    entity_id: light.living_room_main
+    entity_id: $ent_light_living
     on_value:
       then:
-        - lambda: 'id(light_on)["light.living_room_main"] = (x == std::string("on"));'
+        - lambda: 'id(light_on)["$ent_light_living"] = (x == std::string("on"));'
         - if:
             condition:
-              lambda: 'return id(sel_light) == "light.living_room_main";'
+              lambda: 'return id(sel_light) == "$ent_light_living";'
             then:
               - lvgl.widget.update:
                   id: sw_sel
@@ -796,13 +817,13 @@ text_sensor:
                     checked: !lambda 'return x == std::string("on");'
   - platform: homeassistant
     id: ha_st_office_shelves
-    entity_id: light.office_shelves
+    entity_id: $ent_light_office_shelves
     on_value:
       then:
-        - lambda: 'id(light_on)["light.office_shelves"] = (x == std::string("on"));'
+        - lambda: 'id(light_on)["$ent_light_office_shelves"] = (x == std::string("on"));'
         - if:
             condition:
-              lambda: 'return id(sel_light) == "light.office_shelves";'
+              lambda: 'return id(sel_light) == "$ent_light_office_shelves";'
             then:
               - lvgl.widget.update:
                   id: sw_sel
@@ -810,13 +831,13 @@ text_sensor:
                     checked: !lambda 'return x == std::string("on");'
   - platform: homeassistant
     id: ha_st_kitchen_kitchen
-    entity_id: light.kitchen_kitchen
+    entity_id: $ent_light_kitchen
     on_value:
       then:
-        - lambda: 'id(light_on)["light.kitchen_kitchen"] = (x == std::string("on"));'
+        - lambda: 'id(light_on)["$ent_light_kitchen"] = (x == std::string("on"));'
         - if:
             condition:
-              lambda: 'return id(sel_light) == "light.kitchen_kitchen";'
+              lambda: 'return id(sel_light) == "$ent_light_kitchen";'
             then:
               - lvgl.widget.update:
                   id: sw_sel
@@ -824,13 +845,13 @@ text_sensor:
                     checked: !lambda 'return x == std::string("on");'
   - platform: homeassistant
     id: ha_st_reading_lamp
-    entity_id: light.reading_lamp
+    entity_id: $ent_light_reading
     on_value:
       then:
-        - lambda: 'id(light_on)["light.reading_lamp"] = (x == std::string("on"));'
+        - lambda: 'id(light_on)["$ent_light_reading"] = (x == std::string("on"));'
         - if:
             condition:
-              lambda: 'return id(sel_light) == "light.reading_lamp";'
+              lambda: 'return id(sel_light) == "$ent_light_reading";'
             then:
               - lvgl.widget.update:
                   id: sw_sel
@@ -838,13 +859,13 @@ text_sensor:
                     checked: !lambda 'return x == std::string("on");'
   - platform: homeassistant
     id: ha_st_outdoor_patio_back_porch_lights
-    entity_id: light.outdoor_patio_back_porch_lights
+    entity_id: $ent_light_patio
     on_value:
       then:
-        - lambda: 'id(light_on)["light.outdoor_patio_back_porch_lights"] = (x == std::string("on"));'
+        - lambda: 'id(light_on)["$ent_light_patio"] = (x == std::string("on"));'
         - if:
             condition:
-              lambda: 'return id(sel_light) == "light.outdoor_patio_back_porch_lights";'
+              lambda: 'return id(sel_light) == "$ent_light_patio";'
             then:
               - lvgl.widget.update:
                   id: sw_sel
@@ -852,13 +873,13 @@ text_sensor:
                     checked: !lambda 'return x == std::string("on");'
   - platform: homeassistant
     id: ha_st_office_main_lights
-    entity_id: light.office_main_lights
+    entity_id: $ent_light_office_main
     on_value:
       then:
-        - lambda: 'id(light_on)["light.office_main_lights"] = (x == std::string("on"));'
+        - lambda: 'id(light_on)["$ent_light_office_main"] = (x == std::string("on"));'
         - if:
             condition:
-              lambda: 'return id(sel_light) == "light.office_main_lights";'
+              lambda: 'return id(sel_light) == "$ent_light_office_main";'
             then:
               - lvgl.widget.update:
                   id: sw_sel
@@ -866,13 +887,13 @@ text_sensor:
                     checked: !lambda 'return x == std::string("on");'
   - platform: homeassistant
     id: ha_st_dining_room_chandelier
-    entity_id: light.dining_room_chandelier
+    entity_id: $ent_light_dining
     on_value:
       then:
-        - lambda: 'id(light_on)["light.dining_room_chandelier"] = (x == std::string("on"));'
+        - lambda: 'id(light_on)["$ent_light_dining"] = (x == std::string("on"));'
         - if:
             condition:
-              lambda: 'return id(sel_light) == "light.dining_room_chandelier";'
+              lambda: 'return id(sel_light) == "$ent_light_dining";'
             then:
               - lvgl.widget.update:
                   id: sw_sel
@@ -880,13 +901,13 @@ text_sensor:
                     checked: !lambda 'return x == std::string("on");'
   - platform: homeassistant
     id: ha_st_master_bedroom_ceiling_fan_light
-    entity_id: light.master_bedroom_ceiling_fan_light
+    entity_id: $ent_light_master
     on_value:
       then:
-        - lambda: 'id(light_on)["light.master_bedroom_ceiling_fan_light"] = (x == std::string("on"));'
+        - lambda: 'id(light_on)["$ent_light_master"] = (x == std::string("on"));'
         - if:
             condition:
-              lambda: 'return id(sel_light) == "light.master_bedroom_ceiling_fan_light";'
+              lambda: 'return id(sel_light) == "$ent_light_master";'
             then:
               - lvgl.widget.update:
                   id: sw_sel
@@ -894,7 +915,7 @@ text_sensor:
                     checked: !lambda 'return x == std::string("on");'
   - platform: homeassistant
     id: ha_lockst_front
-    entity_id: lock.front_door
+    entity_id: $ent_lock_front
     on_value:
       then:
         - if:
@@ -912,7 +933,7 @@ text_sensor:
               - lvgl.widget.update: { id: btn_front_unlock, bg_color: 0xFF9F6B }
   - platform: homeassistant
     id: ha_lockst_back
-    entity_id: lock.back_door
+    entity_id: $ent_lock_back
     on_value:
       then:
         - if:
@@ -931,7 +952,7 @@ text_sensor:
 
   - platform: homeassistant
     id: ha_room_living_light_living_room_main
-    entity_id: light.living_room_main
+    entity_id: $ent_light_living
     on_value:
       then:
         - if:
@@ -943,7 +964,7 @@ text_sensor:
               - lvgl.label.update: { id: ic_living_light_living_room_main, text_color: 0x4A4F5A }
   - platform: homeassistant
     id: ha_room_kitchen_light_kitchen_kitchen
-    entity_id: light.kitchen_kitchen
+    entity_id: $ent_light_kitchen
     on_value:
       then:
         - if:
@@ -955,7 +976,7 @@ text_sensor:
               - lvgl.label.update: { id: ic_kitchen_light_kitchen_kitchen, text_color: 0x4A4F5A }
   - platform: homeassistant
     id: ha_room_office_light_office_shelves
-    entity_id: light.office_shelves
+    entity_id: $ent_light_office_shelves
     on_value:
       then:
         - if:
@@ -967,7 +988,7 @@ text_sensor:
               - lvgl.label.update: { id: ic_office_light_office_shelves, text_color: 0x4A4F5A }
   - platform: homeassistant
     id: ha_room_office_light_office_main_lights
-    entity_id: light.office_main_lights
+    entity_id: $ent_light_office_main
     on_value:
       then:
         - if:
@@ -979,7 +1000,7 @@ text_sensor:
               - lvgl.label.update: { id: ic_office_light_office_main_lights, text_color: 0x4A4F5A }
   - platform: homeassistant
     id: ha_room_office_light_office_desk_lamp
-    entity_id: light.office_desk_lamp
+    entity_id: $ent_light_office_desk
     on_value:
       then:
         - if:
@@ -991,7 +1012,7 @@ text_sensor:
               - lvgl.label.update: { id: ic_office_light_office_desk_lamp, text_color: 0x4A4F5A }
   - platform: homeassistant
     id: ha_room_master_light_reading_lamp
-    entity_id: light.reading_lamp
+    entity_id: $ent_light_reading
     on_value:
       then:
         - if:
@@ -1003,7 +1024,7 @@ text_sensor:
               - lvgl.label.update: { id: ic_master_light_reading_lamp, text_color: 0x4A4F5A }
   - platform: homeassistant
     id: ha_room_master_light_master_bedroom_ceiling_fan_light
-    entity_id: light.master_bedroom_ceiling_fan_light
+    entity_id: $ent_light_master
     on_value:
       then:
         - if:
@@ -1015,7 +1036,7 @@ text_sensor:
               - lvgl.label.update: { id: ic_master_light_master_bedroom_ceiling_fan_light, text_color: 0x4A4F5A }
   - platform: homeassistant
     id: ha_room_exterior_light_outdoor_patio_back_porch_lights
-    entity_id: light.outdoor_patio_back_porch_lights
+    entity_id: $ent_light_patio
     on_value:
       then:
         - if:
@@ -1027,7 +1048,7 @@ text_sensor:
               - lvgl.label.update: { id: ic_exterior_light_outdoor_patio_back_porch_lights, text_color: 0x4A4F5A }
   - platform: homeassistant
     id: ha_room_exterior_switch_outdoor_patio_putting_green
-    entity_id: switch.outdoor_patio_putting_green
+    entity_id: $ent_switch_putting_green
     on_value:
       then:
         - if:
@@ -1041,7 +1062,7 @@ text_sensor:
 
   - platform: homeassistant
     id: ha_room_living_fan_living_room_pendant
-    entity_id: fan.living_room_pendant
+    entity_id: $ent_fan_living
     on_value:
       then:
         - if:
@@ -1053,7 +1074,7 @@ text_sensor:
               - lvgl.animimg.stop: animfan_living
   - platform: homeassistant
     id: ha_room_office_fan_office_ceiling_fan
-    entity_id: fan.office_ceiling_fan
+    entity_id: $ent_fan_office
     on_value:
       then:
         - if:
@@ -1068,7 +1089,7 @@ globals:
   - id: sel_light
     type: std::string
     restore_value: false
-    initial_value: '"light.living_room_main"'
+    initial_value: '"$ent_light_living"'
   - id: light_bri
     type: std::map<std::string, int>
     restore_value: false
@@ -1527,7 +1548,7 @@ lvgl:
                     - homeassistant.action:
                         action: spotifyplus.player_media_skip_previous
                         data:
-                          entity_id: media_player.spotifyplus_ben_walton
+                          entity_id: $ent_media_spotify
                           device_id: !lambda 'return id(g_room);'
               - button:
                   x: 118
@@ -1547,13 +1568,13 @@ lvgl:
                           - homeassistant.action:
                               action: spotifyplus.player_media_pause
                               data:
-                                entity_id: media_player.spotifyplus_ben_walton
+                                entity_id: $ent_media_spotify
                                 device_id: !lambda 'return id(g_room);'
                         else:
                           - homeassistant.action:
                               action: spotifyplus.player_media_resume
                               data:
-                                entity_id: media_player.spotifyplus_ben_walton
+                                entity_id: $ent_media_spotify
                                 device_id: !lambda 'return id(g_room);'
               - button:
                   x: 202
@@ -1567,7 +1588,7 @@ lvgl:
                     - homeassistant.action:
                         action: spotifyplus.player_media_skip_next
                         data:
-                          entity_id: media_player.spotifyplus_ben_walton
+                          entity_id: $ent_media_spotify
                           device_id: !lambda 'return id(g_room);'
         - obj:
             x: 412
@@ -1685,19 +1706,19 @@ lvgl:
               - obj: { width: 11, height: 11, radius: 6, bg_color: 0xFFD9A0, align: left_mid, x: 4, border_width: 0 }
               - label: { text: "Living Room", align: left_mid, x: 24, text_font: f_body, text_color: 0xEEF0F6 }
             on_click:
-              - lambda: 'id(sel_light) = "light.living_room_main";'
+              - lambda: 'id(sel_light) = "$ent_light_living";'
               - lvgl.label.update: { id: lbl_sel_name, text: "Living Room" }
               - lvgl.arc.update:
                   id: arc_brightness
-                  value: !lambda 'return id(light_bri)["light.living_room_main"];'
+                  value: !lambda 'return id(light_bri)["$ent_light_living"];'
               - lvgl.label.update:
                   id: lbl_bri_pct
                   text: !lambda |-
-                    char b[8]; snprintf(b, sizeof(b), "%d%%", id(light_bri)["light.living_room_main"]); return std::string(b);
+                    char b[8]; snprintf(b, sizeof(b), "%d%%", id(light_bri)["$ent_light_living"]); return std::string(b);
               - lvgl.widget.update:
                   id: sw_sel
                   state:
-                    checked: !lambda 'return id(light_on)["light.living_room_main"];'
+                    checked: !lambda 'return id(light_on)["$ent_light_living"];'
         - button:
             x: 96
             y: 148
@@ -1709,19 +1730,19 @@ lvgl:
               - obj: { width: 11, height: 11, radius: 6, bg_color: 0x7B6CFF, align: left_mid, x: 4, border_width: 0 }
               - label: { text: "Office Shelves", align: left_mid, x: 24, text_font: f_body, text_color: 0xEEF0F6 }
             on_click:
-              - lambda: 'id(sel_light) = "light.office_shelves";'
+              - lambda: 'id(sel_light) = "$ent_light_office_shelves";'
               - lvgl.label.update: { id: lbl_sel_name, text: "Office Shelves" }
               - lvgl.arc.update:
                   id: arc_brightness
-                  value: !lambda 'return id(light_bri)["light.office_shelves"];'
+                  value: !lambda 'return id(light_bri)["$ent_light_office_shelves"];'
               - lvgl.label.update:
                   id: lbl_bri_pct
                   text: !lambda |-
-                    char b[8]; snprintf(b, sizeof(b), "%d%%", id(light_bri)["light.office_shelves"]); return std::string(b);
+                    char b[8]; snprintf(b, sizeof(b), "%d%%", id(light_bri)["$ent_light_office_shelves"]); return std::string(b);
               - lvgl.widget.update:
                   id: sw_sel
                   state:
-                    checked: !lambda 'return id(light_on)["light.office_shelves"];'
+                    checked: !lambda 'return id(light_on)["$ent_light_office_shelves"];'
         - button:
             x: 96
             y: 204
@@ -1733,19 +1754,19 @@ lvgl:
               - obj: { width: 11, height: 11, radius: 6, bg_color: 0xFFF3DF, align: left_mid, x: 4, border_width: 0 }
               - label: { text: "Kitchen", align: left_mid, x: 24, text_font: f_body, text_color: 0xEEF0F6 }
             on_click:
-              - lambda: 'id(sel_light) = "light.kitchen_kitchen";'
+              - lambda: 'id(sel_light) = "$ent_light_kitchen";'
               - lvgl.label.update: { id: lbl_sel_name, text: "Kitchen" }
               - lvgl.arc.update:
                   id: arc_brightness
-                  value: !lambda 'return id(light_bri)["light.kitchen_kitchen"];'
+                  value: !lambda 'return id(light_bri)["$ent_light_kitchen"];'
               - lvgl.label.update:
                   id: lbl_bri_pct
                   text: !lambda |-
-                    char b[8]; snprintf(b, sizeof(b), "%d%%", id(light_bri)["light.kitchen_kitchen"]); return std::string(b);
+                    char b[8]; snprintf(b, sizeof(b), "%d%%", id(light_bri)["$ent_light_kitchen"]); return std::string(b);
               - lvgl.widget.update:
                   id: sw_sel
                   state:
-                    checked: !lambda 'return id(light_on)["light.kitchen_kitchen"];'
+                    checked: !lambda 'return id(light_on)["$ent_light_kitchen"];'
         - button:
             x: 96
             y: 260
@@ -1757,19 +1778,19 @@ lvgl:
               - obj: { width: 11, height: 11, radius: 6, bg_color: 0xFF9F6B, align: left_mid, x: 4, border_width: 0 }
               - label: { text: "Reading Lamp", align: left_mid, x: 24, text_font: f_body, text_color: 0xEEF0F6 }
             on_click:
-              - lambda: 'id(sel_light) = "light.reading_lamp";'
+              - lambda: 'id(sel_light) = "$ent_light_reading";'
               - lvgl.label.update: { id: lbl_sel_name, text: "Reading Lamp" }
               - lvgl.arc.update:
                   id: arc_brightness
-                  value: !lambda 'return id(light_bri)["light.reading_lamp"];'
+                  value: !lambda 'return id(light_bri)["$ent_light_reading"];'
               - lvgl.label.update:
                   id: lbl_bri_pct
                   text: !lambda |-
-                    char b[8]; snprintf(b, sizeof(b), "%d%%", id(light_bri)["light.reading_lamp"]); return std::string(b);
+                    char b[8]; snprintf(b, sizeof(b), "%d%%", id(light_bri)["$ent_light_reading"]); return std::string(b);
               - lvgl.widget.update:
                   id: sw_sel
                   state:
-                    checked: !lambda 'return id(light_on)["light.reading_lamp"];'
+                    checked: !lambda 'return id(light_on)["$ent_light_reading"];'
         - button:
             x: 96
             y: 316
@@ -1781,19 +1802,19 @@ lvgl:
               - obj: { width: 11, height: 11, radius: 6, bg_color: 0x2ED5B8, align: left_mid, x: 4, border_width: 0 }
               - label: { text: "Patio Lights", align: left_mid, x: 24, text_font: f_body, text_color: 0xEEF0F6 }
             on_click:
-              - lambda: 'id(sel_light) = "light.outdoor_patio_back_porch_lights";'
+              - lambda: 'id(sel_light) = "$ent_light_patio";'
               - lvgl.label.update: { id: lbl_sel_name, text: "Patio Lights" }
               - lvgl.arc.update:
                   id: arc_brightness
-                  value: !lambda 'return id(light_bri)["light.outdoor_patio_back_porch_lights"];'
+                  value: !lambda 'return id(light_bri)["$ent_light_patio"];'
               - lvgl.label.update:
                   id: lbl_bri_pct
                   text: !lambda |-
-                    char b[8]; snprintf(b, sizeof(b), "%d%%", id(light_bri)["light.outdoor_patio_back_porch_lights"]); return std::string(b);
+                    char b[8]; snprintf(b, sizeof(b), "%d%%", id(light_bri)["$ent_light_patio"]); return std::string(b);
               - lvgl.widget.update:
                   id: sw_sel
                   state:
-                    checked: !lambda 'return id(light_on)["light.outdoor_patio_back_porch_lights"];'
+                    checked: !lambda 'return id(light_on)["$ent_light_patio"];'
         - button:
             x: 96
             y: 372
@@ -1805,19 +1826,19 @@ lvgl:
               - obj: { width: 11, height: 11, radius: 6, bg_color: 0xCFE6FF, align: left_mid, x: 4, border_width: 0 }
               - label: { text: "Office Main", align: left_mid, x: 24, text_font: f_body, text_color: 0xEEF0F6 }
             on_click:
-              - lambda: 'id(sel_light) = "light.office_main_lights";'
+              - lambda: 'id(sel_light) = "$ent_light_office_main";'
               - lvgl.label.update: { id: lbl_sel_name, text: "Office Main" }
               - lvgl.arc.update:
                   id: arc_brightness
-                  value: !lambda 'return id(light_bri)["light.office_main_lights"];'
+                  value: !lambda 'return id(light_bri)["$ent_light_office_main"];'
               - lvgl.label.update:
                   id: lbl_bri_pct
                   text: !lambda |-
-                    char b[8]; snprintf(b, sizeof(b), "%d%%", id(light_bri)["light.office_main_lights"]); return std::string(b);
+                    char b[8]; snprintf(b, sizeof(b), "%d%%", id(light_bri)["$ent_light_office_main"]); return std::string(b);
               - lvgl.widget.update:
                   id: sw_sel
                   state:
-                    checked: !lambda 'return id(light_on)["light.office_main_lights"];'
+                    checked: !lambda 'return id(light_on)["$ent_light_office_main"];'
         - button:
             x: 96
             y: 428
@@ -1829,19 +1850,19 @@ lvgl:
               - obj: { width: 11, height: 11, radius: 6, bg_color: 0xFFDCA8, align: left_mid, x: 4, border_width: 0 }
               - label: { text: "Dining Chandelier", align: left_mid, x: 24, text_font: f_body, text_color: 0xEEF0F6 }
             on_click:
-              - lambda: 'id(sel_light) = "light.dining_room_chandelier";'
+              - lambda: 'id(sel_light) = "$ent_light_dining";'
               - lvgl.label.update: { id: lbl_sel_name, text: "Dining Chandelier" }
               - lvgl.arc.update:
                   id: arc_brightness
-                  value: !lambda 'return id(light_bri)["light.dining_room_chandelier"];'
+                  value: !lambda 'return id(light_bri)["$ent_light_dining"];'
               - lvgl.label.update:
                   id: lbl_bri_pct
                   text: !lambda |-
-                    char b[8]; snprintf(b, sizeof(b), "%d%%", id(light_bri)["light.dining_room_chandelier"]); return std::string(b);
+                    char b[8]; snprintf(b, sizeof(b), "%d%%", id(light_bri)["$ent_light_dining"]); return std::string(b);
               - lvgl.widget.update:
                   id: sw_sel
                   state:
-                    checked: !lambda 'return id(light_on)["light.dining_room_chandelier"];'
+                    checked: !lambda 'return id(light_on)["$ent_light_dining"];'
         - button:
             x: 96
             y: 484
@@ -1853,19 +1874,19 @@ lvgl:
               - obj: { width: 11, height: 11, radius: 6, bg_color: 0xFFE6C0, align: left_mid, x: 4, border_width: 0 }
               - label: { text: "Master Ceiling", align: left_mid, x: 24, text_font: f_body, text_color: 0xEEF0F6 }
             on_click:
-              - lambda: 'id(sel_light) = "light.master_bedroom_ceiling_fan_light";'
+              - lambda: 'id(sel_light) = "$ent_light_master";'
               - lvgl.label.update: { id: lbl_sel_name, text: "Master Ceiling" }
               - lvgl.arc.update:
                   id: arc_brightness
-                  value: !lambda 'return id(light_bri)["light.master_bedroom_ceiling_fan_light"];'
+                  value: !lambda 'return id(light_bri)["$ent_light_master"];'
               - lvgl.label.update:
                   id: lbl_bri_pct
                   text: !lambda |-
-                    char b[8]; snprintf(b, sizeof(b), "%d%%", id(light_bri)["light.master_bedroom_ceiling_fan_light"]); return std::string(b);
+                    char b[8]; snprintf(b, sizeof(b), "%d%%", id(light_bri)["$ent_light_master"]); return std::string(b);
               - lvgl.widget.update:
                   id: sw_sel
                   state:
-                    checked: !lambda 'return id(light_on)["light.master_bedroom_ceiling_fan_light"];'
+                    checked: !lambda 'return id(light_on)["$ent_light_master"];'
         - obj:
             x: 386
             y: 26
@@ -1918,7 +1939,7 @@ lvgl:
       widgets:
         - image: { src: img_aurora_bg, x: 0, y: 0 }
         - label: { text: "Climate", x: 100, y: 26, text_font: f_title, text_color: $c_text }
-        - label: { text: "Outdoor conditions · weather.forecast_home", x: 100, y: 60, text_font: f_small, text_color: $c_text2 }
+        - label: { text: "Outdoor conditions · $ent_weather", x: 100, y: 60, text_font: f_small, text_color: $c_text2 }
         - obj:
             x: 96
             y: 100
@@ -1974,7 +1995,7 @@ lvgl:
             widgets: [label: { text: "Library", align: center, text_font: f_small, text_color: $c_text }]
             on_click: [lvgl.page.show: page_library]
 
-        # Now-playing card (SpotifyPlus: media_player.spotifyplus_ben_walton)
+        # Now-playing card (SpotifyPlus: $ent_media_spotify)
         - obj:
             x: 96
             y: 70
@@ -2016,7 +2037,7 @@ lvgl:
                     - homeassistant.action:
                         action: spotifyplus.player_media_skip_previous
                         data:
-                          entity_id: media_player.spotifyplus_ben_walton
+                          entity_id: $ent_media_spotify
                           device_id: !lambda 'return id(g_room);'
               - button:
                   align: bottom_mid
@@ -2034,13 +2055,13 @@ lvgl:
                           - homeassistant.action:
                               action: spotifyplus.player_media_pause
                               data:
-                                entity_id: media_player.spotifyplus_ben_walton
+                                entity_id: $ent_media_spotify
                                 device_id: !lambda 'return id(g_room);'
                         else:
                           - homeassistant.action:
                               action: spotifyplus.player_media_resume
                               data:
-                                entity_id: media_player.spotifyplus_ben_walton
+                                entity_id: $ent_media_spotify
                                 device_id: !lambda 'return id(g_room);'
               - button:
                   align: bottom_right
@@ -2053,7 +2074,7 @@ lvgl:
                     - homeassistant.action:
                         action: spotifyplus.player_media_skip_next
                         data:
-                          entity_id: media_player.spotifyplus_ben_walton
+                          entity_id: $ent_media_spotify
                           device_id: !lambda 'return id(g_room);'
               # volume
               - label: { text: "󰕾", align: bottom_left, x: 4, y: -16, text_font: f_icon, text_color: $c_text2 }
@@ -2070,7 +2091,7 @@ lvgl:
                     - homeassistant.action:
                         action: spotifyplus.player_set_volume_level
                         data:
-                          entity_id: media_player.spotifyplus_ben_walton
+                          entity_id: $ent_media_spotify
                           device_id: !lambda 'return id(g_room);'
                           volume_level: !lambda 'char b[8]; snprintf(b, sizeof(b), "%d", (int) x); return std::string(b);'
 
@@ -2089,7 +2110,7 @@ lvgl:
             on_click:
               - lambda: 'id(g_room) = "Dining Room";'
               - script.execute: hl_rooms
-              - homeassistant.action: { action: spotifyplus.player_transfer_playback, data: { entity_id: media_player.spotifyplus_ben_walton, device_id: "Dining Room", play: "true" } }
+              - homeassistant.action: { action: spotifyplus.player_transfer_playback, data: { entity_id: $ent_media_spotify, device_id: "Dining Room", play: "true" } }
         - button:
             id: src_btn_gameroom
             x: 786
@@ -2103,7 +2124,7 @@ lvgl:
             on_click:
               - lambda: 'id(g_room) = "Gameroom";'
               - script.execute: hl_rooms
-              - homeassistant.action: { action: spotifyplus.player_transfer_playback, data: { entity_id: media_player.spotifyplus_ben_walton, device_id: "Gameroom", play: "true" } }
+              - homeassistant.action: { action: spotifyplus.player_transfer_playback, data: { entity_id: $ent_media_spotify, device_id: "Gameroom", play: "true" } }
         - button:
             id: src_btn_johnwick
             x: 560
@@ -2117,7 +2138,7 @@ lvgl:
             on_click:
               - lambda: 'id(g_room) = "JOHN-WICK";'
               - script.execute: hl_rooms
-              - homeassistant.action: { action: spotifyplus.player_transfer_playback, data: { entity_id: media_player.spotifyplus_ben_walton, device_id: "JOHN-WICK", play: "true" } }
+              - homeassistant.action: { action: spotifyplus.player_transfer_playback, data: { entity_id: $ent_media_spotify, device_id: "JOHN-WICK", play: "true" } }
         - button:
             id: src_btn_kitchen
             x: 786
@@ -2131,7 +2152,7 @@ lvgl:
             on_click:
               - lambda: 'id(g_room) = "Kitchen";'
               - script.execute: hl_rooms
-              - homeassistant.action: { action: spotifyplus.player_transfer_playback, data: { entity_id: media_player.spotifyplus_ben_walton, device_id: "Kitchen", play: "true" } }
+              - homeassistant.action: { action: spotifyplus.player_transfer_playback, data: { entity_id: $ent_media_spotify, device_id: "Kitchen", play: "true" } }
         - button:
             id: src_btn_living
             x: 560
@@ -2145,7 +2166,7 @@ lvgl:
             on_click:
               - lambda: 'id(g_room) = "Living Room";'
               - script.execute: hl_rooms
-              - homeassistant.action: { action: spotifyplus.player_transfer_playback, data: { entity_id: media_player.spotifyplus_ben_walton, device_id: "Living Room", play: "true" } }
+              - homeassistant.action: { action: spotifyplus.player_transfer_playback, data: { entity_id: $ent_media_spotify, device_id: "Living Room", play: "true" } }
         - button:
             id: src_btn_office
             x: 786
@@ -2159,7 +2180,7 @@ lvgl:
             on_click:
               - lambda: 'id(g_room) = "Office";'
               - script.execute: hl_rooms
-              - homeassistant.action: { action: spotifyplus.player_transfer_playback, data: { entity_id: media_player.spotifyplus_ben_walton, device_id: "Office", play: "true" } }
+              - homeassistant.action: { action: spotifyplus.player_transfer_playback, data: { entity_id: $ent_media_spotify, device_id: "Office", play: "true" } }
         - button:
             id: src_btn_patio
             x: 560
@@ -2173,7 +2194,7 @@ lvgl:
             on_click:
               - lambda: 'id(g_room) = "Patio";'
               - script.execute: hl_rooms
-              - homeassistant.action: { action: spotifyplus.player_transfer_playback, data: { entity_id: media_player.spotifyplus_ben_walton, device_id: "Patio", play: "true" } }
+              - homeassistant.action: { action: spotifyplus.player_transfer_playback, data: { entity_id: $ent_media_spotify, device_id: "Patio", play: "true" } }
         - button:
             id: src_btn_roku
             x: 786
@@ -2187,7 +2208,7 @@ lvgl:
             on_click:
               - lambda: 'id(g_room) = "Roku Ultra";'
               - script.execute: hl_rooms
-              - homeassistant.action: { action: spotifyplus.player_transfer_playback, data: { entity_id: media_player.spotifyplus_ben_walton, device_id: "Roku Ultra", play: "true" } }
+              - homeassistant.action: { action: spotifyplus.player_transfer_playback, data: { entity_id: $ent_media_spotify, device_id: "Roku Ultra", play: "true" } }
 
     # ---------- SECURITY (locks + presence; real entities) ----------
     - id: page_security
@@ -2220,7 +2241,7 @@ lvgl:
                   height: 46
                   bg_color: 0x161B24
                   widgets: [label: { text: "Lock", align: center, text_font: f_body, text_color: 0xEEF0F6 }]
-                  on_click: [homeassistant.action: { action: lock.lock, data: { entity_id: lock.front_door } }]
+                  on_click: [homeassistant.action: { action: lock.lock, data: { entity_id: $ent_lock_front } }]
               - button:
                   id: btn_front_unlock
                   align: bottom_right
@@ -2228,7 +2249,7 @@ lvgl:
                   height: 46
                   bg_color: 0x161B24
                   widgets: [label: { text: "Unlock", align: center, text_font: f_body, text_color: 0xEEF0F6 }]
-                  on_click: [homeassistant.action: { action: lock.unlock, data: { entity_id: lock.front_door } }]
+                  on_click: [homeassistant.action: { action: lock.unlock, data: { entity_id: $ent_lock_front } }]
         - obj:
             x: 492
             y: 70
@@ -2245,7 +2266,7 @@ lvgl:
                   height: 46
                   bg_color: 0x161B24
                   widgets: [label: { text: "Lock", align: center, text_font: f_body, text_color: 0xEEF0F6 }]
-                  on_click: [homeassistant.action: { action: lock.lock, data: { entity_id: lock.back_door } }]
+                  on_click: [homeassistant.action: { action: lock.lock, data: { entity_id: $ent_lock_back } }]
               - button:
                   id: btn_back_unlock
                   align: bottom_right
@@ -2253,7 +2274,7 @@ lvgl:
                   height: 46
                   bg_color: 0x161B24
                   widgets: [label: { text: "Unlock", align: center, text_font: f_body, text_color: 0xEEF0F6 }]
-                  on_click: [homeassistant.action: { action: lock.unlock, data: { entity_id: lock.back_door } }]
+                  on_click: [homeassistant.action: { action: lock.unlock, data: { entity_id: $ent_lock_back } }]
         - obj:
             x: 96
             y: 246
@@ -2362,7 +2383,7 @@ lvgl:
               - homeassistant.action:
                   action: light.toggle
                   data:
-                    entity_id: light.living_room_main
+                    entity_id: $ent_light_living
             widgets:
               - label: { id: ic_living_light_living_room_main, text: "\U000F0335", x: 14, y: 12, text_font: f_icon, text_color: 0x4A4F5A }
               - label: { text: "Main Light", x: 14, y: 46, text_font: f_body, text_color: 0xEEF0F6 }
@@ -2382,10 +2403,10 @@ lvgl:
                           - homeassistant.action:
                               action: light.turn_on
                               data:
-                                entity_id: light.living_room_main
+                                entity_id: $ent_light_living
                                 brightness_pct: !lambda 'return std::to_string((int) x);'
                         else:
-                          - homeassistant.action: { action: light.turn_off, data: { entity_id: light.living_room_main } }
+                          - homeassistant.action: { action: light.turn_off, data: { entity_id: $ent_light_living } }
         - obj:
             x: 348
             y: 96
@@ -2404,7 +2425,7 @@ lvgl:
                   repeat_count: forever
                   auto_start: false
               - label: { text: "Ceiling Fan", x: 14, y: 86, text_font: f_body, text_color: 0xEEF0F6 }
-            on_click: [homeassistant.action: { action: fan.toggle, data: { entity_id: fan.living_room_pendant } }]
+            on_click: [homeassistant.action: { action: fan.toggle, data: { entity_id: $ent_fan_living } }]
         - button:
             x: 596
             y: 96
@@ -2450,7 +2471,7 @@ lvgl:
               - homeassistant.action:
                   action: light.toggle
                   data:
-                    entity_id: light.kitchen_kitchen
+                    entity_id: $ent_light_kitchen
             widgets:
               - label: { id: ic_kitchen_light_kitchen_kitchen, text: "\U000F0335", x: 14, y: 12, text_font: f_icon, text_color: 0x4A4F5A }
               - label: { text: "Kitchen Lights", x: 14, y: 46, text_font: f_body, text_color: 0xEEF0F6 }
@@ -2470,10 +2491,10 @@ lvgl:
                           - homeassistant.action:
                               action: light.turn_on
                               data:
-                                entity_id: light.kitchen_kitchen
+                                entity_id: $ent_light_kitchen
                                 brightness_pct: !lambda 'return std::to_string((int) x);'
                         else:
-                          - homeassistant.action: { action: light.turn_off, data: { entity_id: light.kitchen_kitchen } }
+                          - homeassistant.action: { action: light.turn_off, data: { entity_id: $ent_light_kitchen } }
     - id: page_room_office
       bg_opa: 0
       on_load:
@@ -2508,7 +2529,7 @@ lvgl:
               - homeassistant.action:
                   action: light.toggle
                   data:
-                    entity_id: light.office_shelves
+                    entity_id: $ent_light_office_shelves
             widgets:
               - label: { id: ic_office_light_office_shelves, text: "\U000F0335", x: 14, y: 12, text_font: f_icon, text_color: 0x4A4F5A }
               - label: { text: "Shelves", x: 14, y: 46, text_font: f_body, text_color: 0xEEF0F6 }
@@ -2528,10 +2549,10 @@ lvgl:
                           - homeassistant.action:
                               action: light.turn_on
                               data:
-                                entity_id: light.office_shelves
+                                entity_id: $ent_light_office_shelves
                                 brightness_pct: !lambda 'return std::to_string((int) x);'
                         else:
-                          - homeassistant.action: { action: light.turn_off, data: { entity_id: light.office_shelves } }
+                          - homeassistant.action: { action: light.turn_off, data: { entity_id: $ent_light_office_shelves } }
         - obj:
             x: 348
             y: 96
@@ -2544,7 +2565,7 @@ lvgl:
               - homeassistant.action:
                   action: light.toggle
                   data:
-                    entity_id: light.office_main_lights
+                    entity_id: $ent_light_office_main
             widgets:
               - label: { id: ic_office_light_office_main_lights, text: "\U000F0335", x: 14, y: 12, text_font: f_icon, text_color: 0x4A4F5A }
               - label: { text: "Main Lights", x: 14, y: 46, text_font: f_body, text_color: 0xEEF0F6 }
@@ -2564,10 +2585,10 @@ lvgl:
                           - homeassistant.action:
                               action: light.turn_on
                               data:
-                                entity_id: light.office_main_lights
+                                entity_id: $ent_light_office_main
                                 brightness_pct: !lambda 'return std::to_string((int) x);'
                         else:
-                          - homeassistant.action: { action: light.turn_off, data: { entity_id: light.office_main_lights } }
+                          - homeassistant.action: { action: light.turn_off, data: { entity_id: $ent_light_office_main } }
         - obj:
             x: 596
             y: 96
@@ -2580,7 +2601,7 @@ lvgl:
               - homeassistant.action:
                   action: light.toggle
                   data:
-                    entity_id: light.office_desk_lamp
+                    entity_id: $ent_light_office_desk
             widgets:
               - label: { id: ic_office_light_office_desk_lamp, text: "\U000F0335", x: 14, y: 12, text_font: f_icon, text_color: 0x4A4F5A }
               - label: { text: "Desk Lamp", x: 14, y: 46, text_font: f_body, text_color: 0xEEF0F6 }
@@ -2600,10 +2621,10 @@ lvgl:
                           - homeassistant.action:
                               action: light.turn_on
                               data:
-                                entity_id: light.office_desk_lamp
+                                entity_id: $ent_light_office_desk
                                 brightness_pct: !lambda 'return std::to_string((int) x);'
                         else:
-                          - homeassistant.action: { action: light.turn_off, data: { entity_id: light.office_desk_lamp } }
+                          - homeassistant.action: { action: light.turn_off, data: { entity_id: $ent_light_office_desk } }
         - obj:
             x: 100
             y: 232
@@ -2622,7 +2643,7 @@ lvgl:
                   repeat_count: forever
                   auto_start: false
               - label: { text: "Ceiling Fan", x: 14, y: 86, text_font: f_body, text_color: 0xEEF0F6 }
-            on_click: [homeassistant.action: { action: fan.toggle, data: { entity_id: fan.office_ceiling_fan } }]
+            on_click: [homeassistant.action: { action: fan.toggle, data: { entity_id: $ent_fan_office } }]
     - id: page_room_master
       bg_opa: 0
       on_load:
@@ -2657,7 +2678,7 @@ lvgl:
               - homeassistant.action:
                   action: light.toggle
                   data:
-                    entity_id: light.reading_lamp
+                    entity_id: $ent_light_reading
             widgets:
               - label: { id: ic_master_light_reading_lamp, text: "\U000F0335", x: 14, y: 12, text_font: f_icon, text_color: 0x4A4F5A }
               - label: { text: "Reading Lamp", x: 14, y: 46, text_font: f_body, text_color: 0xEEF0F6 }
@@ -2677,10 +2698,10 @@ lvgl:
                           - homeassistant.action:
                               action: light.turn_on
                               data:
-                                entity_id: light.reading_lamp
+                                entity_id: $ent_light_reading
                                 brightness_pct: !lambda 'return std::to_string((int) x);'
                         else:
-                          - homeassistant.action: { action: light.turn_off, data: { entity_id: light.reading_lamp } }
+                          - homeassistant.action: { action: light.turn_off, data: { entity_id: $ent_light_reading } }
         - obj:
             x: 348
             y: 96
@@ -2693,7 +2714,7 @@ lvgl:
               - homeassistant.action:
                   action: light.toggle
                   data:
-                    entity_id: light.master_bedroom_ceiling_fan_light
+                    entity_id: $ent_light_master
             widgets:
               - label: { id: ic_master_light_master_bedroom_ceiling_fan_light, text: "\U000F0335", x: 14, y: 12, text_font: f_icon, text_color: 0x4A4F5A }
               - label: { text: "Ceiling Light", x: 14, y: 46, text_font: f_body, text_color: 0xEEF0F6 }
@@ -2713,10 +2734,10 @@ lvgl:
                           - homeassistant.action:
                               action: light.turn_on
                               data:
-                                entity_id: light.master_bedroom_ceiling_fan_light
+                                entity_id: $ent_light_master
                                 brightness_pct: !lambda 'return std::to_string((int) x);'
                         else:
-                          - homeassistant.action: { action: light.turn_off, data: { entity_id: light.master_bedroom_ceiling_fan_light } }
+                          - homeassistant.action: { action: light.turn_off, data: { entity_id: $ent_light_master } }
     - id: page_room_exterior
       bg_opa: 0
       on_load:
@@ -2751,7 +2772,7 @@ lvgl:
               - homeassistant.action:
                   action: light.toggle
                   data:
-                    entity_id: light.outdoor_patio_back_porch_lights
+                    entity_id: $ent_light_patio
             widgets:
               - label: { id: ic_exterior_light_outdoor_patio_back_porch_lights, text: "\U000F0335", x: 14, y: 12, text_font: f_icon, text_color: 0x4A4F5A }
               - label: { text: "Patio Lights", x: 14, y: 46, text_font: f_body, text_color: 0xEEF0F6 }
@@ -2771,10 +2792,10 @@ lvgl:
                           - homeassistant.action:
                               action: light.turn_on
                               data:
-                                entity_id: light.outdoor_patio_back_porch_lights
+                                entity_id: $ent_light_patio
                                 brightness_pct: !lambda 'return std::to_string((int) x);'
                         else:
-                          - homeassistant.action: { action: light.turn_off, data: { entity_id: light.outdoor_patio_back_porch_lights } }
+                          - homeassistant.action: { action: light.turn_off, data: { entity_id: $ent_light_patio } }
         - obj:
             x: 348
             y: 96
@@ -2786,7 +2807,7 @@ lvgl:
             widgets:
               - label: { id: ic_exterior_switch_outdoor_patio_putting_green, text: "\U000F06A5", x: 14, y: 12, text_font: f_icon, text_color: 0x4A4F5A }
               - label: { text: "Putting Green", x: 14, y: 86, text_font: f_body, text_color: 0xEEF0F6 }
-            on_click: [homeassistant.action: { action: switch.toggle, data: { entity_id: switch.outdoor_patio_putting_green } }]
+            on_click: [homeassistant.action: { action: switch.toggle, data: { entity_id: $ent_switch_putting_green } }]
     - id: page_network
       bg_opa: 0
       on_load:
@@ -2882,7 +2903,7 @@ lvgl:
               - homeassistant.action:
                   action: spotifyplus.player_media_play_context
                   data:
-                    entity_id: media_player.spotifyplus_ben_walton
+                    entity_id: $ent_media_spotify
                     context_uri: !lambda 'return id(g_cur_pl_uri);'
                     device_id: !lambda 'return id(g_room);'
         - label: { text: "TRACKS · tap to play", x: 100, y: 162, text_font: f_small, text_color: $c_text2 }
@@ -3925,7 +3946,7 @@ lvgl:
             height: 56
             styles: st_glass
             widgets: [label: { text: "Power", align: center, text_font: f_body, text_color: 0xFF9F6B }]
-            on_click: [homeassistant.action: { action: media_player.toggle, data: { entity_id: media_player.lg_g3_living_room_2 } } ]
+            on_click: [homeassistant.action: { action: media_player.toggle, data: { entity_id: $ent_media_tv } } ]
         - button:
             x: 120
             y: 164
@@ -3933,7 +3954,7 @@ lvgl:
             height: 56
             styles: st_glass
             widgets: [label: { text: "Home", align: center, text_font: f_body, text_color: 0xEEF0F6 }]
-            on_click: [homeassistant.action: { action: webostv.button, data: { entity_id: media_player.lg_g3_living_room_2, button: HOME } } ]
+            on_click: [homeassistant.action: { action: webostv.button, data: { entity_id: $ent_media_tv, button: HOME } } ]
         - button:
             x: 120
             y: 228
@@ -3941,7 +3962,7 @@ lvgl:
             height: 56
             styles: st_glass
             widgets: [label: { text: "Back", align: center, text_font: f_body, text_color: 0xEEF0F6 }]
-            on_click: [homeassistant.action: { action: webostv.button, data: { entity_id: media_player.lg_g3_living_room_2, button: BACK } } ]
+            on_click: [homeassistant.action: { action: webostv.button, data: { entity_id: $ent_media_tv, button: BACK } } ]
         - button:
             x: 120
             y: 292
@@ -3949,7 +3970,7 @@ lvgl:
             height: 56
             styles: st_glass
             widgets: [label: { text: "Exit", align: center, text_font: f_body, text_color: 0xEEF0F6 }]
-            on_click: [homeassistant.action: { action: webostv.button, data: { entity_id: media_player.lg_g3_living_room_2, button: EXIT } } ]
+            on_click: [homeassistant.action: { action: webostv.button, data: { entity_id: $ent_media_tv, button: EXIT } } ]
         - button:
             x: 120
             y: 356
@@ -3957,7 +3978,7 @@ lvgl:
             height: 56
             styles: st_glass
             widgets: [label: { text: "Menu", align: center, text_font: f_body, text_color: 0xEEF0F6 }]
-            on_click: [homeassistant.action: { action: webostv.button, data: { entity_id: media_player.lg_g3_living_room_2, button: MENU } } ]
+            on_click: [homeassistant.action: { action: webostv.button, data: { entity_id: $ent_media_tv, button: MENU } } ]
         - button:
             x: 120
             y: 420
@@ -3965,7 +3986,7 @@ lvgl:
             height: 56
             styles: st_glass
             widgets: [label: { text: "Info", align: center, text_font: f_body, text_color: 0xEEF0F6 }]
-            on_click: [homeassistant.action: { action: webostv.button, data: { entity_id: media_player.lg_g3_living_room_2, button: INFO } } ]
+            on_click: [homeassistant.action: { action: webostv.button, data: { entity_id: $ent_media_tv, button: INFO } } ]
         - button:
             x: 476
             y: 110
@@ -3973,7 +3994,7 @@ lvgl:
             height: 84
             styles: st_glass
             widgets: [label: { text: "󰅃", align: center, text_font: f_icon, text_color: 0xEEF0F6 }]
-            on_click: [homeassistant.action: { action: webostv.button, data: { entity_id: media_player.lg_g3_living_room_2, button: UP } } ]
+            on_click: [homeassistant.action: { action: webostv.button, data: { entity_id: $ent_media_tv, button: UP } } ]
         - button:
             x: 382
             y: 200
@@ -3981,7 +4002,7 @@ lvgl:
             height: 84
             styles: st_glass
             widgets: [label: { text: "󰅁", align: center, text_font: f_icon, text_color: 0xEEF0F6 }]
-            on_click: [homeassistant.action: { action: webostv.button, data: { entity_id: media_player.lg_g3_living_room_2, button: LEFT } } ]
+            on_click: [homeassistant.action: { action: webostv.button, data: { entity_id: $ent_media_tv, button: LEFT } } ]
         - button:
             x: 476
             y: 200
@@ -3989,7 +4010,7 @@ lvgl:
             height: 84
             bg_color: 0x2ED5B8
             widgets: [label: { text: "OK", align: center, text_font: f_body, text_color: 0x08090D }]
-            on_click: [homeassistant.action: { action: webostv.button, data: { entity_id: media_player.lg_g3_living_room_2, button: ENTER } } ]
+            on_click: [homeassistant.action: { action: webostv.button, data: { entity_id: $ent_media_tv, button: ENTER } } ]
         - button:
             x: 570
             y: 200
@@ -3997,7 +4018,7 @@ lvgl:
             height: 84
             styles: st_glass
             widgets: [label: { text: "󰅂", align: center, text_font: f_icon, text_color: 0xEEF0F6 }]
-            on_click: [homeassistant.action: { action: webostv.button, data: { entity_id: media_player.lg_g3_living_room_2, button: RIGHT } } ]
+            on_click: [homeassistant.action: { action: webostv.button, data: { entity_id: $ent_media_tv, button: RIGHT } } ]
         - button:
             x: 476
             y: 290
@@ -4005,7 +4026,7 @@ lvgl:
             height: 84
             styles: st_glass
             widgets: [label: { text: "󰅀", align: center, text_font: f_icon, text_color: 0xEEF0F6 }]
-            on_click: [homeassistant.action: { action: webostv.button, data: { entity_id: media_player.lg_g3_living_room_2, button: DOWN } } ]
+            on_click: [homeassistant.action: { action: webostv.button, data: { entity_id: $ent_media_tv, button: DOWN } } ]
         - button:
             x: 382
             y: 392
@@ -4013,7 +4034,7 @@ lvgl:
             height: 54
             styles: st_glass
             widgets: [label: { text: "REW", align: center, text_font: f_small, text_color: 0xEEF0F6 }]
-            on_click: [homeassistant.action: { action: webostv.button, data: { entity_id: media_player.lg_g3_living_room_2, button: REWIND } } ]
+            on_click: [homeassistant.action: { action: webostv.button, data: { entity_id: $ent_media_tv, button: REWIND } } ]
         - button:
             x: 458
             y: 392
@@ -4021,7 +4042,7 @@ lvgl:
             height: 54
             styles: st_glass
             widgets: [label: { text: "PLAY", align: center, text_font: f_small, text_color: 0xEEF0F6 }]
-            on_click: [homeassistant.action: { action: webostv.button, data: { entity_id: media_player.lg_g3_living_room_2, button: PLAY } } ]
+            on_click: [homeassistant.action: { action: webostv.button, data: { entity_id: $ent_media_tv, button: PLAY } } ]
         - button:
             x: 534
             y: 392
@@ -4029,7 +4050,7 @@ lvgl:
             height: 54
             styles: st_glass
             widgets: [label: { text: "PAUSE", align: center, text_font: f_small, text_color: 0xEEF0F6 }]
-            on_click: [homeassistant.action: { action: webostv.button, data: { entity_id: media_player.lg_g3_living_room_2, button: PAUSE } } ]
+            on_click: [homeassistant.action: { action: webostv.button, data: { entity_id: $ent_media_tv, button: PAUSE } } ]
         - button:
             x: 610
             y: 392
@@ -4037,7 +4058,7 @@ lvgl:
             height: 54
             styles: st_glass
             widgets: [label: { text: "STOP", align: center, text_font: f_small, text_color: 0xEEF0F6 }]
-            on_click: [homeassistant.action: { action: webostv.button, data: { entity_id: media_player.lg_g3_living_room_2, button: STOP } } ]
+            on_click: [homeassistant.action: { action: webostv.button, data: { entity_id: $ent_media_tv, button: STOP } } ]
         - button:
             x: 686
             y: 392
@@ -4045,7 +4066,7 @@ lvgl:
             height: 54
             styles: st_glass
             widgets: [label: { text: "FF", align: center, text_font: f_small, text_color: 0xEEF0F6 }]
-            on_click: [homeassistant.action: { action: webostv.button, data: { entity_id: media_player.lg_g3_living_room_2, button: FASTFORWARD } } ]
+            on_click: [homeassistant.action: { action: webostv.button, data: { entity_id: $ent_media_tv, button: FASTFORWARD } } ]
         - button:
             x: 382
             y: 456
@@ -4053,7 +4074,7 @@ lvgl:
             height: 54
             styles: st_glass
             widgets: [label: { text: "Netflix", align: center, text_font: f_body, text_color: 0xEEF0F6 }]
-            on_click: [homeassistant.action: { action: media_player.select_source, data: { entity_id: media_player.lg_g3_living_room_2, source: "Netflix" } } ]
+            on_click: [homeassistant.action: { action: media_player.select_source, data: { entity_id: $ent_media_tv, source: "Netflix" } } ]
         - button:
             x: 576
             y: 456
@@ -4061,7 +4082,7 @@ lvgl:
             height: 54
             styles: st_glass
             widgets: [label: { text: "YouTube", align: center, text_font: f_body, text_color: 0xEEF0F6 }]
-            on_click: [homeassistant.action: { action: media_player.select_source, data: { entity_id: media_player.lg_g3_living_room_2, source: "YouTube" } } ]
+            on_click: [homeassistant.action: { action: media_player.select_source, data: { entity_id: $ent_media_tv, source: "YouTube" } } ]
         - button:
             x: 812
             y: 110
@@ -4069,7 +4090,7 @@ lvgl:
             height: 56
             styles: st_glass
             widgets: [label: { text: "VOL +", align: center, text_font: f_body, text_color: 0xEEF0F6 }]
-            on_click: [homeassistant.action: { action: webostv.button, data: { entity_id: media_player.lg_g3_living_room_2, button: VOLUMEUP } } ]
+            on_click: [homeassistant.action: { action: webostv.button, data: { entity_id: $ent_media_tv, button: VOLUMEUP } } ]
         - button:
             x: 812
             y: 174
@@ -4077,7 +4098,7 @@ lvgl:
             height: 56
             styles: st_glass
             widgets: [label: { text: "MUTE", align: center, text_font: f_body, text_color: 0xEEF0F6 }]
-            on_click: [homeassistant.action: { action: webostv.button, data: { entity_id: media_player.lg_g3_living_room_2, button: MUTE } } ]
+            on_click: [homeassistant.action: { action: webostv.button, data: { entity_id: $ent_media_tv, button: MUTE } } ]
         - button:
             x: 812
             y: 238
@@ -4085,7 +4106,7 @@ lvgl:
             height: 56
             styles: st_glass
             widgets: [label: { text: "VOL -", align: center, text_font: f_body, text_color: 0xEEF0F6 }]
-            on_click: [homeassistant.action: { action: webostv.button, data: { entity_id: media_player.lg_g3_living_room_2, button: VOLUMEDOWN } } ]
+            on_click: [homeassistant.action: { action: webostv.button, data: { entity_id: $ent_media_tv, button: VOLUMEDOWN } } ]
         - button:
             x: 812
             y: 318
@@ -4093,7 +4114,7 @@ lvgl:
             height: 56
             styles: st_glass
             widgets: [label: { text: "CH +", align: center, text_font: f_body, text_color: 0xEEF0F6 }]
-            on_click: [homeassistant.action: { action: webostv.button, data: { entity_id: media_player.lg_g3_living_room_2, button: CHANNELUP } } ]
+            on_click: [homeassistant.action: { action: webostv.button, data: { entity_id: $ent_media_tv, button: CHANNELUP } } ]
         - button:
             x: 812
             y: 382
@@ -4101,4 +4122,4 @@ lvgl:
             height: 56
             styles: st_glass
             widgets: [label: { text: "CH -", align: center, text_font: f_body, text_color: 0xEEF0F6 }]
-            on_click: [homeassistant.action: { action: webostv.button, data: { entity_id: media_player.lg_g3_living_room_2, button: CHANNELDOWN } } ]
+            on_click: [homeassistant.action: { action: webostv.button, data: { entity_id: $ent_media_tv, button: CHANNELDOWN } } ]
