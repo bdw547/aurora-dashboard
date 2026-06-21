@@ -1522,7 +1522,11 @@ lvgl:
                   scrollable: false
                   widgets: [label: { text: "\U000F04AE", align: center, text_font: f_icon, text_color: 0xEEF0F6 }]
                   on_click:
-                    - homeassistant.action: { action: media_player.media_previous_track, data: { entity_id: media_player.spotifyplus_ben_walton } }
+                    - homeassistant.action:
+                        action: spotifyplus.player_media_skip_previous
+                        data:
+                          entity_id: media_player.spotifyplus_ben_walton
+                          device_id: !lambda 'return id(g_room);'
               - button:
                   x: 118
                   y: 366
@@ -1534,7 +1538,21 @@ lvgl:
                   scrollable: false
                   widgets: [label: { id: ic_home_playpause, text: "\U000F040A", align: center, text_font: f_icon, text_color: 0x08090D }]
                   on_click:
-                    - homeassistant.action: { action: media_player.media_play_pause, data: { entity_id: media_player.spotifyplus_ben_walton } }
+                    - if:
+                        condition:
+                          lambda: 'return id(np_playing);'
+                        then:
+                          - homeassistant.action:
+                              action: spotifyplus.player_media_pause
+                              data:
+                                entity_id: media_player.spotifyplus_ben_walton
+                                device_id: !lambda 'return id(g_room);'
+                        else:
+                          - homeassistant.action:
+                              action: spotifyplus.player_media_resume
+                              data:
+                                entity_id: media_player.spotifyplus_ben_walton
+                                device_id: !lambda 'return id(g_room);'
               - button:
                   x: 202
                   y: 374
@@ -1544,7 +1562,11 @@ lvgl:
                   scrollable: false
                   widgets: [label: { text: "\U000F04AD", align: center, text_font: f_icon, text_color: 0xEEF0F6 }]
                   on_click:
-                    - homeassistant.action: { action: media_player.media_next_track, data: { entity_id: media_player.spotifyplus_ben_walton } }
+                    - homeassistant.action:
+                        action: spotifyplus.player_media_skip_next
+                        data:
+                          entity_id: media_player.spotifyplus_ben_walton
+                          device_id: !lambda 'return id(g_room);'
         - obj:
             x: 412
             y: 104
@@ -1989,7 +2011,11 @@ lvgl:
                   height: 52
                   widgets: [label: { text: "󰒮", align: center, text_font: f_icon, text_color: $c_text } ]
                   on_click:
-                    - homeassistant.action: { action: media_player.media_previous_track, data: { entity_id: media_player.spotifyplus_ben_walton } }
+                    - homeassistant.action:
+                        action: spotifyplus.player_media_skip_previous
+                        data:
+                          entity_id: media_player.spotifyplus_ben_walton
+                          device_id: !lambda 'return id(g_room);'
               - button:
                   align: bottom_mid
                   y: -72
@@ -1999,7 +2025,21 @@ lvgl:
                   bg_grad_color: $c_purple
                   widgets: [label: { id: ic_playpause, text: "󰐊", align: center, text_font: f_icon, text_color: $c_bg } ]
                   on_click:
-                    - homeassistant.action: { action: media_player.media_play_pause, data: { entity_id: media_player.spotifyplus_ben_walton } }
+                    - if:
+                        condition:
+                          lambda: 'return id(np_playing);'
+                        then:
+                          - homeassistant.action:
+                              action: spotifyplus.player_media_pause
+                              data:
+                                entity_id: media_player.spotifyplus_ben_walton
+                                device_id: !lambda 'return id(g_room);'
+                        else:
+                          - homeassistant.action:
+                              action: spotifyplus.player_media_resume
+                              data:
+                                entity_id: media_player.spotifyplus_ben_walton
+                                device_id: !lambda 'return id(g_room);'
               - button:
                   align: bottom_right
                   x: 0
@@ -2008,7 +2048,11 @@ lvgl:
                   height: 52
                   widgets: [label: { text: "󰒭", align: center, text_font: f_icon, text_color: $c_text } ]
                   on_click:
-                    - homeassistant.action: { action: media_player.media_next_track, data: { entity_id: media_player.spotifyplus_ben_walton } }
+                    - homeassistant.action:
+                        action: spotifyplus.player_media_skip_next
+                        data:
+                          entity_id: media_player.spotifyplus_ben_walton
+                          device_id: !lambda 'return id(g_room);'
               # volume
               - label: { text: "󰕾", align: bottom_left, x: 4, y: -16, text_font: f_icon, text_color: $c_text2 }
               - slider:
@@ -2022,10 +2066,11 @@ lvgl:
                   value: 34
                   on_release:
                     - homeassistant.action:
-                        action: media_player.volume_set
+                        action: spotifyplus.player_set_volume_level
                         data:
                           entity_id: media_player.spotifyplus_ben_walton
-                          volume_level: !lambda 'char b[8]; snprintf(b, sizeof(b), "%.2f", x / 100.0f); return std::string(b);'
+                          device_id: !lambda 'return id(g_room);'
+                          volume_level: !lambda 'char b[8]; snprintf(b, sizeof(b), "%d", (int) x); return std::string(b);'
 
         # Spotify source selector (room playback target)
         - label: { text: "PLAY ON", x: 560, y: 70, text_font: f_small, text_color: $c_text2 }
