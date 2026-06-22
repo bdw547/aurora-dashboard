@@ -1549,10 +1549,10 @@ text_sensor:
     entity_id: $ent_fan_living
     on_value:
       then:
+        - lvgl.slider.update: { id: sld_living_fan, value: !lambda 'return x == std::string("on") ? 100 : 0;' }
         - lvgl.label.update: { id: lbl_living_fan_state, text: !lambda 'return x == std::string("on") ? std::string("On") : std::string("Off");' }
-        - lvgl.widget.update: { id: btn_living_fan, bg_color: !lambda 'return x == std::string("on") ? lv_color_hex(0x16323A) : lv_color_hex(0x2A2D33);' }
-        - lvgl.widget.update: { id: thumb_fan_on, hidden: !lambda 'return x != std::string("on");' }
-        - lvgl.widget.update: { id: thumb_fan_off, hidden: !lambda 'return x == std::string("on");' }
+        - lvgl.widget.update: { id: btn_living_fan_pwr, bg_color: !lambda 'return x == std::string("on") ? lv_color_hex(0x16323A) : lv_color_hex(0x12141C);' }
+        - lvgl.label.update: { id: ic_living_fan, text_color: !lambda 'return x == std::string("on") ? lv_color_hex(0x2ED5B8) : lv_color_hex(0x8A8F9E);' }
   - platform: homeassistant
     id: ha_room_office_fan_office_ceiling_fan
     entity_id: $ent_fan_office
@@ -3398,42 +3398,52 @@ lvgl:
             widgets:
               - label: { text: "Ceiling Fan", x: 0, y: 0, width: 120, text_align: center, text_font: f_body, text_color: 0xEEF0F6 }
               - label: { id: lbl_living_fan_state, text: "Off", x: 0, y: 24, width: 120, text_align: center, text_font: f_body, text_color: 0x8A8F9E }
-              - button:
-                  id: btn_living_fan
+              - slider:
+                  id: sld_living_fan
                   x: 0
                   y: 52
                   width: 120
-                  height: 380
+                  height: 268
+                  min_value: 0
+                  max_value: 100
+                  value: 0
                   radius: 24
-                  bg_color: 0x2A2D33
+                  bg_color: 0x12141C
+                  bg_opa: 100%
                   border_width: 2
                   border_color: 0x2A2F3A
+                  indicator:
+                    bg_color: 0x2ED5B8
+                    radius: 24
+                  knob:
+                    bg_color: 0x56C5DD
+                    pad_left: -8
+                    pad_right: -8
+                    pad_top: -8
+                    pad_bottom: -8
+                    radius: 20
+                  on_release:
+                    - if:
+                        condition:
+                          lambda: 'return x >= 50;'
+                        then:
+                          - homeassistant.action: { action: fan.turn_on, data: { entity_id: $ent_fan_living } }
+                          - lvgl.slider.update: { id: sld_living_fan, value: 100 }
+                        else:
+                          - homeassistant.action: { action: fan.turn_off, data: { entity_id: $ent_fan_living } }
+                          - lvgl.slider.update: { id: sld_living_fan, value: 0 }
+              - button:
+                  id: btn_living_fan_pwr
+                  align: bottom_mid
+                  y: 0
+                  width: 120
+                  height: 100
+                  radius: 24
+                  bg_color: 0x12141C
+                  border_width: 2
+                  border_color: 0x2A2F3A
+                  widgets: [label: { id: ic_living_fan, text: "\U000F0210", align: center, text_font: f_icon, text_color: 0x8A8F9E }]
                   on_click: [homeassistant.action: { action: fan.toggle, data: { entity_id: $ent_fan_living } }]
-              - obj:
-                  id: thumb_fan_off
-                  x: 8
-                  y: 320
-                  width: 104
-                  height: 104
-                  radius: 20
-                  bg_color: 0xBFC4CC
-                  border_width: 0
-                  clickable: false
-                  scrollable: false
-                  widgets: [label: { text: "\U000F0210", align: center, text_font: f_icon, text_color: 0x3A3D42 }]
-              - obj:
-                  id: thumb_fan_on
-                  x: 8
-                  y: 60
-                  width: 104
-                  height: 104
-                  radius: 20
-                  bg_color: 0x56C5DD
-                  border_width: 0
-                  hidden: true
-                  clickable: false
-                  scrollable: false
-                  widgets: [label: { text: "\U000F0210", align: center, text_font: f_icon, text_color: 0xFFFFFF }]
         - button:
             x: 596
             y: 96
