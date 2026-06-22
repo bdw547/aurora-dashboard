@@ -1551,8 +1551,8 @@ text_sensor:
       then:
         - lvgl.slider.update: { id: sld_living_fan, value: !lambda 'return x == std::string("on") ? 100 : 0;' }
         - lvgl.label.update: { id: lbl_living_fan_state, text: !lambda 'return x == std::string("on") ? std::string("On") : std::string("Off");' }
-        - lvgl.widget.update: { id: btn_living_fan_pwr, bg_color: !lambda 'return x == std::string("on") ? lv_color_hex(0x16323A) : lv_color_hex(0x12141C);' }
-        - lvgl.label.update: { id: ic_living_fan, text_color: !lambda 'return x == std::string("on") ? lv_color_hex(0x2ED5B8) : lv_color_hex(0x8A8F9E);' }
+        - lvgl.widget.update: { id: btn_living_fan_pwr, bg_color: !lambda 'return x == std::string("on") ? lv_color_hex(0x2563EB) : lv_color_hex(0x12141C);' }
+        - lvgl.label.update: { id: ic_living_fan, text_color: !lambda 'return x == std::string("on") ? lv_color_hex(0xFFFFFF) : lv_color_hex(0x8A8F9E);' }
   - platform: homeassistant
     id: ha_room_office_fan_office_ceiling_fan
     entity_id: $ent_fan_office
@@ -3398,24 +3398,30 @@ lvgl:
             widgets:
               - label: { text: "Ceiling Fan", x: 0, y: 0, width: 120, text_align: center, text_font: f_body, text_color: 0xEEF0F6 }
               - label: { id: lbl_living_fan_state, text: "Off", x: 0, y: 24, width: 120, text_align: center, text_font: f_body, text_color: 0x8A8F9E }
-              - slider:
-                  id: sld_living_fan
+              - obj:
+                  id: fan_track
                   x: 0
                   y: 52
                   width: 120
                   height: 268
+                  radius: 24
+                  bg_color: 0x12141C
+                  border_width: 2
+                  border_color: 0x2A2F3A
+                  clickable: false
+                  scrollable: false
+              - slider:
+                  id: sld_living_fan
+                  x: 0
+                  y: 96
+                  width: 120
+                  height: 180
                   min_value: 0
                   max_value: 100
                   value: 0
-                  radius: 24
-                  bg_color: 0x12141C
-                  bg_opa: 100%
-                  border_width: 2
-                  border_color: 0x2A2F3A
+                  bg_opa: 0%
                   indicator:
-                    bg_color: 0x2ED5B8
                     bg_opa: 0%
-                    radius: 24
                   knob:
                     bg_color: 0x56C5DD
                     pad_left: -6
