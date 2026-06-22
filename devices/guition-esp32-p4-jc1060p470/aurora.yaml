@@ -47,6 +47,7 @@ substitutions:
   ha_base: "http://10.0.0.208:8123"
   ent_person: "person.ben"
   ent_weather: "weather.forecast_home"
+  ent_weather_fc: "sensor.aurora_weather_daily"
   ent_nas_status: "sensor.walton_synology_volume_1_status"
   ent_nas_used: "sensor.walton_synology_volume_1_volume_used"
 
@@ -377,6 +378,27 @@ font:
   - file: "gfonts://Sora@600"
     id: f_head
     size: 34
+  # Large weather glyphs for the weather page hero icon
+  - file: 'https://github.com/Templarian/MaterialDesign-Webfont/raw/v7.4.47/fonts/materialdesignicons-webfont.ttf'
+    id: f_wxicon
+    size: 72
+    bpp: 4
+    glyphs:
+      - "\U000F0599"  # sunny
+      - "\U000F0595"  # partly-cloudy
+      - "\U000F0590"  # cloudy
+      - "\U000F0597"  # rainy
+      - "\U000F0596"  # pouring
+      - "\U000F0598"  # snowy
+      - "\U000F067F"  # snowy-rainy
+      - "\U000F0591"  # fog
+      - "\U000F0592"  # hail
+      - "\U000F0593"  # lightning
+      - "\U000F067E"  # lightning-rainy
+      - "\U000F059D"  # windy
+      - "\U000F0594"  # clear-night
+      - "\U000F0F31"  # night-partly-cloudy
+      - "\U000F0026"  # alert
   - file: "gfonts://Sora@500"
     id: f_body
     size: 14
@@ -413,6 +435,20 @@ font:
       - "\U000F06A5"  # power-plug
       - "\U000F0599"  # weather-sunny
       - "\U000F0493"  # cog
+      - "\U000F0595"  # weather-partly-cloudy
+      - "\U000F0590"  # weather-cloudy
+      - "\U000F0597"  # weather-rainy
+      - "\U000F0596"  # weather-pouring
+      - "\U000F0598"  # weather-snowy
+      - "\U000F067F"  # weather-snowy-rainy
+      - "\U000F0591"  # weather-fog
+      - "\U000F0592"  # weather-hail
+      - "\U000F0593"  # weather-lightning
+      - "\U000F067E"  # weather-lightning-rainy
+      - "\U000F059D"  # weather-windy
+      - "\U000F0594"  # weather-night (clear)
+      - "\U000F0F31"  # weather-night-partly-cloudy
+      - "\U000F0026"  # alert (exceptional)
 
 # --- Live HA state (selected light = Living Room for v1) ---
 sensor:
@@ -554,6 +590,47 @@ sensor:
     on_value:
       then:
         - lvgl.label.update: { id: lbl_back_batt, text: !lambda 'char b[8]; snprintf(b,sizeof(b),"%.0f%%",x); return std::string(b);' }
+  # ---- Weather detail page (current conditions from $ent_weather attributes) ----
+  - platform: homeassistant
+    id: ha_wx_temp
+    entity_id: $ent_weather
+    attribute: temperature
+    on_value:
+      then:
+        - lvgl.label.update: { id: lbl_wx_temp, text: !lambda 'char b[12]; snprintf(b,sizeof(b),"%.0f°",x); return std::string(b);' }
+  - platform: homeassistant
+    id: ha_wx_humidity
+    entity_id: $ent_weather
+    attribute: humidity
+    on_value:
+      then:
+        - lvgl.label.update: { id: lbl_wx_humidity, text: !lambda 'char b[8]; snprintf(b,sizeof(b),"%.0f%%",x); return std::string(b);' }
+  - platform: homeassistant
+    id: ha_wx_pressure
+    entity_id: $ent_weather
+    attribute: pressure
+    on_value:
+      then:
+        - lvgl.label.update: { id: lbl_wx_pressure, text: !lambda 'char b[20]; snprintf(b,sizeof(b),"%.2f inHg",x); return std::string(b);' }
+  - platform: homeassistant
+    id: ha_wx_windbearing
+    entity_id: $ent_weather
+    attribute: wind_bearing
+    on_value:
+      then:
+        - lambda: 'id(g_wx_bearing) = x;'
+  - platform: homeassistant
+    id: ha_wx_windspeed
+    entity_id: $ent_weather
+    attribute: wind_speed
+    on_value:
+      then:
+        - lvgl.label.update:
+            id: lbl_wx_wind
+            text: !lambda |-
+              const char* d[] = {"N","NNE","NE","ENE","E","ESE","SE","SSE","S","SSW","SW","WSW","W","WNW","NW","NNW"};
+              int i = ((int)((id(g_wx_bearing) + 11.25f) / 22.5f)) % 16; if (i < 0) i += 16;
+              char b[28]; snprintf(b, sizeof(b), "%.1f mph %s", x, d[i]); return std::string(b);
   - platform: wifi_signal
     id: panel_rssi
     update_interval: 30s
@@ -907,6 +984,118 @@ text_sensor:
                     - light.turn_on: { id: display_backlight, brightness: !lambda 'return id(g_bri) / 100.0f;' }
                     - lambda: 'id(g_screen_off) = false;'
                     - lvgl.page.show: page_doorbell
+  # ---- Weather detail: current condition -> big glyph + pretty name ----
+  - platform: homeassistant
+    id: ha_wx_cond
+    entity_id: $ent_weather
+    on_value:
+      then:
+        - lvgl.label.update:
+            id: lbl_wx_icon
+            text: !lambda |-
+              std::string c = x;
+              if (c=="sunny") return std::string("\U000F0599");
+              if (c=="clear-night") return std::string("\U000F0594");
+              if (c=="partlycloudy") return std::string("\U000F0595");
+              if (c=="cloudy") return std::string("\U000F0590");
+              if (c=="rainy") return std::string("\U000F0597");
+              if (c=="pouring") return std::string("\U000F0596");
+              if (c=="snowy") return std::string("\U000F0598");
+              if (c=="snowy-rainy") return std::string("\U000F067F");
+              if (c=="fog") return std::string("\U000F0591");
+              if (c=="hail") return std::string("\U000F0592");
+              if (c=="lightning") return std::string("\U000F0593");
+              if (c=="lightning-rainy") return std::string("\U000F067E");
+              if (c=="windy" || c=="windy-variant") return std::string("\U000F059D");
+              return std::string("\U000F0026");
+        - lvgl.label.update:
+            id: lbl_wx_cond
+            text: !lambda |-
+              std::string c = x;
+              if (c=="partlycloudy") return std::string("Partly cloudy");
+              if (c=="clear-night") return std::string("Clear");
+              if (c=="snowy-rainy") return std::string("Sleet");
+              if (c=="lightning-rainy") return std::string("Thunderstorms");
+              if (c=="lightning") return std::string("Thunder");
+              if (c=="windy-variant") return std::string("Windy");
+              for (size_t i=0;i<c.size();i++){ if(c[i]=='-') c[i]=' '; }
+              if (!c.empty()) c[0]=toupper(c[0]);
+              return c;
+  # ---- Today high/low (forecast package) ----
+  - platform: homeassistant
+    id: ha_wx_today_hi
+    entity_id: $ent_weather_fc
+    attribute: today_high
+    on_value:
+      then:
+        - lvgl.label.update: { id: lbl_wx_hi, text: !lambda 'return std::string("H ") + x + "°";' }
+  - platform: homeassistant
+    id: ha_wx_today_lo
+    entity_id: $ent_weather_fc
+    attribute: today_low
+    on_value:
+      then:
+        - lvgl.label.update: { id: lbl_wx_lo, text: !lambda 'return std::string("L ") + x + "°";' }
+  # ---- 6-day forecast columns (forecast package, \n-joined strings) ----
+  - platform: homeassistant
+    id: ha_wx_fc_names
+    entity_id: $ent_weather_fc
+    attribute: d_names
+    on_value:
+      then:
+        - lambda: |-
+            lv_obj_t* L[6] = { id(lbl_fc_name_0),id(lbl_fc_name_1),id(lbl_fc_name_2),id(lbl_fc_name_3),id(lbl_fc_name_4),id(lbl_fc_name_5) };
+            std::string s = x; size_t p = 0;
+            for (int i = 0; i < 6; i++) { size_t nl = s.find('\n', p); std::string t = (nl==std::string::npos)?s.substr(p):s.substr(p,nl-p); lv_label_set_text(L[i], t.c_str()); if (nl==std::string::npos) break; p = nl+1; }
+  - platform: homeassistant
+    id: ha_wx_fc_high
+    entity_id: $ent_weather_fc
+    attribute: d_high
+    on_value:
+      then:
+        - lambda: |-
+            lv_obj_t* L[6] = { id(lbl_fc_hi_0),id(lbl_fc_hi_1),id(lbl_fc_hi_2),id(lbl_fc_hi_3),id(lbl_fc_hi_4),id(lbl_fc_hi_5) };
+            std::string s = x; size_t p = 0;
+            for (int i = 0; i < 6; i++) { size_t nl = s.find('\n', p); std::string t = (nl==std::string::npos)?s.substr(p):s.substr(p,nl-p); t += "°"; lv_label_set_text(L[i], t.c_str()); if (nl==std::string::npos) break; p = nl+1; }
+  - platform: homeassistant
+    id: ha_wx_fc_low
+    entity_id: $ent_weather_fc
+    attribute: d_low
+    on_value:
+      then:
+        - lambda: |-
+            lv_obj_t* L[6] = { id(lbl_fc_lo_0),id(lbl_fc_lo_1),id(lbl_fc_lo_2),id(lbl_fc_lo_3),id(lbl_fc_lo_4),id(lbl_fc_lo_5) };
+            std::string s = x; size_t p = 0;
+            for (int i = 0; i < 6; i++) { size_t nl = s.find('\n', p); std::string t = (nl==std::string::npos)?s.substr(p):s.substr(p,nl-p); t += "°"; lv_label_set_text(L[i], t.c_str()); if (nl==std::string::npos) break; p = nl+1; }
+  - platform: homeassistant
+    id: ha_wx_fc_cond
+    entity_id: $ent_weather_fc
+    attribute: d_cond
+    on_value:
+      then:
+        - lambda: |-
+            lv_obj_t* L[6] = { id(icon_fc_0),id(icon_fc_1),id(icon_fc_2),id(icon_fc_3),id(icon_fc_4),id(icon_fc_5) };
+            std::string s = x; size_t p = 0;
+            for (int i = 0; i < 6; i++) {
+              size_t nl = s.find('\n', p); std::string c = (nl==std::string::npos)?s.substr(p):s.substr(p,nl-p);
+              std::string g;
+              if (c=="sunny") g="\U000F0599";
+              else if (c=="clear-night") g="\U000F0594";
+              else if (c=="partlycloudy") g="\U000F0595";
+              else if (c=="cloudy") g="\U000F0590";
+              else if (c=="rainy") g="\U000F0597";
+              else if (c=="pouring") g="\U000F0596";
+              else if (c=="snowy") g="\U000F0598";
+              else if (c=="snowy-rainy") g="\U000F067F";
+              else if (c=="fog") g="\U000F0591";
+              else if (c=="hail") g="\U000F0592";
+              else if (c=="lightning") g="\U000F0593";
+              else if (c=="lightning-rainy") g="\U000F067E";
+              else if (c=="windy"||c=="windy-variant") g="\U000F059D";
+              else g="\U000F0026";
+              lv_label_set_text(L[i], g.c_str());
+              if (nl==std::string::npos) break; p = nl+1;
+            }
   - platform: homeassistant
     id: ha_outdoor_condition
     entity_id: $ent_weather
@@ -1424,6 +1613,10 @@ globals:
     type: bool
     restore_value: false
     initial_value: 'false'
+  - id: g_wx_bearing
+    type: float
+    restore_value: false
+    initial_value: '0'
   # Main Floor thermostat working setpoints (mirror HA so +/- can step locally)
   - id: g_mf_target
     type: float
@@ -2083,7 +2276,7 @@ lvgl:
             styles: st_glass
             scrollable: false
             clickable: true
-            on_click: [lvgl.page.show: page_climate]
+            on_click: [lvgl.page.show: page_weather]
             widgets:
               - label: { text: "CLIMATE", x: 4, y: 2, text_font: f_small, text_color: 0x8A8F9E }
               - label: { id: lbl_home_temp_big, text: "--", x: 2, y: 46, text_font: f_display, text_color: 0xEEF0F6 }
@@ -5319,3 +5512,84 @@ lvgl:
                     - lvgl.widget.update: { id: lbl_ssid, hidden: false }
                     - lvgl.widget.update: { id: lbl_ip, hidden: false }
                     - lvgl.page.show: page_home
+
+    # ---------- WEATHER (detail, opened from the Home climate card) ----------
+    - id: page_weather
+      bg_opa: 0
+      on_load:
+        - lvgl.widget.update: { id: nav_home, bg_color: 0x2ED5B8 }
+        - lvgl.widget.update: { id: nav_rooms, bg_color: 0x10121A }
+        - lvgl.widget.update: { id: nav_lights, bg_color: 0x10121A }
+        - lvgl.widget.update: { id: nav_climate, bg_color: 0x10121A }
+        - lvgl.widget.update: { id: nav_media, bg_color: 0x10121A }
+        - lvgl.widget.update: { id: nav_security, bg_color: 0x10121A }
+        - lvgl.widget.update: { id: nav_network, bg_color: 0x10121A }
+        - lvgl.widget.update: { id: nav_settings, bg_color: 0x10121A }
+      widgets:
+        - image: { src: img_aurora_bg, x: 0, y: 0 }
+        - label: { text: "Weather", x: 100, y: 26, text_font: f_title, text_color: 0xEEF0F6 }
+        - button:
+            x: 880
+            y: 24
+            width: 124
+            height: 44
+            styles: st_glass
+            widgets: [label: { text: "Home", align: center, text_font: f_small, text_color: 0xEEF0F6 }]
+            on_click: [lvgl.page.show: page_home]
+        # Current conditions
+        - obj:
+            x: 96
+            y: 76
+            width: 908
+            height: 150
+            styles: st_glass
+            scrollable: false
+            widgets:
+              - label: { id: lbl_wx_icon, text: "\U000F0599", x: 4, align: left_mid, text_font: f_wxicon, text_color: 0xFFCE54 }
+              - label: { id: lbl_wx_cond, text: "--", x: 130, y: 30, text_font: f_head, text_color: 0xEEF0F6 }
+              - label: { text: "Outdoor conditions", x: 132, y: 80, text_font: f_small, text_color: 0x8A8F9E }
+              - label: { id: lbl_wx_temp, text: "--", align: top_right, x: -16, y: 18, text_font: f_display, text_color: 0xEEF0F6 }
+              - label: { id: lbl_wx_hi, text: "--", align: top_right, x: -16, y: 96, text_font: f_body, text_color: 0xC8CCD6 }
+              - label: { id: lbl_wx_lo, text: "--", align: top_right, x: -16, y: 120, text_font: f_small, text_color: 0x8A8F9E }
+        # Detail rows
+        - obj:
+            x: 96
+            y: 238
+            width: 908
+            height: 140
+            styles: st_glass
+            scrollable: false
+            widgets:
+              - label: { text: "Air pressure", x: 4, y: 6, text_font: f_body, text_color: 0xC8CCD6 }
+              - label: { id: lbl_wx_pressure, text: "--", align: top_right, x: -4, y: 6, text_font: f_body, text_color: 0xEEF0F6 }
+              - label: { text: "Humidity", x: 4, y: 44, text_font: f_body, text_color: 0xC8CCD6 }
+              - label: { id: lbl_wx_humidity, text: "--", align: top_right, x: -4, y: 44, text_font: f_body, text_color: 0xEEF0F6 }
+              - label: { text: "Wind speed", x: 4, y: 82, text_font: f_body, text_color: 0xC8CCD6 }
+              - label: { id: lbl_wx_wind, text: "--", align: top_right, x: -4, y: 82, text_font: f_body, text_color: 0xEEF0F6 }
+        - label: { text: "Forecast", x: 100, y: 394, text_font: f_body, text_color: 0xEEF0F6 }
+        # 6-day forecast columns
+        - label: { id: lbl_fc_name_0, text: "--", x: 96,  y: 426, width: 140, text_align: center, text_font: f_body, text_color: 0xEEF0F6 }
+        - label: { id: icon_fc_0, text: "", x: 96,  y: 452, width: 140, text_align: center, text_font: f_icon, text_color: 0xFFCE54 }
+        - label: { id: lbl_fc_hi_0, text: "--", x: 96,  y: 498, width: 140, text_align: center, text_font: f_body, text_color: 0xEEF0F6 }
+        - label: { id: lbl_fc_lo_0, text: "--", x: 96,  y: 524, width: 140, text_align: center, text_font: f_small, text_color: 0x8A8F9E }
+        - label: { id: lbl_fc_name_1, text: "--", x: 248, y: 426, width: 140, text_align: center, text_font: f_body, text_color: 0xEEF0F6 }
+        - label: { id: icon_fc_1, text: "", x: 248, y: 452, width: 140, text_align: center, text_font: f_icon, text_color: 0xFFCE54 }
+        - label: { id: lbl_fc_hi_1, text: "--", x: 248, y: 498, width: 140, text_align: center, text_font: f_body, text_color: 0xEEF0F6 }
+        - label: { id: lbl_fc_lo_1, text: "--", x: 248, y: 524, width: 140, text_align: center, text_font: f_small, text_color: 0x8A8F9E }
+        - label: { id: lbl_fc_name_2, text: "--", x: 400, y: 426, width: 140, text_align: center, text_font: f_body, text_color: 0xEEF0F6 }
+        - label: { id: icon_fc_2, text: "", x: 400, y: 452, width: 140, text_align: center, text_font: f_icon, text_color: 0xFFCE54 }
+        - label: { id: lbl_fc_hi_2, text: "--", x: 400, y: 498, width: 140, text_align: center, text_font: f_body, text_color: 0xEEF0F6 }
+        - label: { id: lbl_fc_lo_2, text: "--", x: 400, y: 524, width: 140, text_align: center, text_font: f_small, text_color: 0x8A8F9E }
+        - label: { id: lbl_fc_name_3, text: "--", x: 552, y: 426, width: 140, text_align: center, text_font: f_body, text_color: 0xEEF0F6 }
+        - label: { id: icon_fc_3, text: "", x: 552, y: 452, width: 140, text_align: center, text_font: f_icon, text_color: 0xFFCE54 }
+        - label: { id: lbl_fc_hi_3, text: "--", x: 552, y: 498, width: 140, text_align: center, text_font: f_body, text_color: 0xEEF0F6 }
+        - label: { id: lbl_fc_lo_3, text: "--", x: 552, y: 524, width: 140, text_align: center, text_font: f_small, text_color: 0x8A8F9E }
+        - label: { id: lbl_fc_name_4, text: "--", x: 704, y: 426, width: 140, text_align: center, text_font: f_body, text_color: 0xEEF0F6 }
+        - label: { id: icon_fc_4, text: "", x: 704, y: 452, width: 140, text_align: center, text_font: f_icon, text_color: 0xFFCE54 }
+        - label: { id: lbl_fc_hi_4, text: "--", x: 704, y: 498, width: 140, text_align: center, text_font: f_body, text_color: 0xEEF0F6 }
+        - label: { id: lbl_fc_lo_4, text: "--", x: 704, y: 524, width: 140, text_align: center, text_font: f_small, text_color: 0x8A8F9E }
+        - label: { id: lbl_fc_name_5, text: "--", x: 856, y: 426, width: 140, text_align: center, text_font: f_body, text_color: 0xEEF0F6 }
+        - label: { id: icon_fc_5, text: "", x: 856, y: 452, width: 140, text_align: center, text_font: f_icon, text_color: 0xFFCE54 }
+        - label: { id: lbl_fc_hi_5, text: "--", x: 856, y: 498, width: 140, text_align: center, text_font: f_body, text_color: 0xEEF0F6 }
+        - label: { id: lbl_fc_lo_5, text: "--", x: 856, y: 524, width: 140, text_align: center, text_font: f_small, text_color: 0x8A8F9E }
+        - label: { id: lbl_wx_attr, text: "Forecast from met.no · Norwegian Meteorological Institute", align: bottom_mid, y: -6, text_font: f_small, text_color: 0x4A4F5A }

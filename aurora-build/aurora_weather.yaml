@@ -1,0 +1,59 @@
+# =============================================================================
+# Aurora · Weather forecast package
+# -----------------------------------------------------------------------------
+# HA removed the `forecast` attribute from weather entities — it's now only
+# available via the weather.get_forecasts service (which returns a response the
+# panel can't read directly). This package calls that service every 15 min and
+# republishes a 6-day daily forecast as plain sensor attributes the panel reads.
+#
+# INSTALL: in configuration.yaml:
+#     homeassistant:
+#       packages:
+#         aurora_weather: !include aurora_weather.yaml
+# then restart HA. Change the weather entity below if yours differs.
+# =============================================================================
+
+template:
+  - trigger:
+      - platform: homeassistant
+        event: start
+      - platform: time_pattern
+        minutes: "/15"
+    action:
+      - service: weather.get_forecasts
+        data:
+          type: daily
+        target:
+          entity_id: weather.forecast_home
+        response_variable: fc
+    sensor:
+      - name: Aurora Weather Daily
+        unique_id: aurora_weather_daily
+        state: "{{ fc['weather.forecast_home'].forecast | count }}"
+        attributes:
+          today_high: "{{ fc['weather.forecast_home'].forecast[0].temperature | round }}"
+          today_low: "{{ fc['weather.forecast_home'].forecast[0].templow | round }}"
+          d_names: >-
+            {%- set ns = namespace(s=[]) -%}
+            {%- for f in fc['weather.forecast_home'].forecast[:6] -%}
+              {%- set ns.s = ns.s + [as_datetime(f.datetime) | as_local | strftime('%a')] -%}
+            {%- endfor -%}
+            {{ ns.s | join('\n') }}
+          d_high: >-
+            {%- set ns = namespace(s=[]) -%}
+            {%- for f in fc['weather.forecast_home'].forecast[:6] -%}
+              {%- set ns.s = ns.s + [f.temperature | round | string] -%}
+            {%- endfor -%}
+            {{ ns.s | join('\n') }}
+          d_low: >-
+            {%- set ns = namespace(s=[]) -%}
+            {%- for f in fc['weather.forecast_home'].forecast[:6] -%}
+              {%- set ns.s = ns.s + [f.templow | round | string] -%}
+            {%- endfor -%}
+            {{ ns.s | join('\n') }}
+          d_cond: >-
+            {%- set ns = namespace(s=[]) -%}
+            {%- for f in fc['weather.forecast_home'].forecast[:6] -%}
+              {%- set ns.s = ns.s + [f.condition] -%}
+            {%- endfor -%}
+            {{ ns.s | join('\n') }}
