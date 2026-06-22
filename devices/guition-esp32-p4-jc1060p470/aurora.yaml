@@ -40,6 +40,9 @@ substitutions:
   ent_climate_main: "climate.main_floor"
   ent_sonos_living: "media_player.living_room"
   ent_sonos_kitchen: "media_player.kitchen"
+  ent_camera_front: "camera.front_door"
+  ent_event_chime: "event.front_door_front_door_chime"
+  ha_base: "http://10.0.0.208:8123"
   ent_person: "person.ben"
   ent_weather: "weather.forecast_home"
   ent_nas_status: "sensor.walton_synology_volume_1_status"
@@ -276,6 +279,27 @@ online_image:
           src: art_big
     on_error:
       - logger.log: "ART big: error"
+  # Front-door camera snapshots (HA camera_proxy JPEG, refreshed while viewing)
+  - id: cam_image
+    url: "http://127.0.0.1/none.jpg"
+    format: JPEG
+    type: RGB565
+    resize: 150x200
+    update_interval: never
+    on_download_finished:
+      - lvgl.image.update: { id: img_cam_security, src: cam_image }
+    on_error:
+      - logger.log: "CAM: download error"
+  - id: cam_big
+    url: "http://127.0.0.1/none.jpg"
+    format: JPEG
+    type: RGB565
+    resize: 384x512
+    update_interval: never
+    on_download_finished:
+      - lvgl.image.update: { id: img_cam_big, src: cam_big }
+    on_error:
+      - logger.log: "CAM big: download error"
 
 image:
   - id: img_aurora_bg
@@ -339,6 +363,9 @@ font:
   - file: "gfonts://Sora@600"
     id: f_title
     size: 24
+  - file: "gfonts://Sora@600"
+    id: f_head
+    size: 34
   - file: "gfonts://Sora@500"
     id: f_body
     size: 14
@@ -828,6 +855,34 @@ text_sensor:
     on_value:
       then:
         - lvgl.label.update: { id: lbl_sonos_link, text: !lambda 'return x.find("kitchen")!=std::string::npos ? std::string("Linked") : std::string("Solo");' }
+  # ---- Front-door camera proxy URL (tokenized, from entity_picture) ----
+  - platform: homeassistant
+    id: ha_cam_picture
+    entity_id: $ent_camera_front
+    attribute: entity_picture
+    on_value:
+      then:
+        - lambda: 'id(g_cam_url) = std::string("$ha_base") + x;'
+  # ---- Doorbell chime -> pop up the camera (guard: ignore initial sync) ----
+  - platform: homeassistant
+    id: ha_chime
+    entity_id: $ent_event_chime
+    on_value:
+      then:
+        - if:
+            condition:
+              lambda: 'return !id(g_chime_init);'
+            then:
+              - lambda: 'id(g_chime_init) = true; id(g_last_chime) = x;'
+            else:
+              - if:
+                  condition:
+                    lambda: 'return x != id(g_last_chime);'
+                  then:
+                    - lambda: 'id(g_last_chime) = x;'
+                    - light.turn_on: { id: display_backlight, brightness: !lambda 'return id(g_bri) / 100.0f;' }
+                    - lambda: 'id(g_screen_off) = false;'
+                    - lvgl.page.show: page_doorbell
   - platform: homeassistant
     id: ha_outdoor_condition
     entity_id: $ent_weather
@@ -1120,11 +1175,13 @@ text_sensor:
             then:
               - lvgl.label.update: { id: lbl_front_lock_state, text: "Locked", text_color: 0x2ED5B8 }
               - lvgl.label.update: { id: lbl_home_lock_front, text: "Locked", text_color: 0x2ED5B8 }
+              - lvgl.label.update: { id: lbl_doorbell_lock, text: "Locked", text_color: 0x2ED5B8 }
               - lvgl.widget.update: { id: btn_front_lock, bg_color: 0x2ED5B8 }
               - lvgl.widget.update: { id: btn_front_unlock, bg_color: 0x161B24 }
             else:
               - lvgl.label.update: { id: lbl_front_lock_state, text: "Unlocked", text_color: 0xFF9F6B }
               - lvgl.label.update: { id: lbl_home_lock_front, text: "Unlocked", text_color: 0xFF9F6B }
+              - lvgl.label.update: { id: lbl_doorbell_lock, text: "Unlocked", text_color: 0xFF9F6B }
               - lvgl.widget.update: { id: btn_front_lock, bg_color: 0x161B24 }
               - lvgl.widget.update: { id: btn_front_unlock, bg_color: 0xFF9F6B }
   - platform: homeassistant
@@ -1405,6 +1462,21 @@ globals:
     type: int
     restore_value: false
     initial_value: '0'
+  # Front-door camera / doorbell
+  - id: g_cam_url
+    type: std::string
+    restore_value: false
+  - id: g_cam_view
+    type: int
+    restore_value: false
+    initial_value: '0'   # 0 none, 1 security card, 2 doorbell popup
+  - id: g_chime_init
+    type: bool
+    restore_value: false
+    initial_value: 'false'
+  - id: g_last_chime
+    type: std::string
+    restore_value: false
 
 script:
   - id: hl_rooms
@@ -1490,6 +1562,18 @@ time:
     id: ha_time
 
 interval:
+  - interval: 1500ms
+    then:
+      - if:
+          condition:
+            lambda: 'return id(g_cam_view) == 1 && !id(g_cam_url).empty();'
+          then:
+            - component.update: cam_image
+      - if:
+          condition:
+            lambda: 'return id(g_cam_view) == 2 && !id(g_cam_url).empty();'
+          then:
+            - component.update: cam_big
   - interval: 50ms
     then:
       - if:
@@ -2680,6 +2764,15 @@ lvgl:
         - lvgl.widget.update: { id: nav_security, bg_color: 0x2ED5B8 }
         - lvgl.widget.update: { id: nav_network, bg_color: 0x10121A }
         - lvgl.widget.update: { id: nav_settings, bg_color: 0x10121A }
+        - lambda: 'id(g_cam_view) = 1;'
+        - if:
+            condition:
+              lambda: 'return !id(g_cam_url).empty();'
+            then:
+              - online_image.set_url: { id: cam_image, url: !lambda 'return id(g_cam_url);' }
+              - component.update: cam_image
+      on_unload:
+        - lambda: 'id(g_cam_view) = 0;'
       widgets:
         - image: { src: img_aurora_bg, x: 0, y: 0 }
         - label: { text: "Security", x: 100, y: 26, text_font: f_title, text_color: 0xEEF0F6 }
@@ -2742,6 +2835,43 @@ lvgl:
             widgets:
               - label: { text: "PRESENCE", x: 4, y: 0, text_font: f_small, text_color: 0x8A8F9E }
               - label: { id: lbl_presence, text: "Ben · Home", x: 4, y: 28, text_font: f_title, text_color: 0x2ED5B8 }
+        # Front-door doorbell camera
+        - obj:
+            x: 96
+            y: 344
+            width: 776
+            height: 206
+            styles: st_glass
+            scrollable: false
+            widgets:
+              - obj: { x: 8, y: 3, width: 150, height: 200, radius: 12, bg_color: 0x05060A, border_width: 0 }
+              - image: { id: img_cam_security, src: cam_image, x: 8, y: 3 }
+              - label: { text: "FRONT DOOR", x: 178, y: 14, text_font: f_title, text_color: 0xEEF0F6 }
+              - label: { text: "Doorbell camera · live", x: 178, y: 50, text_font: f_small, text_color: 0x8A8F9E }
+              - button:
+                  x: 178
+                  y: 96
+                  width: 256
+                  height: 72
+                  bg_color: 0x2ED5B8
+                  widgets: [label: { text: "View Live", align: center, text_font: f_body, text_color: 0x08090D }]
+                  on_click: [lvgl.page.show: page_doorbell]
+              - button:
+                  x: 446
+                  y: 96
+                  width: 150
+                  height: 72
+                  bg_color: 0x161B24
+                  widgets: [label: { text: "Unlock", align: center, text_font: f_body, text_color: 0xEEF0F6 }]
+                  on_click: [homeassistant.action: { action: lock.unlock, data: { entity_id: $ent_lock_front } }]
+              - button:
+                  x: 608
+                  y: 96
+                  width: 150
+                  height: 72
+                  bg_color: 0x161B24
+                  widgets: [label: { text: "Lock", align: center, text_font: f_body, text_color: 0xEEF0F6 }]
+                  on_click: [homeassistant.action: { action: lock.lock, data: { entity_id: $ent_lock_front } }]
     - id: page_rooms
       bg_opa: 0
       on_load:
@@ -4991,3 +5121,69 @@ lvgl:
                         action: media_player.unjoin
                         data:
                           entity_id: $ent_sonos_kitchen
+
+    # ---------- DOORBELL (auto-popup on chime: live snapshot + lock control) ----------
+    - id: page_doorbell
+      bg_color: 0x05060A
+      bg_opa: 100%
+      on_load:
+        - lvgl.widget.update: { id: nav_rail, hidden: true }
+        - lvgl.widget.update: { id: lbl_ssid, hidden: true }
+        - lvgl.widget.update: { id: lbl_ip, hidden: true }
+        - lambda: 'id(g_cam_view) = 2;'
+        - if:
+            condition:
+              lambda: 'return !id(g_cam_url).empty();'
+            then:
+              - online_image.set_url: { id: cam_big, url: !lambda 'return id(g_cam_url);' }
+              - component.update: cam_big
+      on_unload:
+        - lambda: 'id(g_cam_view) = 0;'
+      widgets:
+        # Live camera feed (left)
+        - obj: { x: 40, y: 44, width: 384, height: 512, radius: 18, bg_color: 0x000000, border_width: 1, border_color: 0x2A2F3A }
+        - image: { id: img_cam_big, src: cam_big, x: 40, y: 44 }
+        - obj:
+            x: 56
+            y: 60
+            width: 76
+            height: 30
+            radius: 15
+            bg_color: 0xE5484D
+            border_width: 0
+            widgets: [label: { text: "LIVE", align: center, text_font: f_small, text_color: 0xFFFFFF }]
+        # Call info + actions (right)
+        - label: { text: "INCOMING", x: 470, y: 120, text_font: f_small, text_color: 0x8A8F9E }
+        - label: { text: "Front Door", x: 470, y: 146, text_font: f_head, text_color: 0xEEF0F6 }
+        - label: { id: lbl_doorbell_lock, text: "", x: 470, y: 196, text_font: f_body, text_color: 0x8A8F9E }
+        - button:
+            x: 470
+            y: 244
+            width: 494
+            height: 84
+            bg_color: 0x2ED5B8
+            widgets: [label: { text: "UNLOCK DOOR", align: center, text_font: f_title, text_color: 0x062018 }]
+            on_click: [homeassistant.action: { action: lock.unlock, data: { entity_id: $ent_lock_front } }]
+        - button:
+            x: 470
+            y: 340
+            width: 494
+            height: 84
+            bg_color: 0x1B2230
+            widgets: [label: { text: "LOCK DOOR", align: center, text_font: f_title, text_color: 0xEEF0F6 }]
+            on_click: [homeassistant.action: { action: lock.lock, data: { entity_id: $ent_lock_front } }]
+        - button:
+            x: 470
+            y: 436
+            width: 494
+            height: 84
+            bg_color: 0x0E0F14
+            border_width: 1
+            border_color: 0x2A2F3A
+            widgets: [label: { text: "DISMISS", align: center, text_font: f_title, text_color: 0x8A8F9E }]
+            on_click:
+              - lambda: 'id(g_cam_view) = 0;'
+              - lvgl.widget.update: { id: nav_rail, hidden: false }
+              - lvgl.widget.update: { id: lbl_ssid, hidden: false }
+              - lvgl.widget.update: { id: lbl_ip, hidden: false }
+              - lvgl.page.show: page_home
