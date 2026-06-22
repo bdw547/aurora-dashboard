@@ -1410,17 +1410,18 @@ time:
     id: ha_time
 
 interval:
-  - interval: 90ms
+  - interval: 50ms
     then:
       - if:
           condition:
             lambda: 'return id(g_tp_active) && (id(g_tp_dx) != 0 || id(g_tp_dy) != 0);'
           then:
+            # x2 sensitivity so a short drag covers more screen (less perceived lag)
             - homeassistant.action:
                 action: pyscript.lg_pointer_move
                 data:
-                  dx: !lambda 'return std::to_string(id(g_tp_dx));'
-                  dy: !lambda 'return std::to_string(id(g_tp_dy));'
+                  dx: !lambda 'return std::to_string(id(g_tp_dx) * 2);'
+                  dy: !lambda 'return std::to_string(id(g_tp_dy) * 2);'
             - lambda: 'id(g_tp_dx) = 0; id(g_tp_dy) = 0;'
   - interval: 10s
     then:
