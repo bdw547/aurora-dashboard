@@ -3296,15 +3296,15 @@ lvgl:
         - label: { text: "Living Room", x: 100, y: 26, text_font: f_title, text_color: 0xEEF0F6 }
         - button:
             align: top_right
-            x: -16
-            y: 22
-            width: 52
-            height: 52
-            radius: 26
+            x: -12
+            y: 12
+            width: 104
+            height: 44
+            radius: 8
             bg_color: 0x1B2230
             border_width: 2
             border_color: 0x2ED5B8
-            widgets: [label: { text: "\U000F0141", align: center, text_font: f_icon, text_color: 0x2ED5B8 }]
+            widgets: [label: { text: "Back", align: center, text_font: f_body, text_color: 0x2ED5B8 }]
             on_click: [lvgl.page.show: page_rooms]
         - obj:
             x: 100
@@ -3321,25 +3321,27 @@ lvgl:
               - slider:
                   id: sld_room_living_light_living_room_main
                   x: 0
-                  y: 54
+                  y: 52
                   width: 120
-                  height: 258
+                  height: 268
                   min_value: 0
                   max_value: 100
                   value: 0
-                  radius: 0
+                  radius: 24
                   bg_color: 0x12141C
                   bg_opa: 100%
                   border_width: 2
                   border_color: 0x2A2F3A
                   indicator:
                     bg_color: 0xEEF0F6
-                    radius: 0
+                    radius: 24
                   knob:
-                    bg_color: 0xFFFFFF
-                    width: 124
-                    height: 12
-                    radius: 0
+                    bg_color: 0xC8CCD6
+                    pad_left: 6
+                    pad_right: 6
+                    pad_top: -56
+                    pad_bottom: -56
+                    radius: 2
                   on_release:
                     - if:
                         condition:
@@ -3359,8 +3361,8 @@ lvgl:
                   align: bottom_mid
                   y: 0
                   width: 120
-                  height: 120
-                  radius: 0
+                  height: 100
+                  radius: 24
                   bg_color: 0x12141C
                   border_width: 2
                   border_color: 0x2A2F3A
@@ -3381,25 +3383,27 @@ lvgl:
               - slider:
                   id: sld_living_fan
                   x: 0
-                  y: 54
+                  y: 52
                   width: 120
-                  height: 258
+                  height: 268
                   min_value: 0
                   max_value: 100
                   value: 0
-                  radius: 0
+                  radius: 24
                   bg_color: 0x12141C
                   bg_opa: 100%
                   border_width: 2
                   border_color: 0x2A2F3A
                   indicator:
                     bg_color: 0x2ED5B8
-                    radius: 0
+                    radius: 24
                   knob:
-                    bg_color: 0xFFFFFF
-                    width: 124
-                    height: 12
-                    radius: 0
+                    bg_color: 0xC8CCD6
+                    pad_left: 6
+                    pad_right: 6
+                    pad_top: -56
+                    pad_bottom: -56
+                    radius: 2
                   on_release:
                     - if:
                         condition:
@@ -3415,8 +3419,8 @@ lvgl:
                   align: bottom_mid
                   y: 0
                   width: 120
-                  height: 120
-                  radius: 0
+                  height: 100
+                  radius: 24
                   bg_color: 0x12141C
                   border_width: 2
                   border_color: 0x2A2F3A
@@ -3449,15 +3453,15 @@ lvgl:
         - label: { text: "Kitchen", x: 100, y: 26, text_font: f_title, text_color: 0xEEF0F6 }
         - button:
             align: top_right
-            x: -16
-            y: 22
-            width: 52
-            height: 52
-            radius: 26
+            x: -12
+            y: 12
+            width: 104
+            height: 44
+            radius: 8
             bg_color: 0x1B2230
             border_width: 2
             border_color: 0x2ED5B8
-            widgets: [label: { text: "\U000F0141", align: center, text_font: f_icon, text_color: 0x2ED5B8 }]
+            widgets: [label: { text: "Back", align: center, text_font: f_body, text_color: 0x2ED5B8 }]
             on_click: [lvgl.page.show: page_rooms]
         - obj:
             x: 100
@@ -3511,15 +3515,15 @@ lvgl:
         - label: { text: "Office", x: 100, y: 26, text_font: f_title, text_color: 0xEEF0F6 }
         - button:
             align: top_right
-            x: -16
-            y: 22
-            width: 52
-            height: 52
-            radius: 26
+            x: -12
+            y: 12
+            width: 104
+            height: 44
+            radius: 8
             bg_color: 0x1B2230
             border_width: 2
             border_color: 0x2ED5B8
-            widgets: [label: { text: "\U000F0141", align: center, text_font: f_icon, text_color: 0x2ED5B8 }]
+            widgets: [label: { text: "Back", align: center, text_font: f_body, text_color: 0x2ED5B8 }]
             on_click: [lvgl.page.show: page_rooms]
         - obj:
             x: 100
@@ -3664,15 +3668,15 @@ lvgl:
         - label: { text: "Master", x: 100, y: 26, text_font: f_title, text_color: 0xEEF0F6 }
         - button:
             align: top_right
-            x: -16
-            y: 22
-            width: 52
-            height: 52
-            radius: 26
+            x: -12
+            y: 12
+            width: 104
+            height: 44
+            radius: 8
             bg_color: 0x1B2230
             border_width: 2
             border_color: 0x2ED5B8
-            widgets: [label: { text: "\U000F0141", align: center, text_font: f_icon, text_color: 0x2ED5B8 }]
+            widgets: [label: { text: "Back", align: center, text_font: f_body, text_color: 0x2ED5B8 }]
             on_click: [lvgl.page.show: page_rooms]
         - obj:
             x: 100
@@ -3762,15 +3766,15 @@ lvgl:
         - label: { text: "Exterior", x: 100, y: 26, text_font: f_title, text_color: 0xEEF0F6 }
         - button:
             align: top_right
-            x: -16
-            y: 22
-            width: 52
-            height: 52
-            radius: 26
+            x: -12
+            y: 12
+            width: 104
+            height: 44
+            radius: 8
             bg_color: 0x1B2230
             border_width: 2
             border_color: 0x2ED5B8
-            widgets: [label: { text: "\U000F0141", align: center, text_font: f_icon, text_color: 0x2ED5B8 }]
+            widgets: [label: { text: "Back", align: center, text_font: f_body, text_color: 0x2ED5B8 }]
             on_click: [lvgl.page.show: page_rooms]
         - obj:
             x: 100
@@ -3870,15 +3874,15 @@ lvgl:
         - label: { text: "Library", x: 100, y: 26, text_font: f_title, text_color: $c_text }
         - button:
             align: top_right
-            x: -16
-            y: 22
-            width: 52
-            height: 52
-            radius: 26
+            x: -12
+            y: 12
+            width: 104
+            height: 44
+            radius: 8
             bg_color: 0x1B2230
             border_width: 2
             border_color: 0x2ED5B8
-            widgets: [label: { text: "\U000F0141", align: center, text_font: f_icon, text_color: 0x2ED5B8 }]
+            widgets: [label: { text: "Back", align: center, text_font: f_body, text_color: 0x2ED5B8 }]
             on_click: [lvgl.page.show: page_media]
         - label: { text: "PLAYLIST", x: 100, y: 80, text_font: f_small, text_color: $c_text2 }
         - dropdown:
@@ -4953,15 +4957,15 @@ lvgl:
         - label: { text: "LG G3 OLED Remote", x: 100, y: 26, text_font: f_title, text_color: 0xEEF0F6 }
         - button:
             align: top_right
-            x: -16
-            y: 22
-            width: 52
-            height: 52
-            radius: 26
+            x: -12
+            y: 12
+            width: 104
+            height: 44
+            radius: 8
             bg_color: 0x1B2230
             border_width: 2
             border_color: 0x2ED5B8
-            widgets: [label: { text: "\U000F0141", align: center, text_font: f_icon, text_color: 0x2ED5B8 }]
+            widgets: [label: { text: "Back", align: center, text_font: f_body, text_color: 0x2ED5B8 }]
             on_click: [lvgl.page.show: page_room_living]
         - button:
             x: 120
@@ -5169,15 +5173,15 @@ lvgl:
         - label: { text: "TV Apps", x: 100, y: 26, text_font: f_title, text_color: 0xEEF0F6 }
         - button:
             align: top_right
-            x: -16
-            y: 22
-            width: 52
-            height: 52
-            radius: 26
+            x: -12
+            y: 12
+            width: 104
+            height: 44
+            radius: 8
             bg_color: 0x1B2230
             border_width: 2
             border_color: 0x2ED5B8
-            widgets: [label: { text: "\U000F0141", align: center, text_font: f_icon, text_color: 0x2ED5B8 }]
+            widgets: [label: { text: "Back", align: center, text_font: f_body, text_color: 0x2ED5B8 }]
             on_click: [lvgl.page.show: page_tvremote]
         # Row 0
         - button:
@@ -5336,15 +5340,15 @@ lvgl:
         - label: { text: "Trackpad", x: 100, y: 26, text_font: f_title, text_color: 0xEEF0F6 }
         - button:
             align: top_right
-            x: -16
-            y: 22
-            width: 52
-            height: 52
-            radius: 26
+            x: -12
+            y: 12
+            width: 104
+            height: 44
+            radius: 8
             bg_color: 0x1B2230
             border_width: 2
             border_color: 0x2ED5B8
-            widgets: [label: { text: "\U000F0141", align: center, text_font: f_icon, text_color: 0x2ED5B8 }]
+            widgets: [label: { text: "Back", align: center, text_font: f_body, text_color: 0x2ED5B8 }]
             on_click: [lvgl.page.show: page_tvremote]
         # Move pad (left) — drag to move, tap to click
         - obj:
@@ -5412,15 +5416,15 @@ lvgl:
         - label: { text: "Sonos", x: 100, y: 26, text_font: f_title, text_color: 0xEEF0F6 }
         - button:
             align: top_right
-            x: -16
-            y: 22
-            width: 52
-            height: 52
-            radius: 26
+            x: -12
+            y: 12
+            width: 104
+            height: 44
+            radius: 8
             bg_color: 0x1B2230
             border_width: 2
             border_color: 0x2ED5B8
-            widgets: [label: { text: "\U000F0141", align: center, text_font: f_icon, text_color: 0x2ED5B8 }]
+            widgets: [label: { text: "Back", align: center, text_font: f_body, text_color: 0x2ED5B8 }]
             on_click: [lvgl.page.show: page_media]
         # ---- Living Room ----
         - obj:
@@ -5674,15 +5678,15 @@ lvgl:
         - label: { text: "Weather", x: 100, y: 26, text_font: f_title, text_color: 0xEEF0F6 }
         - button:
             align: top_right
-            x: -16
-            y: 22
-            width: 52
-            height: 52
-            radius: 26
+            x: -12
+            y: 12
+            width: 104
+            height: 44
+            radius: 8
             bg_color: 0x1B2230
             border_width: 2
             border_color: 0x2ED5B8
-            widgets: [label: { text: "\U000F0141", align: center, text_font: f_icon, text_color: 0x2ED5B8 }]
+            widgets: [label: { text: "Back", align: center, text_font: f_body, text_color: 0x2ED5B8 }]
             on_click: [lvgl.page.show: page_home]
         # Current conditions
         - obj:
@@ -5696,9 +5700,9 @@ lvgl:
               - label: { id: lbl_wx_icon, text: "\U000F0599", x: 4, align: left_mid, text_font: f_wxicon, text_color: 0xFFCE54 }
               - label: { id: lbl_wx_cond, text: "--", x: 130, y: 30, text_font: f_head, text_color: 0xEEF0F6 }
               - label: { text: "Outdoor conditions", x: 132, y: 80, text_font: f_small, text_color: 0x8A8F9E }
-              - label: { id: lbl_wx_temp, text: "--", align: top_right, x: -16, y: 18, text_font: f_display, text_color: 0xEEF0F6 }
-              - label: { id: lbl_wx_hi, text: "--", align: top_right, x: -16, y: 96, text_font: f_body, text_color: 0xC8CCD6 }
-              - label: { id: lbl_wx_lo, text: "--", align: top_right, x: -16, y: 120, text_font: f_small, text_color: 0x8A8F9E }
+              - label: { id: lbl_wx_temp, text: "--", align: top_right, x: -16, y: 2, text_font: f_display, text_color: 0xEEF0F6 }
+              - label: { id: lbl_wx_hi, text: "--", align: top_right, x: -16, y: 62, text_font: f_body, text_color: 0xC8CCD6 }
+              - label: { id: lbl_wx_lo, text: "--", align: top_right, x: -16, y: 86, text_font: f_small, text_color: 0x8A8F9E }
         # Detail rows
         - obj:
             x: 96
