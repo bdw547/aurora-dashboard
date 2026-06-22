@@ -58,6 +58,7 @@ esphome:
     - priority: -100
       then:
         - lvgl.display.set_rotation: 0
+        - script.execute: demo_watchdog
 
 esp32:
   variant: esp32p4
@@ -113,10 +114,18 @@ wifi:
   password: !secret wifi_password
   fast_connect: true
   power_save_mode: none
+  # Stay running the dashboard (demo mode) when the home network isn't found,
+  # instead of reboot-looping.
+  reboot_timeout: 0s
 
 api:
   on_client_connected:
     then:
+      # Clear demo state if HA (re)connects — live data takes over.
+      - lambda: 'id(g_demo) = false;'
+      - lvgl.widget.update: { id: lbl_demo, hidden: true }
+      - lvgl.widget.update: { id: lbl_cam_demo, hidden: true }
+      - lvgl.widget.update: { id: lbl_cam_demo_big, hidden: true }
       - if:
           condition:
             lambda: 'return !id(g_booted);'
@@ -1411,6 +1420,10 @@ globals:
     type: bool
     restore_value: false
     initial_value: 'false'
+  - id: g_demo
+    type: bool
+    restore_value: false
+    initial_value: 'false'
   # Main Floor thermostat working setpoints (mirror HA so +/- can step locally)
   - id: g_mf_target
     type: float
@@ -1491,6 +1504,80 @@ globals:
     restore_value: false
 
 script:
+  # If Home Assistant never connects after boot, run a self-contained demo.
+  - id: demo_watchdog
+    mode: single
+    then:
+      - delay: 18s
+      - if:
+          condition:
+            lambda: 'return !id(g_booted);'
+          then:
+            - lambda: 'id(g_demo) = true;'
+            - lvgl.label.update: { id: lbl_boot_status, text: "Demo mode - no Home Assistant" }
+            - delay: 1200ms
+            - script.execute: demo_populate
+            - lvgl.page.show: page_home
+  # Fill the dashboard with believable sample data for showing it off offline.
+  - id: demo_populate
+    then:
+      - lvgl.widget.update: { id: lbl_demo, hidden: false }
+      - lvgl.widget.update: { id: lbl_cam_demo, hidden: false }
+      - lvgl.widget.update: { id: lbl_cam_demo_big, hidden: false }
+      # clock / greeting / screensaver
+      - lvgl.label.update: { id: lbl_clock, text: "2:45" }
+      - lvgl.label.update: { id: lbl_ampm, text: "PM" }
+      - lvgl.label.update: { id: lbl_greeting, text: "Good afternoon, Ben" }
+      - lvgl.label.update: { id: lbl_ss_time, text: "2:45" }
+      - lvgl.label.update: { id: lbl_ss_date, text: "Saturday, June 21" }
+      # home
+      - lvgl.label.update: { id: lbl_home_temp_big, text: "72" }
+      - lvgl.label.update: { id: lbl_home_cond, text: "Sunny" }
+      - lvgl.label.update: { id: lbl_home_temp, text: "72°" }
+      - lvgl.label.update: { id: lbl_home_np, text: "Midnight City" }
+      - lvgl.label.update: { id: lbl_home_np_artist, text: "M83" }
+      - lvgl.label.update: { id: lbl_home_lock_front, text: "Locked", text_color: 0x2ED5B8 }
+      - lvgl.label.update: { id: lbl_home_lock_back, text: "Locked", text_color: 0x2ED5B8 }
+      - lvgl.label.update: { id: lbl_home_presence, text: "Home" }
+      - lvgl.label.update: { id: lbl_home_presence2, text: "Home", text_color: 0x2ED5B8 }
+      # climate (auto / range)
+      - lvgl.label.update: { id: lbl_clim_condition, text: "Sunny" }
+      - lvgl.label.update: { id: lbl_outdoor, text: "78°" }
+      - lvgl.label.update: { id: lbl_clim_humidity, text: "45%" }
+      - lvgl.label.update: { id: lbl_clim_wind, text: "6" }
+      - lvgl.label.update: { id: lbl_mf_current, text: "72°" }
+      - lvgl.label.update: { id: lbl_mf_action, text: "Cooling" }
+      - lvgl.label.update: { id: lbl_mf_mode, text: "Auto" }
+      - lvgl.label.update: { id: lbl_mf_low, text: "68°" }
+      - lvgl.label.update: { id: lbl_mf_high, text: "74°" }
+      - lvgl.widget.update: { id: obj_mf_single, hidden: true }
+      - lvgl.widget.update: { id: obj_mf_range, hidden: false }
+      - lvgl.widget.update: { id: btn_mf_auto, bg_color: 0x2ED5B8 }
+      # media / sonos
+      - lvgl.label.update: { id: lbl_np_title, text: "Midnight City" }
+      - lvgl.label.update: { id: lbl_np_artist, text: "M83" }
+      - lvgl.label.update: { id: lbl_sonos_living_title, text: "Open Eye Signal" }
+      - lvgl.label.update: { id: lbl_sonos_kitchen_title, text: "Awake — Tycho" }
+      - lvgl.label.update: { id: lbl_sonos_link, text: "Solo" }
+      # security
+      - lvgl.label.update: { id: lbl_front_lock_state, text: "Locked", text_color: 0x2ED5B8 }
+      - lvgl.label.update: { id: lbl_back_lock_state, text: "Locked", text_color: 0x2ED5B8 }
+      - lvgl.widget.update: { id: btn_front_lock, bg_color: 0x2ED5B8 }
+      - lvgl.widget.update: { id: btn_back_lock, bg_color: 0x2ED5B8 }
+      - lvgl.label.update: { id: lbl_front_batt, text: "100%" }
+      - lvgl.label.update: { id: lbl_back_batt, text: "92%" }
+  # Load ONE front-door snapshot shortly after the Security tab opens, so the
+  # page renders/stays responsive first and the blocking fetch happens after.
+  - id: cam_snap_once
+    mode: restart
+    then:
+      - delay: 250ms
+      - if:
+          condition:
+            lambda: 'return id(g_cam_view) == 1 && !id(g_cam_url).empty();'
+          then:
+            - online_image.set_url: { id: cam_image, url: !lambda 'return id(g_cam_url);' }
+            - component.update: cam_image
   - id: hl_rooms
     then:
       - lvgl.widget.update: { id: src_btn_dining, bg_color: !lambda 'return id(g_room) == std::string("Dining Room") ? lv_color_hex(0x2ED5B8) : lv_color_hex(0x161B24);' }
@@ -1574,13 +1661,12 @@ time:
     id: ha_time
 
 interval:
-  - interval: 1500ms
+  # Only the dedicated fullscreen view auto-refreshes. The image fetch is
+  # SYNCHRONOUS (blocks the UI loop) and the cloud-Nest camera_proxy is slow,
+  # so the Security card loads a single snapshot on open instead of polling —
+  # otherwise the whole tab locks up.
+  - interval: 3000ms
     then:
-      - if:
-          condition:
-            lambda: 'return id(g_cam_view) == 1 && !id(g_cam_url).empty();'
-          then:
-            - component.update: cam_image
       - if:
           condition:
             lambda: 'return id(g_cam_view) == 2 && !id(g_cam_url).empty();'
@@ -1791,6 +1877,15 @@ lvgl:
           y: -8
           text_font: f_small
           text_color: 0x2ED5B8
+      - label:
+          id: lbl_demo
+          text: "● DEMO MODE"
+          align: bottom_left
+          x: 84
+          y: -8
+          text_font: f_small
+          text_color: 0xFF9F6B
+          hidden: true
 
   pages:
     - id: page_boot
@@ -2777,14 +2872,10 @@ lvgl:
         - lvgl.widget.update: { id: nav_network, bg_color: 0x10121A }
         - lvgl.widget.update: { id: nav_settings, bg_color: 0x10121A }
         - lambda: 'id(g_cam_view) = 1;'
-        - if:
-            condition:
-              lambda: 'return !id(g_cam_url).empty();'
-            then:
-              - online_image.set_url: { id: cam_image, url: !lambda 'return id(g_cam_url);' }
-              - component.update: cam_image
+        - script.execute: cam_snap_once
       on_unload:
         - lambda: 'id(g_cam_view) = 0;'
+        - script.stop: cam_snap_once
       widgets:
         - image: { src: img_aurora_bg, x: 0, y: 0 }
         - label: { text: "Security", x: 100, y: 26, text_font: f_title, text_color: 0xEEF0F6 }
@@ -2803,6 +2894,7 @@ lvgl:
             on_click: [lvgl.page.show: page_doorbell]
             widgets:
               - image: { id: img_cam_security, src: cam_image, align: center }
+              - label: { id: lbl_cam_demo, text: "DEMO FEED", align: center, text_font: f_title, text_color: 0x6E727E, hidden: true }
               - obj:
                   x: 14
                   y: 14
@@ -5153,6 +5245,7 @@ lvgl:
       widgets:
         # Fullscreen live feed (800x600 = 1/2 of source, fills height, centered)
         - image: { id: img_cam_big, src: cam_big, x: 112, y: 0 }
+        - label: { id: lbl_cam_demo_big, text: "DEMO FEED — offline", align: center, y: -70, text_font: f_head, text_color: 0x6E727E, hidden: true }
         - obj:
             x: 20
             y: 20
