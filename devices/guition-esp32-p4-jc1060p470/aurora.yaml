@@ -1578,6 +1578,17 @@ script:
           then:
             - online_image.set_url: { id: cam_image, url: !lambda 'return id(g_cam_url);' }
             - component.update: cam_image
+  # Fullscreen view: one deferred snapshot on open (then manual Refresh only).
+  - id: cam_snap_big
+    mode: restart
+    then:
+      - delay: 250ms
+      - if:
+          condition:
+            lambda: 'return id(g_cam_view) == 2 && !id(g_cam_url).empty();'
+          then:
+            - online_image.set_url: { id: cam_big, url: !lambda 'return id(g_cam_url);' }
+            - component.update: cam_big
   - id: hl_rooms
     then:
       - lvgl.widget.update: { id: src_btn_dining, bg_color: !lambda 'return id(g_room) == std::string("Dining Room") ? lv_color_hex(0x2ED5B8) : lv_color_hex(0x161B24);' }
@@ -1661,17 +1672,10 @@ time:
     id: ha_time
 
 interval:
-  # Only the dedicated fullscreen view auto-refreshes. The image fetch is
-  # SYNCHRONOUS (blocks the UI loop) and the cloud-Nest camera_proxy is slow,
-  # so the Security card loads a single snapshot on open instead of polling —
-  # otherwise the whole tab locks up.
-  - interval: 3000ms
-    then:
-      - if:
-          condition:
-            lambda: 'return id(g_cam_view) == 2 && !id(g_cam_url).empty();'
-          then:
-            - component.update: cam_big
+  # NOTE: camera images are NOT polled on an interval. ESPHome's image fetch is
+  # synchronous (blocks the UI loop) and the cloud-Nest camera_proxy is slow, so
+  # both the Security card and the fullscreen view load a single snapshot on open
+  # (deferred) plus a manual Refresh — auto-polling locked up the screen.
   - interval: 50ms
     then:
       - if:
@@ -5234,14 +5238,10 @@ lvgl:
         - lvgl.widget.update: { id: lbl_ssid, hidden: true }
         - lvgl.widget.update: { id: lbl_ip, hidden: true }
         - lambda: 'id(g_cam_view) = 2;'
-        - if:
-            condition:
-              lambda: 'return !id(g_cam_url).empty();'
-            then:
-              - online_image.set_url: { id: cam_big, url: !lambda 'return id(g_cam_url);' }
-              - component.update: cam_big
+        - script.execute: cam_snap_big
       on_unload:
         - lambda: 'id(g_cam_view) = 0;'
+        - script.stop: cam_snap_big
       widgets:
         # Fullscreen live feed (800x600 = 1/2 of source, fills height, centered)
         - image: { id: img_cam_big, src: cam_big, x: 112, y: 0 }
@@ -5268,8 +5268,22 @@ lvgl:
             pad_all: 0
             scrollable: false
             widgets:
-              - label: { text: "Front Door", x: 32, y: 24, text_font: f_head, text_color: 0xFFFFFF }
-              - label: { id: lbl_doorbell_lock, text: "", x: 34, y: 72, text_font: f_body, text_color: 0xC8CCD6 }
+              - label: { text: "Front Door", x: 32, y: 18, text_font: f_head, text_color: 0xFFFFFF }
+              - label: { id: lbl_doorbell_lock, text: "", x: 34, y: 64, text_font: f_small, text_color: 0xC8CCD6 }
+              - button:
+                  x: 300
+                  y: 34
+                  width: 150
+                  height: 80
+                  bg_color: 0x1B2230
+                  widgets: [label: { text: "Refresh", align: center, text_font: f_body, text_color: 0xEEF0F6 }]
+                  on_click:
+                    - if:
+                        condition:
+                          lambda: 'return !id(g_cam_url).empty();'
+                        then:
+                          - online_image.set_url: { id: cam_big, url: !lambda 'return id(g_cam_url);' }
+                          - component.update: cam_big
               - button:
                   x: 470
                   y: 34
