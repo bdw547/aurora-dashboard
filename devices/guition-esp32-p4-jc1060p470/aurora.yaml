@@ -40,6 +40,8 @@ substitutions:
   ent_media_spotify: "media_player.spotifyplus_ben_walton"
   ent_media_tv: "media_player.lg_g3_living_room_2"
   ent_climate_main: "climate.main_floor"
+  ent_climate_master: "climate.master_bedroom_master_bedroom"
+  ent_climate_up: "climate.upstairs_upstairs"
   ent_sonos_living: "media_player.living_room"
   ent_sonos_kitchen: "media_player.kitchen"
   ent_camera_front: "camera.front_door"
@@ -485,10 +487,6 @@ sensor:
     on_value:
       then:
         - lvgl.label.update:
-            id: lbl_outdoor
-            text: !lambda |-
-              char b[16]; snprintf(b, sizeof(b), "%.0f°", x); return std::string(b);
-        - lvgl.label.update:
             id: lbl_home_temp
             text: !lambda |-
               char b[16]; snprintf(b, sizeof(b), "%.0f°", x); return std::string(b);
@@ -496,48 +494,14 @@ sensor:
             id: lbl_home_temp_big
             text: !lambda |-
               char b[16]; snprintf(b, sizeof(b), "%.0f°", x); return std::string(b);
-  - platform: homeassistant
-    id: ha_outdoor_humidity
-    entity_id: $ent_weather
-    attribute: humidity
-    on_value:
-      then:
-        - lvgl.label.update:
-            id: lbl_clim_humidity
-            text: !lambda |-
-              char b[16]; snprintf(b, sizeof(b), "%.0f%%", x); return std::string(b);
-  - platform: homeassistant
-    id: ha_outdoor_wind
-    entity_id: $ent_weather
-    attribute: wind_speed
-    on_value:
-      then:
-        - lvgl.label.update:
-            id: lbl_clim_wind
-            text: !lambda |-
-              char b[16]; snprintf(b, sizeof(b), "%.0f", x); return std::string(b);
-  # ---- Main Floor thermostat (ecobee: $ent_climate_main) ----
+  # ---- Thermostats: current temp + setpoints (Main Floor / Master / Upstairs) ----
   - platform: homeassistant
     id: ha_mf_current
     entity_id: $ent_climate_main
     attribute: current_temperature
     on_value:
       then:
-        - lvgl.label.update:
-            id: lbl_mf_current
-            text: !lambda |-
-              char b[12]; snprintf(b, sizeof(b), "%.0f°", x); return std::string(b);
-  - platform: homeassistant
-    id: ha_mf_target
-    entity_id: $ent_climate_main
-    attribute: temperature
-    on_value:
-      then:
-        - lambda: 'id(g_mf_target) = x;'
-        - lvgl.label.update:
-            id: lbl_mf_setpoint
-            text: !lambda |-
-              char b[12]; snprintf(b, sizeof(b), "%.0f°", x); return std::string(b);
+        - lvgl.label.update: { id: lbl_mf_cur, text: !lambda 'char b[12]; snprintf(b,sizeof(b),"· %.0f°",x); return std::string(b);' }
   - platform: homeassistant
     id: ha_mf_low
     entity_id: $ent_climate_main
@@ -545,10 +509,7 @@ sensor:
     on_value:
       then:
         - lambda: 'id(g_mf_low) = x;'
-        - lvgl.label.update:
-            id: lbl_mf_low
-            text: !lambda |-
-              char b[12]; snprintf(b, sizeof(b), "%.0f°", x); return std::string(b);
+        - lvgl.label.update: { id: lbl_mf_lo, text: !lambda 'char b[12]; snprintf(b,sizeof(b),"%.0f°",x); return std::string(b);' }
   - platform: homeassistant
     id: ha_mf_high
     entity_id: $ent_climate_main
@@ -556,10 +517,53 @@ sensor:
     on_value:
       then:
         - lambda: 'id(g_mf_high) = x;'
-        - lvgl.label.update:
-            id: lbl_mf_high
-            text: !lambda |-
-              char b[12]; snprintf(b, sizeof(b), "%.0f°", x); return std::string(b);
+        - lvgl.label.update: { id: lbl_mf_hi, text: !lambda 'char b[12]; snprintf(b,sizeof(b),"%.0f°",x); return std::string(b);' }
+  - platform: homeassistant
+    id: ha_mb_current
+    entity_id: $ent_climate_master
+    attribute: current_temperature
+    on_value:
+      then:
+        - lvgl.label.update: { id: lbl_mb_cur, text: !lambda 'char b[12]; snprintf(b,sizeof(b),"· %.0f°",x); return std::string(b);' }
+  - platform: homeassistant
+    id: ha_mb_low
+    entity_id: $ent_climate_master
+    attribute: target_temp_low
+    on_value:
+      then:
+        - lambda: 'id(g_mb_low) = x;'
+        - lvgl.label.update: { id: lbl_mb_lo, text: !lambda 'char b[12]; snprintf(b,sizeof(b),"%.0f°",x); return std::string(b);' }
+  - platform: homeassistant
+    id: ha_mb_high
+    entity_id: $ent_climate_master
+    attribute: target_temp_high
+    on_value:
+      then:
+        - lambda: 'id(g_mb_high) = x;'
+        - lvgl.label.update: { id: lbl_mb_hi, text: !lambda 'char b[12]; snprintf(b,sizeof(b),"%.0f°",x); return std::string(b);' }
+  - platform: homeassistant
+    id: ha_up_current
+    entity_id: $ent_climate_up
+    attribute: current_temperature
+    on_value:
+      then:
+        - lvgl.label.update: { id: lbl_up_cur, text: !lambda 'char b[12]; snprintf(b,sizeof(b),"· %.0f°",x); return std::string(b);' }
+  - platform: homeassistant
+    id: ha_up_low
+    entity_id: $ent_climate_up
+    attribute: target_temp_low
+    on_value:
+      then:
+        - lambda: 'id(g_up_low) = x;'
+        - lvgl.label.update: { id: lbl_up_lo, text: !lambda 'char b[12]; snprintf(b,sizeof(b),"%.0f°",x); return std::string(b);' }
+  - platform: homeassistant
+    id: ha_up_high
+    entity_id: $ent_climate_up
+    attribute: target_temp_high
+    on_value:
+      then:
+        - lambda: 'id(g_up_high) = x;'
+        - lvgl.label.update: { id: lbl_up_hi, text: !lambda 'char b[12]; snprintf(b,sizeof(b),"%.0f°",x); return std::string(b);' }
   # ---- Sonos volume levels (0..1) -> slider 0..100 ----
   - platform: homeassistant
     id: ha_sonos_living_vol
@@ -867,7 +871,7 @@ sensor:
             id: sld_room_exterior_light_outdoor_patio_back_porch_lights
             value: !lambda 'return (x == x) ? (int) roundf(x / 2.55f) : 0;'
 text_sensor:
-  # ---- Main Floor thermostat mode + action (ecobee: $ent_climate_main) ----
+  # ---- Thermostat hvac_action (Main Floor / Master / Upstairs) ----
   - platform: homeassistant
     id: ha_mf_action
     entity_id: $ent_climate_main
@@ -876,31 +880,28 @@ text_sensor:
       then:
         - lvgl.label.update:
             id: lbl_mf_action
-            text: !lambda |-
-              std::string r = x; if (!r.empty()) r[0] = toupper(r[0]); return r;
+            text: !lambda 'std::string r=x; if(!r.empty()) r[0]=toupper(r[0]); return r;'
+            text_color: !lambda 'return x=="cooling"?lv_color_hex(0x4F91FF): x=="heating"?lv_color_hex(0xFF9F6B): x=="off"?lv_color_hex(0x6E727E): lv_color_hex(0x8A8F9E);'
   - platform: homeassistant
-    id: ha_mf_mode
-    entity_id: $ent_climate_main
+    id: ha_mb_action
+    entity_id: $ent_climate_master
+    attribute: hvac_action
     on_value:
       then:
         - lvgl.label.update:
-            id: lbl_mf_mode
-            text: !lambda |-
-              if (x == "heat_cool" || x == "auto") return std::string("Auto");
-              std::string r = x; if (!r.empty()) r[0] = toupper(r[0]); return r;
-        - if:
-            condition:
-              lambda: 'return x == "heat_cool" || x == "auto";'
-            then:
-              - lvgl.widget.update: { id: obj_mf_single, hidden: true }
-              - lvgl.widget.update: { id: obj_mf_range, hidden: false }
-            else:
-              - lvgl.widget.update: { id: obj_mf_single, hidden: false }
-              - lvgl.widget.update: { id: obj_mf_range, hidden: true }
-        - lvgl.widget.update: { id: btn_mf_heat, bg_color: !lambda 'return x == "heat" ? lv_color_hex(0x2ED5B8) : lv_color_hex(0x161B24);' }
-        - lvgl.widget.update: { id: btn_mf_cool, bg_color: !lambda 'return x == "cool" ? lv_color_hex(0x2ED5B8) : lv_color_hex(0x161B24);' }
-        - lvgl.widget.update: { id: btn_mf_auto, bg_color: !lambda 'return (x == "heat_cool" || x == "auto") ? lv_color_hex(0x2ED5B8) : lv_color_hex(0x161B24);' }
-        - lvgl.widget.update: { id: btn_mf_off, bg_color: !lambda 'return x == "off" ? lv_color_hex(0x2ED5B8) : lv_color_hex(0x161B24);' }
+            id: lbl_mb_action
+            text: !lambda 'std::string r=x; if(!r.empty()) r[0]=toupper(r[0]); return r;'
+            text_color: !lambda 'return x=="cooling"?lv_color_hex(0x4F91FF): x=="heating"?lv_color_hex(0xFF9F6B): x=="off"?lv_color_hex(0x6E727E): lv_color_hex(0x8A8F9E);'
+  - platform: homeassistant
+    id: ha_up_action
+    entity_id: $ent_climate_up
+    attribute: hvac_action
+    on_value:
+      then:
+        - lvgl.label.update:
+            id: lbl_up_action
+            text: !lambda 'std::string r=x; if(!r.empty()) r[0]=toupper(r[0]); return r;'
+            text_color: !lambda 'return x=="cooling"?lv_color_hex(0x4F91FF): x=="heating"?lv_color_hex(0xFF9F6B): x=="off"?lv_color_hex(0x6E727E): lv_color_hex(0x8A8F9E);'
   # ---- LG TV current app/source -> highlight active app tile ----
   - platform: homeassistant
     id: ha_tv_source
@@ -1102,19 +1103,30 @@ text_sensor:
     on_value:
       then:
         - lvgl.label.update:
-            id: lbl_clim_condition
-            text: !lambda |-
-              std::string r = x;
-              for (size_t i = 0; i < r.size(); i++) { if (r[i] == '-' || r[i] == '_') r[i] = ' '; }
-              if (!r.empty()) r[0] = toupper(r[0]);
-              return r;
-        - lvgl.label.update:
             id: lbl_home_cond
             text: !lambda |-
               std::string r = x;
               for (size_t i = 0; i < r.size(); i++) { if (r[i] == '-' || r[i] == '_') r[i] = ' '; }
               if (!r.empty()) r[0] = toupper(r[0]);
               return r;
+        - lvgl.label.update:
+            id: lbl_home_wx_icon
+            text: !lambda |-
+              std::string c = x;
+              if (c=="sunny") return std::string("\U000F0599");
+              if (c=="clear-night") return std::string("\U000F0594");
+              if (c=="partlycloudy") return std::string("\U000F0595");
+              if (c=="cloudy") return std::string("\U000F0590");
+              if (c=="rainy") return std::string("\U000F0597");
+              if (c=="pouring") return std::string("\U000F0596");
+              if (c=="snowy") return std::string("\U000F0598");
+              if (c=="snowy-rainy") return std::string("\U000F067F");
+              if (c=="fog") return std::string("\U000F0591");
+              if (c=="hail") return std::string("\U000F0592");
+              if (c=="lightning") return std::string("\U000F0593");
+              if (c=="lightning-rainy") return std::string("\U000F067E");
+              if (c=="windy" || c=="windy-variant") return std::string("\U000F059D");
+              return std::string("\U000F0026");
   - platform: homeassistant
     id: ha_spotify_source
     entity_id: $ent_media_spotify
@@ -1630,6 +1642,22 @@ globals:
     type: float
     restore_value: false
     initial_value: '74'
+  - id: g_mb_low
+    type: float
+    restore_value: false
+    initial_value: '63'
+  - id: g_mb_high
+    type: float
+    restore_value: false
+    initial_value: '68'
+  - id: g_up_low
+    type: float
+    restore_value: false
+    initial_value: '66'
+  - id: g_up_high
+    type: float
+    restore_value: false
+    initial_value: '70'
   # Trackpad (LG cursor) gesture state
   - id: g_tp_active
     type: bool
@@ -1733,19 +1761,19 @@ script:
       - lvgl.label.update: { id: lbl_home_lock_back, text: "Locked", text_color: 0x2ED5B8 }
       - lvgl.label.update: { id: lbl_home_presence, text: "Home" }
       - lvgl.label.update: { id: lbl_home_presence2, text: "Home", text_color: 0x2ED5B8 }
-      # climate (auto / range)
-      - lvgl.label.update: { id: lbl_clim_condition, text: "Sunny" }
-      - lvgl.label.update: { id: lbl_outdoor, text: "78°" }
-      - lvgl.label.update: { id: lbl_clim_humidity, text: "45%" }
-      - lvgl.label.update: { id: lbl_clim_wind, text: "6" }
-      - lvgl.label.update: { id: lbl_mf_current, text: "72°" }
+      # climate (3 thermostats)
+      - lvgl.label.update: { id: lbl_mf_cur, text: "· 72°" }
       - lvgl.label.update: { id: lbl_mf_action, text: "Cooling" }
-      - lvgl.label.update: { id: lbl_mf_mode, text: "Auto" }
-      - lvgl.label.update: { id: lbl_mf_low, text: "68°" }
-      - lvgl.label.update: { id: lbl_mf_high, text: "74°" }
-      - lvgl.widget.update: { id: obj_mf_single, hidden: true }
-      - lvgl.widget.update: { id: obj_mf_range, hidden: false }
-      - lvgl.widget.update: { id: btn_mf_auto, bg_color: 0x2ED5B8 }
+      - lvgl.label.update: { id: lbl_mf_lo, text: "65°" }
+      - lvgl.label.update: { id: lbl_mf_hi, text: "72°" }
+      - lvgl.label.update: { id: lbl_mb_cur, text: "· 70°" }
+      - lvgl.label.update: { id: lbl_mb_action, text: "Cooling" }
+      - lvgl.label.update: { id: lbl_mb_lo, text: "63°" }
+      - lvgl.label.update: { id: lbl_mb_hi, text: "68°" }
+      - lvgl.label.update: { id: lbl_up_cur, text: "· 70°" }
+      - lvgl.label.update: { id: lbl_up_action, text: "Idle" }
+      - lvgl.label.update: { id: lbl_up_lo, text: "66°" }
+      - lvgl.label.update: { id: lbl_up_hi, text: "70°" }
       # media / sonos
       - lvgl.label.update: { id: lbl_np_title, text: "Midnight City" }
       - lvgl.label.update: { id: lbl_np_artist, text: "M83" }
@@ -2279,6 +2307,7 @@ lvgl:
             on_click: [lvgl.page.show: page_weather]
             widgets:
               - label: { text: "CLIMATE", x: 4, y: 2, text_font: f_small, text_color: 0x8A8F9E }
+              - label: { id: lbl_home_wx_icon, text: "", align: top_right, x: -6, y: 0, text_font: f_icon, text_color: 0xFFCE54 }
               - label: { id: lbl_home_temp_big, text: "--", x: 2, y: 46, text_font: f_display, text_color: 0xEEF0F6 }
               - label: { id: lbl_home_cond, text: "--", x: 4, y: 138, text_font: f_body, text_color: 0x2ED5B8 }
               - label: { text: "Outdoor", x: 4, y: 168, text_font: f_small, text_color: 0x8A8F9E }
@@ -2618,194 +2647,205 @@ lvgl:
       widgets:
         - image: { src: img_aurora_bg, x: 0, y: 0 }
         - label: { text: "Climate", x: 100, y: 26, text_font: f_title, text_color: $c_text }
-        - label: { text: "Main Floor · Outdoor conditions", x: 100, y: 60, text_font: f_small, text_color: $c_text2 }
-
-        # ---- Main Floor thermostat (ecobee: $ent_climate_main) ----
+        - label: { text: "Thermostats", x: 100, y: 60, text_font: f_small, text_color: $c_text2 }
+        # Master Bedroom
         - obj:
             x: 96
-            y: 100
-            width: 430
-            height: 430
+            y: 88
+            width: 908
+            height: 148
             styles: st_glass
+            pad_all: 0
             scrollable: false
             widgets:
-              - label: { text: "MAIN FLOOR", x: 16, y: 12, text_font: f_small, text_color: $c_text2 }
-              - label: { id: lbl_mf_mode, text: "--", align: top_right, x: -16, y: 12, text_font: f_small, text_color: $c_teal }
-              - label: { id: lbl_mf_action, text: "", align: top_mid, y: 40, text_font: f_small, text_color: $c_teal }
-              - label: { id: lbl_mf_current, text: "", align: top_mid, y: 60, text_font: f_display, text_color: $c_text }
-              - label: { text: "INDOOR", align: top_mid, y: 150, text_font: f_small, text_color: $c_text3 }
-              # single setpoint (heat / cool)
-              - obj:
-                  id: obj_mf_single
-                  x: 14
-                  y: 178
-                  width: 402
-                  height: 140
-                  bg_opa: 0
-                  border_width: 0
-                  pad_all: 0
-                  scrollable: false
-                  widgets:
-                    - label: { text: "SET TO", align: top_mid, y: 0, text_font: f_small, text_color: $c_text2 }
-                    - button:
-                        id: btn_mf_minus
-                        x: 8
-                        y: 30
-                        width: 88
-                        height: 96
-                        bg_color: 0x161B24
-                        widgets: [label: { text: "-", align: center, text_font: f_display, text_color: $c_text }]
-                        on_click:
-                          - lambda: 'id(g_mf_target) -= 1;'
-                          - lvgl.label.update: { id: lbl_mf_setpoint, text: !lambda 'char b[12]; snprintf(b,sizeof(b),"%.0f°",id(g_mf_target)); return std::string(b);' }
-                          - homeassistant.action: { action: climate.set_temperature, data: { entity_id: $ent_climate_main, temperature: !lambda 'return std::to_string((int) id(g_mf_target));' } }
-                    - label: { id: lbl_mf_setpoint, text: "", align: center, y: 6, text_font: f_display, text_color: $c_teal }
-                    - button:
-                        id: btn_mf_plus
-                        align: right_mid
-                        x: -8
-                        y: 6
-                        width: 88
-                        height: 96
-                        bg_color: 0x161B24
-                        widgets: [label: { text: "+", align: center, text_font: f_display, text_color: $c_text }]
-                        on_click:
-                          - lambda: 'id(g_mf_target) += 1;'
-                          - lvgl.label.update: { id: lbl_mf_setpoint, text: !lambda 'char b[12]; snprintf(b,sizeof(b),"%.0f°",id(g_mf_target)); return std::string(b);' }
-                          - homeassistant.action: { action: climate.set_temperature, data: { entity_id: $ent_climate_main, temperature: !lambda 'return std::to_string((int) id(g_mf_target));' } }
-              # range setpoint (auto / heat_cool)
-              - obj:
-                  id: obj_mf_range
-                  x: 14
-                  y: 172
-                  width: 402
-                  height: 152
-                  bg_opa: 0
-                  border_width: 0
-                  pad_all: 0
-                  hidden: true
-                  scrollable: false
-                  widgets:
-                    - label: { text: "HEAT TO", x: 8, y: 26, text_font: f_body, text_color: $c_warn }
-                    - button:
-                        id: btn_mf_low_minus
-                        x: 150
-                        y: 16
-                        width: 60
-                        height: 52
-                        bg_color: 0x161B24
-                        widgets: [label: { text: "-", align: center, text_font: f_title, text_color: $c_text }]
-                        on_click:
-                          - lambda: 'id(g_mf_low) -= 1;'
-                          - lvgl.label.update: { id: lbl_mf_low, text: !lambda 'char b[12]; snprintf(b,sizeof(b),"%.0f°",id(g_mf_low)); return std::string(b);' }
-                          - homeassistant.action: { action: climate.set_temperature, data: { entity_id: $ent_climate_main, target_temp_low: !lambda 'return std::to_string((int) id(g_mf_low));', target_temp_high: !lambda 'return std::to_string((int) id(g_mf_high));' } }
-                    - label: { id: lbl_mf_low, text: "", x: 214, y: 22, width: 72, text_align: center, text_font: f_title, text_color: $c_warn }
-                    - button:
-                        id: btn_mf_low_plus
-                        x: 300
-                        y: 16
-                        width: 60
-                        height: 52
-                        bg_color: 0x161B24
-                        widgets: [label: { text: "+", align: center, text_font: f_title, text_color: $c_text }]
-                        on_click:
-                          - lambda: 'id(g_mf_low) += 1;'
-                          - lvgl.label.update: { id: lbl_mf_low, text: !lambda 'char b[12]; snprintf(b,sizeof(b),"%.0f°",id(g_mf_low)); return std::string(b);' }
-                          - homeassistant.action: { action: climate.set_temperature, data: { entity_id: $ent_climate_main, target_temp_low: !lambda 'return std::to_string((int) id(g_mf_low));', target_temp_high: !lambda 'return std::to_string((int) id(g_mf_high));' } }
-                    - label: { text: "COOL TO", x: 8, y: 96, text_font: f_body, text_color: $c_teal }
-                    - button:
-                        id: btn_mf_high_minus
-                        x: 150
-                        y: 86
-                        width: 60
-                        height: 52
-                        bg_color: 0x161B24
-                        widgets: [label: { text: "-", align: center, text_font: f_title, text_color: $c_text }]
-                        on_click:
-                          - lambda: 'id(g_mf_high) -= 1;'
-                          - lvgl.label.update: { id: lbl_mf_high, text: !lambda 'char b[12]; snprintf(b,sizeof(b),"%.0f°",id(g_mf_high)); return std::string(b);' }
-                          - homeassistant.action: { action: climate.set_temperature, data: { entity_id: $ent_climate_main, target_temp_low: !lambda 'return std::to_string((int) id(g_mf_low));', target_temp_high: !lambda 'return std::to_string((int) id(g_mf_high));' } }
-                    - label: { id: lbl_mf_high, text: "", x: 214, y: 92, width: 72, text_align: center, text_font: f_title, text_color: $c_teal }
-                    - button:
-                        id: btn_mf_high_plus
-                        x: 300
-                        y: 86
-                        width: 60
-                        height: 52
-                        bg_color: 0x161B24
-                        widgets: [label: { text: "+", align: center, text_font: f_title, text_color: $c_text }]
-                        on_click:
-                          - lambda: 'id(g_mf_high) += 1;'
-                          - lvgl.label.update: { id: lbl_mf_high, text: !lambda 'char b[12]; snprintf(b,sizeof(b),"%.0f°",id(g_mf_high)); return std::string(b);' }
-                          - homeassistant.action: { action: climate.set_temperature, data: { entity_id: $ent_climate_main, target_temp_low: !lambda 'return std::to_string((int) id(g_mf_low));', target_temp_high: !lambda 'return std::to_string((int) id(g_mf_high));' } }
-              # mode buttons
+              - label: { text: "\U000F0393", x: 20, align: left_mid, text_font: f_icon, text_color: 0x2ED5B8 }
+              - label: { text: "Master Bedroom", x: 70, y: 30, text_font: f_title, text_color: 0xEEF0F6 }
+              - label: { id: lbl_mb_action, text: "--", x: 72, y: 78, text_font: f_small, text_color: 0x8A8F9E }
+              - label: { id: lbl_mb_cur, text: "", x: 168, y: 78, text_font: f_small, text_color: 0x8A8F9E }
+              - label: { text: "HEAT", x: 470, y: 14, width: 190, text_align: center, text_font: f_small, text_color: 0xFF9F6B }
               - button:
-                  id: btn_mf_heat
-                  x: 12
-                  y: 344
-                  width: 94
-                  height: 66
+                  id: btn_mb_lo_minus
+                  x: 470
+                  y: 46
+                  width: 56
+                  height: 72
                   bg_color: 0x161B24
-                  widgets: [label: { text: "Heat", align: center, text_font: f_body, text_color: $c_text }]
-                  on_click: [homeassistant.action: { action: climate.set_hvac_mode, data: { entity_id: $ent_climate_main, hvac_mode: "heat" } }]
+                  widgets: [label: { text: "-", align: center, text_font: f_head, text_color: 0xEEF0F6 }]
+                  on_click:
+                    - lambda: 'id(g_mb_low) -= 1;'
+                    - lvgl.label.update: { id: lbl_mb_lo, text: !lambda 'char b[12]; snprintf(b,sizeof(b),"%.0f°",id(g_mb_low)); return std::string(b);' }
+                    - homeassistant.action: { action: climate.set_temperature, data: { entity_id: $ent_climate_master, target_temp_low: !lambda 'return std::to_string((int) id(g_mb_low));', target_temp_high: !lambda 'return std::to_string((int) id(g_mb_high));' } }
+              - label: { id: lbl_mb_lo, text: "--", x: 526, y: 60, width: 78, text_align: center, text_font: f_head, text_color: 0xFF9F6B }
               - button:
-                  id: btn_mf_cool
-                  x: 112
-                  y: 344
-                  width: 94
-                  height: 66
+                  id: btn_mb_lo_plus
+                  x: 604
+                  y: 46
+                  width: 56
+                  height: 72
                   bg_color: 0x161B24
-                  widgets: [label: { text: "Cool", align: center, text_font: f_body, text_color: $c_text }]
-                  on_click: [homeassistant.action: { action: climate.set_hvac_mode, data: { entity_id: $ent_climate_main, hvac_mode: "cool" } }]
+                  widgets: [label: { text: "+", align: center, text_font: f_head, text_color: 0xEEF0F6 }]
+                  on_click:
+                    - lambda: 'id(g_mb_low) += 1;'
+                    - lvgl.label.update: { id: lbl_mb_lo, text: !lambda 'char b[12]; snprintf(b,sizeof(b),"%.0f°",id(g_mb_low)); return std::string(b);' }
+                    - homeassistant.action: { action: climate.set_temperature, data: { entity_id: $ent_climate_master, target_temp_low: !lambda 'return std::to_string((int) id(g_mb_low));', target_temp_high: !lambda 'return std::to_string((int) id(g_mb_high));' } }
+              - label: { text: "COOL", x: 700, y: 14, width: 190, text_align: center, text_font: f_small, text_color: 0x4F91FF }
               - button:
-                  id: btn_mf_auto
-                  x: 212
-                  y: 344
-                  width: 94
-                  height: 66
+                  id: btn_mb_hi_minus
+                  x: 700
+                  y: 46
+                  width: 56
+                  height: 72
                   bg_color: 0x161B24
-                  widgets: [label: { text: "Auto", align: center, text_font: f_body, text_color: $c_text }]
-                  on_click: [homeassistant.action: { action: climate.set_hvac_mode, data: { entity_id: $ent_climate_main, hvac_mode: "heat_cool" } }]
+                  widgets: [label: { text: "-", align: center, text_font: f_head, text_color: 0xEEF0F6 }]
+                  on_click:
+                    - lambda: 'id(g_mb_high) -= 1;'
+                    - lvgl.label.update: { id: lbl_mb_hi, text: !lambda 'char b[12]; snprintf(b,sizeof(b),"%.0f°",id(g_mb_high)); return std::string(b);' }
+                    - homeassistant.action: { action: climate.set_temperature, data: { entity_id: $ent_climate_master, target_temp_low: !lambda 'return std::to_string((int) id(g_mb_low));', target_temp_high: !lambda 'return std::to_string((int) id(g_mb_high));' } }
+              - label: { id: lbl_mb_hi, text: "--", x: 756, y: 60, width: 78, text_align: center, text_font: f_head, text_color: 0x4F91FF }
               - button:
-                  id: btn_mf_off
-                  x: 312
-                  y: 344
-                  width: 94
-                  height: 66
+                  id: btn_mb_hi_plus
+                  x: 834
+                  y: 46
+                  width: 56
+                  height: 72
                   bg_color: 0x161B24
-                  widgets: [label: { text: "Off", align: center, text_font: f_body, text_color: $c_text }]
-                  on_click: [homeassistant.action: { action: climate.set_hvac_mode, data: { entity_id: $ent_climate_main, hvac_mode: "off" } }]
-
-        # ---- Outdoor / humidity / wind (weather: $ent_weather) ----
+                  widgets: [label: { text: "+", align: center, text_font: f_head, text_color: 0xEEF0F6 }]
+                  on_click:
+                    - lambda: 'id(g_mb_high) += 1;'
+                    - lvgl.label.update: { id: lbl_mb_hi, text: !lambda 'char b[12]; snprintf(b,sizeof(b),"%.0f°",id(g_mb_high)); return std::string(b);' }
+                    - homeassistant.action: { action: climate.set_temperature, data: { entity_id: $ent_climate_master, target_temp_low: !lambda 'return std::to_string((int) id(g_mb_low));', target_temp_high: !lambda 'return std::to_string((int) id(g_mb_high));' } }
+        # Main Floor
         - obj:
-            x: 546
-            y: 100
-            width: 366
-            height: 136
+            x: 96
+            y: 244
+            width: 908
+            height: 148
             styles: st_glass
+            pad_all: 0
+            scrollable: false
             widgets:
-              - label: { text: "OUTDOOR", x: 6, y: 4, text_font: f_small, text_color: $c_text2 }
-              - label: { id: lbl_clim_condition, text: "--", x: 6, y: 30, text_font: f_body, text_color: $c_teal }
-              - label: { id: lbl_outdoor, text: "", align: right_mid, x: -10, text_font: f_display, text_color: $c_text }
+              - label: { text: "\U000F0393", x: 20, align: left_mid, text_font: f_icon, text_color: 0x2ED5B8 }
+              - label: { text: "Main Floor", x: 70, y: 30, text_font: f_title, text_color: 0xEEF0F6 }
+              - label: { id: lbl_mf_action, text: "--", x: 72, y: 78, text_font: f_small, text_color: 0x8A8F9E }
+              - label: { id: lbl_mf_cur, text: "", x: 168, y: 78, text_font: f_small, text_color: 0x8A8F9E }
+              - label: { text: "HEAT", x: 470, y: 14, width: 190, text_align: center, text_font: f_small, text_color: 0xFF9F6B }
+              - button:
+                  id: btn_mf_lo_minus
+                  x: 470
+                  y: 46
+                  width: 56
+                  height: 72
+                  bg_color: 0x161B24
+                  widgets: [label: { text: "-", align: center, text_font: f_head, text_color: 0xEEF0F6 }]
+                  on_click:
+                    - lambda: 'id(g_mf_low) -= 1;'
+                    - lvgl.label.update: { id: lbl_mf_lo, text: !lambda 'char b[12]; snprintf(b,sizeof(b),"%.0f°",id(g_mf_low)); return std::string(b);' }
+                    - homeassistant.action: { action: climate.set_temperature, data: { entity_id: $ent_climate_main, target_temp_low: !lambda 'return std::to_string((int) id(g_mf_low));', target_temp_high: !lambda 'return std::to_string((int) id(g_mf_high));' } }
+              - label: { id: lbl_mf_lo, text: "--", x: 526, y: 60, width: 78, text_align: center, text_font: f_head, text_color: 0xFF9F6B }
+              - button:
+                  id: btn_mf_lo_plus
+                  x: 604
+                  y: 46
+                  width: 56
+                  height: 72
+                  bg_color: 0x161B24
+                  widgets: [label: { text: "+", align: center, text_font: f_head, text_color: 0xEEF0F6 }]
+                  on_click:
+                    - lambda: 'id(g_mf_low) += 1;'
+                    - lvgl.label.update: { id: lbl_mf_lo, text: !lambda 'char b[12]; snprintf(b,sizeof(b),"%.0f°",id(g_mf_low)); return std::string(b);' }
+                    - homeassistant.action: { action: climate.set_temperature, data: { entity_id: $ent_climate_main, target_temp_low: !lambda 'return std::to_string((int) id(g_mf_low));', target_temp_high: !lambda 'return std::to_string((int) id(g_mf_high));' } }
+              - label: { text: "COOL", x: 700, y: 14, width: 190, text_align: center, text_font: f_small, text_color: 0x4F91FF }
+              - button:
+                  id: btn_mf_hi_minus
+                  x: 700
+                  y: 46
+                  width: 56
+                  height: 72
+                  bg_color: 0x161B24
+                  widgets: [label: { text: "-", align: center, text_font: f_head, text_color: 0xEEF0F6 }]
+                  on_click:
+                    - lambda: 'id(g_mf_high) -= 1;'
+                    - lvgl.label.update: { id: lbl_mf_hi, text: !lambda 'char b[12]; snprintf(b,sizeof(b),"%.0f°",id(g_mf_high)); return std::string(b);' }
+                    - homeassistant.action: { action: climate.set_temperature, data: { entity_id: $ent_climate_main, target_temp_low: !lambda 'return std::to_string((int) id(g_mf_low));', target_temp_high: !lambda 'return std::to_string((int) id(g_mf_high));' } }
+              - label: { id: lbl_mf_hi, text: "--", x: 756, y: 60, width: 78, text_align: center, text_font: f_head, text_color: 0x4F91FF }
+              - button:
+                  id: btn_mf_hi_plus
+                  x: 834
+                  y: 46
+                  width: 56
+                  height: 72
+                  bg_color: 0x161B24
+                  widgets: [label: { text: "+", align: center, text_font: f_head, text_color: 0xEEF0F6 }]
+                  on_click:
+                    - lambda: 'id(g_mf_high) += 1;'
+                    - lvgl.label.update: { id: lbl_mf_hi, text: !lambda 'char b[12]; snprintf(b,sizeof(b),"%.0f°",id(g_mf_high)); return std::string(b);' }
+                    - homeassistant.action: { action: climate.set_temperature, data: { entity_id: $ent_climate_main, target_temp_low: !lambda 'return std::to_string((int) id(g_mf_low));', target_temp_high: !lambda 'return std::to_string((int) id(g_mf_high));' } }
+        # Upstairs
         - obj:
-            x: 546
-            y: 248
-            width: 366
-            height: 136
+            x: 96
+            y: 400
+            width: 908
+            height: 148
             styles: st_glass
+            pad_all: 0
+            scrollable: false
             widgets:
-              - label: { text: "HUMIDITY", x: 6, y: 4, text_font: f_small, text_color: $c_text2 }
-              - label: { id: lbl_clim_humidity, text: "", align: center, text_font: f_display, text_color: $c_text }
-        - obj:
-            x: 546
-            y: 396
-            width: 366
-            height: 134
-            styles: st_glass
-            widgets:
-              - label: { text: "WIND", x: 6, y: 4, text_font: f_small, text_color: $c_text2 }
-              - label: { id: lbl_clim_wind, text: "", align: center, y: -10, text_font: f_display, text_color: $c_text }
-              - label: { text: "mph", align: center, y: 42, text_font: f_small, text_color: $c_text2 }
+              - label: { text: "\U000F0393", x: 20, align: left_mid, text_font: f_icon, text_color: 0x2ED5B8 }
+              - label: { text: "Upstairs", x: 70, y: 30, text_font: f_title, text_color: 0xEEF0F6 }
+              - label: { id: lbl_up_action, text: "--", x: 72, y: 78, text_font: f_small, text_color: 0x8A8F9E }
+              - label: { id: lbl_up_cur, text: "", x: 168, y: 78, text_font: f_small, text_color: 0x8A8F9E }
+              - label: { text: "HEAT", x: 470, y: 14, width: 190, text_align: center, text_font: f_small, text_color: 0xFF9F6B }
+              - button:
+                  id: btn_up_lo_minus
+                  x: 470
+                  y: 46
+                  width: 56
+                  height: 72
+                  bg_color: 0x161B24
+                  widgets: [label: { text: "-", align: center, text_font: f_head, text_color: 0xEEF0F6 }]
+                  on_click:
+                    - lambda: 'id(g_up_low) -= 1;'
+                    - lvgl.label.update: { id: lbl_up_lo, text: !lambda 'char b[12]; snprintf(b,sizeof(b),"%.0f°",id(g_up_low)); return std::string(b);' }
+                    - homeassistant.action: { action: climate.set_temperature, data: { entity_id: $ent_climate_up, target_temp_low: !lambda 'return std::to_string((int) id(g_up_low));', target_temp_high: !lambda 'return std::to_string((int) id(g_up_high));' } }
+              - label: { id: lbl_up_lo, text: "--", x: 526, y: 60, width: 78, text_align: center, text_font: f_head, text_color: 0xFF9F6B }
+              - button:
+                  id: btn_up_lo_plus
+                  x: 604
+                  y: 46
+                  width: 56
+                  height: 72
+                  bg_color: 0x161B24
+                  widgets: [label: { text: "+", align: center, text_font: f_head, text_color: 0xEEF0F6 }]
+                  on_click:
+                    - lambda: 'id(g_up_low) += 1;'
+                    - lvgl.label.update: { id: lbl_up_lo, text: !lambda 'char b[12]; snprintf(b,sizeof(b),"%.0f°",id(g_up_low)); return std::string(b);' }
+                    - homeassistant.action: { action: climate.set_temperature, data: { entity_id: $ent_climate_up, target_temp_low: !lambda 'return std::to_string((int) id(g_up_low));', target_temp_high: !lambda 'return std::to_string((int) id(g_up_high));' } }
+              - label: { text: "COOL", x: 700, y: 14, width: 190, text_align: center, text_font: f_small, text_color: 0x4F91FF }
+              - button:
+                  id: btn_up_hi_minus
+                  x: 700
+                  y: 46
+                  width: 56
+                  height: 72
+                  bg_color: 0x161B24
+                  widgets: [label: { text: "-", align: center, text_font: f_head, text_color: 0xEEF0F6 }]
+                  on_click:
+                    - lambda: 'id(g_up_high) -= 1;'
+                    - lvgl.label.update: { id: lbl_up_hi, text: !lambda 'char b[12]; snprintf(b,sizeof(b),"%.0f°",id(g_up_high)); return std::string(b);' }
+                    - homeassistant.action: { action: climate.set_temperature, data: { entity_id: $ent_climate_up, target_temp_low: !lambda 'return std::to_string((int) id(g_up_low));', target_temp_high: !lambda 'return std::to_string((int) id(g_up_high));' } }
+              - label: { id: lbl_up_hi, text: "--", x: 756, y: 60, width: 78, text_align: center, text_font: f_head, text_color: 0x4F91FF }
+              - button:
+                  id: btn_up_hi_plus
+                  x: 834
+                  y: 46
+                  width: 56
+                  height: 72
+                  bg_color: 0x161B24
+                  widgets: [label: { text: "+", align: center, text_font: f_head, text_color: 0xEEF0F6 }]
+                  on_click:
+                    - lambda: 'id(g_up_high) += 1;'
+                    - lvgl.label.update: { id: lbl_up_hi, text: !lambda 'char b[12]; snprintf(b,sizeof(b),"%.0f°",id(g_up_high)); return std::string(b);' }
+                    - homeassistant.action: { action: climate.set_temperature, data: { entity_id: $ent_climate_up, target_temp_low: !lambda 'return std::to_string((int) id(g_up_low));', target_temp_high: !lambda 'return std::to_string((int) id(g_up_high));' } }
 
     # ---------- MEDIA (Sonos now-playing + zones + webOS TV remote) ----------
     # NOTE: zone buttons call media_play_pause per room for v1; real Sonos
