@@ -823,6 +823,9 @@ sensor:
         - lvgl.slider.update:
             id: sld_room_kitchen_light_kitchen_kitchen
             value: !lambda 'return (x == x) ? (int) roundf(x / 2.55f) : 0;'
+        - lvgl.label.update:
+            id: pct_sld_room_kitchen_light_kitchen_kitchen
+            text: !lambda 'int v=(x==x)?(int)roundf(x/2.55f):0; char b[8]; if(v<=0) return std::string("OFF"); snprintf(b,sizeof(b),"%d%%",v); return std::string(b);'
   - platform: homeassistant
     id: ha_roombri_light_office_shelves
     entity_id: $ent_light_office_shelves
@@ -832,6 +835,9 @@ sensor:
         - lvgl.slider.update:
             id: sld_room_office_light_office_shelves
             value: !lambda 'return (x == x) ? (int) roundf(x / 2.55f) : 0;'
+        - lvgl.label.update:
+            id: pct_sld_room_office_light_office_shelves
+            text: !lambda 'int v=(x==x)?(int)roundf(x/2.55f):0; char b[8]; if(v<=0) return std::string("OFF"); snprintf(b,sizeof(b),"%d%%",v); return std::string(b);'
   - platform: homeassistant
     id: ha_roombri_light_office_main_lights
     entity_id: $ent_light_office_main
@@ -841,6 +847,9 @@ sensor:
         - lvgl.slider.update:
             id: sld_room_office_light_office_main_lights
             value: !lambda 'return (x == x) ? (int) roundf(x / 2.55f) : 0;'
+        - lvgl.label.update:
+            id: pct_sld_room_office_light_office_main_lights
+            text: !lambda 'int v=(x==x)?(int)roundf(x/2.55f):0; char b[8]; if(v<=0) return std::string("OFF"); snprintf(b,sizeof(b),"%d%%",v); return std::string(b);'
   - platform: homeassistant
     id: ha_roombri_light_office_desk_lamp
     entity_id: $ent_light_office_desk
@@ -850,6 +859,9 @@ sensor:
         - lvgl.slider.update:
             id: sld_room_office_light_office_desk_lamp
             value: !lambda 'return (x == x) ? (int) roundf(x / 2.55f) : 0;'
+        - lvgl.label.update:
+            id: pct_sld_room_office_light_office_desk_lamp
+            text: !lambda 'int v=(x==x)?(int)roundf(x/2.55f):0; char b[8]; if(v<=0) return std::string("OFF"); snprintf(b,sizeof(b),"%d%%",v); return std::string(b);'
   - platform: homeassistant
     id: ha_roombri_light_reading_lamp
     entity_id: $ent_light_reading
@@ -859,6 +871,9 @@ sensor:
         - lvgl.slider.update:
             id: sld_room_master_light_reading_lamp
             value: !lambda 'return (x == x) ? (int) roundf(x / 2.55f) : 0;'
+        - lvgl.label.update:
+            id: pct_sld_room_master_light_reading_lamp
+            text: !lambda 'int v=(x==x)?(int)roundf(x/2.55f):0; char b[8]; if(v<=0) return std::string("OFF"); snprintf(b,sizeof(b),"%d%%",v); return std::string(b);'
   - platform: homeassistant
     id: ha_roombri_light_master_bedroom_ceiling_fan_light
     entity_id: $ent_light_master
@@ -868,6 +883,9 @@ sensor:
         - lvgl.slider.update:
             id: sld_room_master_light_master_bedroom_ceiling_fan_light
             value: !lambda 'return (x == x) ? (int) roundf(x / 2.55f) : 0;'
+        - lvgl.label.update:
+            id: pct_sld_room_master_light_master_bedroom_ceiling_fan_light
+            text: !lambda 'int v=(x==x)?(int)roundf(x/2.55f):0; char b[8]; if(v<=0) return std::string("OFF"); snprintf(b,sizeof(b),"%d%%",v); return std::string(b);'
   - platform: homeassistant
     id: ha_roombri_light_outdoor_patio_back_porch_lights
     entity_id: $ent_light_patio
@@ -877,6 +895,9 @@ sensor:
         - lvgl.slider.update:
             id: sld_room_exterior_light_outdoor_patio_back_porch_lights
             value: !lambda 'return (x == x) ? (int) roundf(x / 2.55f) : 0;'
+        - lvgl.label.update:
+            id: pct_sld_room_exterior_light_outdoor_patio_back_porch_lights
+            text: !lambda 'int v=(x==x)?(int)roundf(x/2.55f):0; char b[8]; if(v<=0) return std::string("OFF"); snprintf(b,sizeof(b),"%d%%",v); return std::string(b);'
 text_sensor:
   # ---- Thermostat hvac_action (Main Floor / Master / Upstairs) ----
   - platform: homeassistant
@@ -1455,9 +1476,11 @@ text_sensor:
             condition:
               lambda: 'return x == std::string("on");'
             then:
-              - lvgl.label.update: { id: ic_kitchen_light_kitchen_kitchen, text_color: 0xC8A45D }
+              - lvgl.widget.update: { id: pwr_ic_kitchen_light_kitchen_kitchen, bg_color: 0x2563EB }
+              - lvgl.label.update: { id: ic_kitchen_light_kitchen_kitchen, text_color: 0xFFFFFF }
             else:
-              - lvgl.label.update: { id: ic_kitchen_light_kitchen_kitchen, text_color: 0x4A4F5A }
+              - lvgl.widget.update: { id: pwr_ic_kitchen_light_kitchen_kitchen, bg_color: 0x12141C }
+              - lvgl.label.update: { id: ic_kitchen_light_kitchen_kitchen, text_color: 0x8A8F9E }
   - platform: homeassistant
     id: ha_room_office_light_office_shelves
     entity_id: $ent_light_office_shelves
@@ -1467,9 +1490,11 @@ text_sensor:
             condition:
               lambda: 'return x == std::string("on");'
             then:
-              - lvgl.label.update: { id: ic_office_light_office_shelves, text_color: 0xC8A45D }
+              - lvgl.widget.update: { id: pwr_ic_office_light_office_shelves, bg_color: 0x2563EB }
+              - lvgl.label.update: { id: ic_office_light_office_shelves, text_color: 0xFFFFFF }
             else:
-              - lvgl.label.update: { id: ic_office_light_office_shelves, text_color: 0x4A4F5A }
+              - lvgl.widget.update: { id: pwr_ic_office_light_office_shelves, bg_color: 0x12141C }
+              - lvgl.label.update: { id: ic_office_light_office_shelves, text_color: 0x8A8F9E }
   - platform: homeassistant
     id: ha_room_office_light_office_main_lights
     entity_id: $ent_light_office_main
@@ -1479,9 +1504,11 @@ text_sensor:
             condition:
               lambda: 'return x == std::string("on");'
             then:
-              - lvgl.label.update: { id: ic_office_light_office_main_lights, text_color: 0xC8A45D }
+              - lvgl.widget.update: { id: pwr_ic_office_light_office_main_lights, bg_color: 0x2563EB }
+              - lvgl.label.update: { id: ic_office_light_office_main_lights, text_color: 0xFFFFFF }
             else:
-              - lvgl.label.update: { id: ic_office_light_office_main_lights, text_color: 0x4A4F5A }
+              - lvgl.widget.update: { id: pwr_ic_office_light_office_main_lights, bg_color: 0x12141C }
+              - lvgl.label.update: { id: ic_office_light_office_main_lights, text_color: 0x8A8F9E }
   - platform: homeassistant
     id: ha_room_office_light_office_desk_lamp
     entity_id: $ent_light_office_desk
@@ -1491,9 +1518,11 @@ text_sensor:
             condition:
               lambda: 'return x == std::string("on");'
             then:
-              - lvgl.label.update: { id: ic_office_light_office_desk_lamp, text_color: 0xC8A45D }
+              - lvgl.widget.update: { id: pwr_ic_office_light_office_desk_lamp, bg_color: 0x2563EB }
+              - lvgl.label.update: { id: ic_office_light_office_desk_lamp, text_color: 0xFFFFFF }
             else:
-              - lvgl.label.update: { id: ic_office_light_office_desk_lamp, text_color: 0x4A4F5A }
+              - lvgl.widget.update: { id: pwr_ic_office_light_office_desk_lamp, bg_color: 0x12141C }
+              - lvgl.label.update: { id: ic_office_light_office_desk_lamp, text_color: 0x8A8F9E }
   - platform: homeassistant
     id: ha_room_master_light_reading_lamp
     entity_id: $ent_light_reading
@@ -1503,9 +1532,11 @@ text_sensor:
             condition:
               lambda: 'return x == std::string("on");'
             then:
-              - lvgl.label.update: { id: ic_master_light_reading_lamp, text_color: 0xC8A45D }
+              - lvgl.widget.update: { id: pwr_ic_master_light_reading_lamp, bg_color: 0x2563EB }
+              - lvgl.label.update: { id: ic_master_light_reading_lamp, text_color: 0xFFFFFF }
             else:
-              - lvgl.label.update: { id: ic_master_light_reading_lamp, text_color: 0x4A4F5A }
+              - lvgl.widget.update: { id: pwr_ic_master_light_reading_lamp, bg_color: 0x12141C }
+              - lvgl.label.update: { id: ic_master_light_reading_lamp, text_color: 0x8A8F9E }
   - platform: homeassistant
     id: ha_room_master_light_master_bedroom_ceiling_fan_light
     entity_id: $ent_light_master
@@ -1515,9 +1546,11 @@ text_sensor:
             condition:
               lambda: 'return x == std::string("on");'
             then:
-              - lvgl.label.update: { id: ic_master_light_master_bedroom_ceiling_fan_light, text_color: 0xC8A45D }
+              - lvgl.widget.update: { id: pwr_ic_master_light_master_bedroom_ceiling_fan_light, bg_color: 0x2563EB }
+              - lvgl.label.update: { id: ic_master_light_master_bedroom_ceiling_fan_light, text_color: 0xFFFFFF }
             else:
-              - lvgl.label.update: { id: ic_master_light_master_bedroom_ceiling_fan_light, text_color: 0x4A4F5A }
+              - lvgl.widget.update: { id: pwr_ic_master_light_master_bedroom_ceiling_fan_light, bg_color: 0x12141C }
+              - lvgl.label.update: { id: ic_master_light_master_bedroom_ceiling_fan_light, text_color: 0x8A8F9E }
   - platform: homeassistant
     id: ha_room_exterior_light_outdoor_patio_back_porch_lights
     entity_id: $ent_light_patio
@@ -1527,9 +1560,11 @@ text_sensor:
             condition:
               lambda: 'return x == std::string("on");'
             then:
-              - lvgl.label.update: { id: ic_exterior_light_outdoor_patio_back_porch_lights, text_color: 0xC8A45D }
+              - lvgl.widget.update: { id: pwr_ic_exterior_light_outdoor_patio_back_porch_lights, bg_color: 0x2563EB }
+              - lvgl.label.update: { id: ic_exterior_light_outdoor_patio_back_porch_lights, text_color: 0xFFFFFF }
             else:
-              - lvgl.label.update: { id: ic_exterior_light_outdoor_patio_back_porch_lights, text_color: 0x4A4F5A }
+              - lvgl.widget.update: { id: pwr_ic_exterior_light_outdoor_patio_back_porch_lights, bg_color: 0x12141C }
+              - lvgl.label.update: { id: ic_exterior_light_outdoor_patio_back_porch_lights, text_color: 0x8A8F9E }
   - platform: homeassistant
     id: ha_room_exterior_switch_outdoor_patio_putting_green
     entity_id: $ent_switch_putting_green
@@ -3490,28 +3525,40 @@ lvgl:
             on_click: [lvgl.page.show: page_rooms]
         - obj:
             x: 100
-            y: 96
-            width: 232
-            height: 120
-            styles: st_glass
+            y: 80
+            width: 120
+            height: 432
+            bg_opa: 0
+            border_width: 0
             pad_all: 0
-            clickable: true
-            on_click:
-              - homeassistant.action:
-                  action: light.toggle
-                  data:
-                    entity_id: $ent_light_kitchen
+            scrollable: false
             widgets:
-              - label: { id: ic_kitchen_light_kitchen_kitchen, text: "\U000F0335", x: 14, y: 12, text_font: f_icon, text_color: 0x4A4F5A }
-              - label: { text: "Kitchen Lights", x: 14, y: 46, text_font: f_body, text_color: 0xEEF0F6 }
+              - label: { text: "Kitchen Lights", x: 0, y: 0, width: 120, text_align: center, text_font: f_body, text_color: 0xEEF0F6 }
+              - label: { id: pct_sld_room_kitchen_light_kitchen_kitchen, text: "OFF", x: 0, y: 24, width: 120, text_align: center, text_font: f_body, text_color: 0x8A8F9E }
               - slider:
                   id: sld_room_kitchen_light_kitchen_kitchen
-                  align: bottom_mid
-                  y: -14
-                  width: 200
+                  x: 0
+                  y: 52
+                  width: 120
+                  height: 268
                   min_value: 0
                   max_value: 100
                   value: 0
+                  radius: 24
+                  bg_color: 0x12141C
+                  bg_opa: 100%
+                  border_width: 2
+                  border_color: 0x2A2F3A
+                  indicator:
+                    bg_color: 0xF2C94C
+                    radius: 24
+                  knob:
+                    bg_color: 0xFFFFFF
+                    pad_left: -24
+                    pad_right: -24
+                    pad_top: -56
+                    pad_bottom: -56
+                    radius: 2
                   on_release:
                     - if:
                         condition:
@@ -3524,6 +3571,20 @@ lvgl:
                                 brightness_pct: !lambda 'return std::to_string((int) x);'
                         else:
                           - homeassistant.action: { action: light.turn_off, data: { entity_id: $ent_light_kitchen } }
+                  on_value:
+                    - lvgl.label.update: { id: pct_sld_room_kitchen_light_kitchen_kitchen, text: !lambda 'int v=(int)x; char b[8]; if(v<=0) return std::string("OFF"); snprintf(b,sizeof(b),"%d%%",v); return std::string(b);' }
+              - button:
+                  id: pwr_ic_kitchen_light_kitchen_kitchen
+                  align: bottom_mid
+                  y: 0
+                  width: 120
+                  height: 100
+                  radius: 24
+                  bg_color: 0x12141C
+                  border_width: 2
+                  border_color: 0x2A2F3A
+                  widgets: [label: { id: ic_kitchen_light_kitchen_kitchen, text: "\U000F0425", align: center, text_font: f_icon, text_color: 0x8A8F9E }]
+                  on_click: [homeassistant.action: { action: light.toggle, data: { entity_id: $ent_light_kitchen } }]
     - id: page_room_office
       bg_opa: 0
       on_load:
@@ -3552,28 +3613,40 @@ lvgl:
             on_click: [lvgl.page.show: page_rooms]
         - obj:
             x: 100
-            y: 96
-            width: 232
-            height: 120
-            styles: st_glass
+            y: 80
+            width: 120
+            height: 432
+            bg_opa: 0
+            border_width: 0
             pad_all: 0
-            clickable: true
-            on_click:
-              - homeassistant.action:
-                  action: light.toggle
-                  data:
-                    entity_id: $ent_light_office_shelves
+            scrollable: false
             widgets:
-              - label: { id: ic_office_light_office_shelves, text: "\U000F0335", x: 14, y: 12, text_font: f_icon, text_color: 0x4A4F5A }
-              - label: { text: "Shelves", x: 14, y: 46, text_font: f_body, text_color: 0xEEF0F6 }
+              - label: { text: "Shelves", x: 0, y: 0, width: 120, text_align: center, text_font: f_body, text_color: 0xEEF0F6 }
+              - label: { id: pct_sld_room_office_light_office_shelves, text: "OFF", x: 0, y: 24, width: 120, text_align: center, text_font: f_body, text_color: 0x8A8F9E }
               - slider:
                   id: sld_room_office_light_office_shelves
-                  align: bottom_mid
-                  y: -14
-                  width: 200
+                  x: 0
+                  y: 52
+                  width: 120
+                  height: 268
                   min_value: 0
                   max_value: 100
                   value: 0
+                  radius: 24
+                  bg_color: 0x12141C
+                  bg_opa: 100%
+                  border_width: 2
+                  border_color: 0x2A2F3A
+                  indicator:
+                    bg_color: 0xF2C94C
+                    radius: 24
+                  knob:
+                    bg_color: 0xFFFFFF
+                    pad_left: -24
+                    pad_right: -24
+                    pad_top: -56
+                    pad_bottom: -56
+                    radius: 2
                   on_release:
                     - if:
                         condition:
@@ -3586,30 +3659,56 @@ lvgl:
                                 brightness_pct: !lambda 'return std::to_string((int) x);'
                         else:
                           - homeassistant.action: { action: light.turn_off, data: { entity_id: $ent_light_office_shelves } }
+                  on_value:
+                    - lvgl.label.update: { id: pct_sld_room_office_light_office_shelves, text: !lambda 'int v=(int)x; char b[8]; if(v<=0) return std::string("OFF"); snprintf(b,sizeof(b),"%d%%",v); return std::string(b);' }
+              - button:
+                  id: pwr_ic_office_light_office_shelves
+                  align: bottom_mid
+                  y: 0
+                  width: 120
+                  height: 100
+                  radius: 24
+                  bg_color: 0x12141C
+                  border_width: 2
+                  border_color: 0x2A2F3A
+                  widgets: [label: { id: ic_office_light_office_shelves, text: "\U000F0425", align: center, text_font: f_icon, text_color: 0x8A8F9E }]
+                  on_click: [homeassistant.action: { action: light.toggle, data: { entity_id: $ent_light_office_shelves } }]
         - obj:
-            x: 348
-            y: 96
-            width: 232
-            height: 120
-            styles: st_glass
+            x: 240
+            y: 80
+            width: 120
+            height: 432
+            bg_opa: 0
+            border_width: 0
             pad_all: 0
-            clickable: true
-            on_click:
-              - homeassistant.action:
-                  action: light.toggle
-                  data:
-                    entity_id: $ent_light_office_main
+            scrollable: false
             widgets:
-              - label: { id: ic_office_light_office_main_lights, text: "\U000F0335", x: 14, y: 12, text_font: f_icon, text_color: 0x4A4F5A }
-              - label: { text: "Main Lights", x: 14, y: 46, text_font: f_body, text_color: 0xEEF0F6 }
+              - label: { text: "Main Lights", x: 0, y: 0, width: 120, text_align: center, text_font: f_body, text_color: 0xEEF0F6 }
+              - label: { id: pct_sld_room_office_light_office_main_lights, text: "OFF", x: 0, y: 24, width: 120, text_align: center, text_font: f_body, text_color: 0x8A8F9E }
               - slider:
                   id: sld_room_office_light_office_main_lights
-                  align: bottom_mid
-                  y: -14
-                  width: 200
+                  x: 0
+                  y: 52
+                  width: 120
+                  height: 268
                   min_value: 0
                   max_value: 100
                   value: 0
+                  radius: 24
+                  bg_color: 0x12141C
+                  bg_opa: 100%
+                  border_width: 2
+                  border_color: 0x2A2F3A
+                  indicator:
+                    bg_color: 0xF2C94C
+                    radius: 24
+                  knob:
+                    bg_color: 0xFFFFFF
+                    pad_left: -24
+                    pad_right: -24
+                    pad_top: -56
+                    pad_bottom: -56
+                    radius: 2
                   on_release:
                     - if:
                         condition:
@@ -3622,30 +3721,56 @@ lvgl:
                                 brightness_pct: !lambda 'return std::to_string((int) x);'
                         else:
                           - homeassistant.action: { action: light.turn_off, data: { entity_id: $ent_light_office_main } }
+                  on_value:
+                    - lvgl.label.update: { id: pct_sld_room_office_light_office_main_lights, text: !lambda 'int v=(int)x; char b[8]; if(v<=0) return std::string("OFF"); snprintf(b,sizeof(b),"%d%%",v); return std::string(b);' }
+              - button:
+                  id: pwr_ic_office_light_office_main_lights
+                  align: bottom_mid
+                  y: 0
+                  width: 120
+                  height: 100
+                  radius: 24
+                  bg_color: 0x12141C
+                  border_width: 2
+                  border_color: 0x2A2F3A
+                  widgets: [label: { id: ic_office_light_office_main_lights, text: "\U000F0425", align: center, text_font: f_icon, text_color: 0x8A8F9E }]
+                  on_click: [homeassistant.action: { action: light.toggle, data: { entity_id: $ent_light_office_main } }]
         - obj:
-            x: 596
-            y: 96
-            width: 232
-            height: 120
-            styles: st_glass
+            x: 380
+            y: 80
+            width: 120
+            height: 432
+            bg_opa: 0
+            border_width: 0
             pad_all: 0
-            clickable: true
-            on_click:
-              - homeassistant.action:
-                  action: light.toggle
-                  data:
-                    entity_id: $ent_light_office_desk
+            scrollable: false
             widgets:
-              - label: { id: ic_office_light_office_desk_lamp, text: "\U000F0335", x: 14, y: 12, text_font: f_icon, text_color: 0x4A4F5A }
-              - label: { text: "Desk Lamp", x: 14, y: 46, text_font: f_body, text_color: 0xEEF0F6 }
+              - label: { text: "Desk Lamp", x: 0, y: 0, width: 120, text_align: center, text_font: f_body, text_color: 0xEEF0F6 }
+              - label: { id: pct_sld_room_office_light_office_desk_lamp, text: "OFF", x: 0, y: 24, width: 120, text_align: center, text_font: f_body, text_color: 0x8A8F9E }
               - slider:
                   id: sld_room_office_light_office_desk_lamp
-                  align: bottom_mid
-                  y: -14
-                  width: 200
+                  x: 0
+                  y: 52
+                  width: 120
+                  height: 268
                   min_value: 0
                   max_value: 100
                   value: 0
+                  radius: 24
+                  bg_color: 0x12141C
+                  bg_opa: 100%
+                  border_width: 2
+                  border_color: 0x2A2F3A
+                  indicator:
+                    bg_color: 0xF2C94C
+                    radius: 24
+                  knob:
+                    bg_color: 0xFFFFFF
+                    pad_left: -24
+                    pad_right: -24
+                    pad_top: -56
+                    pad_bottom: -56
+                    radius: 2
                   on_release:
                     - if:
                         condition:
@@ -3658,6 +3783,20 @@ lvgl:
                                 brightness_pct: !lambda 'return std::to_string((int) x);'
                         else:
                           - homeassistant.action: { action: light.turn_off, data: { entity_id: $ent_light_office_desk } }
+                  on_value:
+                    - lvgl.label.update: { id: pct_sld_room_office_light_office_desk_lamp, text: !lambda 'int v=(int)x; char b[8]; if(v<=0) return std::string("OFF"); snprintf(b,sizeof(b),"%d%%",v); return std::string(b);' }
+              - button:
+                  id: pwr_ic_office_light_office_desk_lamp
+                  align: bottom_mid
+                  y: 0
+                  width: 120
+                  height: 100
+                  radius: 24
+                  bg_color: 0x12141C
+                  border_width: 2
+                  border_color: 0x2A2F3A
+                  widgets: [label: { id: ic_office_light_office_desk_lamp, text: "\U000F0425", align: center, text_font: f_icon, text_color: 0x8A8F9E }]
+                  on_click: [homeassistant.action: { action: light.toggle, data: { entity_id: $ent_light_office_desk } }]
         - obj:
             x: 100
             y: 232
@@ -3705,28 +3844,40 @@ lvgl:
             on_click: [lvgl.page.show: page_rooms]
         - obj:
             x: 100
-            y: 96
-            width: 232
-            height: 120
-            styles: st_glass
+            y: 80
+            width: 120
+            height: 432
+            bg_opa: 0
+            border_width: 0
             pad_all: 0
-            clickable: true
-            on_click:
-              - homeassistant.action:
-                  action: light.toggle
-                  data:
-                    entity_id: $ent_light_reading
+            scrollable: false
             widgets:
-              - label: { id: ic_master_light_reading_lamp, text: "\U000F0335", x: 14, y: 12, text_font: f_icon, text_color: 0x4A4F5A }
-              - label: { text: "Reading Lamp", x: 14, y: 46, text_font: f_body, text_color: 0xEEF0F6 }
+              - label: { text: "Reading Lamp", x: 0, y: 0, width: 120, text_align: center, text_font: f_body, text_color: 0xEEF0F6 }
+              - label: { id: pct_sld_room_master_light_reading_lamp, text: "OFF", x: 0, y: 24, width: 120, text_align: center, text_font: f_body, text_color: 0x8A8F9E }
               - slider:
                   id: sld_room_master_light_reading_lamp
-                  align: bottom_mid
-                  y: -14
-                  width: 200
+                  x: 0
+                  y: 52
+                  width: 120
+                  height: 268
                   min_value: 0
                   max_value: 100
                   value: 0
+                  radius: 24
+                  bg_color: 0x12141C
+                  bg_opa: 100%
+                  border_width: 2
+                  border_color: 0x2A2F3A
+                  indicator:
+                    bg_color: 0xF2C94C
+                    radius: 24
+                  knob:
+                    bg_color: 0xFFFFFF
+                    pad_left: -24
+                    pad_right: -24
+                    pad_top: -56
+                    pad_bottom: -56
+                    radius: 2
                   on_release:
                     - if:
                         condition:
@@ -3739,30 +3890,56 @@ lvgl:
                                 brightness_pct: !lambda 'return std::to_string((int) x);'
                         else:
                           - homeassistant.action: { action: light.turn_off, data: { entity_id: $ent_light_reading } }
+                  on_value:
+                    - lvgl.label.update: { id: pct_sld_room_master_light_reading_lamp, text: !lambda 'int v=(int)x; char b[8]; if(v<=0) return std::string("OFF"); snprintf(b,sizeof(b),"%d%%",v); return std::string(b);' }
+              - button:
+                  id: pwr_ic_master_light_reading_lamp
+                  align: bottom_mid
+                  y: 0
+                  width: 120
+                  height: 100
+                  radius: 24
+                  bg_color: 0x12141C
+                  border_width: 2
+                  border_color: 0x2A2F3A
+                  widgets: [label: { id: ic_master_light_reading_lamp, text: "\U000F0425", align: center, text_font: f_icon, text_color: 0x8A8F9E }]
+                  on_click: [homeassistant.action: { action: light.toggle, data: { entity_id: $ent_light_reading } }]
         - obj:
-            x: 348
-            y: 96
-            width: 232
-            height: 120
-            styles: st_glass
+            x: 240
+            y: 80
+            width: 120
+            height: 432
+            bg_opa: 0
+            border_width: 0
             pad_all: 0
-            clickable: true
-            on_click:
-              - homeassistant.action:
-                  action: light.toggle
-                  data:
-                    entity_id: $ent_light_master
+            scrollable: false
             widgets:
-              - label: { id: ic_master_light_master_bedroom_ceiling_fan_light, text: "\U000F0335", x: 14, y: 12, text_font: f_icon, text_color: 0x4A4F5A }
-              - label: { text: "Ceiling Light", x: 14, y: 46, text_font: f_body, text_color: 0xEEF0F6 }
+              - label: { text: "Ceiling Light", x: 0, y: 0, width: 120, text_align: center, text_font: f_body, text_color: 0xEEF0F6 }
+              - label: { id: pct_sld_room_master_light_master_bedroom_ceiling_fan_light, text: "OFF", x: 0, y: 24, width: 120, text_align: center, text_font: f_body, text_color: 0x8A8F9E }
               - slider:
                   id: sld_room_master_light_master_bedroom_ceiling_fan_light
-                  align: bottom_mid
-                  y: -14
-                  width: 200
+                  x: 0
+                  y: 52
+                  width: 120
+                  height: 268
                   min_value: 0
                   max_value: 100
                   value: 0
+                  radius: 24
+                  bg_color: 0x12141C
+                  bg_opa: 100%
+                  border_width: 2
+                  border_color: 0x2A2F3A
+                  indicator:
+                    bg_color: 0xF2C94C
+                    radius: 24
+                  knob:
+                    bg_color: 0xFFFFFF
+                    pad_left: -24
+                    pad_right: -24
+                    pad_top: -56
+                    pad_bottom: -56
+                    radius: 2
                   on_release:
                     - if:
                         condition:
@@ -3775,6 +3952,20 @@ lvgl:
                                 brightness_pct: !lambda 'return std::to_string((int) x);'
                         else:
                           - homeassistant.action: { action: light.turn_off, data: { entity_id: $ent_light_master } }
+                  on_value:
+                    - lvgl.label.update: { id: pct_sld_room_master_light_master_bedroom_ceiling_fan_light, text: !lambda 'int v=(int)x; char b[8]; if(v<=0) return std::string("OFF"); snprintf(b,sizeof(b),"%d%%",v); return std::string(b);' }
+              - button:
+                  id: pwr_ic_master_light_master_bedroom_ceiling_fan_light
+                  align: bottom_mid
+                  y: 0
+                  width: 120
+                  height: 100
+                  radius: 24
+                  bg_color: 0x12141C
+                  border_width: 2
+                  border_color: 0x2A2F3A
+                  widgets: [label: { id: ic_master_light_master_bedroom_ceiling_fan_light, text: "\U000F0425", align: center, text_font: f_icon, text_color: 0x8A8F9E }]
+                  on_click: [homeassistant.action: { action: light.toggle, data: { entity_id: $ent_light_master } }]
     - id: page_room_exterior
       bg_opa: 0
       on_load:
@@ -3803,28 +3994,40 @@ lvgl:
             on_click: [lvgl.page.show: page_rooms]
         - obj:
             x: 100
-            y: 96
-            width: 232
-            height: 120
-            styles: st_glass
+            y: 80
+            width: 120
+            height: 432
+            bg_opa: 0
+            border_width: 0
             pad_all: 0
-            clickable: true
-            on_click:
-              - homeassistant.action:
-                  action: light.toggle
-                  data:
-                    entity_id: $ent_light_patio
+            scrollable: false
             widgets:
-              - label: { id: ic_exterior_light_outdoor_patio_back_porch_lights, text: "\U000F0335", x: 14, y: 12, text_font: f_icon, text_color: 0x4A4F5A }
-              - label: { text: "Patio Lights", x: 14, y: 46, text_font: f_body, text_color: 0xEEF0F6 }
+              - label: { text: "Patio Lights", x: 0, y: 0, width: 120, text_align: center, text_font: f_body, text_color: 0xEEF0F6 }
+              - label: { id: pct_sld_room_exterior_light_outdoor_patio_back_porch_lights, text: "OFF", x: 0, y: 24, width: 120, text_align: center, text_font: f_body, text_color: 0x8A8F9E }
               - slider:
                   id: sld_room_exterior_light_outdoor_patio_back_porch_lights
-                  align: bottom_mid
-                  y: -14
-                  width: 200
+                  x: 0
+                  y: 52
+                  width: 120
+                  height: 268
                   min_value: 0
                   max_value: 100
                   value: 0
+                  radius: 24
+                  bg_color: 0x12141C
+                  bg_opa: 100%
+                  border_width: 2
+                  border_color: 0x2A2F3A
+                  indicator:
+                    bg_color: 0xF2C94C
+                    radius: 24
+                  knob:
+                    bg_color: 0xFFFFFF
+                    pad_left: -24
+                    pad_right: -24
+                    pad_top: -56
+                    pad_bottom: -56
+                    radius: 2
                   on_release:
                     - if:
                         condition:
@@ -3837,6 +4040,20 @@ lvgl:
                                 brightness_pct: !lambda 'return std::to_string((int) x);'
                         else:
                           - homeassistant.action: { action: light.turn_off, data: { entity_id: $ent_light_patio } }
+                  on_value:
+                    - lvgl.label.update: { id: pct_sld_room_exterior_light_outdoor_patio_back_porch_lights, text: !lambda 'int v=(int)x; char b[8]; if(v<=0) return std::string("OFF"); snprintf(b,sizeof(b),"%d%%",v); return std::string(b);' }
+              - button:
+                  id: pwr_ic_exterior_light_outdoor_patio_back_porch_lights
+                  align: bottom_mid
+                  y: 0
+                  width: 120
+                  height: 100
+                  radius: 24
+                  bg_color: 0x12141C
+                  border_width: 2
+                  border_color: 0x2A2F3A
+                  widgets: [label: { id: ic_exterior_light_outdoor_patio_back_porch_lights, text: "\U000F0425", align: center, text_font: f_icon, text_color: 0x8A8F9E }]
+                  on_click: [homeassistant.action: { action: light.toggle, data: { entity_id: $ent_light_patio } }]
         - obj:
             x: 348
             y: 96
