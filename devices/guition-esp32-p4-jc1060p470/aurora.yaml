@@ -191,6 +191,38 @@ touchscreen:
                   lambda: 'return id(g_screensaver);'
                 then:
                   - lvgl.page.show: page_home
+      # Trackpad: start a fresh gesture
+      - if:
+          condition:
+            lambda: 'return id(g_tp_active);'
+          then:
+            - lambda: |-
+                id(g_tp_total) = 0; id(g_tp_dx) = 0; id(g_tp_dy) = 0;
+                id(g_tp_have_last) = false; id(g_tp_inpad) = false;
+    on_update:
+      - if:
+          condition:
+            lambda: 'return id(g_tp_active) && !touches.empty();'
+          then:
+            - lambda: |-
+                auto &t = touches[0];
+                bool inpad = (t.x >= 96 && t.x <= 1004 && t.y >= 120 && t.y <= 470);
+                if (!inpad) { id(g_tp_have_last) = false; return; }
+                id(g_tp_inpad) = true;
+                if (id(g_tp_have_last)) {
+                  int ddx = (int) t.x - id(g_tp_lastx);
+                  int ddy = (int) t.y - id(g_tp_lasty);
+                  id(g_tp_dx) += ddx; id(g_tp_dy) += ddy;
+                  id(g_tp_total) += abs(ddx) + abs(ddy);
+                }
+                id(g_tp_lastx) = t.x; id(g_tp_lasty) = t.y; id(g_tp_have_last) = true;
+    on_release:
+      - if:
+          condition:
+            lambda: 'return id(g_tp_active) && id(g_tp_inpad) && id(g_tp_total) < 10;'
+          then:
+            - homeassistant.action: { action: pyscript.lg_pointer_click }
+      - lambda: 'id(g_tp_have_last) = false; id(g_tp_inpad) = false;'
 
 # --- Display (stock mipi_dsi, built-in model) ---
 display:
@@ -1260,6 +1292,39 @@ globals:
     type: float
     restore_value: false
     initial_value: '74'
+  # Trackpad (LG cursor) gesture state
+  - id: g_tp_active
+    type: bool
+    restore_value: false
+    initial_value: 'false'
+  - id: g_tp_have_last
+    type: bool
+    restore_value: false
+    initial_value: 'false'
+  - id: g_tp_inpad
+    type: bool
+    restore_value: false
+    initial_value: 'false'
+  - id: g_tp_lastx
+    type: int
+    restore_value: false
+    initial_value: '0'
+  - id: g_tp_lasty
+    type: int
+    restore_value: false
+    initial_value: '0'
+  - id: g_tp_dx
+    type: int
+    restore_value: false
+    initial_value: '0'
+  - id: g_tp_dy
+    type: int
+    restore_value: false
+    initial_value: '0'
+  - id: g_tp_total
+    type: int
+    restore_value: false
+    initial_value: '0'
 
 script:
   - id: hl_rooms
@@ -1345,6 +1410,18 @@ time:
     id: ha_time
 
 interval:
+  - interval: 90ms
+    then:
+      - if:
+          condition:
+            lambda: 'return id(g_tp_active) && (id(g_tp_dx) != 0 || id(g_tp_dy) != 0);'
+          then:
+            - homeassistant.action:
+                action: pyscript.lg_pointer_move
+                data:
+                  dx: !lambda 'return std::to_string(id(g_tp_dx));'
+                  dy: !lambda 'return std::to_string(id(g_tp_dy));'
+            - lambda: 'id(g_tp_dx) = 0; id(g_tp_dy) = 0;'
   - interval: 10s
     then:
       - lvgl.label.update:
@@ -4357,13 +4434,21 @@ lvgl:
         - button:
             x: 382
             y: 456
-            width: 374
+            width: 240
             height: 54
             bg_color: 0x7B6CFF
             widgets:
               - label: { text: "Apps", align: left_mid, x: 16, text_font: f_body, text_color: 0xFFFFFF }
-              - label: { id: lbl_tv_source, text: "", align: right_mid, x: -16, text_font: f_small, text_color: 0xE6E2FF }
+              - label: { id: lbl_tv_source, text: "", align: right_mid, x: -10, text_font: f_small, text_color: 0xE6E2FF }
             on_click: [lvgl.page.show: page_tvapps]
+        - button:
+            x: 636
+            y: 456
+            width: 120
+            height: 54
+            styles: st_glass
+            widgets: [label: { text: "Trackpad", align: center, text_font: f_body, text_color: 0xEEF0F6 }]
+            on_click: [lvgl.page.show: page_trackpad]
         - button:
             x: 812
             y: 110
@@ -4544,3 +4629,76 @@ lvgl:
             widgets: [label: { text: "Spotify", align: center, text_font: f_title, text_color: 0x06210F }]
             on_click: [homeassistant.action: { action: media_player.select_source, data: { entity_id: $ent_media_tv, source: "Spotify" } }]
         - label: { id: lbl_tvapps_now, text: "", x: 528, y: 410, width: 416, text_font: f_body, text_color: 0x8A8F9E }
+
+    # ---------- TV TRACKPAD (LG cursor via pyscript.lg_pointer_* bridge) ----------
+    - id: page_trackpad
+      bg_opa: 0
+      on_load:
+        - lvgl.widget.update: { id: nav_home, bg_color: 0x10121A }
+        - lvgl.widget.update: { id: nav_rooms, bg_color: 0x2ED5B8 }
+        - lvgl.widget.update: { id: nav_lights, bg_color: 0x10121A }
+        - lvgl.widget.update: { id: nav_climate, bg_color: 0x10121A }
+        - lvgl.widget.update: { id: nav_media, bg_color: 0x10121A }
+        - lvgl.widget.update: { id: nav_security, bg_color: 0x10121A }
+        - lvgl.widget.update: { id: nav_network, bg_color: 0x10121A }
+        - lvgl.widget.update: { id: nav_settings, bg_color: 0x10121A }
+        - lambda: 'id(g_tp_active) = true;'
+      on_unload:
+        - lambda: 'id(g_tp_active) = false;'
+      widgets:
+        - image: { src: img_aurora_bg, x: 0, y: 0 }
+        - label: { text: "Trackpad", x: 100, y: 26, text_font: f_title, text_color: 0xEEF0F6 }
+        - button:
+            x: 880
+            y: 24
+            width: 124
+            height: 44
+            styles: st_glass
+            widgets: [label: { text: "Remote", align: center, text_font: f_small, text_color: 0xEEF0F6 }]
+            on_click: [lvgl.page.show: page_tvremote]
+        - obj:
+            x: 96
+            y: 120
+            width: 908
+            height: 350
+            bg_color: 0x10121A
+            bg_opa: 60%
+            radius: 22
+            border_width: 1
+            border_color: 0x2A2F3A
+            scrollable: false
+            clickable: false
+            widgets:
+              - label: { text: "Drag to move the cursor  ·  tap to click", align: center, text_font: f_body, text_color: 0x6E727E }
+        - button:
+            x: 96
+            y: 486
+            width: 430
+            height: 54
+            bg_color: 0x2ED5B8
+            widgets: [label: { text: "Click", align: center, text_font: f_body, text_color: 0x08090D }]
+            on_click: [homeassistant.action: { action: pyscript.lg_pointer_click }]
+        - button:
+            x: 540
+            y: 486
+            width: 150
+            height: 54
+            styles: st_glass
+            widgets: [label: { text: "Back", align: center, text_font: f_body, text_color: 0xEEF0F6 }]
+            on_click: [homeassistant.action: { action: webostv.button, data: { entity_id: $ent_media_tv, button: BACK } }]
+        - button:
+            x: 704
+            y: 486
+            width: 150
+            height: 54
+            styles: st_glass
+            widgets: [label: { text: "Home", align: center, text_font: f_body, text_color: 0xEEF0F6 }]
+            on_click: [homeassistant.action: { action: webostv.button, data: { entity_id: $ent_media_tv, button: HOME } }]
+        - button:
+            x: 868
+            y: 486
+            width: 136
+            height: 54
+            styles: st_glass
+            widgets: [label: { text: "Scroll +", align: center, text_font: f_small, text_color: 0xEEF0F6 }]
+            on_click: [homeassistant.action: { action: pyscript.lg_pointer_scroll, data: { dy: "40" } }]
