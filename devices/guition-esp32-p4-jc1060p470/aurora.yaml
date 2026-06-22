@@ -93,6 +93,16 @@ esp32:
       CONFIG_ESP_HOSTED_DFLT_TASK_FROM_SPIRAM: "y"
       CONFIG_FREERTOS_THREAD_LOCAL_STORAGE_POINTERS: "1"
       CONFIG_LOG_DEFAULT_LEVEL: "2"
+      # --- On-board OV02C10 MIPI-CSI camera ---
+      # The esp_video_camera component only auto-enables SC202CS/OV5647/SC2336.
+      # This board's sensor is an OV02C10, so we enable its esp_cam_sensor
+      # driver + MIPI auto-detect here. RAW10 1920x1080@30 + default IPA tuning
+      # JSON match the vendor JC1060P470 IDF reference (video_lcd_display).
+      CONFIG_CAMERA_OV02C10: "y"
+      CONFIG_CAMERA_OV02C10_AUTO_DETECT: "y"
+      CONFIG_CAMERA_OV02C10_AUTO_DETECT_MIPI_INTERFACE_SENSOR: "y"
+      CONFIG_CAMERA_OV02C10_MIPI_RAW10_1920x1080_30FPS: "y"
+      CONFIG_CAMERA_OV02C10_DEFAULT_IPA_JSON_CONFIGURATION_FILE: "y"
 
 psram:
   mode: hex
@@ -187,10 +197,42 @@ light:
     default_transition_length: 0s
 
 # --- I2C + GT911 touch ---
+# --- On-board camera (OV02C10 MIPI-CSI) -------------------------------------
+# The JC1060P470 carries an on-board OV02C10 sensor on the MIPI-CSI port whose
+# SCCB control lines share bus_a with GT911 touch (SDA GPIO7 / SCL GPIO8).
+# ESPHome has no native MIPI-CSI camera, so we use the esp_video_camera
+# external component (Espressif esp_video stack, PR #16944 / youkorr fork).
+# This board has NO external XCLK GPIO and NO reset/pwdn pins — the sensor runs
+# off its internal 24MHz clock, so XCLK init is disabled here.
+external_components:
+  - source: github://youkorr/esphome@esp_video_camera
+    components: [esp_video_camera]
+    refresh: 1d
+  # Local: injects vendored esp_cam_sensor 2.2.0 + grafted OV02C10 driver,
+  # overriding the registry esp_cam_sensor (which lacks ov02c10).
+  - source:
+      type: local
+      path: ../../components
+    components: [ov02c10_support]
+
+# Triggers ov02c10_support.to_code() -> add_idf_component(path=vendored).
+ov02c10_support:
+
+esp_video_camera:
+  name: "Aurora Camera"
+  i2c_id: bus_a
+  device: jpeg
+  resolution: 720P
+  jpeg_quality: 12
+  max_framerate: 10
+  enable_xclk: false
+  xclk_pin: -1
+
 i2c:
   - id: bus_a
     sda: GPIO07
     scl: GPIO08
+    scan: true
     frequency: 400kHz
     sda_pullup_enabled: false
     scl_pullup_enabled: false
