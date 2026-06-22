@@ -3414,14 +3414,15 @@ lvgl:
                   border_color: 0x2A2F3A
                   indicator:
                     bg_color: 0x2ED5B8
+                    bg_opa: 0%
                     radius: 24
                   knob:
                     bg_color: 0x56C5DD
-                    pad_left: -8
-                    pad_right: -8
-                    pad_top: -8
-                    pad_bottom: -8
-                    radius: 20
+                    pad_left: -6
+                    pad_right: -6
+                    pad_top: -16
+                    pad_bottom: -16
+                    radius: 18
                   on_release:
                     - if:
                         condition:
