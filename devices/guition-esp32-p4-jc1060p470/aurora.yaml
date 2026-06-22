@@ -286,7 +286,7 @@ online_image:
     url: "http://127.0.0.1/none.jpg"
     format: JPEG
     type: RGB565
-    resize: 600x450
+    resize: 400x300
     update_interval: never
     on_download_finished:
       - lvgl.image.update: { id: img_cam_security, src: cam_image }
@@ -296,7 +296,7 @@ online_image:
     url: "http://127.0.0.1/none.jpg"
     format: JPEG
     type: RGB565
-    resize: 1024x768
+    resize: 800x600
     update_interval: never
     on_download_finished:
       - lvgl.image.update: { id: img_cam_big, src: cam_big }
@@ -1574,7 +1574,7 @@ time:
     id: ha_time
 
 interval:
-  - interval: 500ms
+  - interval: 1500ms
     then:
       - if:
           condition:
@@ -5151,8 +5151,8 @@ lvgl:
       on_unload:
         - lambda: 'id(g_cam_view) = 0;'
       widgets:
-        # Fullscreen live feed (fills width; 4:3 source, top-aligned so faces stay in frame)
-        - image: { id: img_cam_big, src: cam_big, x: 0, y: 0 }
+        # Fullscreen live feed (800x600 = 1/2 of source, fills height, centered)
+        - image: { id: img_cam_big, src: cam_big, x: 112, y: 0 }
         - obj:
             x: 20
             y: 20
