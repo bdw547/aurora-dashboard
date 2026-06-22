@@ -792,6 +792,8 @@ text_sensor:
         - lvgl.widget.update: { id: app_plex,       border_width: !lambda 'return x.find("Plex")!=std::string::npos ? 4 : 0;' }
         - lvgl.widget.update: { id: app_peacock,    border_width: !lambda 'return x.find("Peacock")!=std::string::npos ? 4 : 0;' }
         - lvgl.widget.update: { id: app_spotify,    border_width: !lambda 'return x.find("Spotify")!=std::string::npos ? 4 : 0;' }
+        - lvgl.widget.update: { id: app_hulu,       border_width: !lambda 'return x.find("Hulu")!=std::string::npos ? 4 : 0;' }
+        - lvgl.widget.update: { id: app_paramount,  border_width: !lambda 'return x.find("Paramount")!=std::string::npos ? 4 : 0;' }
   # ---- Sonos now-playing titles, play/pause icon, link status ----
   - platform: homeassistant
     id: ha_sonos_living_title
@@ -4677,8 +4679,8 @@ lvgl:
             bg_color: 0x3C1AD6
             border_color: 0x2ED5B8
             border_width: 0
-            widgets: [label: { text: "Max", align: center, text_font: f_title, text_color: 0xFFFFFF }]
-            on_click: [homeassistant.action: { action: media_player.select_source, data: { entity_id: $ent_media_tv, source: "Max" } }]
+            widgets: [label: { text: "HBO Max", align: center, text_font: f_title, text_color: 0xFFFFFF }]
+            on_click: [homeassistant.action: { action: media_player.select_source, data: { entity_id: $ent_media_tv, source: "HBO Max" } }]
         - button:
             id: app_appletv
             x: 528
@@ -4723,8 +4725,30 @@ lvgl:
             border_color: 0x2ED5B8
             border_width: 0
             widgets: [label: { text: "Spotify", align: center, text_font: f_title, text_color: 0x06210F }]
-            on_click: [homeassistant.action: { action: media_player.select_source, data: { entity_id: $ent_media_tv, source: "Spotify" } }]
-        - label: { id: lbl_tvapps_now, text: "", x: 528, y: 410, width: 416, text_font: f_body, text_color: 0x8A8F9E }
+            on_click: [homeassistant.action: { action: media_player.select_source, data: { entity_id: $ent_media_tv, source: "Spotify - Music and Podcasts" } }]
+        - button:
+            id: app_hulu
+            x: 528
+            y: 382
+            width: 200
+            height: 120
+            bg_color: 0x1CE783
+            border_color: 0x2ED5B8
+            border_width: 0
+            widgets: [label: { text: "Hulu", align: center, text_font: f_title, text_color: 0x06210F }]
+            on_click: [homeassistant.action: { action: media_player.select_source, data: { entity_id: $ent_media_tv, source: "Hulu" } }]
+        - button:
+            id: app_paramount
+            x: 744
+            y: 382
+            width: 200
+            height: 120
+            bg_color: 0x0064FF
+            border_color: 0x2ED5B8
+            border_width: 0
+            widgets: [label: { text: "Paramount+", align: center, text_font: f_title, text_color: 0xFFFFFF }]
+            on_click: [homeassistant.action: { action: media_player.select_source, data: { entity_id: $ent_media_tv, source: "Paramount+" } }]
+        - label: { id: lbl_tvapps_now, text: "", x: 96, y: 520, width: 848, text_font: f_small, text_color: 0x8A8F9E }
 
     # ---------- TV TRACKPAD (LG cursor via pyscript.lg_pointer_* bridge) ----------
     - id: page_trackpad
