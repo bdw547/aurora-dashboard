@@ -35,6 +35,8 @@ substitutions:
   ent_switch_putting_green: "switch.outdoor_patio_putting_green"
   ent_lock_front: "lock.front_door"
   ent_lock_back: "lock.back_door"
+  ent_batt_front: "sensor.front_door_battery"
+  ent_batt_back: "sensor.back_door_battery"
   ent_media_spotify: "media_player.spotifyplus_ben_walton"
   ent_media_tv: "media_player.lg_g3_living_room_2"
   ent_climate_main: "climate.main_floor"
@@ -284,7 +286,7 @@ online_image:
     url: "http://127.0.0.1/none.jpg"
     format: JPEG
     type: RGB565
-    resize: 150x200
+    resize: 600x450
     update_interval: never
     on_download_finished:
       - lvgl.image.update: { id: img_cam_security, src: cam_image }
@@ -294,7 +296,7 @@ online_image:
     url: "http://127.0.0.1/none.jpg"
     format: JPEG
     type: RGB565
-    resize: 384x512
+    resize: 1024x768
     update_interval: never
     on_download_finished:
       - lvgl.image.update: { id: img_cam_big, src: cam_big }
@@ -530,6 +532,19 @@ sensor:
       then:
         - lambda: 'id(g_vol_kitchen) = (int)(x * 100);'
         - lvgl.slider.update: { id: sld_sonos_kitchen, value: !lambda 'return (int)(x * 100);' }
+  # ---- Door lock battery levels ----
+  - platform: homeassistant
+    id: ha_batt_front
+    entity_id: $ent_batt_front
+    on_value:
+      then:
+        - lvgl.label.update: { id: lbl_front_batt, text: !lambda 'char b[8]; snprintf(b,sizeof(b),"%.0f%%",x); return std::string(b);' }
+  - platform: homeassistant
+    id: ha_batt_back
+    entity_id: $ent_batt_back
+    on_value:
+      then:
+        - lvgl.label.update: { id: lbl_back_batt, text: !lambda 'char b[8]; snprintf(b,sizeof(b),"%.0f%%",x); return std::string(b);' }
   - platform: wifi_signal
     id: panel_rssi
     update_interval: 30s
@@ -1009,9 +1024,6 @@ text_sensor:
     entity_id: $ent_person
     on_value:
       then:
-        - lvgl.label.update:
-            id: lbl_presence
-            text: !lambda 'return x == "home" ? std::string("Ben · Home") : std::string("Ben · Away");'
         - lvgl.label.update:
             id: lbl_home_presence
             text: !lambda 'return x == "home" ? std::string("Home") : std::string("Away");'
@@ -1789,7 +1801,7 @@ lvgl:
         - lvgl.widget.update: { id: lbl_ssid, hidden: true }
         - lvgl.widget.update: { id: lbl_ip, hidden: true }
       widgets:
-        - label: { text: "AURORA", align: center, y: -56, text_font: f_display, text_color: 0x2ED5B8 }
+        - label: { text: "AURORA", align: center, y: -56, text_font: f_head, text_color: 0x2ED5B8 }
         - spinner:
             align: center
             y: 24
@@ -2776,102 +2788,101 @@ lvgl:
       widgets:
         - image: { src: img_aurora_bg, x: 0, y: 0 }
         - label: { text: "Security", x: 100, y: 26, text_font: f_title, text_color: 0xEEF0F6 }
-        - obj:
+        # Main front-door camera (4:3 live feed, tap = fullscreen)
+        - button:
+            id: btn_cam_card
             x: 96
-            y: 70
-            width: 380
-            height: 160
-            styles: st_glass
+            y: 84
+            width: 600
+            height: 452
+            bg_color: 0x000000
+            radius: 22
+            border_width: 1
+            border_color: 0x222734
+            pad_all: 0
+            on_click: [lvgl.page.show: page_doorbell]
             widgets:
-              - label: { text: "Front Door", x: 4, y: 0, text_font: f_title, text_color: 0xEEF0F6 }
-              - label: { id: lbl_front_lock_state, text: "--", x: 4, y: 38, text_font: f_body, text_color: 0x8A8F9E }
+              - image: { id: img_cam_security, src: cam_image, align: center }
+              - obj:
+                  x: 14
+                  y: 14
+                  width: 78
+                  height: 30
+                  radius: 15
+                  bg_color: 0xE5484D
+                  border_width: 0
+                  widgets: [label: { text: "LIVE", align: center, text_font: f_small, text_color: 0xFFFFFF }]
+              - label: { text: "Front Door · tap for fullscreen", align: bottom_left, x: 14, y: -12, text_font: f_small, text_color: 0xC8CCD6 }
+        # Front-door lock controls (icons)
+        - obj:
+            x: 716
+            y: 84
+            width: 288
+            height: 214
+            styles: st_glass
+            pad_all: 0
+            scrollable: false
+            widgets:
+              - label: { text: "FRONT DOOR", x: 16, y: 16, text_font: f_small, text_color: 0x8A8F9E }
+              - label: { id: lbl_front_batt, text: "", align: top_right, x: -16, y: 16, text_font: f_small, text_color: 0x2ED5B8 }
+              - label: { id: lbl_front_lock_state, text: "--", x: 16, y: 42, text_font: f_title, text_color: 0xEEF0F6 }
               - button:
                   id: btn_front_lock
-                  align: bottom_left
-                  width: 170
-                  height: 46
+                  x: 16
+                  y: 94
+                  width: 116
+                  height: 104
                   bg_color: 0x161B24
-                  widgets: [label: { text: "Lock", align: center, text_font: f_body, text_color: 0xEEF0F6 }]
+                  widgets:
+                    - label: { text: "\U000F033E", align: top_mid, y: 14, text_font: f_icon, text_color: 0xEEF0F6 }
+                    - label: { text: "Lock", align: bottom_mid, y: -12, text_font: f_small, text_color: 0xEEF0F6 }
                   on_click: [homeassistant.action: { action: lock.lock, data: { entity_id: $ent_lock_front } }]
               - button:
                   id: btn_front_unlock
-                  align: bottom_right
-                  width: 170
-                  height: 46
+                  x: 156
+                  y: 94
+                  width: 116
+                  height: 104
                   bg_color: 0x161B24
-                  widgets: [label: { text: "Unlock", align: center, text_font: f_body, text_color: 0xEEF0F6 }]
+                  widgets:
+                    - label: { text: "\U000F033F", align: top_mid, y: 14, text_font: f_icon, text_color: 0xEEF0F6 }
+                    - label: { text: "Unlock", align: bottom_mid, y: -12, text_font: f_small, text_color: 0xEEF0F6 }
                   on_click: [homeassistant.action: { action: lock.unlock, data: { entity_id: $ent_lock_front } }]
+        # Back-door lock controls (icons)
         - obj:
-            x: 492
-            y: 70
-            width: 380
-            height: 160
+            x: 716
+            y: 322
+            width: 288
+            height: 214
             styles: st_glass
+            pad_all: 0
+            scrollable: false
             widgets:
-              - label: { text: "Back Door", x: 4, y: 0, text_font: f_title, text_color: 0xEEF0F6 }
-              - label: { id: lbl_back_lock_state, text: "--", x: 4, y: 38, text_font: f_body, text_color: 0x8A8F9E }
+              - label: { text: "BACK DOOR", x: 16, y: 16, text_font: f_small, text_color: 0x8A8F9E }
+              - label: { id: lbl_back_batt, text: "", align: top_right, x: -16, y: 16, text_font: f_small, text_color: 0x2ED5B8 }
+              - label: { id: lbl_back_lock_state, text: "--", x: 16, y: 42, text_font: f_title, text_color: 0xEEF0F6 }
               - button:
                   id: btn_back_lock
-                  align: bottom_left
-                  width: 170
-                  height: 46
+                  x: 16
+                  y: 94
+                  width: 116
+                  height: 104
                   bg_color: 0x161B24
-                  widgets: [label: { text: "Lock", align: center, text_font: f_body, text_color: 0xEEF0F6 }]
+                  widgets:
+                    - label: { text: "\U000F033E", align: top_mid, y: 14, text_font: f_icon, text_color: 0xEEF0F6 }
+                    - label: { text: "Lock", align: bottom_mid, y: -12, text_font: f_small, text_color: 0xEEF0F6 }
                   on_click: [homeassistant.action: { action: lock.lock, data: { entity_id: $ent_lock_back } }]
               - button:
                   id: btn_back_unlock
-                  align: bottom_right
-                  width: 170
-                  height: 46
+                  x: 156
+                  y: 94
+                  width: 116
+                  height: 104
                   bg_color: 0x161B24
-                  widgets: [label: { text: "Unlock", align: center, text_font: f_body, text_color: 0xEEF0F6 }]
+                  widgets:
+                    - label: { text: "\U000F033F", align: top_mid, y: 14, text_font: f_icon, text_color: 0xEEF0F6 }
+                    - label: { text: "Unlock", align: bottom_mid, y: -12, text_font: f_small, text_color: 0xEEF0F6 }
                   on_click: [homeassistant.action: { action: lock.unlock, data: { entity_id: $ent_lock_back } }]
-        - obj:
-            x: 96
-            y: 246
-            width: 776
-            height: 90
-            styles: st_glass
-            widgets:
-              - label: { text: "PRESENCE", x: 4, y: 0, text_font: f_small, text_color: 0x8A8F9E }
-              - label: { id: lbl_presence, text: "Ben · Home", x: 4, y: 28, text_font: f_title, text_color: 0x2ED5B8 }
-        # Front-door doorbell camera
-        - obj:
-            x: 96
-            y: 344
-            width: 776
-            height: 206
-            styles: st_glass
-            scrollable: false
-            widgets:
-              - obj: { x: 8, y: 3, width: 150, height: 200, radius: 12, bg_color: 0x05060A, border_width: 0 }
-              - image: { id: img_cam_security, src: cam_image, x: 8, y: 3 }
-              - label: { text: "FRONT DOOR", x: 178, y: 14, text_font: f_title, text_color: 0xEEF0F6 }
-              - label: { text: "Doorbell camera · live", x: 178, y: 50, text_font: f_small, text_color: 0x8A8F9E }
-              - button:
-                  x: 178
-                  y: 96
-                  width: 256
-                  height: 72
-                  bg_color: 0x2ED5B8
-                  widgets: [label: { text: "View Live", align: center, text_font: f_body, text_color: 0x08090D }]
-                  on_click: [lvgl.page.show: page_doorbell]
-              - button:
-                  x: 446
-                  y: 96
-                  width: 150
-                  height: 72
-                  bg_color: 0x161B24
-                  widgets: [label: { text: "Unlock", align: center, text_font: f_body, text_color: 0xEEF0F6 }]
-                  on_click: [homeassistant.action: { action: lock.unlock, data: { entity_id: $ent_lock_front } }]
-              - button:
-                  x: 608
-                  y: 96
-                  width: 150
-                  height: 72
-                  bg_color: 0x161B24
-                  widgets: [label: { text: "Lock", align: center, text_font: f_body, text_color: 0xEEF0F6 }]
-                  on_click: [homeassistant.action: { action: lock.lock, data: { entity_id: $ent_lock_front } }]
     - id: page_rooms
       bg_opa: 0
       on_load:
@@ -5140,50 +5151,64 @@ lvgl:
       on_unload:
         - lambda: 'id(g_cam_view) = 0;'
       widgets:
-        # Live camera feed (left)
-        - obj: { x: 40, y: 44, width: 384, height: 512, radius: 18, bg_color: 0x000000, border_width: 1, border_color: 0x2A2F3A }
-        - image: { id: img_cam_big, src: cam_big, x: 40, y: 44 }
+        # Fullscreen live feed (fills width; 4:3 source, top-aligned so faces stay in frame)
+        - image: { id: img_cam_big, src: cam_big, x: 0, y: 0 }
         - obj:
-            x: 56
-            y: 60
-            width: 76
+            x: 20
+            y: 20
+            width: 78
             height: 30
             radius: 15
             bg_color: 0xE5484D
             border_width: 0
             widgets: [label: { text: "LIVE", align: center, text_font: f_small, text_color: 0xFFFFFF }]
-        # Call info + actions (right)
-        - label: { text: "INCOMING", x: 470, y: 120, text_font: f_small, text_color: 0x8A8F9E }
-        - label: { text: "Front Door", x: 470, y: 146, text_font: f_head, text_color: 0xEEF0F6 }
-        - label: { id: lbl_doorbell_lock, text: "", x: 470, y: 196, text_font: f_body, text_color: 0x8A8F9E }
-        - button:
-            x: 470
-            y: 244
-            width: 494
-            height: 84
-            bg_color: 0x2ED5B8
-            widgets: [label: { text: "UNLOCK DOOR", align: center, text_font: f_title, text_color: 0x062018 }]
-            on_click: [homeassistant.action: { action: lock.unlock, data: { entity_id: $ent_lock_front } }]
-        - button:
-            x: 470
-            y: 340
-            width: 494
-            height: 84
-            bg_color: 0x1B2230
-            widgets: [label: { text: "LOCK DOOR", align: center, text_font: f_title, text_color: 0xEEF0F6 }]
-            on_click: [homeassistant.action: { action: lock.lock, data: { entity_id: $ent_lock_front } }]
-        - button:
-            x: 470
-            y: 436
-            width: 494
-            height: 84
-            bg_color: 0x0E0F14
-            border_width: 1
-            border_color: 0x2A2F3A
-            widgets: [label: { text: "DISMISS", align: center, text_font: f_title, text_color: 0x8A8F9E }]
-            on_click:
-              - lambda: 'id(g_cam_view) = 0;'
-              - lvgl.widget.update: { id: nav_rail, hidden: false }
-              - lvgl.widget.update: { id: lbl_ssid, hidden: false }
-              - lvgl.widget.update: { id: lbl_ip, hidden: false }
-              - lvgl.page.show: page_home
+        # Translucent control overlay across the bottom
+        - obj:
+            x: 0
+            y: 452
+            width: 1024
+            height: 148
+            bg_color: 0x05060A
+            bg_opa: 62%
+            border_width: 0
+            radius: 0
+            pad_all: 0
+            scrollable: false
+            widgets:
+              - label: { text: "Front Door", x: 32, y: 24, text_font: f_head, text_color: 0xFFFFFF }
+              - label: { id: lbl_doorbell_lock, text: "", x: 34, y: 72, text_font: f_body, text_color: 0xC8CCD6 }
+              - button:
+                  x: 470
+                  y: 34
+                  width: 156
+                  height: 80
+                  bg_color: 0x2ED5B8
+                  widgets:
+                    - label: { text: "\U000F033F", align: top_mid, y: 8, text_font: f_icon, text_color: 0x062018 }
+                    - label: { text: "Unlock", align: bottom_mid, y: -8, text_font: f_small, text_color: 0x062018 }
+                  on_click: [homeassistant.action: { action: lock.unlock, data: { entity_id: $ent_lock_front } }]
+              - button:
+                  x: 636
+                  y: 34
+                  width: 156
+                  height: 80
+                  bg_color: 0x1B2230
+                  widgets:
+                    - label: { text: "\U000F033E", align: top_mid, y: 8, text_font: f_icon, text_color: 0xEEF0F6 }
+                    - label: { text: "Lock", align: bottom_mid, y: -8, text_font: f_small, text_color: 0xEEF0F6 }
+                  on_click: [homeassistant.action: { action: lock.lock, data: { entity_id: $ent_lock_front } }]
+              - button:
+                  x: 802
+                  y: 34
+                  width: 190
+                  height: 80
+                  bg_color: 0x0E0F14
+                  border_width: 1
+                  border_color: 0x3A4150
+                  widgets: [label: { text: "Dismiss", align: center, text_font: f_title, text_color: 0xC8CCD6 }]
+                  on_click:
+                    - lambda: 'id(g_cam_view) = 0;'
+                    - lvgl.widget.update: { id: nav_rail, hidden: false }
+                    - lvgl.widget.update: { id: lbl_ssid, hidden: false }
+                    - lvgl.widget.update: { id: lbl_ip, hidden: false }
+                    - lvgl.page.show: page_home
