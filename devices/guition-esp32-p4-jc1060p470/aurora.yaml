@@ -451,6 +451,7 @@ font:
       - "\U000F0594"  # weather-night (clear)
       - "\U000F0F31"  # weather-night-partly-cloudy
       - "\U000F0026"  # alert (exceptional)
+      - "\U000F0425"  # power
 
 # --- Live HA state (selected light = Living Room for v1) ---
 sensor:
@@ -807,6 +808,9 @@ sensor:
         - lvgl.slider.update:
             id: sld_room_living_light_living_room_main
             value: !lambda 'return (x == x) ? (int) roundf(x / 2.55f) : 0;'
+        - lvgl.label.update:
+            id: lbl_living_main_pct
+            text: !lambda 'int v=(x==x)?(int)roundf(x/2.55f):0; char b[8]; if(v<=0) return std::string("OFF"); snprintf(b,sizeof(b),"%d%%",v); return std::string(b);'
   - platform: homeassistant
     id: ha_roombri_light_kitchen_kitchen
     entity_id: $ent_light_kitchen
@@ -1434,9 +1438,11 @@ text_sensor:
             condition:
               lambda: 'return x == std::string("on");'
             then:
-              - lvgl.label.update: { id: ic_living_light_living_room_main, text_color: 0xC8A45D }
+              - lvgl.widget.update: { id: btn_living_main_pwr, bg_color: 0x2563EB }
+              - lvgl.label.update: { id: ic_living_light_living_room_main, text_color: 0xFFFFFF }
             else:
-              - lvgl.label.update: { id: ic_living_light_living_room_main, text_color: 0x4A4F5A }
+              - lvgl.widget.update: { id: btn_living_main_pwr, bg_color: 0x12141C }
+              - lvgl.label.update: { id: ic_living_light_living_room_main, text_color: 0x8A8F9E }
   - platform: homeassistant
     id: ha_room_kitchen_light_kitchen_kitchen
     entity_id: $ent_light_kitchen
@@ -1540,13 +1546,10 @@ text_sensor:
     entity_id: $ent_fan_living
     on_value:
       then:
-        - if:
-            condition:
-              lambda: 'return x == std::string("on");'
-            then:
-              - lvgl.animimg.start: animfan_living
-            else:
-              - lvgl.animimg.stop: animfan_living
+        - lvgl.slider.update: { id: sld_living_fan, value: !lambda 'return x == std::string("on") ? 100 : 0;' }
+        - lvgl.label.update: { id: lbl_living_fan_state, text: !lambda 'return x == std::string("on") ? std::string("On") : std::string("Off");' }
+        - lvgl.widget.update: { id: btn_living_fan_pwr, bg_color: !lambda 'return x == std::string("on") ? lv_color_hex(0x2ED5B8) : lv_color_hex(0x12141C);' }
+        - lvgl.label.update: { id: ic_living_fan, text_color: !lambda 'return x == std::string("on") ? lv_color_hex(0x06210F) : lv_color_hex(0x8A8F9E);' }
   - platform: homeassistant
     id: ha_room_office_fan_office_ceiling_fan
     entity_id: $ent_fan_office
@@ -3292,37 +3295,51 @@ lvgl:
         - image: { src: img_aurora_bg, x: 0, y: 0 }
         - label: { text: "Living Room", x: 100, y: 26, text_font: f_title, text_color: 0xEEF0F6 }
         - button:
-            x: 760
-            y: 28
-            width: 112
-            height: 40
-            styles: st_glass
-            widgets: [label: { text: "Rooms", align: center, text_font: f_small, text_color: 0xEEF0F6 }]
+            align: top_right
+            x: -16
+            y: 22
+            width: 52
+            height: 52
+            radius: 26
+            bg_color: 0x1B2230
+            border_width: 2
+            border_color: 0x2ED5B8
+            widgets: [label: { text: "\U000F0141", align: center, text_font: f_icon, text_color: 0x2ED5B8 }]
             on_click: [lvgl.page.show: page_rooms]
         - obj:
             x: 100
-            y: 96
-            width: 232
-            height: 120
-            styles: st_glass
+            y: 80
+            width: 120
+            height: 432
+            bg_opa: 0
+            border_width: 0
             pad_all: 0
-            clickable: true
-            on_click:
-              - homeassistant.action:
-                  action: light.toggle
-                  data:
-                    entity_id: $ent_light_living
+            scrollable: false
             widgets:
-              - label: { id: ic_living_light_living_room_main, text: "\U000F0335", x: 14, y: 12, text_font: f_icon, text_color: 0x4A4F5A }
-              - label: { text: "Main Light", x: 14, y: 46, text_font: f_body, text_color: 0xEEF0F6 }
+              - label: { text: "Main Light", x: 0, y: 0, width: 120, text_align: center, text_font: f_body, text_color: 0xEEF0F6 }
+              - label: { id: lbl_living_main_pct, text: "OFF", x: 0, y: 24, width: 120, text_align: center, text_font: f_body, text_color: 0x8A8F9E }
               - slider:
                   id: sld_room_living_light_living_room_main
-                  align: bottom_mid
-                  y: -14
-                  width: 200
+                  x: 0
+                  y: 54
+                  width: 120
+                  height: 258
                   min_value: 0
                   max_value: 100
                   value: 0
+                  radius: 0
+                  bg_color: 0x12141C
+                  bg_opa: 100%
+                  border_width: 2
+                  border_color: 0x2A2F3A
+                  indicator:
+                    bg_color: 0xEEF0F6
+                    radius: 0
+                  knob:
+                    bg_color: 0xFFFFFF
+                    width: 124
+                    height: 12
+                    radius: 0
                   on_release:
                     - if:
                         condition:
@@ -3335,25 +3352,76 @@ lvgl:
                                 brightness_pct: !lambda 'return std::to_string((int) x);'
                         else:
                           - homeassistant.action: { action: light.turn_off, data: { entity_id: $ent_light_living } }
+                  on_value:
+                    - lvgl.label.update: { id: lbl_living_main_pct, text: !lambda 'int v=(int)x; char b[8]; if(v<=0) return std::string("OFF"); snprintf(b,sizeof(b),"%d%%",v); return std::string(b);' }
+              - button:
+                  id: btn_living_main_pwr
+                  align: bottom_mid
+                  y: 0
+                  width: 120
+                  height: 120
+                  radius: 0
+                  bg_color: 0x12141C
+                  border_width: 2
+                  border_color: 0x2A2F3A
+                  widgets: [label: { id: ic_living_light_living_room_main, text: "\U000F0425", align: center, text_font: f_icon, text_color: 0x8A8F9E }]
+                  on_click: [homeassistant.action: { action: light.toggle, data: { entity_id: $ent_light_living } }]
         - obj:
-            x: 348
-            y: 96
-            width: 232
-            height: 120
-            styles: st_glass
+            x: 240
+            y: 80
+            width: 120
+            height: 432
+            bg_opa: 0
+            border_width: 0
             pad_all: 0
-            clickable: true
+            scrollable: false
             widgets:
-              - animimg:
-                  id: animfan_living
-                  x: 10
-                  y: 10
-                  src: [fan0, fan1, fan2, fan3, fan4, fan5, fan6, fan7, fan8, fan9, fan10, fan11]
-                  duration: 1000ms
-                  repeat_count: forever
-                  auto_start: false
-              - label: { text: "Ceiling Fan", x: 14, y: 86, text_font: f_body, text_color: 0xEEF0F6 }
-            on_click: [homeassistant.action: { action: fan.toggle, data: { entity_id: $ent_fan_living } }]
+              - label: { text: "Ceiling Fan", x: 0, y: 0, width: 120, text_align: center, text_font: f_body, text_color: 0xEEF0F6 }
+              - label: { id: lbl_living_fan_state, text: "Off", x: 0, y: 24, width: 120, text_align: center, text_font: f_body, text_color: 0x8A8F9E }
+              - slider:
+                  id: sld_living_fan
+                  x: 0
+                  y: 54
+                  width: 120
+                  height: 258
+                  min_value: 0
+                  max_value: 100
+                  value: 0
+                  radius: 0
+                  bg_color: 0x12141C
+                  bg_opa: 100%
+                  border_width: 2
+                  border_color: 0x2A2F3A
+                  indicator:
+                    bg_color: 0x2ED5B8
+                    radius: 0
+                  knob:
+                    bg_color: 0xFFFFFF
+                    width: 124
+                    height: 12
+                    radius: 0
+                  on_release:
+                    - if:
+                        condition:
+                          lambda: 'return x >= 50;'
+                        then:
+                          - homeassistant.action: { action: fan.turn_on, data: { entity_id: $ent_fan_living } }
+                          - lvgl.slider.update: { id: sld_living_fan, value: 100 }
+                        else:
+                          - homeassistant.action: { action: fan.turn_off, data: { entity_id: $ent_fan_living } }
+                          - lvgl.slider.update: { id: sld_living_fan, value: 0 }
+              - button:
+                  id: btn_living_fan_pwr
+                  align: bottom_mid
+                  y: 0
+                  width: 120
+                  height: 120
+                  radius: 0
+                  bg_color: 0x12141C
+                  border_width: 2
+                  border_color: 0x2A2F3A
+                  widgets: [label: { id: ic_living_fan, text: "\U000F0210", align: center, text_font: f_icon, text_color: 0x8A8F9E }]
+                  on_click: [homeassistant.action: { action: fan.toggle, data: { entity_id: $ent_fan_living } }]
         - button:
             x: 596
             y: 96
@@ -3380,12 +3448,16 @@ lvgl:
         - image: { src: img_aurora_bg, x: 0, y: 0 }
         - label: { text: "Kitchen", x: 100, y: 26, text_font: f_title, text_color: 0xEEF0F6 }
         - button:
-            x: 760
-            y: 28
-            width: 112
-            height: 40
-            styles: st_glass
-            widgets: [label: { text: "Rooms", align: center, text_font: f_small, text_color: 0xEEF0F6 }]
+            align: top_right
+            x: -16
+            y: 22
+            width: 52
+            height: 52
+            radius: 26
+            bg_color: 0x1B2230
+            border_width: 2
+            border_color: 0x2ED5B8
+            widgets: [label: { text: "\U000F0141", align: center, text_font: f_icon, text_color: 0x2ED5B8 }]
             on_click: [lvgl.page.show: page_rooms]
         - obj:
             x: 100
@@ -3438,12 +3510,16 @@ lvgl:
         - image: { src: img_aurora_bg, x: 0, y: 0 }
         - label: { text: "Office", x: 100, y: 26, text_font: f_title, text_color: 0xEEF0F6 }
         - button:
-            x: 760
-            y: 28
-            width: 112
-            height: 40
-            styles: st_glass
-            widgets: [label: { text: "Rooms", align: center, text_font: f_small, text_color: 0xEEF0F6 }]
+            align: top_right
+            x: -16
+            y: 22
+            width: 52
+            height: 52
+            radius: 26
+            bg_color: 0x1B2230
+            border_width: 2
+            border_color: 0x2ED5B8
+            widgets: [label: { text: "\U000F0141", align: center, text_font: f_icon, text_color: 0x2ED5B8 }]
             on_click: [lvgl.page.show: page_rooms]
         - obj:
             x: 100
@@ -3587,12 +3663,16 @@ lvgl:
         - image: { src: img_aurora_bg, x: 0, y: 0 }
         - label: { text: "Master", x: 100, y: 26, text_font: f_title, text_color: 0xEEF0F6 }
         - button:
-            x: 760
-            y: 28
-            width: 112
-            height: 40
-            styles: st_glass
-            widgets: [label: { text: "Rooms", align: center, text_font: f_small, text_color: 0xEEF0F6 }]
+            align: top_right
+            x: -16
+            y: 22
+            width: 52
+            height: 52
+            radius: 26
+            bg_color: 0x1B2230
+            border_width: 2
+            border_color: 0x2ED5B8
+            widgets: [label: { text: "\U000F0141", align: center, text_font: f_icon, text_color: 0x2ED5B8 }]
             on_click: [lvgl.page.show: page_rooms]
         - obj:
             x: 100
@@ -3681,12 +3761,16 @@ lvgl:
         - image: { src: img_aurora_bg, x: 0, y: 0 }
         - label: { text: "Exterior", x: 100, y: 26, text_font: f_title, text_color: 0xEEF0F6 }
         - button:
-            x: 760
-            y: 28
-            width: 112
-            height: 40
-            styles: st_glass
-            widgets: [label: { text: "Rooms", align: center, text_font: f_small, text_color: 0xEEF0F6 }]
+            align: top_right
+            x: -16
+            y: 22
+            width: 52
+            height: 52
+            radius: 26
+            bg_color: 0x1B2230
+            border_width: 2
+            border_color: 0x2ED5B8
+            widgets: [label: { text: "\U000F0141", align: center, text_font: f_icon, text_color: 0x2ED5B8 }]
             on_click: [lvgl.page.show: page_rooms]
         - obj:
             x: 100
@@ -3785,12 +3869,16 @@ lvgl:
         - image: { src: img_aurora_bg, x: 0, y: 0 }
         - label: { text: "Library", x: 100, y: 26, text_font: f_title, text_color: $c_text }
         - button:
-            x: 760
-            y: 28
-            width: 112
-            height: 40
-            styles: st_glass
-            widgets: [label: { text: "Back", align: center, text_font: f_small, text_color: $c_text }]
+            align: top_right
+            x: -16
+            y: 22
+            width: 52
+            height: 52
+            radius: 26
+            bg_color: 0x1B2230
+            border_width: 2
+            border_color: 0x2ED5B8
+            widgets: [label: { text: "\U000F0141", align: center, text_font: f_icon, text_color: 0x2ED5B8 }]
             on_click: [lvgl.page.show: page_media]
         - label: { text: "PLAYLIST", x: 100, y: 80, text_font: f_small, text_color: $c_text2 }
         - dropdown:
@@ -4864,12 +4952,16 @@ lvgl:
         - image: { src: img_aurora_bg, x: 0, y: 0 }
         - label: { text: "LG G3 OLED Remote", x: 100, y: 26, text_font: f_title, text_color: 0xEEF0F6 }
         - button:
-            x: 880
-            y: 24
-            width: 124
-            height: 44
-            styles: st_glass
-            widgets: [label: { text: "Back", align: center, text_font: f_small, text_color: 0xEEF0F6 }]
+            align: top_right
+            x: -16
+            y: 22
+            width: 52
+            height: 52
+            radius: 26
+            bg_color: 0x1B2230
+            border_width: 2
+            border_color: 0x2ED5B8
+            widgets: [label: { text: "\U000F0141", align: center, text_font: f_icon, text_color: 0x2ED5B8 }]
             on_click: [lvgl.page.show: page_room_living]
         - button:
             x: 120
@@ -5076,12 +5168,16 @@ lvgl:
         - image: { src: img_aurora_bg, x: 0, y: 0 }
         - label: { text: "TV Apps", x: 100, y: 26, text_font: f_title, text_color: 0xEEF0F6 }
         - button:
-            x: 880
-            y: 24
-            width: 124
-            height: 44
-            styles: st_glass
-            widgets: [label: { text: "Remote", align: center, text_font: f_small, text_color: 0xEEF0F6 }]
+            align: top_right
+            x: -16
+            y: 22
+            width: 52
+            height: 52
+            radius: 26
+            bg_color: 0x1B2230
+            border_width: 2
+            border_color: 0x2ED5B8
+            widgets: [label: { text: "\U000F0141", align: center, text_font: f_icon, text_color: 0x2ED5B8 }]
             on_click: [lvgl.page.show: page_tvremote]
         # Row 0
         - button:
@@ -5239,12 +5335,16 @@ lvgl:
         - image: { src: img_aurora_bg, x: 0, y: 0 }
         - label: { text: "Trackpad", x: 100, y: 26, text_font: f_title, text_color: 0xEEF0F6 }
         - button:
-            x: 880
-            y: 24
-            width: 124
-            height: 44
-            styles: st_glass
-            widgets: [label: { text: "Remote", align: center, text_font: f_small, text_color: 0xEEF0F6 }]
+            align: top_right
+            x: -16
+            y: 22
+            width: 52
+            height: 52
+            radius: 26
+            bg_color: 0x1B2230
+            border_width: 2
+            border_color: 0x2ED5B8
+            widgets: [label: { text: "\U000F0141", align: center, text_font: f_icon, text_color: 0x2ED5B8 }]
             on_click: [lvgl.page.show: page_tvremote]
         # Move pad (left) — drag to move, tap to click
         - obj:
@@ -5311,12 +5411,16 @@ lvgl:
         - image: { src: img_aurora_bg, x: 0, y: 0 }
         - label: { text: "Sonos", x: 100, y: 26, text_font: f_title, text_color: 0xEEF0F6 }
         - button:
-            x: 800
-            y: 24
-            width: 204
-            height: 44
-            styles: st_glass
-            widgets: [label: { text: "Listening", align: center, text_font: f_small, text_color: 0xEEF0F6 }]
+            align: top_right
+            x: -16
+            y: 22
+            width: 52
+            height: 52
+            radius: 26
+            bg_color: 0x1B2230
+            border_width: 2
+            border_color: 0x2ED5B8
+            widgets: [label: { text: "\U000F0141", align: center, text_font: f_icon, text_color: 0x2ED5B8 }]
             on_click: [lvgl.page.show: page_media]
         # ---- Living Room ----
         - obj:
@@ -5569,12 +5673,16 @@ lvgl:
         - image: { src: img_aurora_bg, x: 0, y: 0 }
         - label: { text: "Weather", x: 100, y: 26, text_font: f_title, text_color: 0xEEF0F6 }
         - button:
-            x: 880
-            y: 24
-            width: 124
-            height: 44
-            styles: st_glass
-            widgets: [label: { text: "Home", align: center, text_font: f_small, text_color: 0xEEF0F6 }]
+            align: top_right
+            x: -16
+            y: 22
+            width: 52
+            height: 52
+            radius: 26
+            bg_color: 0x1B2230
+            border_width: 2
+            border_color: 0x2ED5B8
+            widgets: [label: { text: "\U000F0141", align: center, text_font: f_icon, text_color: 0x2ED5B8 }]
             on_click: [lvgl.page.show: page_home]
         # Current conditions
         - obj:
