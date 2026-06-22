@@ -38,6 +38,8 @@ substitutions:
   ent_media_spotify: "media_player.spotifyplus_ben_walton"
   ent_media_tv: "media_player.lg_g3_living_room_2"
   ent_climate_main: "climate.main_floor"
+  ent_sonos_living: "media_player.living_room"
+  ent_sonos_kitchen: "media_player.kitchen"
   ent_person: "person.ben"
   ent_weather: "weather.forecast_home"
   ent_nas_status: "sensor.walton_synology_volume_1_status"
@@ -197,8 +199,8 @@ touchscreen:
             lambda: 'return id(g_tp_active);'
           then:
             - lambda: |-
-                id(g_tp_total) = 0; id(g_tp_dx) = 0; id(g_tp_dy) = 0;
-                id(g_tp_have_last) = false; id(g_tp_inpad) = false;
+                id(g_tp_total) = 0; id(g_tp_dx) = 0; id(g_tp_dy) = 0; id(g_tp_scroll) = 0;
+                id(g_tp_have_last) = false; id(g_tp_inpad) = false; id(g_tp_zone) = 0;
     on_update:
       - if:
           condition:
@@ -206,14 +208,22 @@ touchscreen:
           then:
             - lambda: |-
                 auto &t = touches[0];
-                bool inpad = (t.x >= 96 && t.x <= 1004 && t.y >= 120 && t.y <= 470);
-                if (!inpad) { id(g_tp_have_last) = false; return; }
-                id(g_tp_inpad) = true;
+                bool inpad    = (t.x >= 96  && t.x <= 856  && t.y >= 120 && t.y <= 470);
+                bool inscroll = (t.x >= 872 && t.x <= 1004 && t.y >= 120 && t.y <= 470);
+                if (!inpad && !inscroll) { id(g_tp_have_last) = false; return; }
+                if (!id(g_tp_have_last)) {
+                  id(g_tp_zone) = inpad ? 1 : 2;   // 1 = move pad, 2 = scroll strip
+                  id(g_tp_inpad) = inpad;
+                }
                 if (id(g_tp_have_last)) {
                   int ddx = (int) t.x - id(g_tp_lastx);
                   int ddy = (int) t.y - id(g_tp_lasty);
-                  id(g_tp_dx) += ddx; id(g_tp_dy) += ddy;
-                  id(g_tp_total) += abs(ddx) + abs(ddy);
+                  if (id(g_tp_zone) == 1) {
+                    id(g_tp_dx) += ddx; id(g_tp_dy) += ddy;
+                    id(g_tp_total) += abs(ddx) + abs(ddy);
+                  } else {
+                    id(g_tp_scroll) -= ddy;          // swipe up -> scroll up
+                  }
                 }
                 id(g_tp_lastx) = t.x; id(g_tp_lasty) = t.y; id(g_tp_have_last) = true;
     on_release:
@@ -476,6 +486,23 @@ sensor:
             id: lbl_mf_high
             text: !lambda |-
               char b[12]; snprintf(b, sizeof(b), "%.0f°", x); return std::string(b);
+  # ---- Sonos volume levels (0..1) -> slider 0..100 ----
+  - platform: homeassistant
+    id: ha_sonos_living_vol
+    entity_id: $ent_sonos_living
+    attribute: volume_level
+    on_value:
+      then:
+        - lambda: 'id(g_vol_living) = (int)(x * 100);'
+        - lvgl.slider.update: { id: sld_sonos_living, value: !lambda 'return (int)(x * 100);' }
+  - platform: homeassistant
+    id: ha_sonos_kitchen_vol
+    entity_id: $ent_sonos_kitchen
+    attribute: volume_level
+    on_value:
+      then:
+        - lambda: 'id(g_vol_kitchen) = (int)(x * 100);'
+        - lvgl.slider.update: { id: sld_sonos_kitchen, value: !lambda 'return (int)(x * 100);' }
   - platform: wifi_signal
     id: panel_rssi
     update_interval: 30s
@@ -765,6 +792,40 @@ text_sensor:
         - lvgl.widget.update: { id: app_plex,       border_width: !lambda 'return x.find("Plex")!=std::string::npos ? 4 : 0;' }
         - lvgl.widget.update: { id: app_peacock,    border_width: !lambda 'return x.find("Peacock")!=std::string::npos ? 4 : 0;' }
         - lvgl.widget.update: { id: app_spotify,    border_width: !lambda 'return x.find("Spotify")!=std::string::npos ? 4 : 0;' }
+  # ---- Sonos now-playing titles, play/pause icon, link status ----
+  - platform: homeassistant
+    id: ha_sonos_living_title
+    entity_id: $ent_sonos_living
+    attribute: media_title
+    on_value:
+      then:
+        - lvgl.label.update: { id: lbl_sonos_living_title, text: !lambda 'return x.empty() ? std::string("Nothing playing") : x;' }
+  - platform: homeassistant
+    id: ha_sonos_kitchen_title
+    entity_id: $ent_sonos_kitchen
+    attribute: media_title
+    on_value:
+      then:
+        - lvgl.label.update: { id: lbl_sonos_kitchen_title, text: !lambda 'return x.empty() ? std::string("Nothing playing") : x;' }
+  - platform: homeassistant
+    id: ha_sonos_living_state
+    entity_id: $ent_sonos_living
+    on_value:
+      then:
+        - lvgl.label.update: { id: ic_sonos_living_play, text: !lambda 'return x == "playing" ? std::string("\U000F03E4") : std::string("\U000F040A");' }
+  - platform: homeassistant
+    id: ha_sonos_kitchen_state
+    entity_id: $ent_sonos_kitchen
+    on_value:
+      then:
+        - lvgl.label.update: { id: ic_sonos_kitchen_play, text: !lambda 'return x == "playing" ? std::string("\U000F03E4") : std::string("\U000F040A");' }
+  - platform: homeassistant
+    id: ha_sonos_group
+    entity_id: $ent_sonos_living
+    attribute: group_members
+    on_value:
+      then:
+        - lvgl.label.update: { id: lbl_sonos_link, text: !lambda 'return x.find("kitchen")!=std::string::npos ? std::string("Linked") : std::string("Solo");' }
   - platform: homeassistant
     id: ha_outdoor_condition
     entity_id: $ent_weather
@@ -1325,6 +1386,23 @@ globals:
     type: int
     restore_value: false
     initial_value: '0'
+  - id: g_tp_zone
+    type: int
+    restore_value: false
+    initial_value: '0'
+  - id: g_tp_scroll
+    type: int
+    restore_value: false
+    initial_value: '0'
+  # Sonos volume mirrors (guard slider<->sensor feedback loop)
+  - id: g_vol_living
+    type: int
+    restore_value: false
+    initial_value: '0'
+  - id: g_vol_kitchen
+    type: int
+    restore_value: false
+    initial_value: '0'
 
 script:
   - id: hl_rooms
@@ -1423,6 +1501,15 @@ interval:
                   dx: !lambda 'return std::to_string(id(g_tp_dx) * 2);'
                   dy: !lambda 'return std::to_string(id(g_tp_dy) * 2);'
             - lambda: 'id(g_tp_dx) = 0; id(g_tp_dy) = 0;'
+      - if:
+          condition:
+            lambda: 'return id(g_tp_active) && abs(id(g_tp_scroll)) >= 10;'
+          then:
+            - homeassistant.action:
+                action: pyscript.lg_pointer_scroll
+                data:
+                  dy: !lambda 'return std::to_string(id(g_tp_scroll) / 10);'
+            - lambda: 'id(g_tp_scroll) = id(g_tp_scroll) % 10;'
   - interval: 10s
     then:
       - lvgl.label.update:
@@ -2347,6 +2434,14 @@ lvgl:
       widgets:
         - image: { src: img_aurora_bg, x: 0, y: 0 }
         - label: { text: "Listening", x: 100, y: 26, text_font: f_title, text_color: $c_text }
+        - button:
+            x: 636
+            y: 28
+            width: 112
+            height: 40
+            styles: st_glass
+            widgets: [label: { text: "Sonos", align: center, text_font: f_small, text_color: $c_text }]
+            on_click: [lvgl.page.show: page_sonos]
         - button:
             x: 760
             y: 28
@@ -4657,10 +4752,11 @@ lvgl:
             styles: st_glass
             widgets: [label: { text: "Remote", align: center, text_font: f_small, text_color: 0xEEF0F6 }]
             on_click: [lvgl.page.show: page_tvremote]
+        # Move pad (left) — drag to move, tap to click
         - obj:
             x: 96
             y: 120
-            width: 908
+            width: 760
             height: 350
             bg_color: 0x10121A
             bg_opa: 60%
@@ -4670,36 +4766,204 @@ lvgl:
             scrollable: false
             clickable: false
             widgets:
-              - label: { text: "Drag to move the cursor  ·  tap to click", align: center, text_font: f_body, text_color: 0x6E727E }
+              - label: { text: "Drag to move  ·  tap to click", align: center, text_font: f_body, text_color: 0x6E727E }
+        # Scroll strip (right) — swipe up/down like a scroll wheel
+        - obj:
+            x: 872
+            y: 120
+            width: 132
+            height: 350
+            bg_color: 0x141A2A
+            bg_opa: 70%
+            radius: 22
+            border_width: 1
+            border_color: 0x2A2F3A
+            scrollable: false
+            clickable: false
+            widgets:
+              - label: { text: "\U000F0143", align: top_mid, y: 16, text_font: f_icon, text_color: 0x8A8F9E }
+              - label: { text: "SCROLL", align: center, text_font: f_small, text_color: 0x6E727E }
+              - label: { text: "\U000F0140", align: bottom_mid, y: -16, text_font: f_icon, text_color: 0x8A8F9E }
         - button:
             x: 96
             y: 486
-            width: 430
-            height: 54
-            bg_color: 0x2ED5B8
-            widgets: [label: { text: "Click", align: center, text_font: f_body, text_color: 0x08090D }]
-            on_click: [homeassistant.action: { action: pyscript.lg_pointer_click }]
-        - button:
-            x: 540
-            y: 486
-            width: 150
+            width: 380
             height: 54
             styles: st_glass
             widgets: [label: { text: "Back", align: center, text_font: f_body, text_color: 0xEEF0F6 }]
             on_click: [homeassistant.action: { action: webostv.button, data: { entity_id: $ent_media_tv, button: BACK } }]
         - button:
-            x: 704
+            x: 490
             y: 486
-            width: 150
+            width: 366
             height: 54
             styles: st_glass
             widgets: [label: { text: "Home", align: center, text_font: f_body, text_color: 0xEEF0F6 }]
             on_click: [homeassistant.action: { action: webostv.button, data: { entity_id: $ent_media_tv, button: HOME } }]
+
+    # ---------- SONOS (per-room transport + volume, link to play together) ----------
+    - id: page_sonos
+      bg_opa: 0
+      on_load:
+        - lvgl.widget.update: { id: nav_home, bg_color: 0x10121A }
+        - lvgl.widget.update: { id: nav_rooms, bg_color: 0x10121A }
+        - lvgl.widget.update: { id: nav_lights, bg_color: 0x10121A }
+        - lvgl.widget.update: { id: nav_climate, bg_color: 0x10121A }
+        - lvgl.widget.update: { id: nav_media, bg_color: 0x2ED5B8 }
+        - lvgl.widget.update: { id: nav_security, bg_color: 0x10121A }
+        - lvgl.widget.update: { id: nav_network, bg_color: 0x10121A }
+        - lvgl.widget.update: { id: nav_settings, bg_color: 0x10121A }
+      widgets:
+        - image: { src: img_aurora_bg, x: 0, y: 0 }
+        - label: { text: "Sonos", x: 100, y: 26, text_font: f_title, text_color: 0xEEF0F6 }
         - button:
-            x: 868
-            y: 486
-            width: 136
-            height: 54
+            x: 800
+            y: 24
+            width: 204
+            height: 44
             styles: st_glass
-            widgets: [label: { text: "Scroll +", align: center, text_font: f_small, text_color: 0xEEF0F6 }]
-            on_click: [homeassistant.action: { action: pyscript.lg_pointer_scroll, data: { dy: "40" } }]
+            widgets: [label: { text: "Listening", align: center, text_font: f_small, text_color: 0xEEF0F6 }]
+            on_click: [lvgl.page.show: page_media]
+        # ---- Living Room ----
+        - obj:
+            x: 96
+            y: 84
+            width: 400
+            height: 300
+            styles: st_glass
+            scrollable: false
+            widgets:
+              - label: { text: "LIVING ROOM", x: 16, y: 12, text_font: f_small, text_color: $c_text2 }
+              - label: { id: lbl_sonos_living_title, text: "Nothing playing", x: 16, y: 38, width: 368, long_mode: scroll_circular, text_font: f_title, text_color: $c_text }
+              - button:
+                  x: 40
+                  y: 118
+                  width: 96
+                  height: 74
+                  bg_color: 0x161B24
+                  widgets: [label: { text: "\U000F04AE", align: center, text_font: f_icon, text_color: $c_text }]
+                  on_click: [homeassistant.action: { action: media_player.media_previous_track, data: { entity_id: $ent_sonos_living } }]
+              - button:
+                  x: 152
+                  y: 118
+                  width: 96
+                  height: 74
+                  bg_color: 0x2ED5B8
+                  widgets: [label: { id: ic_sonos_living_play, text: "\U000F040A", align: center, text_font: f_icon, text_color: 0x08090D }]
+                  on_click: [homeassistant.action: { action: media_player.media_play_pause, data: { entity_id: $ent_sonos_living } }]
+              - button:
+                  x: 264
+                  y: 118
+                  width: 96
+                  height: 74
+                  bg_color: 0x161B24
+                  widgets: [label: { text: "\U000F04AD", align: center, text_font: f_icon, text_color: $c_text }]
+                  on_click: [homeassistant.action: { action: media_player.media_next_track, data: { entity_id: $ent_sonos_living } }]
+              - label: { text: "VOLUME", x: 16, y: 212, text_font: f_small, text_color: $c_text2 }
+              - slider:
+                  id: sld_sonos_living
+                  x: 16
+                  y: 244
+                  width: 368
+                  min_value: 0
+                  max_value: 100
+                  value: 0
+                  on_value:
+                    - if:
+                        condition:
+                          lambda: 'return abs((int)x - id(g_vol_living)) > 2;'
+                        then:
+                          - lambda: 'id(g_vol_living) = (int) x;'
+                          - homeassistant.action:
+                              action: media_player.volume_set
+                              data:
+                                entity_id: $ent_sonos_living
+                                volume_level: !lambda 'return std::to_string(x / 100.0);'
+        # ---- Kitchen ----
+        - obj:
+            x: 516
+            y: 84
+            width: 400
+            height: 300
+            styles: st_glass
+            scrollable: false
+            widgets:
+              - label: { text: "KITCHEN", x: 16, y: 12, text_font: f_small, text_color: $c_text2 }
+              - label: { id: lbl_sonos_kitchen_title, text: "Nothing playing", x: 16, y: 38, width: 368, long_mode: scroll_circular, text_font: f_title, text_color: $c_text }
+              - button:
+                  x: 40
+                  y: 118
+                  width: 96
+                  height: 74
+                  bg_color: 0x161B24
+                  widgets: [label: { text: "\U000F04AE", align: center, text_font: f_icon, text_color: $c_text }]
+                  on_click: [homeassistant.action: { action: media_player.media_previous_track, data: { entity_id: $ent_sonos_kitchen } }]
+              - button:
+                  x: 152
+                  y: 118
+                  width: 96
+                  height: 74
+                  bg_color: 0x2ED5B8
+                  widgets: [label: { id: ic_sonos_kitchen_play, text: "\U000F040A", align: center, text_font: f_icon, text_color: 0x08090D }]
+                  on_click: [homeassistant.action: { action: media_player.media_play_pause, data: { entity_id: $ent_sonos_kitchen } }]
+              - button:
+                  x: 264
+                  y: 118
+                  width: 96
+                  height: 74
+                  bg_color: 0x161B24
+                  widgets: [label: { text: "\U000F04AD", align: center, text_font: f_icon, text_color: $c_text }]
+                  on_click: [homeassistant.action: { action: media_player.media_next_track, data: { entity_id: $ent_sonos_kitchen } }]
+              - label: { text: "VOLUME", x: 16, y: 212, text_font: f_small, text_color: $c_text2 }
+              - slider:
+                  id: sld_sonos_kitchen
+                  x: 16
+                  y: 244
+                  width: 368
+                  min_value: 0
+                  max_value: 100
+                  value: 0
+                  on_value:
+                    - if:
+                        condition:
+                          lambda: 'return abs((int)x - id(g_vol_kitchen)) > 2;'
+                        then:
+                          - lambda: 'id(g_vol_kitchen) = (int) x;'
+                          - homeassistant.action:
+                              action: media_player.volume_set
+                              data:
+                                entity_id: $ent_sonos_kitchen
+                                volume_level: !lambda 'return std::to_string(x / 100.0);'
+        # ---- Group (link to play together) ----
+        - obj:
+            x: 96
+            y: 404
+            width: 820
+            height: 130
+            styles: st_glass
+            scrollable: false
+            widgets:
+              - label: { text: "GROUP", x: 16, y: 12, text_font: f_small, text_color: $c_text2 }
+              - label: { id: lbl_sonos_link, text: "Solo", x: 16, y: 40, text_font: f_title, text_color: $c_teal }
+              - label: { text: "Link to play the same music on both speakers", x: 16, y: 84, text_font: f_small, text_color: $c_text2 }
+              - button:
+                  x: 506
+                  y: 30
+                  width: 146
+                  height: 70
+                  bg_color: 0x2ED5B8
+                  widgets: [label: { text: "Link", align: center, text_font: f_body, text_color: 0x08090D }]
+                  on_click:
+                    - homeassistant.action: { action: script.aurora_sonos_link }
+              - button:
+                  x: 664
+                  y: 30
+                  width: 146
+                  height: 70
+                  bg_color: 0x161B24
+                  widgets: [label: { text: "Unlink", align: center, text_font: f_body, text_color: $c_text }]
+                  on_click:
+                    - homeassistant.action:
+                        action: media_player.unjoin
+                        data:
+                          entity_id: $ent_sonos_kitchen

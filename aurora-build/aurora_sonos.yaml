@@ -1,0 +1,26 @@
+# =============================================================================
+# Aurora · Sonos helper package
+# -----------------------------------------------------------------------------
+# media_player.join needs a LIST for group_members, which ESPHome's
+# homeassistant.action cannot send (it only passes string values). So the
+# Aurora panel calls this script instead, which holds the group definition.
+#
+# INSTALL: merge into your Home Assistant config, e.g. in configuration.yaml:
+#     homeassistant:
+#       packages:
+#         aurora_sonos: !include aurora_sonos.yaml
+# then restart HA. Edit the entity_ids below if your Sonos players differ.
+# (Unlink is sent directly by the panel via media_player.unjoin and needs
+#  nothing here.)
+# =============================================================================
+
+script:
+  aurora_sonos_link:
+    alias: Aurora Sonos Link
+    sequence:
+      - service: media_player.join
+        data:
+          group_members:
+            - media_player.kitchen
+        target:
+          entity_id: media_player.living_room
