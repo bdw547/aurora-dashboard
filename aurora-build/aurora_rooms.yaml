@@ -1,0 +1,47 @@
+# =============================================================================
+# Aurora · Room device counts
+# -----------------------------------------------------------------------------
+# Exposes, per room, how many devices (lights/fans/TV/switch) are currently on,
+# so the Rooms list can show "X on" next to each room.
+#
+# INSTALL: drop this file in <config>/packages/  (loaded by
+#   homeassistant: packages: !include_dir_named packages) then RESTART HA.
+# Edit the entity lists below to match your rooms.
+# =============================================================================
+
+template:
+  - sensor:
+      - name: Aurora Room Living
+        unique_id: aurora_room_living
+        state: >-
+          {{ [states('light.living_room_main'), states('fan.living_room_pendant'),
+              states('media_player.lg_g3_living_room_2')]
+             | reject('in', ['off','unavailable','unknown','idle','standby','none','None',''])
+             | list | count }}
+      - name: Aurora Room Kitchen
+        unique_id: aurora_room_kitchen
+        state: >-
+          {{ [states('light.kitchen_kitchen')]
+             | reject('in', ['off','unavailable','unknown','none','None',''])
+             | list | count }}
+      - name: Aurora Room Office
+        unique_id: aurora_room_office
+        state: >-
+          {{ [states('light.office_shelves'), states('light.office_main_lights'),
+              states('light.office_desk_lamp'), states('fan.office_ceiling_fan')]
+             | reject('in', ['off','unavailable','unknown','none','None',''])
+             | list | count }}
+      - name: Aurora Room Master
+        unique_id: aurora_room_master
+        state: >-
+          {{ [states('light.reading_lamp'),
+              states('light.master_bedroom_ceiling_fan_light')]
+             | reject('in', ['off','unavailable','unknown','none','None',''])
+             | list | count }}
+      - name: Aurora Room Exterior
+        unique_id: aurora_room_exterior
+        state: >-
+          {{ [states('light.outdoor_patio_back_porch_lights'),
+              states('switch.outdoor_patio_putting_green')]
+             | reject('in', ['off','unavailable','unknown','none','None',''])
+             | list | count }}

@@ -50,6 +50,11 @@ substitutions:
   ent_person: "person.ben"
   ent_weather: "weather.forecast_home"
   ent_weather_fc: "sensor.aurora_weather_daily"
+  ent_count_living: "sensor.aurora_room_living"
+  ent_count_kitchen: "sensor.aurora_room_kitchen"
+  ent_count_office: "sensor.aurora_room_office"
+  ent_count_master: "sensor.aurora_room_master"
+  ent_count_exterior: "sensor.aurora_room_exterior"
   ent_nas_status: "sensor.walton_synology_volume_1_status"
   ent_nas_used: "sensor.walton_synology_volume_1_volume_used"
 
@@ -639,6 +644,37 @@ sensor:
               const char* d[] = {"N","NNE","NE","ENE","E","ESE","SE","SSE","S","SSW","SW","WSW","W","WNW","NW","NNW"};
               int i = ((int)((id(g_wx_bearing) + 11.25f) / 22.5f)) % 16; if (i < 0) i += 16;
               char b[28]; snprintf(b, sizeof(b), "%.1f mph %s", x, d[i]); return std::string(b);
+  # ---- Per-room "X on" counts (from aurora_rooms.yaml package) ----
+  - platform: homeassistant
+    id: ha_count_living
+    entity_id: $ent_count_living
+    on_value:
+      then:
+        - lvgl.label.update: { id: lbl_roomcount_living, text: !lambda 'int v=(int)x; if(v<=0) return std::string("All off"); char b[16]; snprintf(b,sizeof(b),"%d on",v); return std::string(b);' }
+  - platform: homeassistant
+    id: ha_count_kitchen
+    entity_id: $ent_count_kitchen
+    on_value:
+      then:
+        - lvgl.label.update: { id: lbl_roomcount_kitchen, text: !lambda 'int v=(int)x; if(v<=0) return std::string("All off"); char b[16]; snprintf(b,sizeof(b),"%d on",v); return std::string(b);' }
+  - platform: homeassistant
+    id: ha_count_office
+    entity_id: $ent_count_office
+    on_value:
+      then:
+        - lvgl.label.update: { id: lbl_roomcount_office, text: !lambda 'int v=(int)x; if(v<=0) return std::string("All off"); char b[16]; snprintf(b,sizeof(b),"%d on",v); return std::string(b);' }
+  - platform: homeassistant
+    id: ha_count_master
+    entity_id: $ent_count_master
+    on_value:
+      then:
+        - lvgl.label.update: { id: lbl_roomcount_master, text: !lambda 'int v=(int)x; if(v<=0) return std::string("All off"); char b[16]; snprintf(b,sizeof(b),"%d on",v); return std::string(b);' }
+  - platform: homeassistant
+    id: ha_count_exterior
+    entity_id: $ent_count_exterior
+    on_value:
+      then:
+        - lvgl.label.update: { id: lbl_roomcount_exterior, text: !lambda 'int v=(int)x; if(v<=0) return std::string("All off"); char b[16]; snprintf(b,sizeof(b),"%d on",v); return std::string(b);' }
   - platform: wifi_signal
     id: panel_rssi
     update_interval: 30s
@@ -1570,13 +1606,10 @@ text_sensor:
     entity_id: $ent_switch_putting_green
     on_value:
       then:
-        - if:
-            condition:
-              lambda: 'return x == std::string("on");'
-            then:
-              - lvgl.label.update: { id: ic_exterior_switch_outdoor_patio_putting_green, text_color: 0x2ED5B8 }
-            else:
-              - lvgl.label.update: { id: ic_exterior_switch_outdoor_patio_putting_green, text_color: 0x4A4F5A }
+        - lvgl.slider.update: { id: sld_pg, value: !lambda 'return x == std::string("on") ? 100 : 0;' }
+        - lvgl.label.update: { id: lbl_pg_state, text: !lambda 'return x == std::string("on") ? std::string("On") : std::string("Off");' }
+        - lvgl.widget.update: { id: btn_pg_pwr, bg_color: !lambda 'return x == std::string("on") ? lv_color_hex(0x2563EB) : lv_color_hex(0x12141C);' }
+        - lvgl.label.update: { id: ic_exterior_switch_outdoor_patio_putting_green, text_color: !lambda 'return x == std::string("on") ? lv_color_hex(0xFFFFFF) : lv_color_hex(0x8A8F9E);' }
 
 
   - platform: homeassistant
@@ -1593,13 +1626,10 @@ text_sensor:
     entity_id: $ent_fan_office
     on_value:
       then:
-        - if:
-            condition:
-              lambda: 'return x == std::string("on");'
-            then:
-              - lvgl.animimg.start: animfan_office
-            else:
-              - lvgl.animimg.stop: animfan_office
+        - lvgl.slider.update: { id: sld_office_fan, value: !lambda 'return x == std::string("on") ? 100 : 0;' }
+        - lvgl.label.update: { id: lbl_office_fan_state, text: !lambda 'return x == std::string("on") ? std::string("On") : std::string("Off");' }
+        - lvgl.widget.update: { id: btn_office_fan_pwr, bg_color: !lambda 'return x == std::string("on") ? lv_color_hex(0x2563EB) : lv_color_hex(0x12141C);' }
+        - lvgl.label.update: { id: ic_office_fan, text_color: !lambda 'return x == std::string("on") ? lv_color_hex(0xFFFFFF) : lv_color_hex(0x8A8F9E);' }
 
 globals:
   - id: sel_light
@@ -1828,6 +1858,55 @@ script:
       - lvgl.widget.update: { id: btn_back_lock, bg_color: 0x2ED5B8 }
       - lvgl.label.update: { id: lbl_front_batt, text: "100%" }
       - lvgl.label.update: { id: lbl_back_batt, text: "92%" }
+      # weather page — current conditions
+      - lvgl.label.update: { id: lbl_wx_icon, text: "\U000F0595" }
+      - lvgl.label.update: { id: lbl_wx_cond, text: "Partly cloudy" }
+      - lvgl.label.update: { id: lbl_wx_temp, text: "83°" }
+      - lvgl.label.update: { id: lbl_wx_hi, text: "H 96°" }
+      - lvgl.label.update: { id: lbl_wx_lo, text: "L 80°" }
+      - lvgl.label.update: { id: lbl_wx_pressure, text: "29.79 inHg" }
+      - lvgl.label.update: { id: lbl_wx_humidity, text: "58%" }
+      - lvgl.label.update: { id: lbl_wx_wind, text: "11 mph SSE" }
+      # weather page — 6-day forecast
+      - lvgl.label.update: { id: lbl_fc_name_0, text: "Mon" }
+      - lvgl.label.update: { id: icon_fc_0, text: "\U000F0595" }
+      - lvgl.label.update: { id: lbl_fc_hi_0, text: "96°" }
+      - lvgl.label.update: { id: lbl_fc_lo_0, text: "80°" }
+      - lvgl.label.update: { id: lbl_fc_name_1, text: "Tue" }
+      - lvgl.label.update: { id: icon_fc_1, text: "\U000F0595" }
+      - lvgl.label.update: { id: lbl_fc_hi_1, text: "97°" }
+      - lvgl.label.update: { id: lbl_fc_lo_1, text: "79°" }
+      - lvgl.label.update: { id: lbl_fc_name_2, text: "Wed" }
+      - lvgl.label.update: { id: icon_fc_2, text: "\U000F0599" }
+      - lvgl.label.update: { id: lbl_fc_hi_2, text: "93°" }
+      - lvgl.label.update: { id: lbl_fc_lo_2, text: "78°" }
+      - lvgl.label.update: { id: lbl_fc_name_3, text: "Thu" }
+      - lvgl.label.update: { id: icon_fc_3, text: "\U000F0595" }
+      - lvgl.label.update: { id: lbl_fc_hi_3, text: "92°" }
+      - lvgl.label.update: { id: lbl_fc_lo_3, text: "78°" }
+      - lvgl.label.update: { id: lbl_fc_name_4, text: "Fri" }
+      - lvgl.label.update: { id: icon_fc_4, text: "\U000F0595" }
+      - lvgl.label.update: { id: lbl_fc_hi_4, text: "94°" }
+      - lvgl.label.update: { id: lbl_fc_lo_4, text: "78°" }
+      - lvgl.label.update: { id: lbl_fc_name_5, text: "Sat" }
+      - lvgl.label.update: { id: icon_fc_5, text: "\U000F0599" }
+      - lvgl.label.update: { id: lbl_fc_hi_5, text: "95°" }
+      - lvgl.label.update: { id: lbl_fc_lo_5, text: "78°" }
+      # room list counts
+      - lvgl.label.update: { id: lbl_roomcount_living, text: "2 on" }
+      - lvgl.label.update: { id: lbl_roomcount_kitchen, text: "All off" }
+      - lvgl.label.update: { id: lbl_roomcount_office, text: "All off" }
+      - lvgl.label.update: { id: lbl_roomcount_master, text: "All off" }
+      - lvgl.label.update: { id: lbl_roomcount_exterior, text: "All off" }
+      # living room tiles (showcase: light 70%, fan on)
+      - lvgl.slider.update: { id: sld_room_living_light_living_room_main, value: 70 }
+      - lvgl.label.update: { id: lbl_living_main_pct, text: "70%" }
+      - lvgl.widget.update: { id: btn_living_main_pwr, bg_color: 0x2563EB }
+      - lvgl.label.update: { id: ic_living_light_living_room_main, text_color: 0xFFFFFF }
+      - lvgl.slider.update: { id: sld_living_fan, value: 100 }
+      - lvgl.label.update: { id: lbl_living_fan_state, text: "On" }
+      - lvgl.widget.update: { id: btn_living_fan_pwr, bg_color: 0x2563EB }
+      - lvgl.label.update: { id: ic_living_fan, text_color: 0xFFFFFF }
   # Load ONE front-door snapshot shortly after the Security tab opens, so the
   # page renders/stays responsive first and the blocking fetch happens after.
   - id: cam_snap_once
@@ -3292,6 +3371,7 @@ lvgl:
             widgets:
               - label: { text: "\U000F04B9", align: left_mid, x: 8, text_font: f_icon, text_color: 0x2ED5B8 }
               - label: { text: "Living Room", align: left_mid, x: 60, text_font: f_title, text_color: 0xEEF0F6 }
+              - label: { id: lbl_roomcount_living, text: "", align: right_mid, x: -16, text_font: f_small, text_color: 0x8A8F9E }
             on_click: [lvgl.page.show: page_room_living]
         - button:
             x: 100
@@ -3302,6 +3382,7 @@ lvgl:
             widgets:
               - label: { text: "\U000F04B9", align: left_mid, x: 8, text_font: f_icon, text_color: 0x2ED5B8 }
               - label: { text: "Kitchen", align: left_mid, x: 60, text_font: f_title, text_color: 0xEEF0F6 }
+              - label: { id: lbl_roomcount_kitchen, text: "", align: right_mid, x: -16, text_font: f_small, text_color: 0x8A8F9E }
             on_click: [lvgl.page.show: page_room_kitchen]
         - button:
             x: 100
@@ -3312,6 +3393,7 @@ lvgl:
             widgets:
               - label: { text: "\U000F04B9", align: left_mid, x: 8, text_font: f_icon, text_color: 0x2ED5B8 }
               - label: { text: "Office", align: left_mid, x: 60, text_font: f_title, text_color: 0xEEF0F6 }
+              - label: { id: lbl_roomcount_office, text: "", align: right_mid, x: -16, text_font: f_small, text_color: 0x8A8F9E }
             on_click: [lvgl.page.show: page_room_office]
         - button:
             x: 100
@@ -3322,6 +3404,7 @@ lvgl:
             widgets:
               - label: { text: "\U000F04B9", align: left_mid, x: 8, text_font: f_icon, text_color: 0x2ED5B8 }
               - label: { text: "Master", align: left_mid, x: 60, text_font: f_title, text_color: 0xEEF0F6 }
+              - label: { id: lbl_roomcount_master, text: "", align: right_mid, x: -16, text_font: f_small, text_color: 0x8A8F9E }
             on_click: [lvgl.page.show: page_room_master]
         - button:
             x: 100
@@ -3332,6 +3415,7 @@ lvgl:
             widgets:
               - label: { text: "\U000F04B9", align: left_mid, x: 8, text_font: f_icon, text_color: 0x2ED5B8 }
               - label: { text: "Exterior", align: left_mid, x: 60, text_font: f_title, text_color: 0xEEF0F6 }
+              - label: { id: lbl_roomcount_exterior, text: "", align: right_mid, x: -16, text_font: f_small, text_color: 0x8A8F9E }
             on_click: [lvgl.page.show: page_room_exterior]
     - id: page_room_living
       bg_opa: 0
@@ -3798,24 +3882,70 @@ lvgl:
                   widgets: [label: { id: ic_office_light_office_desk_lamp, text: "\U000F0425", align: center, text_font: f_icon, text_color: 0x8A8F9E }]
                   on_click: [homeassistant.action: { action: light.toggle, data: { entity_id: $ent_light_office_desk } }]
         - obj:
-            x: 100
-            y: 232
-            width: 232
-            height: 120
-            styles: st_glass
+            x: 520
+            y: 80
+            width: 120
+            height: 432
+            bg_opa: 0
+            border_width: 0
             pad_all: 0
-            clickable: true
+            scrollable: false
             widgets:
-              - animimg:
-                  id: animfan_office
-                  x: 10
-                  y: 10
-                  src: [fan0, fan1, fan2, fan3, fan4, fan5, fan6, fan7, fan8, fan9, fan10, fan11]
-                  duration: 1000ms
-                  repeat_count: forever
-                  auto_start: false
-              - label: { text: "Ceiling Fan", x: 14, y: 86, text_font: f_body, text_color: 0xEEF0F6 }
-            on_click: [homeassistant.action: { action: fan.toggle, data: { entity_id: $ent_fan_office } }]
+              - label: { text: "Ceiling Fan", x: 0, y: 0, width: 120, text_align: center, text_font: f_body, text_color: 0xEEF0F6 }
+              - label: { id: lbl_office_fan_state, text: "Off", x: 0, y: 24, width: 120, text_align: center, text_font: f_body, text_color: 0x8A8F9E }
+              - obj:
+                  id: fan_track_office
+                  x: 0
+                  y: 52
+                  width: 120
+                  height: 268
+                  radius: 24
+                  bg_color: 0x12141C
+                  border_width: 2
+                  border_color: 0x2A2F3A
+                  clickable: false
+                  scrollable: false
+              - slider:
+                  id: sld_office_fan
+                  x: 0
+                  y: 96
+                  width: 120
+                  height: 180
+                  min_value: 0
+                  max_value: 100
+                  value: 0
+                  bg_opa: 0%
+                  indicator:
+                    bg_opa: 0%
+                  knob:
+                    bg_color: 0x56C5DD
+                    pad_left: -6
+                    pad_right: -6
+                    pad_top: -16
+                    pad_bottom: -16
+                    radius: 18
+                  on_release:
+                    - if:
+                        condition:
+                          lambda: 'return x >= 50;'
+                        then:
+                          - homeassistant.action: { action: fan.turn_on, data: { entity_id: $ent_fan_office } }
+                          - lvgl.slider.update: { id: sld_office_fan, value: 100 }
+                        else:
+                          - homeassistant.action: { action: fan.turn_off, data: { entity_id: $ent_fan_office } }
+                          - lvgl.slider.update: { id: sld_office_fan, value: 0 }
+              - button:
+                  id: btn_office_fan_pwr
+                  align: bottom_mid
+                  y: 0
+                  width: 120
+                  height: 100
+                  radius: 24
+                  bg_color: 0x12141C
+                  border_width: 2
+                  border_color: 0x2A2F3A
+                  widgets: [label: { id: ic_office_fan, text: "\U000F0210", align: center, text_font: f_icon, text_color: 0x8A8F9E }]
+                  on_click: [homeassistant.action: { action: fan.toggle, data: { entity_id: $ent_fan_office } }]
     - id: page_room_master
       bg_opa: 0
       on_load:
@@ -4055,17 +4185,70 @@ lvgl:
                   widgets: [label: { id: ic_exterior_light_outdoor_patio_back_porch_lights, text: "\U000F0425", align: center, text_font: f_icon, text_color: 0x8A8F9E }]
                   on_click: [homeassistant.action: { action: light.toggle, data: { entity_id: $ent_light_patio } }]
         - obj:
-            x: 348
-            y: 96
-            width: 232
-            height: 120
-            styles: st_glass
+            x: 240
+            y: 80
+            width: 120
+            height: 432
+            bg_opa: 0
+            border_width: 0
             pad_all: 0
-            clickable: true
+            scrollable: false
             widgets:
-              - label: { id: ic_exterior_switch_outdoor_patio_putting_green, text: "\U000F06A5", x: 14, y: 12, text_font: f_icon, text_color: 0x4A4F5A }
-              - label: { text: "Putting Green", x: 14, y: 86, text_font: f_body, text_color: 0xEEF0F6 }
-            on_click: [homeassistant.action: { action: switch.toggle, data: { entity_id: $ent_switch_putting_green } }]
+              - label: { text: "Putting Green", x: 0, y: 0, width: 120, text_align: center, text_font: f_small, text_color: 0xEEF0F6 }
+              - label: { id: lbl_pg_state, text: "Off", x: 0, y: 24, width: 120, text_align: center, text_font: f_body, text_color: 0x8A8F9E }
+              - obj:
+                  id: fan_track_pg
+                  x: 0
+                  y: 52
+                  width: 120
+                  height: 268
+                  radius: 24
+                  bg_color: 0x12141C
+                  border_width: 2
+                  border_color: 0x2A2F3A
+                  clickable: false
+                  scrollable: false
+              - slider:
+                  id: sld_pg
+                  x: 0
+                  y: 96
+                  width: 120
+                  height: 180
+                  min_value: 0
+                  max_value: 100
+                  value: 0
+                  bg_opa: 0%
+                  indicator:
+                    bg_opa: 0%
+                  knob:
+                    bg_color: 0x56C5DD
+                    pad_left: -6
+                    pad_right: -6
+                    pad_top: -16
+                    pad_bottom: -16
+                    radius: 18
+                  on_release:
+                    - if:
+                        condition:
+                          lambda: 'return x >= 50;'
+                        then:
+                          - homeassistant.action: { action: switch.turn_on, data: { entity_id: $ent_switch_putting_green } }
+                          - lvgl.slider.update: { id: sld_pg, value: 100 }
+                        else:
+                          - homeassistant.action: { action: switch.turn_off, data: { entity_id: $ent_switch_putting_green } }
+                          - lvgl.slider.update: { id: sld_pg, value: 0 }
+              - button:
+                  id: btn_pg_pwr
+                  align: bottom_mid
+                  y: 0
+                  width: 120
+                  height: 100
+                  radius: 24
+                  bg_color: 0x12141C
+                  border_width: 2
+                  border_color: 0x2A2F3A
+                  widgets: [label: { id: ic_exterior_switch_outdoor_patio_putting_green, text: "\U000F06A5", align: center, text_font: f_icon, text_color: 0x8A8F9E }]
+                  on_click: [homeassistant.action: { action: switch.toggle, data: { entity_id: $ent_switch_putting_green } }]
     - id: page_network
       bg_opa: 0
       on_load:
