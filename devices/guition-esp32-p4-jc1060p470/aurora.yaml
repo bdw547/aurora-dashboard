@@ -1562,7 +1562,7 @@ time:
     id: ha_time
 
 interval:
-  - interval: 1500ms
+  - interval: 500ms
     then:
       - if:
           condition:
