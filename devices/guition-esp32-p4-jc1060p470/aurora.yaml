@@ -298,12 +298,14 @@ online_image:
     url: "http://127.0.0.1/none.jpg"
     format: JPEG
     type: RGB565
-    resize: 400x300
+    resize: 600x452
     update_interval: never
     on_download_finished:
       - lvgl.image.update: { id: img_cam_security, src: cam_image }
+      - lvgl.widget.update: { id: spin_cam, hidden: true }
     on_error:
       - logger.log: "CAM: download error"
+      - lvgl.widget.update: { id: spin_cam, hidden: true }
   - id: cam_big
     url: "http://127.0.0.1/none.jpg"
     format: JPEG
@@ -417,6 +419,7 @@ font:
       - "\U000F0335"  # lightbulb
       - "\U000F0336"  # lightbulb-outline
       - "\U000F0393"  # thermostat
+      - "\U000F050F"  # thermometer (climate nav)
       - "\U000F075A"  # music
       - "\U000F068A"  # shield-home
       - "\U000F0928"  # wifi
@@ -1546,10 +1549,10 @@ text_sensor:
     entity_id: $ent_fan_living
     on_value:
       then:
-        - lvgl.slider.update: { id: sld_living_fan, value: !lambda 'return x == std::string("on") ? 100 : 0;' }
         - lvgl.label.update: { id: lbl_living_fan_state, text: !lambda 'return x == std::string("on") ? std::string("On") : std::string("Off");' }
-        - lvgl.widget.update: { id: btn_living_fan_pwr, bg_color: !lambda 'return x == std::string("on") ? lv_color_hex(0x2ED5B8) : lv_color_hex(0x12141C);' }
-        - lvgl.label.update: { id: ic_living_fan, text_color: !lambda 'return x == std::string("on") ? lv_color_hex(0x06210F) : lv_color_hex(0x8A8F9E);' }
+        - lvgl.widget.update: { id: btn_living_fan, bg_color: !lambda 'return x == std::string("on") ? lv_color_hex(0x16323A) : lv_color_hex(0x2A2D33);' }
+        - lvgl.widget.update: { id: thumb_fan_on, hidden: !lambda 'return x != std::string("on");' }
+        - lvgl.widget.update: { id: thumb_fan_off, hidden: !lambda 'return x == std::string("on");' }
   - platform: homeassistant
     id: ha_room_office_fan_office_ceiling_fan
     entity_id: $ent_fan_office
@@ -1795,6 +1798,7 @@ script:
   - id: cam_snap_once
     mode: restart
     then:
+      - lvgl.widget.update: { id: spin_cam, hidden: false }
       - delay: 250ms
       - if:
           condition:
@@ -1802,6 +1806,8 @@ script:
           then:
             - online_image.set_url: { id: cam_image, url: !lambda 'return id(g_cam_url);' }
             - component.update: cam_image
+          else:
+            - lvgl.widget.update: { id: spin_cam, hidden: true }
   # Fullscreen view: one deferred snapshot on open (then manual Refresh only).
   - id: cam_snap_big
     mode: restart
@@ -2051,7 +2057,7 @@ lvgl:
                 width: 58
                 height: 58
                 bg_color: 0x10121A
-                widgets: [label: { text: "󰎓", align: center, text_font: f_icon, text_color: $c_text } ]
+                widgets: [label: { text: "\U000F050F", align: center, text_font: f_icon, text_color: $c_text } ]
                 on_click: [lvgl.page.show: page_climate]
             - button:
                 id: nav_media
@@ -3134,6 +3140,18 @@ lvgl:
             on_click: [lvgl.page.show: page_doorbell]
             widgets:
               - image: { id: img_cam_security, src: cam_image, align: center }
+              - spinner:
+                  id: spin_cam
+                  align: center
+                  width: 64
+                  height: 64
+                  arc_length: 60deg
+                  spin_time: 1000ms
+                  arc_color: 0x2A2F3A
+                  arc_width: 6
+                  indicator:
+                    arc_color: 0x2ED5B8
+                    arc_width: 6
               - label: { id: lbl_cam_demo, text: "DEMO FEED", align: center, text_font: f_title, text_color: 0x6E727E, hidden: true }
               - obj:
                   x: 14
@@ -3333,12 +3351,12 @@ lvgl:
                   border_width: 2
                   border_color: 0x2A2F3A
                   indicator:
-                    bg_color: 0xEEF0F6
+                    bg_color: 0xF2C94C
                     radius: 24
                   knob:
-                    bg_color: 0xC8CCD6
-                    pad_left: 6
-                    pad_right: 6
+                    bg_color: 0xFFFFFF
+                    pad_left: -24
+                    pad_right: -24
                     pad_top: -56
                     pad_bottom: -56
                     radius: 2
@@ -3380,52 +3398,42 @@ lvgl:
             widgets:
               - label: { text: "Ceiling Fan", x: 0, y: 0, width: 120, text_align: center, text_font: f_body, text_color: 0xEEF0F6 }
               - label: { id: lbl_living_fan_state, text: "Off", x: 0, y: 24, width: 120, text_align: center, text_font: f_body, text_color: 0x8A8F9E }
-              - slider:
-                  id: sld_living_fan
+              - button:
+                  id: btn_living_fan
                   x: 0
                   y: 52
                   width: 120
-                  height: 268
-                  min_value: 0
-                  max_value: 100
-                  value: 0
+                  height: 380
                   radius: 24
-                  bg_color: 0x12141C
-                  bg_opa: 100%
+                  bg_color: 0x2A2D33
                   border_width: 2
                   border_color: 0x2A2F3A
-                  indicator:
-                    bg_color: 0x2ED5B8
-                    radius: 24
-                  knob:
-                    bg_color: 0xC8CCD6
-                    pad_left: 6
-                    pad_right: 6
-                    pad_top: -56
-                    pad_bottom: -56
-                    radius: 2
-                  on_release:
-                    - if:
-                        condition:
-                          lambda: 'return x >= 50;'
-                        then:
-                          - homeassistant.action: { action: fan.turn_on, data: { entity_id: $ent_fan_living } }
-                          - lvgl.slider.update: { id: sld_living_fan, value: 100 }
-                        else:
-                          - homeassistant.action: { action: fan.turn_off, data: { entity_id: $ent_fan_living } }
-                          - lvgl.slider.update: { id: sld_living_fan, value: 0 }
-              - button:
-                  id: btn_living_fan_pwr
-                  align: bottom_mid
-                  y: 0
-                  width: 120
-                  height: 100
-                  radius: 24
-                  bg_color: 0x12141C
-                  border_width: 2
-                  border_color: 0x2A2F3A
-                  widgets: [label: { id: ic_living_fan, text: "\U000F0210", align: center, text_font: f_icon, text_color: 0x8A8F9E }]
                   on_click: [homeassistant.action: { action: fan.toggle, data: { entity_id: $ent_fan_living } }]
+              - obj:
+                  id: thumb_fan_off
+                  x: 8
+                  y: 320
+                  width: 104
+                  height: 104
+                  radius: 20
+                  bg_color: 0xBFC4CC
+                  border_width: 0
+                  clickable: false
+                  scrollable: false
+                  widgets: [label: { text: "\U000F0210", align: center, text_font: f_icon, text_color: 0x3A3D42 }]
+              - obj:
+                  id: thumb_fan_on
+                  x: 8
+                  y: 60
+                  width: 104
+                  height: 104
+                  radius: 20
+                  bg_color: 0x56C5DD
+                  border_width: 0
+                  hidden: true
+                  clickable: false
+                  scrollable: false
+                  widgets: [label: { text: "\U000F0210", align: center, text_font: f_icon, text_color: 0xFFFFFF }]
         - button:
             x: 596
             y: 96
