@@ -23,7 +23,7 @@ from esphome.core import CORE
 from esphome.core.entity_helpers import setup_entity
 
 CODEOWNERS = ["@youkorr"]
-DEPENDENCIES = ["esp32", "i2c"]
+DEPENDENCIES = ["esp32", "i2c", "network"]
 AUTO_LOAD = ["camera"]
 
 esp_video_camera_ns = cg.esphome_ns.namespace("esp_video_camera")

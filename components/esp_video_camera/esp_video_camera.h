@@ -96,6 +96,10 @@ class ESPVideoCamera : public camera::Camera {
 
  protected:
   bool init_pipeline_();
+  // Retrying SCCB probe of the OV02C10 chip ID (0x300a/0x300b == 0x5602) before
+  // esp_video_init, so flaky reads don't drive esp_video into its NULL-semaphore
+  // assert (which crash-loops the device and wedges the shared I2C bus).
+  bool probe_ov02c10_();
   bool start_capture_();
   void stop_capture_();
   void update_capture_state_();
@@ -208,7 +212,8 @@ class ESPVideoCamera : public camera::Camera {
   static void rtsp_server_task_(void *arg);
   static void rtsp_stream_task_(void *arg);
   void handle_rtsp_client_(int fd);
-  bool ensure_params_();             // capture one keyframe -> sps_/pps_
+  bool ensure_params_();             // wait for the stream task to publish sps_/pps_
+  void extract_params_(const uint8_t *au, size_t len);  // pull SPS/PPS from an access unit
   bool capture_h264_(const uint8_t **nal, size_t *len);  // one encoded frame (Annex-B)
   void rtp_send_access_unit_(const uint8_t *annexb, size_t len, uint32_t ts);
   void rtp_send_nal_(const uint8_t *nal, size_t len, uint32_t ts, bool marker);

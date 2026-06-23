@@ -5,6 +5,7 @@
 #include "i2c_helper.h"
 #include "esphome/core/log.h"
 #include "esphome/core/hal.h"
+#include "esphome/components/network/util.h"
 
 #include "esp_heap_caps.h"
 
@@ -243,6 +244,44 @@ void ESPVideoCamera::setup() {
   // stack and scheduler are fully up before its tasks spawn.
 }
 
+bool ESPVideoCamera::probe_ov02c10_() {
+  if (this->i2c_bus_ == nullptr)
+    return false;
+  const uint8_t kAddr = 0x36;  // OV02C10 SCCB address
+
+  // Software-reset the sensor (reg 0x0103 = 0x01) to clear any partial-wedge
+  // state left by a soft reset — this board has no camera reset/pwdn pin, so a
+  // reboot/flash can leave the sensor in a state esp_video can't detect (which
+  // then asserts and crash-loops). The SW reset mimics a power cycle.
+  for (int r = 0; r < 5; r++) {
+    uint8_t sw_reset[3] = {0x01, 0x03, 0x01};  // reg 0x0103 = 0x01
+    if (this->i2c_bus_->write(kAddr, sw_reset, 3, true) == i2c::ERROR_OK)
+      break;
+    vTaskDelay(pdMS_TO_TICKS(20));
+  }
+  vTaskDelay(pdMS_TO_TICKS(30));  // let the reset complete
+
+  for (int attempt = 0; attempt < 25; attempt++) {
+    uint8_t reg_h[2] = {0x30, 0x0a};  // OV02C10_REG_SENSOR_ID_H
+    uint8_t reg_l[2] = {0x30, 0x0b};  // OV02C10_REG_SENSOR_ID_L
+    uint8_t h = 0, l = 0;
+    if (this->i2c_bus_->write(kAddr, reg_h, 2, false) == i2c::ERROR_OK &&
+        this->i2c_bus_->read(kAddr, &h, 1) == i2c::ERROR_OK &&
+        this->i2c_bus_->write(kAddr, reg_l, 2, false) == i2c::ERROR_OK &&
+        this->i2c_bus_->read(kAddr, &l, 1) == i2c::ERROR_OK) {
+      uint16_t pid = ((uint16_t) h << 8) | l;
+      if (pid == 0x5602) {  // OV02C10_PID
+        ESP_LOGI(TAG, "OV02C10 confirmed on SCCB (PID 0x%04X, attempt %d)", pid, attempt + 1);
+        return true;
+      }
+    }
+    vTaskDelay(pdMS_TO_TICKS(40));
+  }
+  ESP_LOGW(TAG, "OV02C10 not confirmed on SCCB after retries; skipping camera init "
+                "(device boots without camera; power-cycle to recover the sensor)");
+  return false;
+}
+
 bool ESPVideoCamera::init_pipeline_() {
   if (this->i2c_bus_ == nullptr) {
     ESP_LOGE(TAG, "No I2C bus set");
@@ -259,6 +298,15 @@ bool ESPVideoCamera::init_pipeline_() {
   // when config->csi != NULL, so leaving it NULL avoids trying (and failing)
   // to detect a MIPI sensor that isn't present on a USB-only board.
   const bool uvc_only = this->device_.rfind("uvc", 0) == 0;
+
+  // ROBUSTNESS: confirm the OV02C10 over SCCB *before* esp_video_init. The SCCB
+  // reads are flaky (shared bus), and esp_video's one-shot detection asserts
+  // (NULL semaphore) when it misses — which crash-loops the device and wedges
+  // the bus. A retrying ID probe rides out the flakiness; if the sensor still
+  // won't identify (truly wedged/absent), we skip camera init so the device
+  // boots cleanly instead of crash-looping. A clean power-up then recovers it.
+  if (!uvc_only && !this->probe_ov02c10_())
+    return false;
 
   // Start XCLK via LEDC if requested (MIPI sensors need it before init).
   if (!uvc_only && this->enable_xclk_init_ && this->xclk_pin_ != (gpio_num_t) -1) {
@@ -348,10 +396,13 @@ bool ESPVideoCamera::init_pipeline_() {
 void ESPVideoCamera::loop() {
   // When the RTSP server is enabled it owns the camera from its own task; the
   // ESPHome-loop capture path is disabled so the two never fight over the V4L2
-  // device or the encoder. Start the server here (first loop) rather than in
-  // setup(), so the network stack is up before its tasks spawn.
+  // device or the encoder. Start the server only once the network is connected:
+  // the very first loop() runs before lwIP's TCP/IP core is initialised, and
+  // calling socket() then locks a NULL core mutex -> assert -> boot crash-loop
+  // (this was the real cause, not the camera). Gating on is_connected() ensures
+  // the lwIP stack is fully up before the RTSP task touches a socket.
   if (this->rtsp_port_ != 0) {
-    if (!this->rtsp_started_) {
+    if (!this->rtsp_started_ && network::is_connected()) {
       this->rtsp_started_ = true;
       this->start_rtsp_server_();
     }
@@ -507,6 +558,12 @@ void ESPVideoCamera::stop_stream(camera::CameraRequester requester) {
 }
 
 void ESPVideoCamera::update_capture_state_() {
+  // In RTSP mode the dedicated stream task is the SOLE owner of the V4L2 device.
+  // Requests from the ESPHome camera entity (e.g. Home Assistant polling the
+  // snapshot entity) must NOT open the device here, or they collide with the
+  // stream task -> VIDIOC_REQBUFS "Device or resource busy". The entity is inert.
+  if (this->rtsp_port_ != 0)
+    return;
   bool wanted = (this->stream_requesters_ != 0) || (this->single_requesters_ != 0);
   if (wanted && !this->streaming_)
     this->start_capture_();
@@ -851,43 +908,44 @@ bool ESPVideoCamera::capture_h264_(const uint8_t **nal, size_t *len) {
 }
 
 // Capture frames until we have both SPS (type 7) and PPS (type 8) for the SDP.
-bool ESPVideoCamera::ensure_params_() {
+// Pull SPS (NAL type 7) and PPS (type 8) out of an Annex-B access unit and
+// cache them for the SDP. Called by the stream task (the sole camera owner).
+void ESPVideoCamera::extract_params_(const uint8_t *au, size_t au_len) {
   if (this->params_ready_)
-    return true;
-  if (!this->start_jpeg_pipeline_())
-    return false;
-  for (int attempt = 0; attempt < 60 && !this->params_ready_; attempt++) {
-    const uint8_t *au;
-    size_t au_len;
-    if (!this->capture_h264_(&au, &au_len)) {
-      vTaskDelay(pdMS_TO_TICKS(10));
-      continue;
-    }
-    size_t pos = next_start_code_(au, au_len, 0);
-    while (pos < au_len) {
-      size_t s = pos + 3;
-      size_t nxt = next_start_code_(au, au_len, s);
-      size_t e = nxt;
-      if (e > s && e < au_len && au[e - 1] == 0)
-        e--;  // 4-byte start code: drop the trailing leading-zero
-      if (e > s) {
-        uint8_t type = au[s] & 0x1F;
-        if (type == 7 && (e - s) <= sizeof(this->sps_)) {
-          memcpy(this->sps_, au + s, e - s);
-          this->sps_len_ = e - s;
-        } else if (type == 8 && (e - s) <= sizeof(this->pps_)) {
-          memcpy(this->pps_, au + s, e - s);
-          this->pps_len_ = e - s;
-        }
+    return;
+  size_t pos = next_start_code_(au, au_len, 0);
+  while (pos < au_len) {
+    size_t s = pos + 3;
+    size_t nxt = next_start_code_(au, au_len, s);
+    size_t e = nxt;
+    if (e > s && e < au_len && au[e - 1] == 0)
+      e--;  // 4-byte start code: drop the trailing leading-zero
+    if (e > s) {
+      uint8_t type = au[s] & 0x1F;
+      if (type == 7 && (e - s) <= sizeof(this->sps_)) {
+        memcpy(this->sps_, au + s, e - s);
+        this->sps_len_ = e - s;
+      } else if (type == 8 && (e - s) <= sizeof(this->pps_)) {
+        memcpy(this->pps_, au + s, e - s);
+        this->pps_len_ = e - s;
       }
-      pos = nxt;
     }
-    if (this->sps_len_ > 0 && this->pps_len_ > 0)
-      this->params_ready_ = true;
+    pos = nxt;
   }
-  this->stop_capture_();
+  if (this->sps_len_ > 0 && this->pps_len_ > 0) {
+    this->params_ready_ = true;
+    ESP_LOGI(TAG, "RTSP: SPS/PPS captured (%u/%u bytes)", (unsigned) this->sps_len_, (unsigned) this->pps_len_);
+  }
+}
+
+// DESCRIBE handler waits for the stream task (sole camera owner) to publish
+// SPS/PPS — it must NOT open the camera itself (that races the stream task and
+// causes VIDIOC_REQBUFS EBUSY).
+bool ESPVideoCamera::ensure_params_() {
+  for (int i = 0; i < 200 && !this->params_ready_; i++)
+    vTaskDelay(pdMS_TO_TICKS(20));
   if (!this->params_ready_)
-    ESP_LOGW(TAG, "RTSP: could not capture SPS/PPS for SDP");
+    ESP_LOGW(TAG, "RTSP: SPS/PPS not ready for SDP");
   return this->params_ready_;
 }
 
@@ -1005,34 +1063,30 @@ void ESPVideoCamera::rtp_send_access_unit_(const uint8_t *au, size_t au_len, uin
 
 void ESPVideoCamera::rtsp_stream_task_(void *arg) {
   auto *self = (ESPVideoCamera *) arg;
-  bool started = false;
+  // Open the camera ONCE and keep it open for the task's lifetime. This task is
+  // the SOLE owner of the V4L2 capture + H.264 encoder; opening/closing per
+  // client (or from two tasks) causes VIDIOC_REQBUFS "Device or resource busy".
+  while (!self->start_jpeg_pipeline_()) {
+    ESP_LOGW(TAG, "RTSP: camera capture not ready yet, retrying...");
+    vTaskDelay(pdMS_TO_TICKS(1000));
+  }
+  if (self->rtp_fd_ < 0)
+    self->rtp_fd_ = socket(AF_INET, SOCK_DGRAM, 0);
+  ESP_LOGI(TAG, "RTSP: capture pipeline open; stream task ready");
+
   while (true) {
-    if (!self->rtsp_playing_) {
-      if (started) {
-        self->stop_capture_();
-        started = false;
-      }
-      vTaskDelay(pdMS_TO_TICKS(50));
-      continue;
-    }
-    if (!started) {
-      if (!self->start_jpeg_pipeline_()) {
-        vTaskDelay(pdMS_TO_TICKS(200));
-        continue;
-      }
-      if (self->rtp_fd_ < 0)
-        self->rtp_fd_ = socket(AF_INET, SOCK_DGRAM, 0);
-      started = true;
-      ESP_LOGI(TAG, "RTSP: streaming started -> %u.%u.%u.%u:%u",
-               (unsigned) (self->rtp_client_ip_) & 0xFF, (unsigned) (self->rtp_client_ip_ >> 8) & 0xFF,
-               (unsigned) (self->rtp_client_ip_ >> 16) & 0xFF, (unsigned) (self->rtp_client_ip_ >> 24) & 0xFF,
-               self->rtp_client_port_);
-    }
     const uint8_t *nal;
     size_t len;
     if (self->capture_h264_(&nal, &len)) {
-      uint32_t ts = (uint32_t) ((esp_timer_get_time() * 9) / 100);  // us -> 90 kHz
-      self->rtp_send_access_unit_(nal, len, ts);
+      // Cache SPS/PPS from the very first frames so DESCRIBE can build the SDP.
+      if (!self->params_ready_)
+        self->extract_params_(nal, len);
+      // Only emit RTP while a client is playing; otherwise just drain the
+      // encoder (keeps the pipeline warm without churning the V4L2 device).
+      if (self->rtsp_playing_) {
+        uint32_t ts = (uint32_t) ((esp_timer_get_time() * 9) / 100);  // us -> 90 kHz
+        self->rtp_send_access_unit_(nal, len, ts);
+      }
     } else {
       vTaskDelay(pdMS_TO_TICKS(5));
     }

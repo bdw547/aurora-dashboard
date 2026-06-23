@@ -220,8 +220,8 @@ esp_video_camera:
   name: "Aurora Camera"
   i2c_id: bus_a
   device: jpeg
-  codec: jpeg        # stabilized: working HW-JPEG snapshots (RTSP boot-crash under debug)
-  rtsp_port: 0       # RTSP server disabled (bisect: does the device boot without it?)
+  codec: h264        # HW H.264 (esp_h264 direct) for live streaming
+  rtsp_port: 8554    # live H.264 RTSP: rtsp://10.0.0.174:8554/cam (for go2rtc)
   resolution: 1288x728
   jpeg_quality: 60   # used directly as esp_driver_jpeg quality (1-100); schema caps at 63
   max_framerate: 10
