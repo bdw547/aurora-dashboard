@@ -101,7 +101,9 @@ esp32:
       CONFIG_CAMERA_OV02C10: "y"
       CONFIG_CAMERA_OV02C10_AUTO_DETECT: "y"
       CONFIG_CAMERA_OV02C10_AUTO_DETECT_MIPI_INTERFACE_SENSOR: "y"
-      CONFIG_CAMERA_OV02C10_MIPI_RAW10_1920x1080_30FPS: "y"
+      # Smaller native mode (~1.8MB/frame vs 4MB at 1080p): the HW-JPEG encode
+      # of a full 1080p RGB565 frame faults the chip; try the lighter frame.
+      CONFIG_CAMERA_OV02C10_MIPI_RAW10_1288x728_30FPS: "y"
       CONFIG_CAMERA_OV02C10_DEFAULT_IPA_JSON_CONFIGURATION_FILE: "y"
 
 psram:
@@ -204,26 +206,22 @@ light:
 # external component (Espressif esp_video stack, PR #16944 / youkorr fork).
 # This board has NO external XCLK GPIO and NO reset/pwdn pins — the sensor runs
 # off its internal 24MHz clock, so XCLK init is disabled here.
+# --- On-board OV02C10 camera. Capture (sensor+MIPI-CSI+ISP) works; the encode
+# was reworked to call esp_driver_jpeg directly (esp_video's JPEG M2M faults). --
 external_components:
-  - source: github://youkorr/esphome@esp_video_camera
-    components: [esp_video_camera]
-    refresh: 1d
-  # Local: injects vendored esp_cam_sensor 2.2.0 + grafted OV02C10 driver,
-  # overriding the registry esp_cam_sensor (which lacks ov02c10).
   - source:
       type: local
       path: ../../components
-    components: [ov02c10_support]
+    components: [esp_video_camera, ov02c10_support]
 
-# Triggers ov02c10_support.to_code() -> add_idf_component(path=vendored).
 ov02c10_support:
 
 esp_video_camera:
   name: "Aurora Camera"
   i2c_id: bus_a
   device: jpeg
-  resolution: 720P
-  jpeg_quality: 12
+  resolution: 1288x728
+  jpeg_quality: 60   # used directly as esp_driver_jpeg quality (1-100); schema caps at 63
   max_framerate: 10
   enable_xclk: false
   xclk_pin: -1
@@ -233,7 +231,10 @@ i2c:
     sda: GPIO07
     scl: GPIO08
     scan: true
-    frequency: 400kHz
+    # 100kHz matches the vendor's OV02C10 SCCB config. At 400kHz the camera is
+    # detected but its init register writes corrupt -> sensor never streams.
+    # GT911 touch (also on this bus) is fine at 100kHz.
+    frequency: 100kHz
     sda_pullup_enabled: false
     scl_pullup_enabled: false
 touchscreen:
