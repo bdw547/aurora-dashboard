@@ -10,6 +10,7 @@
 
 #include <cerrno>
 #include <cstring>
+#include <cstdio>
 #include <fcntl.h>
 #include <unistd.h>
 #include <sys/ioctl.h>
@@ -20,6 +21,9 @@ extern "C" {
 #include "esp_video_device.h"
 #include "linux/videodev2.h"
 #include "driver/ledc.h"
+#include "esp_timer.h"
+#include "mbedtls/base64.h"
+#include "lwip/sockets.h"
 #include "freertos/FreeRTOS.h"
 #include "freertos/task.h"
 #include "freertos/semphr.h"
@@ -28,6 +32,18 @@ extern "C" {
 #include "usb/usb_host.h"
 #endif
 }
+
+// lwip/sockets.h (LWIP_POSIX_SOCKETS_IO_NAMES) remaps the POSIX IO names to its
+// socket variants via macros, e.g. close()->lwip_close(), ioctl()->lwip_ioctl().
+// That breaks our V4L2 calls — close()/ioctl() on a /dev/videoN fd would be sent
+// to lwip and assert/abort (this crashed the panel at boot). Undo the IO-name
+// macros so close()/read()/write()/ioctl() go through the VFS and route by fd
+// type. Socket-specific names (socket/bind/recv/send/...) stay mapped to lwip_*.
+#undef close
+#undef read
+#undef write
+#undef ioctl
+#undef fcntl
 
 #ifndef V4L2_CID_JPEG_COMPRESSION_QUALITY
 #define V4L2_CID_JPEG_COMPRESSION_QUALITY (V4L2_CID_JPEG_CLASS_BASE + 1)
@@ -223,6 +239,8 @@ void ESPVideoCamera::setup() {
   close(test_fd);
 
   ESP_LOGI(TAG, "Camera ready on %s (source: %s)", this->resolved_device_.c_str(), this->device_.c_str());
+  // The RTSP server is started lazily from loop() (not here) so the network
+  // stack and scheduler are fully up before its tasks spawn.
 }
 
 bool ESPVideoCamera::init_pipeline_() {
@@ -328,6 +346,17 @@ bool ESPVideoCamera::init_pipeline_() {
 // ESPVideoCamera — streaming / capture
 // ===========================================================================
 void ESPVideoCamera::loop() {
+  // When the RTSP server is enabled it owns the camera from its own task; the
+  // ESPHome-loop capture path is disabled so the two never fight over the V4L2
+  // device or the encoder. Start the server here (first loop) rather than in
+  // setup(), so the network stack is up before its tasks spawn.
+  if (this->rtsp_port_ != 0) {
+    if (!this->rtsp_started_) {
+      this->rtsp_started_ = true;
+      this->start_rtsp_server_();
+    }
+    return;
+  }
   if (!this->streaming_)
     return;
 
@@ -765,6 +794,365 @@ void ESPVideoCamera::dump_config() {
   ESP_LOGCONFIG(TAG, "  Max framerate: %.1f fps", this->max_framerate_);
   if (this->is_failed())
     ESP_LOGCONFIG(TAG, "  State: FAILED");
+  if (this->rtsp_port_ != 0)
+    ESP_LOGCONFIG(TAG, "  RTSP: rtsp://<ip>:%u/cam (codec: %s)", this->rtsp_port_, this->codec_.c_str());
+}
+
+// ===========================================================================
+// ESPVideoCamera — RTSP / RTP(H.264) server (Milestone 2)
+// ===========================================================================
+
+// Index of the next 3-byte Annex-B start code (00 00 01) at/after `from`.
+static size_t next_start_code_(const uint8_t *b, size_t len, size_t from) {
+  for (size_t k = from; k + 3 <= len; k++)
+    if (b[k] == 0 && b[k + 1] == 0 && b[k + 2] == 1)
+      return k;
+  return len;
+}
+
+// Capture one YUV420 frame and HW-encode it to an H.264 Annex-B access unit.
+// Returns the encoder's output buffer (valid until the next call). False on
+// EAGAIN (no frame ready) or encode error.
+bool ESPVideoCamera::capture_h264_(const uint8_t **nal, size_t *len) {
+  if (this->hw_h264_enc_ == nullptr || this->capture_fd_ < 0)
+    return false;
+  struct v4l2_buffer cap_buf;
+  memset(&cap_buf, 0, sizeof(cap_buf));
+  cap_buf.type = V4L2_BUF_TYPE_VIDEO_CAPTURE;
+  cap_buf.memory = V4L2_MEMORY_MMAP;
+  if (ioctl(this->capture_fd_, VIDIOC_DQBUF, &cap_buf) < 0)
+    return false;  // EAGAIN
+
+  bool ok = false;
+  if (cap_buf.index < (uint32_t) this->num_capture_buffers_ && cap_buf.bytesused > 0) {
+    size_t copy_len = cap_buf.bytesused;
+    if (copy_len > this->h264_in_cap_)
+      copy_len = this->h264_in_cap_;
+    memcpy(this->h264_in_buf_, this->capture_buffers_[cap_buf.index].start, copy_len);
+
+    esp_h264_enc_in_frame_t in_frame = {};
+    in_frame.raw_data.buffer = this->h264_in_buf_;
+    in_frame.raw_data.len = copy_len;
+    esp_h264_enc_out_frame_t out_frame = {};
+    out_frame.raw_data.buffer = this->h264_out_buf_;
+    out_frame.raw_data.len = this->h264_out_cap_;
+    esp_h264_err_t e = esp_h264_enc_process(this->hw_h264_enc_, &in_frame, &out_frame);
+    if (e == ESP_H264_ERR_OK && out_frame.length > 0) {
+      *nal = this->h264_out_buf_;
+      *len = out_frame.length;
+      ok = true;
+    } else {
+      ESP_LOGW(TAG, "esp_h264_enc_process failed: %d", (int) e);
+    }
+  }
+  if (ioctl(this->capture_fd_, VIDIOC_QBUF, &cap_buf) < 0)
+    ESP_LOGW(TAG, "capture QBUF failed: %s", strerror(errno));
+  return ok;
+}
+
+// Capture frames until we have both SPS (type 7) and PPS (type 8) for the SDP.
+bool ESPVideoCamera::ensure_params_() {
+  if (this->params_ready_)
+    return true;
+  if (!this->start_jpeg_pipeline_())
+    return false;
+  for (int attempt = 0; attempt < 60 && !this->params_ready_; attempt++) {
+    const uint8_t *au;
+    size_t au_len;
+    if (!this->capture_h264_(&au, &au_len)) {
+      vTaskDelay(pdMS_TO_TICKS(10));
+      continue;
+    }
+    size_t pos = next_start_code_(au, au_len, 0);
+    while (pos < au_len) {
+      size_t s = pos + 3;
+      size_t nxt = next_start_code_(au, au_len, s);
+      size_t e = nxt;
+      if (e > s && e < au_len && au[e - 1] == 0)
+        e--;  // 4-byte start code: drop the trailing leading-zero
+      if (e > s) {
+        uint8_t type = au[s] & 0x1F;
+        if (type == 7 && (e - s) <= sizeof(this->sps_)) {
+          memcpy(this->sps_, au + s, e - s);
+          this->sps_len_ = e - s;
+        } else if (type == 8 && (e - s) <= sizeof(this->pps_)) {
+          memcpy(this->pps_, au + s, e - s);
+          this->pps_len_ = e - s;
+        }
+      }
+      pos = nxt;
+    }
+    if (this->sps_len_ > 0 && this->pps_len_ > 0)
+      this->params_ready_ = true;
+  }
+  this->stop_capture_();
+  if (!this->params_ready_)
+    ESP_LOGW(TAG, "RTSP: could not capture SPS/PPS for SDP");
+  return this->params_ready_;
+}
+
+void ESPVideoCamera::build_sdp_(char *out, size_t out_size, uint32_t server_ip) {
+  unsigned char b64sps[160], b64pps[64];
+  size_t o1 = 0, o2 = 0;
+  mbedtls_base64_encode(b64sps, sizeof(b64sps), &o1, this->sps_, this->sps_len_);
+  b64sps[o1] = 0;
+  mbedtls_base64_encode(b64pps, sizeof(b64pps), &o2, this->pps_, this->pps_len_);
+  b64pps[o2] = 0;
+  char plid[8] = "42001f";
+  if (this->sps_len_ >= 4)
+    snprintf(plid, sizeof(plid), "%02x%02x%02x", this->sps_[1], this->sps_[2], this->sps_[3]);
+  snprintf(out, out_size,
+           "v=0\r\n"
+           "o=- 0 0 IN IP4 %u.%u.%u.%u\r\n"
+           "s=Aurora Camera\r\n"
+           "c=IN IP4 0.0.0.0\r\n"
+           "t=0 0\r\n"
+           "m=video 0 RTP/AVP 96\r\n"
+           "a=rtpmap:96 H264/90000\r\n"
+           "a=fmtp:96 packetization-mode=1;profile-level-id=%s;sprop-parameter-sets=%s,%s\r\n"
+           "a=control:trackID=0\r\n",
+           (unsigned) (server_ip >> 24) & 0xFF, (unsigned) (server_ip >> 16) & 0xFF,
+           (unsigned) (server_ip >> 8) & 0xFF, (unsigned) server_ip & 0xFF, plid, b64sps, b64pps);
+}
+
+// Send one NAL (start-code stripped, including its 1-byte header) as RTP,
+// fragmenting with FU-A when larger than the payload limit.
+void ESPVideoCamera::rtp_send_nal_(const uint8_t *nal, size_t len, uint32_t ts, bool marker) {
+  if (this->rtp_fd_ < 0 || len == 0)
+    return;
+  struct sockaddr_in dst;
+  memset(&dst, 0, sizeof(dst));
+  dst.sin_family = AF_INET;
+  dst.sin_addr.s_addr = this->rtp_client_ip_;
+  dst.sin_port = htons(this->rtp_client_port_);
+
+  static const size_t MAX_PAYLOAD = 1400;
+  uint8_t pkt[1460];
+  if (len <= MAX_PAYLOAD) {
+    pkt[0] = 0x80;
+    pkt[1] = (uint8_t) (96 | (marker ? 0x80 : 0));
+    pkt[2] = this->rtp_seq_ >> 8;
+    pkt[3] = this->rtp_seq_ & 0xFF;
+    pkt[4] = ts >> 24;
+    pkt[5] = ts >> 16;
+    pkt[6] = ts >> 8;
+    pkt[7] = ts;
+    pkt[8] = this->rtp_ssrc_ >> 24;
+    pkt[9] = this->rtp_ssrc_ >> 16;
+    pkt[10] = this->rtp_ssrc_ >> 8;
+    pkt[11] = this->rtp_ssrc_;
+    memcpy(pkt + 12, nal, len);
+    sendto(this->rtp_fd_, pkt, 12 + len, 0, (struct sockaddr *) &dst, sizeof(dst));
+    this->rtp_seq_++;
+    return;
+  }
+  // FU-A
+  uint8_t nri = nal[0] & 0x60;
+  uint8_t type = nal[0] & 0x1F;
+  const uint8_t *p = nal + 1;
+  size_t rem = len - 1;
+  bool first = true;
+  while (rem > 0) {
+    size_t frag = rem > (MAX_PAYLOAD - 2) ? (MAX_PAYLOAD - 2) : rem;
+    bool last = (frag == rem);
+    pkt[0] = 0x80;
+    pkt[1] = (uint8_t) (96 | ((marker && last) ? 0x80 : 0));
+    pkt[2] = this->rtp_seq_ >> 8;
+    pkt[3] = this->rtp_seq_ & 0xFF;
+    pkt[4] = ts >> 24;
+    pkt[5] = ts >> 16;
+    pkt[6] = ts >> 8;
+    pkt[7] = ts;
+    pkt[8] = this->rtp_ssrc_ >> 24;
+    pkt[9] = this->rtp_ssrc_ >> 16;
+    pkt[10] = this->rtp_ssrc_ >> 8;
+    pkt[11] = this->rtp_ssrc_;
+    pkt[12] = (uint8_t) (nri | 28);                                       // FU indicator: F=0, NRI, type=28
+    pkt[13] = (uint8_t) ((first ? 0x80 : 0) | (last ? 0x40 : 0) | type);  // FU header
+    memcpy(pkt + 14, p, frag);
+    sendto(this->rtp_fd_, pkt, 14 + frag, 0, (struct sockaddr *) &dst, sizeof(dst));
+    this->rtp_seq_++;
+    p += frag;
+    rem -= frag;
+    first = false;
+  }
+}
+
+void ESPVideoCamera::rtp_send_access_unit_(const uint8_t *au, size_t au_len, uint32_t ts) {
+  // Collect NAL boundaries so the marker bit lands on the final NAL.
+  struct {
+    const uint8_t *p;
+    size_t n;
+  } nals[48];
+  int cnt = 0;
+  size_t pos = next_start_code_(au, au_len, 0);
+  while (pos < au_len && cnt < 48) {
+    size_t s = pos + 3;
+    size_t nxt = next_start_code_(au, au_len, s);
+    size_t e = nxt;
+    if (e > s && e < au_len && au[e - 1] == 0)
+      e--;
+    if (e > s) {
+      nals[cnt].p = au + s;
+      nals[cnt].n = e - s;
+      cnt++;
+    }
+    pos = nxt;
+  }
+  for (int k = 0; k < cnt; k++)
+    this->rtp_send_nal_(nals[k].p, nals[k].n, ts, k == cnt - 1);
+}
+
+void ESPVideoCamera::rtsp_stream_task_(void *arg) {
+  auto *self = (ESPVideoCamera *) arg;
+  bool started = false;
+  while (true) {
+    if (!self->rtsp_playing_) {
+      if (started) {
+        self->stop_capture_();
+        started = false;
+      }
+      vTaskDelay(pdMS_TO_TICKS(50));
+      continue;
+    }
+    if (!started) {
+      if (!self->start_jpeg_pipeline_()) {
+        vTaskDelay(pdMS_TO_TICKS(200));
+        continue;
+      }
+      if (self->rtp_fd_ < 0)
+        self->rtp_fd_ = socket(AF_INET, SOCK_DGRAM, 0);
+      started = true;
+      ESP_LOGI(TAG, "RTSP: streaming started -> %u.%u.%u.%u:%u",
+               (unsigned) (self->rtp_client_ip_) & 0xFF, (unsigned) (self->rtp_client_ip_ >> 8) & 0xFF,
+               (unsigned) (self->rtp_client_ip_ >> 16) & 0xFF, (unsigned) (self->rtp_client_ip_ >> 24) & 0xFF,
+               self->rtp_client_port_);
+    }
+    const uint8_t *nal;
+    size_t len;
+    if (self->capture_h264_(&nal, &len)) {
+      uint32_t ts = (uint32_t) ((esp_timer_get_time() * 9) / 100);  // us -> 90 kHz
+      self->rtp_send_access_unit_(nal, len, ts);
+    } else {
+      vTaskDelay(pdMS_TO_TICKS(5));
+    }
+  }
+}
+
+void ESPVideoCamera::handle_rtsp_client_(int fd) {
+  char req[1280];
+  char resp[1400];
+  while (true) {
+    int n = recv(fd, req, sizeof(req) - 1, 0);
+    if (n <= 0)
+      break;
+    req[n] = 0;
+    int cseq = 0;
+    const char *cs = strstr(req, "CSeq:");
+    if (cs == nullptr)
+      cs = strstr(req, "Cseq:");
+    if (cs != nullptr)
+      cseq = atoi(cs + 5);
+
+    if (strncmp(req, "OPTIONS", 7) == 0) {
+      snprintf(resp, sizeof(resp),
+               "RTSP/1.0 200 OK\r\nCSeq: %d\r\nPublic: OPTIONS, DESCRIBE, SETUP, PLAY, TEARDOWN\r\n\r\n", cseq);
+      send(fd, resp, strlen(resp), 0);
+    } else if (strncmp(req, "DESCRIBE", 8) == 0) {
+      if (!this->ensure_params_()) {
+        snprintf(resp, sizeof(resp), "RTSP/1.0 500 Internal Server Error\r\nCSeq: %d\r\n\r\n", cseq);
+        send(fd, resp, strlen(resp), 0);
+        continue;
+      }
+      struct sockaddr_in sa;
+      socklen_t sl = sizeof(sa);
+      getsockname(fd, (struct sockaddr *) &sa, &sl);
+      char sdp[800];
+      this->build_sdp_(sdp, sizeof(sdp), ntohl(sa.sin_addr.s_addr));
+      snprintf(resp, sizeof(resp),
+               "RTSP/1.0 200 OK\r\nCSeq: %d\r\nContent-Type: application/sdp\r\nContent-Length: %u\r\n\r\n%s",
+               cseq, (unsigned) strlen(sdp), sdp);
+      send(fd, resp, strlen(resp), 0);
+    } else if (strncmp(req, "SETUP", 5) == 0) {
+      uint16_t cport = 0;
+      const char *t = strstr(req, "client_port=");
+      if (t != nullptr)
+        cport = (uint16_t) atoi(t + 12);
+      this->rtp_client_port_ = cport;
+      struct sockaddr_in pa;
+      socklen_t pl = sizeof(pa);
+      getpeername(fd, (struct sockaddr *) &pa, &pl);
+      this->rtp_client_ip_ = pa.sin_addr.s_addr;
+      this->rtp_seq_ = 0;
+      snprintf(resp, sizeof(resp),
+               "RTSP/1.0 200 OK\r\nCSeq: %d\r\n"
+               "Transport: RTP/AVP;unicast;client_port=%u-%u;server_port=6970-6971\r\n"
+               "Session: %08X\r\n\r\n",
+               cseq, cport, cport + 1, (unsigned) this->rtsp_session_id_);
+      send(fd, resp, strlen(resp), 0);
+    } else if (strncmp(req, "PLAY", 4) == 0) {
+      snprintf(resp, sizeof(resp),
+               "RTSP/1.0 200 OK\r\nCSeq: %d\r\nSession: %08X\r\nRTP-Info: url=trackID=0;seq=%u\r\n\r\n", cseq,
+               (unsigned) this->rtsp_session_id_, (unsigned) this->rtp_seq_);
+      send(fd, resp, strlen(resp), 0);
+      this->rtsp_playing_ = true;
+    } else if (strncmp(req, "TEARDOWN", 8) == 0) {
+      snprintf(resp, sizeof(resp), "RTSP/1.0 200 OK\r\nCSeq: %d\r\n\r\n", cseq);
+      send(fd, resp, strlen(resp), 0);
+      break;
+    } else {
+      snprintf(resp, sizeof(resp), "RTSP/1.0 501 Not Implemented\r\nCSeq: %d\r\n\r\n", cseq);
+      send(fd, resp, strlen(resp), 0);
+    }
+  }
+  this->rtsp_playing_ = false;
+}
+
+void ESPVideoCamera::rtsp_server_task_(void *arg) {
+  auto *self = (ESPVideoCamera *) arg;
+  // The network (lwIP/tcpip) stack may not be up yet when this task starts
+  // (camera setup runs before WiFi). Retry the listen-socket setup until it
+  // succeeds instead of giving up.
+  int ls = -1;
+  while (true) {
+    ls = socket(AF_INET, SOCK_STREAM, 0);
+    if (ls >= 0) {
+      int yes = 1;
+      setsockopt(ls, SOL_SOCKET, SO_REUSEADDR, &yes, sizeof(yes));
+      struct sockaddr_in addr;
+      memset(&addr, 0, sizeof(addr));
+      addr.sin_family = AF_INET;
+      addr.sin_addr.s_addr = htonl(INADDR_ANY);
+      addr.sin_port = htons(self->rtsp_port_);
+      if (bind(ls, (struct sockaddr *) &addr, sizeof(addr)) == 0 && listen(ls, 1) == 0)
+        break;  // listening
+      close(ls);
+      ls = -1;
+    }
+    vTaskDelay(pdMS_TO_TICKS(1000));  // network not ready yet — retry
+  }
+  self->rtsp_listen_fd_ = ls;
+  ESP_LOGI(TAG, "RTSP server listening on port %u (rtsp://<ip>:%u/cam)", self->rtsp_port_, self->rtsp_port_);
+  while (true) {
+    struct sockaddr_in client;
+    socklen_t clen = sizeof(client);
+    int fd = accept(ls, (struct sockaddr *) &client, &clen);
+    if (fd < 0) {
+      vTaskDelay(pdMS_TO_TICKS(100));
+      continue;
+    }
+    ESP_LOGI(TAG, "RTSP: client connected");
+    self->handle_rtsp_client_(fd);
+    close(fd);
+    ESP_LOGI(TAG, "RTSP: client disconnected");
+  }
+}
+
+void ESPVideoCamera::start_rtsp_server_() {
+  // Generous stacks: the control task runs ensure_params_ (start pipeline +
+  // capture + H.264 encode + NAL parse) and the stream task runs encode + RTP.
+  xTaskCreatePinnedToCore(rtsp_stream_task_, "rtsp_stream", 16384, this, 5, nullptr, 1);
+  xTaskCreatePinnedToCore(rtsp_server_task_, "rtsp_ctrl", 16384, this, 5, nullptr, 1);
 }
 
 }  // namespace esphome::esp_video_camera

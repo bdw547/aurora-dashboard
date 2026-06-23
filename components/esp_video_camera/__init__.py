@@ -33,6 +33,7 @@ ESPVideoCamera = esp_video_camera_ns.class_(
 
 CONF_JPEG_QUALITY = "jpeg_quality"
 CONF_CODEC = "codec"
+CONF_RTSP_PORT = "rtsp_port"
 CONF_MAX_FRAMERATE = "max_framerate"
 CONF_XCLK_PIN = "xclk_pin"
 CONF_XCLK_FREQUENCY = "xclk_frequency"
@@ -87,6 +88,7 @@ CONFIG_SCHEMA = (
             cv.Optional(CONF_RESOLUTION, default="auto"): _validate_resolution,
             cv.Optional(CONF_JPEG_QUALITY, default=10): cv.int_range(min=1, max=63),
             cv.Optional(CONF_CODEC, default="jpeg"): cv.one_of("jpeg", "h264", lower=True),
+            cv.Optional(CONF_RTSP_PORT, default=0): cv.int_range(min=0, max=65535),  # 0 = disabled
             cv.Optional(CONF_MAX_FRAMERATE, default=10): cv.float_range(
                 min=0.1, max=60.0
             ),
@@ -128,6 +130,7 @@ async def to_code(config):
     cg.add(var.set_resolution(config[CONF_RESOLUTION]))
     cg.add(var.set_jpeg_quality(config[CONF_JPEG_QUALITY]))
     cg.add(var.set_codec(config[CONF_CODEC]))
+    cg.add(var.set_rtsp_port(config[CONF_RTSP_PORT]))
     cg.add(var.set_max_framerate(config[CONF_MAX_FRAMERATE]))
 
     # ESP32-P4 hardware H.264 encoder. esp_h264 is already in esp_video's

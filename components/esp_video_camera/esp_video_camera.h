@@ -81,6 +81,7 @@ class ESPVideoCamera : public camera::Camera {
   void set_resolution(const std::string &resolution) { this->resolution_ = resolution; }
   void set_jpeg_quality(int quality) { this->jpeg_quality_ = quality; }
   void set_codec(const std::string &codec) { this->codec_ = codec; }
+  void set_rtsp_port(uint16_t port) { this->rtsp_port_ = port; }
   void set_max_framerate(float fps) {
     this->max_framerate_ = fps;
     this->min_interval_ms_ = (fps > 0.0f) ? (uint32_t) (1000.0f / fps) : 0;
@@ -179,6 +180,39 @@ class ESPVideoCamera : public camera::Camera {
   size_t h264_out_cap_{0};
   uint32_t h264_dims_{0};
   bool ensure_hw_h264_encoder_(uint32_t width, uint32_t height);
+
+  // ---- RTSP/RTP H.264 server (Milestone 2) -------------------------------
+  // A tiny RTSP server + RTP/H.264 (RFC 6184) packetiser, both off the ESPHome
+  // main loop, so go2rtc/VLC can pull a live stream without lagging the panel.
+  // When rtsp_port_ != 0 the RTSP path owns the camera (the ESPHome snapshot
+  // entity is suppressed). Single client at a time; RTP over UDP.
+  uint16_t rtsp_port_{0};
+  bool rtsp_started_{false};
+  int rtsp_listen_fd_{-1};
+  int rtsp_client_fd_{-1};
+  int rtp_fd_{-1};                   // UDP socket used to send RTP
+  volatile bool rtsp_playing_{false};
+  uint32_t rtp_client_ip_{0};        // network byte order
+  uint16_t rtp_client_port_{0};      // host order (client RTP port from SETUP)
+  uint16_t rtp_seq_{0};
+  uint32_t rtp_ssrc_{0x4155524F};    // 'AURO'
+  uint32_t rtsp_session_id_{0x4155524F};
+  // SPS/PPS captured once for the SDP (sprop-parameter-sets).
+  uint8_t sps_[96];
+  size_t sps_len_{0};
+  uint8_t pps_[32];
+  size_t pps_len_{0};
+  bool params_ready_{false};
+
+  void start_rtsp_server_();
+  static void rtsp_server_task_(void *arg);
+  static void rtsp_stream_task_(void *arg);
+  void handle_rtsp_client_(int fd);
+  bool ensure_params_();             // capture one keyframe -> sps_/pps_
+  bool capture_h264_(const uint8_t **nal, size_t *len);  // one encoded frame (Annex-B)
+  void rtp_send_access_unit_(const uint8_t *annexb, size_t len, uint32_t ts);
+  void rtp_send_nal_(const uint8_t *nal, size_t len, uint32_t ts, bool marker);
+  void build_sdp_(char *out, size_t out_size, uint32_t server_ip);
 };
 
 }  // namespace esphome::esp_video_camera

@@ -220,7 +220,8 @@ esp_video_camera:
   name: "Aurora Camera"
   i2c_id: bus_a
   device: jpeg
-  codec: h264        # MILESTONE 1: HW H.264 encode proof (esp_h264 direct)
+  codec: jpeg        # stabilized: working HW-JPEG snapshots (RTSP boot-crash under debug)
+  rtsp_port: 0       # RTSP server disabled (bisect: does the device boot without it?)
   resolution: 1288x728
   jpeg_quality: 60   # used directly as esp_driver_jpeg quality (1-100); schema caps at 63
   max_framerate: 10
