@@ -397,7 +397,34 @@ void ESPVideoCamera::loop_jpeg_pipeline_() {
   }
 
   if (cap_buf.index < (uint32_t) this->num_capture_buffers_ && cap_buf.bytesused > 0 &&
-      this->hw_jpeg_enc_ != nullptr) {
+      this->hw_h264_enc_ != nullptr) {
+    // H.264 path (Milestone 1 proof): encode the YUV420 frame with the HW
+    // H.264 encoder via esp_h264 directly. Copy the frame out of the
+    // (re-queueable) V4L2 buffer into our aligned input buffer first.
+    size_t copy_len = cap_buf.bytesused;
+    if (copy_len > this->h264_in_cap_)
+      copy_len = this->h264_in_cap_;
+    memcpy(this->h264_in_buf_, this->capture_buffers_[cap_buf.index].start, copy_len);
+
+    esp_h264_enc_in_frame_t in_frame = {};
+    in_frame.raw_data.buffer = this->h264_in_buf_;
+    in_frame.raw_data.len = copy_len;
+    esp_h264_enc_out_frame_t out_frame = {};
+    out_frame.raw_data.buffer = this->h264_out_buf_;
+    out_frame.raw_data.len = this->h264_out_cap_;
+
+    esp_h264_err_t e = esp_h264_enc_process(this->hw_h264_enc_, &in_frame, &out_frame);
+    if (e == ESP_H264_ERR_OK && out_frame.length > 0) {
+      static uint32_t fn = 0;
+      if ((fn++ % 15) == 0)
+        ESP_LOGI(TAG, "H264 frame #%u: %u bytes (in %u)", (unsigned) fn, (unsigned) out_frame.length,
+                 (unsigned) copy_len);
+      this->deliver_frame_(this->h264_out_buf_, out_frame.length);
+    } else {
+      ESP_LOGW(TAG, "esp_h264_enc_process failed: %d (out=%u)", (int) e, (unsigned) out_frame.length);
+    }
+  } else if (cap_buf.index < (uint32_t) this->num_capture_buffers_ && cap_buf.bytesused > 0 &&
+             this->hw_jpeg_enc_ != nullptr) {
     // Encode the RGB565 frame with the JPEG hardware via esp_driver_jpeg.
     // jpeg_encoder_process needs DMA-aligned in/out buffers, so copy the frame
     // out of the (re-queueable) V4L2 capture buffer into our aligned input buf.
@@ -562,13 +589,15 @@ bool ESPVideoCamera::start_direct_capture_() {
 }
 
 bool ESPVideoCamera::start_jpeg_pipeline_() {
-  // Stage 1: sensor/ISP (MIPI-CSI) capture device producing RGB565 frames.
+  bool h264 = (this->codec_ == "h264");
+  // Stage 1: sensor/ISP (MIPI-CSI) capture device. JPEG path captures RGB565;
+  // H.264 path captures YUV420 (the HW H.264 encoder's native input).
   this->capture_fd_ = open(ESP_VIDEO_MIPI_CSI_DEVICE_NAME, O_RDWR | O_NONBLOCK);
   if (this->capture_fd_ < 0) {
     ESP_LOGE(TAG, "open(%s) failed: %s", ESP_VIDEO_MIPI_CSI_DEVICE_NAME, strerror(errno));
     return false;
   }
-  if (!this->configure_capture_format_(V4L2_PIX_FMT_RGB565))
+  if (!this->configure_capture_format_(h264 ? V4L2_PIX_FMT_YUV420 : V4L2_PIX_FMT_RGB565))
     return false;
   if (!this->setup_capture_buffers_())
     return false;
@@ -578,12 +607,17 @@ bool ESPVideoCamera::start_jpeg_pipeline_() {
     return false;
   }
 
-  // Stage 2: direct esp_driver_jpeg HW encoder. esp_video 2.2.0's JPEG M2M
-  // V4L2 device faults the chip ("instruction address misaligned") on every
-  // frame, so we drive the JPEG hardware ourselves and encode the RGB565 frame
-  // captured above. The CSI capture (stage 1) and this encoder are independent.
-  if (!this->ensure_hw_jpeg_encoder_(this->capture_width_, this->capture_height_))
-    return false;
+  // Stage 2: direct HW encoder. esp_video 2.2.0's M2M V4L2 encode devices fault
+  // the chip ("instruction address misaligned"), so we drive the JPEG / H.264
+  // hardware ourselves and encode the frame captured above. Capture (stage 1)
+  // and the encoder are independent.
+  if (h264) {
+    if (!this->ensure_hw_h264_encoder_(this->capture_width_, this->capture_height_))
+      return false;
+  } else {
+    if (!this->ensure_hw_jpeg_encoder_(this->capture_width_, this->capture_height_))
+      return false;
+  }
   return true;
 }
 
@@ -629,6 +663,66 @@ bool ESPVideoCamera::ensure_hw_jpeg_encoder_(uint32_t width, uint32_t height) {
     }
   }
   this->enc_dims_ = dims;
+  return true;
+}
+
+bool ESPVideoCamera::ensure_hw_h264_encoder_(uint32_t width, uint32_t height) {
+  uint32_t dims = (width << 16) | (height & 0xFFFF);
+  if (this->hw_h264_enc_ != nullptr && this->h264_dims_ == dims)
+    return true;
+
+  if (this->hw_h264_enc_ == nullptr) {
+    int fps = (int) this->max_framerate_;
+    if (fps < 1)
+      fps = 1;
+    esp_h264_enc_cfg_hw_t cfg = {};
+    cfg.pic_type = ESP_H264_RAW_FMT_O_UYY_E_VYY;  // YUV420 from the ISP
+    cfg.gop = (uint8_t) fps;                       // ~1 keyframe / second
+    cfg.fps = (uint8_t) fps;
+    cfg.res.width = width;
+    cfg.res.height = height;
+    cfg.rc.bitrate = (width >= 1280) ? 2000000 : 1000000;
+    cfg.rc.qp_min = 25;
+    cfg.rc.qp_max = 45;
+    esp_h264_err_t e = esp_h264_enc_hw_new(&cfg, &this->hw_h264_enc_);
+    if (e != ESP_H264_ERR_OK) {
+      ESP_LOGE(TAG, "esp_h264_enc_hw_new failed: %d (res %ux%u)", (int) e, (unsigned) width, (unsigned) height);
+      this->hw_h264_enc_ = nullptr;
+      return false;
+    }
+    e = esp_h264_enc_open(this->hw_h264_enc_);
+    if (e != ESP_H264_ERR_OK) {
+      ESP_LOGE(TAG, "esp_h264_enc_open failed: %d", (int) e);
+      esp_h264_enc_del(this->hw_h264_enc_);
+      this->hw_h264_enc_ = nullptr;
+      return false;
+    }
+  }
+
+  size_t in_need = (size_t) width * height * 3 / 2;  // YUV420
+  size_t out_need = (size_t) width * height;          // generous for an H.264 NAL
+  if (this->h264_in_buf_ == nullptr || this->h264_in_cap_ < in_need) {
+    if (this->h264_in_buf_ != nullptr)
+      heap_caps_free(this->h264_in_buf_);
+    this->h264_in_buf_ = (uint8_t *) heap_caps_aligned_alloc(128, in_need, MALLOC_CAP_SPIRAM | MALLOC_CAP_8BIT);
+    if (this->h264_in_buf_ == nullptr) {
+      ESP_LOGE(TAG, "h264 input alloc (%u) failed", (unsigned) in_need);
+      return false;
+    }
+    this->h264_in_cap_ = in_need;
+  }
+  if (this->h264_out_buf_ == nullptr || this->h264_out_cap_ < out_need) {
+    if (this->h264_out_buf_ != nullptr)
+      heap_caps_free(this->h264_out_buf_);
+    this->h264_out_buf_ = (uint8_t *) heap_caps_aligned_alloc(128, out_need, MALLOC_CAP_SPIRAM | MALLOC_CAP_8BIT);
+    if (this->h264_out_buf_ == nullptr) {
+      ESP_LOGE(TAG, "h264 output alloc (%u) failed", (unsigned) out_need);
+      return false;
+    }
+    this->h264_out_cap_ = out_need;
+  }
+  this->h264_dims_ = dims;
+  ESP_LOGI(TAG, "H.264 HW encoder ready %ux%u", (unsigned) width, (unsigned) height);
   return true;
 }
 

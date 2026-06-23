@@ -10,6 +10,8 @@
 
 #include "driver/gpio.h"
 #include "driver/jpeg_encode.h"
+#include "esp_h264_enc_single.h"
+#include "esp_h264_enc_single_hw.h"
 
 #include <memory>
 #include <string>
@@ -78,6 +80,7 @@ class ESPVideoCamera : public camera::Camera {
   void set_device(const std::string &device) { this->device_ = device; }
   void set_resolution(const std::string &resolution) { this->resolution_ = resolution; }
   void set_jpeg_quality(int quality) { this->jpeg_quality_ = quality; }
+  void set_codec(const std::string &codec) { this->codec_ = codec; }
   void set_max_framerate(float fps) {
     this->max_framerate_ = fps;
     this->min_interval_ms_ = (fps > 0.0f) ? (uint32_t) (1000.0f / fps) : 0;
@@ -164,6 +167,18 @@ class ESPVideoCamera : public camera::Camera {
   uint8_t *enc_out_buf_{nullptr};  // DMA-aligned JPEG output
   size_t enc_out_cap_{0};
   uint32_t enc_dims_{0};           // (w<<16)|h the buffers/encoder were sized for
+
+  // codec: "jpeg" (HW JPEG snapshots) or "h264" (HW H.264 for live streaming).
+  std::string codec_{"jpeg"};
+  // Direct esp_h264 HW encoder (bypasses esp_video's M2M H.264 device).
+  // Input is YUV420 captured straight from the ISP; output is an H.264 NAL.
+  esp_h264_enc_handle_t hw_h264_enc_{nullptr};
+  uint8_t *h264_in_buf_{nullptr};   // DMA-aligned YUV420 input (w*h*3/2)
+  size_t h264_in_cap_{0};
+  uint8_t *h264_out_buf_{nullptr};  // DMA-aligned H.264 output
+  size_t h264_out_cap_{0};
+  uint32_t h264_dims_{0};
+  bool ensure_hw_h264_encoder_(uint32_t width, uint32_t height);
 };
 
 }  // namespace esphome::esp_video_camera
