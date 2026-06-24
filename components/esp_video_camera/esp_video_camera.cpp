@@ -54,6 +54,29 @@ namespace esphome::esp_video_camera {
 
 static const char *const TAG = "esp_video_camera";
 
+// --- V4L2 EXT-control helpers ------------------------------------------------
+// esp_video implements only the *_EXT_CTRL[S] ioctls (not the legacy
+// VIDIOC_{S,G,QUERY}CTRL), so we mirror the ISP pipeline's own calling pattern:
+// VIDIOC_QUERY_EXT_CTRL to read ranges, VIDIOC_{G,S}_EXT_CTRLS to read/write.
+static bool v4l2_query_ext_(int fd, uint32_t id, struct v4l2_query_ext_ctrl *q) {
+  memset(q, 0, sizeof(*q));
+  q->id = id;
+  return ioctl(fd, VIDIOC_QUERY_EXT_CTRL, q) == 0;
+}
+
+static bool v4l2_set_int_(int fd, uint32_t id, int32_t value) {
+  struct v4l2_ext_control c;
+  struct v4l2_ext_controls cs;
+  memset(&c, 0, sizeof(c));
+  memset(&cs, 0, sizeof(cs));
+  c.id = id;
+  c.value = value;
+  cs.ctrl_class = V4L2_CID_USER_CLASS;
+  cs.count = 1;
+  cs.controls = &c;
+  return ioctl(fd, VIDIOC_S_EXT_CTRLS, &cs) == 0;
+}
+
 // ===========================================================================
 // Pipeline init helpers (run esp_video_init on core 0, optional LEDC XCLK)
 // ===========================================================================
@@ -687,6 +710,12 @@ bool ESPVideoCamera::start_jpeg_pipeline_() {
     return false;
   if (!this->setup_capture_buffers_())
     return false;
+  // Tune the ISP image controls NOW, before STREAMON — while the ISP is
+  // quiescent. Writing these controls on /dev/video20 once the capture is
+  // streaming races the IPA pipeline (which drives the same ISP every frame for
+  // AE/AWB) and wedges the capture. Done here, there are no frames in flight, so
+  // it is safe and the values are in place when streaming begins.
+  this->apply_image_tuning_();
   int ctype = V4L2_BUF_TYPE_VIDEO_CAPTURE;
   if (ioctl(this->capture_fd_, VIDIOC_STREAMON, &ctype) < 0) {
     ESP_LOGE(TAG, "capture STREAMON failed: %s", strerror(errno));
@@ -1091,6 +1120,118 @@ void ESPVideoCamera::rtsp_stream_task_(void *arg) {
       vTaskDelay(pdMS_TO_TICKS(5));
     }
   }
+}
+
+// Set one ISP integer control to a target derived from its queried range. frac
+// picks a point in [min,max]; when use_default is set the control is left at its
+// neutral default instead (used for hue, whose neutral point is the default, not
+// the range midpoint).
+void ESPVideoCamera::tune_ctrl_(int fd, uint32_t id, float frac, bool use_default, const char *name) {
+  struct v4l2_query_ext_ctrl q;
+  if (!v4l2_query_ext_(fd, id, &q)) {
+    ESP_LOGW(TAG, "image tuning: '%s' not supported by ISP", name);
+    return;
+  }
+  if (q.type != V4L2_CTRL_TYPE_INTEGER && q.type != V4L2_CTRL_TYPE_INTEGER64 &&
+      q.type != V4L2_CTRL_TYPE_BOOLEAN && q.type != V4L2_CTRL_TYPE_MENU) {
+    ESP_LOGW(TAG, "image tuning: '%s' is not a scalar control (type=%u) — skipping", name,
+             (unsigned) q.type);
+    return;
+  }
+  int32_t target;
+  if (use_default) {
+    target = (int32_t) q.default_value;
+  } else {
+    double v = (double) q.minimum + frac * ((double) q.maximum - (double) q.minimum);
+    target = (int32_t) (v + (v >= 0 ? 0.5 : -0.5));
+    if (q.step > 1) {  // snap to the control's step grid
+      int64_t steps = (target - (int64_t) q.minimum) / (int64_t) q.step;
+      target = (int32_t) ((int64_t) q.minimum + steps * (int64_t) q.step);
+    }
+  }
+  if (target < (int32_t) q.minimum)
+    target = (int32_t) q.minimum;
+  if (target > (int32_t) q.maximum)
+    target = (int32_t) q.maximum;
+
+  ESP_LOGI(TAG, "image tuning: setting %s (id=0x%08x) -> %d", name, (unsigned) id, target);
+  if (v4l2_set_int_(fd, id, target))
+    ESP_LOGI(TAG, "image tuning: %-10s -> %4d  (range %ld..%ld, default %ld)", name, target,
+             (long) q.minimum, (long) q.maximum, (long) q.default_value);
+  else
+    ESP_LOGW(TAG, "image tuning: failed to set %s -> %d: %s", name, target, strerror(errno));
+}
+
+// Set one ISP control to an absolute value (clamped to its queried range). Used
+// for the white-balance channel gains, where the meaningful value is a specific
+// gain (value = gain x 1000), not a fraction of the range.
+void ESPVideoCamera::tune_ctrl_abs_(int fd, uint32_t id, int32_t value, const char *name) {
+  struct v4l2_query_ext_ctrl q;
+  if (!v4l2_query_ext_(fd, id, &q)) {
+    ESP_LOGW(TAG, "image tuning: '%s' not supported by ISP", name);
+    return;
+  }
+  if (value < (int32_t) q.minimum)
+    value = (int32_t) q.minimum;
+  if (value > (int32_t) q.maximum)
+    value = (int32_t) q.maximum;
+  ESP_LOGI(TAG, "image tuning: setting %s (id=0x%08x) -> %d", name, (unsigned) id, value);
+  if (v4l2_set_int_(fd, id, value))
+    ESP_LOGI(TAG, "image tuning: %-12s -> %4d  (range %ld..%ld)", name, value, (long) q.minimum,
+             (long) q.maximum);
+  else
+    ESP_LOGW(TAG, "image tuning: failed to set %s -> %d: %s", name, value, strerror(errno));
+}
+
+// Auto-configure the camera for a bright, clear, colour-accurate image.
+//
+// The ISP exposes brightness/contrast/saturation/hue as post-processing
+// controls on its own device node (ISP1 = /dev/video20), independent of the CSI
+// capture device. We nudge brightness/contrast/saturation slightly above neutral
+// and keep hue neutral. Exposure + gain are deliberately left on the ISP's
+// automatic loop (AE/AGC) so the image stays correctly exposed as lighting
+// changes — pinning a fixed exposure would make a "clear" image worse — and
+// white balance stays on AWB for colour accuracy. esp_video reference-counts
+// device opens, so opening the ISP node here (while the IPA pipeline also holds
+// it) just bumps the refcount; our close() leaves the pipeline's handle intact.
+void ESPVideoCamera::apply_image_tuning_() {
+  // Run exactly once, ever. The ISP device is shared with the ISP/IPA pipeline
+  // controller, which concurrently issues its own control ioctls; doing our own
+  // ISP I/O more than once (or enumerating controls in a loop) raced that
+  // pipeline and deadlocked the stream task. Set the guard before any I/O so a
+  // second caller bails immediately.
+  if (this->image_tuned_)
+    return;
+  this->image_tuned_ = true;
+
+  int fd = open(ESP_VIDEO_ISP1_DEVICE_NAME, O_RDWR);
+  if (fd < 0) {
+    ESP_LOGW(TAG, "image tuning: open(%s) failed (%s) — leaving ISP defaults",
+             ESP_VIDEO_ISP1_DEVICE_NAME, strerror(errno));
+    return;
+  }
+
+  // Apply the 'bright, clear, colour-accurate' profile in one short pass. Ranges
+  // are confirmed on this ISP: brightness [-128,127] def 0, contrast/saturation
+  // [0,255] def 128, hue [0,360] def 0. Each step logs before it acts so a fault
+  // localises to the last line printed. (No control enumeration here — walking
+  // the control list on the live ISP raced the IPA pipeline and hung.)
+  ESP_LOGI(TAG, "image tuning: applying profile on %s (fd=%d)", ESP_VIDEO_ISP1_DEVICE_NAME, fd);
+  this->tune_ctrl_(fd, V4L2_CID_BRIGHTNESS, 0.60f, false, "brightness");
+  this->tune_ctrl_(fd, V4L2_CID_CONTRAST, 0.56f, false, "contrast");
+  this->tune_ctrl_(fd, V4L2_CID_SATURATION, 0.56f, false, "saturation");
+  this->tune_ctrl_(fd, V4L2_CID_HUE, 0.0f, true, "hue");
+
+  // White balance: the raw Bayer sensor has ~2x green photosites, so without
+  // correction the image goes green (white reads green). The OV02C10's auto-WB
+  // isn't compensating, so set a manual baseline that boosts the red + blue
+  // channel gains (value = gain x 1000; green is the 1.0 reference). Tunable —
+  // raise/lower per the live image. Range on this ISP is 1..3999.
+  this->tune_ctrl_abs_(fd, V4L2_CID_RED_BALANCE, 1500, "red balance");
+  this->tune_ctrl_abs_(fd, V4L2_CID_BLUE_BALANCE, 1600, "blue balance");
+
+  close(fd);
+  ESP_LOGI(TAG, "image tuning: done (gain/exposure left on AE/AGC auto; manual R/B white balance)");
 }
 
 void ESPVideoCamera::handle_rtsp_client_(int fd) {

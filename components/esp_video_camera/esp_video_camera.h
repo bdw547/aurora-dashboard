@@ -218,6 +218,14 @@ class ESPVideoCamera : public camera::Camera {
   void rtp_send_access_unit_(const uint8_t *annexb, size_t len, uint32_t ts);
   void rtp_send_nal_(const uint8_t *nal, size_t len, uint32_t ts, bool marker);
   void build_sdp_(char *out, size_t out_size, uint32_t server_ip);
+
+  // Auto-configure the ISP for a bright, clear, colour-accurate image: set
+  // brightness/contrast/saturation/hue on the ISP device (/dev/video20), leaving
+  // exposure/gain on the AE/AGC auto loop. Runs once after the pipeline opens.
+  bool image_tuned_{false};  // guard: apply the ISP profile exactly once, ever
+  void apply_image_tuning_();
+  void tune_ctrl_(int fd, uint32_t id, float frac, bool use_default, const char *name);
+  void tune_ctrl_abs_(int fd, uint32_t id, int32_t value, const char *name);
 };
 
 }  // namespace esphome::esp_video_camera
