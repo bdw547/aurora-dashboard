@@ -1247,13 +1247,13 @@ void ESPVideoCamera::apply_image_tuning_() {
   // localises to the last line printed. (No control enumeration here — walking
   // the control list on the live ISP raced the IPA pipeline and hung.)
   ESP_LOGI(TAG, "image tuning: applying profile on %s (fd=%d)", ESP_VIDEO_ISP1_DEVICE_NAME, fd);
-  // Eased from +25 / 143: the brightness+contrast boost stretched highlights and
-  // amplified sensor grain on white surfaces, which the H.264 encoder then blocked
-  // on. Keep brightness just above neutral and contrast neutral to stop amplifying
-  // grain; saturation stays up for colour pop, white balance unchanged.
-  this->tune_ctrl_(fd, V4L2_CID_BRIGHTNESS, 0.53f, false, "brightness");  // ~+7
-  this->tune_ctrl_(fd, V4L2_CID_CONTRAST, 0.50f, false, "contrast");      // 128 (neutral)
-  this->tune_ctrl_(fd, V4L2_CID_SATURATION, 0.56f, false, "saturation");
+  // Bright/clear profile (approved): brightness +25, contrast 143, saturation 143.
+  // Easing these to reduce grain backfired - the dimmer image let the AGC raise
+  // gain, which added MORE noise (and looked flat), so the white-surface pixelation
+  // is the raw sensor grain, not this tuning. Real fix is ISP denoise / IPA (#30).
+  this->tune_ctrl_(fd, V4L2_CID_BRIGHTNESS, 0.60f, false, "brightness");  // +25
+  this->tune_ctrl_(fd, V4L2_CID_CONTRAST, 0.56f, false, "contrast");      // 143
+  this->tune_ctrl_(fd, V4L2_CID_SATURATION, 0.56f, false, "saturation");  // 143
   this->tune_ctrl_(fd, V4L2_CID_HUE, 0.0f, true, "hue");
 
   // White balance: the raw Bayer sensor has ~2x green photosites, so without

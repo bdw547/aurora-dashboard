@@ -165,7 +165,7 @@
                 {
                     "gain": 1,
                     "param": {
-                        "level": 3,
+                        "level": 5,
                         "matrix":
                         [
                             2, 4, 2,
@@ -177,7 +177,7 @@
                 {
                     "gain": 4,
                     "param": {
-                        "level": 3,
+                        "level": 5,
                         "matrix":
                         [
                             1, 3, 1,
@@ -189,7 +189,7 @@
                 {
                     "gain": 8,
                     "param": {
-                        "level": 4,
+                        "level": 6,
                         "matrix":
                         [
                             1, 3, 1,
@@ -289,8 +289,8 @@
                     "param": {
                         "h_thresh": 25,
                         "l_thresh": 5,
-                        "h_coeff": 1.925,
-                        "m_coeff": 1.825,
+                        "h_coeff": 1.4,
+                        "m_coeff": 1.3,
                         "matrix":
                         [
                             1, 2, 1,

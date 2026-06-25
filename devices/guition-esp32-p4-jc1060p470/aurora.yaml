@@ -185,6 +185,13 @@ ota:
             id: ota_status
             text: !lambda 'char b[40]; snprintf(b, sizeof(b), "Update failed (error %d)", (int) x); return std::string(b);'
 
+# Shorten the OTA boot-confirm window (default 60s -> 10s). Freshly-flashed images
+# kept rolling back because an intermittent early-boot reset hit before the 60s
+# "mark valid" point; confirming at 10s lands the OTA before that, while still
+# catching a genuine boot crash (which happens in the first few seconds).
+safe_mode:
+  boot_is_good_after: 10s
+
 logger:
   level: INFO
 
