@@ -705,6 +705,11 @@ pre{background:#06070a;border:1px solid var(--hair);border-radius:10px;padding:1
 .hcell{background:var(--card);border:1px solid var(--hair);border-radius:14px;padding:14px;min-height:96px;cursor:grab;transition:.12s}
 .hcell:hover{border-color:var(--teal)}.hcell.drag{opacity:.4}.hcell.over{border-color:var(--purple);background:#1a1d28}
 .hcell .n{font-weight:600}.hcell .h{color:var(--t2);font-size:12px;margin-top:4px}.hcell .d{color:var(--t2);font-size:11px;margin-top:8px}
+.room{border:1px solid var(--hair);border-radius:12px;padding:12px 14px;margin:10px 0;background:#10121a}
+.room .rh{display:grid;grid-template-columns:1fr 120px 150px 90px;gap:8px;align-items:end}
+.ent{display:grid;grid-template-columns:110px 1fr 1fr 56px;gap:8px;align-items:center;margin-top:6px}
+.x{background:#2a1416;color:#ff9b9b;border:1px solid #50232a}
+.sm{font-size:11px;color:var(--t2);margin:6px 0 2px}
 </style></head><body>
 <header><h1><span>Aurora</span> Configurator</h1><div class=sub>Point the panel at your Home Assistant — no code.</div></header>
 <main>
@@ -718,9 +723,14 @@ pre{background:#06070a;border:1px solid var(--hair);border-radius:10px;padding:1
 <div class=card><h2>3 · Home screen layout <span class=muted>(drag the cards to rearrange)</span></h2>
 <div class=preview><div class=np>Now&nbsp;Playing<br><small>(fixed)</small></div><div id=homegrid class=hgrid></div></div></div>
 
-<div class=card id=flashcard><h2>4 · Save &amp; flash</h2>
-<div class=row><div><label>Panel IP address</label><input id=device placeholder="10.0.0.174"></div><div></div></div>
-<div style="margin-top:12px" class=bar><button class=ghost onclick=save()>Save bindings</button><button onclick=flash()>Save &amp; flash panel</button><span id=fmsg class=muted></span></div>
+<div class=card id=roomcard style=display:none><h2>4 · Rooms <span class=muted>(add / rename / assign entities — max 6 rooms, 6 entities each)</span></h2>
+<div id=roomlist></div>
+<div style="margin-top:10px" class=bar><button class=ghost onclick=addRoom()>+ Add room</button><button onclick=saveRooms()>Save rooms</button><span id=rmsg class=muted></span></div>
+<div class=muted style="margin-top:6px;font-size:12px">Saving regenerates the firmware source. Then click “Save &amp; flash panel” below to push the changes to the device.</div></div>
+
+<div class=card id=flashcard><h2>5 · Save &amp; flash</h2>
+<div class=row><div><label>Panel IP address <span class=muted>(also the device's web page)</span></label><input id=device placeholder="10.0.0.174"></div><div></div></div>
+<div style="margin-top:12px" class=bar><button class=ghost onclick=save()>Save bindings</button><button onclick=flash()>Save &amp; flash panel</button><button class=ghost onclick=opendev()>Open device page ↗</button><span id=fmsg class=muted></span></div>
 <pre id=flog style=display:none></pre></div>
 </main>
 <script>
@@ -739,7 +749,7 @@ async function saveHome(){await j('/api/home',{method:'POST',headers:{'Content-T
 async function connect(){
  const url=url_.value.trim(),token=token_.value.trim();cmsg.textContent='Loading…';cmsg.className='muted';
  try{ENTS=await j('/api/entities',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({url,token})});
-  cmsg.textContent='Loaded '+ENTS.length+' entities ✓';cmsg.className='ok';render();slotcard.style.display='';flashcard.style.display=''}
+  cmsg.textContent='Loaded '+ENTS.length+' entities ✓';cmsg.className='ok';render();slotcard.style.display='';flashcard.style.display='';await loadRooms();renderRooms();roomcard.style.display=''}
  catch(e){cmsg.textContent='Failed: '+e.message+' (check URL/token & that this PC can reach HA)';cmsg.className='err'}}
 function render(){let g='',h='';for(const s of SLOTS){if(s.group!=g){g=s.group;h+=`<div class=grp>${g}</div>`}
   const opts=ENTS.filter(e=>e.domain==s.domain).map(e=>`<option value="${e.entity_id}" ${e.entity_id==s.value?'selected':''}>${e.name} — ${e.entity_id}</option>`).join('');
@@ -752,6 +762,44 @@ async function flash(){await save();await saveHome();const device=device_.value.
  await j('/api/flash',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({device})});
  const t=setInterval(async()=>{const s=await j('/api/flash-status');flog.textContent=s.log;flog.scrollTop=flog.scrollHeight;
   if(s.done){clearInterval(t);fmsg.textContent=s.ok?'Flashed ✓':'Flash failed — see log';fmsg.className=s.ok?'ok':'err'}},1500)}
+function opendev(){let ip=device_.value.trim();if(!ip){fmsg.textContent='Enter the panel IP first';fmsg.className='err';return}if(!/^https?:\/\//.test(ip))ip='http://'+ip;window.open(ip,'_blank')}
+// ---- Rooms wizard ----
+let ROOMS=[];const RTYPES=['light','fan','switch'];
+function esc(s){return (s||'').replace(/"/g,'&quot;')}
+function slugify(s){return ((s||'').toLowerCase().replace(/[^a-z0-9_]/g,'_').replace(/^_+/,'')||'room')}
+async function loadRooms(){try{const r=await j('/api/rooms');ROOMS=(r&&r.rooms)||[]}catch(e){ROOMS=[]}}
+function entOpts(type,cur){const list=ENTS.filter(e=>e.domain===type);
+ let o=list.map(e=>`<option value="${e.entity_id}" ${e.entity_id===cur?'selected':''}>${e.name} — ${e.entity_id}</option>`).join('');
+ if(cur&&!list.some(e=>e.entity_id===cur))o=`<option value="${cur}" selected>${cur}</option>`+o;
+ return `<option value="">— select ${type} —</option>`+o}
+function renderRooms(){roomlist.innerHTML=ROOMS.map((r,ri)=>`
+ <div class=room data-ri="${ri}">
+  <div class=rh>
+   <div><div class=sm>Room name</div><input class=r-name value="${esc(r.name)}"></div>
+   <div><div class=sm>id (slug)</div><input class=r-id value="${esc(r.id)}"></div>
+   <div><div class=sm>icon (\\U…)</div><input class=r-icon value="${esc(r.icon)}"></div>
+   <div><div class=sm>&nbsp;</div><button class="ghost x" onclick="removeRoom(${ri})">Remove</button></div>
+  </div>
+  <div class=sm>Entities (${(r.entities||[]).length}/6)</div>
+  ${(r.entities||[]).map((e,ei)=>`<div class=ent data-ri="${ri}" data-ei="${ei}">
+    <select class=e-type onchange="onType(${ri},${ei})">${RTYPES.map(t=>`<option ${t===e.type?'selected':''}>${t}</option>`).join('')}</select>
+    <select class=e-id>${entOpts(e.type||'light',e.entity_id)}</select>
+    <input class=e-label placeholder=Label value="${esc(e.label)}">
+    <button class="ghost x" onclick="removeEntity(${ri},${ei})">✕</button></div>`).join('')}
+  <div style="margin-top:8px"><button class=ghost onclick="addEntity(${ri})" ${(r.entities||[]).length>=6?'disabled':''}>+ Add entity</button></div>
+ </div>`).join('')||'<div class=muted>No rooms yet — add one.</div>'}
+function syncRooms(){ROOMS=[...roomlist.querySelectorAll('.room')].map(rb=>({
+  id:rb.querySelector('.r-id').value.trim(),name:rb.querySelector('.r-name').value.trim(),icon:rb.querySelector('.r-icon').value.trim(),
+  entities:[...rb.querySelectorAll('.ent')].map(eb=>({type:eb.querySelector('.e-type').value,entity_id:eb.querySelector('.e-id').value.trim(),label:eb.querySelector('.e-label').value.trim()}))}))}
+function onType(ri,ei){syncRooms();renderRooms()}
+function addRoom(){syncRooms();if(ROOMS.length>=6){rmsg.textContent='Max 6 rooms (Phase 1)';rmsg.className='err';return}const n='Room '+(ROOMS.length+1);ROOMS.push({id:slugify(n),name:n,icon:'\\U000F04B9',entities:[]});renderRooms()}
+function removeRoom(ri){syncRooms();ROOMS.splice(ri,1);renderRooms()}
+function addEntity(ri){syncRooms();if((ROOMS[ri].entities||[]).length>=6){rmsg.textContent='Max 6 entities per room';rmsg.className='err';return}ROOMS[ri].entities.push({type:'light',entity_id:'',label:''});renderRooms()}
+function removeEntity(ri,ei){syncRooms();ROOMS[ri].entities.splice(ei,1);renderRooms()}
+async function saveRooms(){syncRooms();rmsg.className='muted';rmsg.textContent='Saving…';
+ try{const r=await j('/api/rooms',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({version:1,rooms:ROOMS})});
+  rmsg.textContent='Saved '+r.rooms+' rooms / '+r.entities+' entities ✓ — now Save & flash';rmsg.className='ok'}
+ catch(e){rmsg.textContent='Error: '+e.message;rmsg.className='err'}}
 window.url_=document.getElementById('url');window.token_=document.getElementById('token');window.device_=document.getElementById('device');
 boot()
 </script></body></html>"""
