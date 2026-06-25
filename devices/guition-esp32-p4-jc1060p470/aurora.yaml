@@ -50,6 +50,9 @@ substitutions:
   ent_person: "person.ben"
   ent_weather: "weather.forecast_home"
   ent_weather_fc: "sensor.aurora_weather_daily"
+  # Photo screensaver (Phase 1): cycles $ha_base$ss_base/1.jpg .. N.jpg (drop photos in HA's www/screensaver/)
+  ss_base: "/local/screensaver"
+  ss_count: "12"
   ent_count_living: "sensor.aurora_room_living"
   ent_count_kitchen: "sensor.aurora_room_kitchen"
   ent_count_office: "sensor.aurora_room_office"
@@ -357,6 +360,16 @@ online_image:
     on_error:
       - logger.log: "CAM: download error"
       - lvgl.widget.update: { id: spin_cam, hidden: true }
+  - id: ss_image
+    url: "http://127.0.0.1/none.jpg"
+    format: JPEG
+    type: RGB565
+    resize: 1024x600
+    update_interval: never
+    on_download_finished:
+      - lvgl.image.update: { id: ss_photo, src: ss_image }
+    on_error:
+      - logger.log: "SS: photo download error"
   - id: cam_big
     url: "http://127.0.0.1/none.jpg"
     format: JPEG
@@ -657,6 +670,7 @@ sensor:
     on_value:
       then:
         - lvgl.label.update: { id: lbl_wx_temp, text: !lambda 'char b[12]; snprintf(b,sizeof(b),"%.0f°",x); return std::string(b);' }
+        - lvgl.label.update: { id: lbl_ss_temp, text: !lambda 'char b[12]; snprintf(b,sizeof(b),"%.0f°",x); return std::string(b);' }
   - platform: homeassistant
     id: ha_wx_humidity
     entity_id: $ent_weather
@@ -1730,6 +1744,14 @@ globals:
     type: bool
     restore_value: false
     initial_value: 'false'
+  - id: ss_idx
+    type: int
+    restore_value: false
+    initial_value: '0'
+  - id: g_ss_showing
+    type: bool
+    restore_value: false
+    initial_value: 'false'
   - id: g_room
     type: std::string
     restore_value: true
@@ -1959,6 +1981,14 @@ script:
       - lvgl.label.update: { id: ic_living_fan_living_room_pendant, text_color: 0xFFFFFF }
   # Load ONE front-door snapshot shortly after the Security tab opens, so the
   # page renders/stays responsive first and the blocking fetch happens after.
+  - id: ss_next
+    mode: restart
+    then:
+      - lambda: 'id(ss_idx) = (id(ss_idx) % $ss_count) + 1;'
+      - online_image.set_url:
+          id: ss_image
+          url: !lambda 'return std::string("$ha_base") + "$ss_base/" + std::to_string(id(ss_idx)) + ".jpg";'
+      - component.update: ss_image
   - id: cam_snap_once
     mode: restart
     then:
@@ -2139,6 +2169,13 @@ interval:
           then:
             - lambda: 'id(np_pos) += 1;'
             - script.execute: np_update
+  - interval: 20s
+    then:
+      - if:
+          condition:
+            lambda: 'return id(g_ss_showing);'
+          then:
+            - script.execute: ss_next
 
 lvgl:
   id: main_lvgl
@@ -5283,9 +5320,27 @@ lvgl:
         - lvgl.widget.update: { id: nav_rail, hidden: true }
         - lvgl.widget.update: { id: lbl_ssid, hidden: true }
         - lvgl.widget.update: { id: lbl_ip, hidden: true }
+        - lambda: 'id(g_ss_showing) = true;'
+        - script.execute: ss_next
+      on_unload:
+        - lambda: 'id(g_ss_showing) = false;'
       widgets:
-        - label: { id: lbl_ss_time, text: "--:--", align: center, y: -24, text_font: f_display, text_color: 0xEEF0F6 }
-        - label: { id: lbl_ss_date, text: "", align: center, y: 48, text_font: f_body, text_color: 0x8A8F9E }
+        - image: { id: ss_photo, src: ss_image, x: 0, y: 0 }
+        - obj:
+            id: ss_scrim
+            align: bottom_mid
+            x: 0
+            y: 0
+            width: 1024
+            height: 184
+            bg_color: 0x000000
+            bg_opa: 50%
+            border_width: 0
+            radius: 0
+            pad_all: 0
+        - label: { id: lbl_ss_time, text: "--:--", align: bottom_left, x: 44, y: -86, text_font: f_display, text_color: 0xFFFFFF }
+        - label: { id: lbl_ss_date, text: "", align: bottom_left, x: 48, y: -36, text_font: f_body, text_color: 0xC8CCD6 }
+        - label: { id: lbl_ss_temp, text: "", align: bottom_right, x: -44, y: -62, text_font: f_title, text_color: 0xFFFFFF }
     - id: page_settings
       bg_opa: 0
       on_load:
