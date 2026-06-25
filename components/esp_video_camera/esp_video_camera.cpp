@@ -16,6 +16,7 @@
 #include <unistd.h>
 #include <sys/ioctl.h>
 #include <sys/mman.h>
+#include <sys/time.h>
 
 extern "C" {
 #include "esp_video_init.h"
@@ -1239,8 +1240,10 @@ void ESPVideoCamera::handle_rtsp_client_(int fd) {
   char resp[1400];
   while (true) {
     int n = recv(fd, req, sizeof(req) - 1, 0);
+    if (n < 0 && (errno == EAGAIN || errno == EWOULDBLOCK))
+      continue;  // recv timeout: healthy idle control conn during streaming — keep it
     if (n <= 0)
-      break;
+      break;     // clean close or keepalive-detected dead peer — free the accept loop
     req[n] = 0;
     int cseq = 0;
     const char *cs = strstr(req, "CSeq:");
@@ -1319,7 +1322,7 @@ void ESPVideoCamera::rtsp_server_task_(void *arg) {
       addr.sin_family = AF_INET;
       addr.sin_addr.s_addr = htonl(INADDR_ANY);
       addr.sin_port = htons(self->rtsp_port_);
-      if (bind(ls, (struct sockaddr *) &addr, sizeof(addr)) == 0 && listen(ls, 1) == 0)
+      if (bind(ls, (struct sockaddr *) &addr, sizeof(addr)) == 0 && listen(ls, 4) == 0)
         break;  // listening
       close(ls);
       ls = -1;
@@ -1337,6 +1340,19 @@ void ESPVideoCamera::rtsp_server_task_(void *arg) {
       continue;
     }
     ESP_LOGI(TAG, "RTSP: client connected");
+    // Keep the single-threaded server from getting wedged on a stale/dead peer
+    // (e.g. go2rtc reconnecting): bound the blocking recv and let TCP keepalive
+    // detect a dead control connection (~25s) so the accept loop recovers.
+    {
+      int ka = 1, idle = 10, intvl = 5, cnt = 3;
+      setsockopt(fd, SOL_SOCKET, SO_KEEPALIVE, &ka, sizeof(ka));
+      setsockopt(fd, IPPROTO_TCP, TCP_KEEPIDLE, &idle, sizeof(idle));
+      setsockopt(fd, IPPROTO_TCP, TCP_KEEPINTVL, &intvl, sizeof(intvl));
+      setsockopt(fd, IPPROTO_TCP, TCP_KEEPCNT, &cnt, sizeof(cnt));
+      struct timeval rcv_to = {};
+      rcv_to.tv_sec = 60;
+      setsockopt(fd, SOL_SOCKET, SO_RCVTIMEO, &rcv_to, sizeof(rcv_to));
+    }
     self->handle_rtsp_client_(fd);
     close(fd);
     ESP_LOGI(TAG, "RTSP: client disconnected");
