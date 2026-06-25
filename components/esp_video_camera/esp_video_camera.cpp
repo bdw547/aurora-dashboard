@@ -797,9 +797,12 @@ bool ESPVideoCamera::ensure_hw_h264_encoder_(uint32_t width, uint32_t height) {
     cfg.fps = (uint8_t) fps;
     cfg.res.width = width;
     cfg.res.height = height;
-    cfg.rc.bitrate = (width >= 1280) ? 2000000 : 1000000;
-    cfg.rc.qp_min = 25;
-    cfg.rc.qp_max = 45;
+    // Higher bitrate + a tighter QP ceiling so noisy/bright scenes (white
+    // surfaces, where sensor grain + the contrast boost add high-frequency
+    // detail) don't get crushed into blocky macroblocks by the rate control.
+    cfg.rc.bitrate = (width >= 1280) ? 4000000 : 2000000;
+    cfg.rc.qp_min = 20;
+    cfg.rc.qp_max = 40;
     esp_h264_err_t e = esp_h264_enc_hw_new(&cfg, &this->hw_h264_enc_);
     if (e != ESP_H264_ERR_OK) {
       ESP_LOGE(TAG, "esp_h264_enc_hw_new failed: %d (res %ux%u)", (int) e, (unsigned) width, (unsigned) height);
