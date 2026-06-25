@@ -230,6 +230,369 @@ def write_home_layout(order):
     return order
 
 
+# ===========================================================================
+# Dynamic rooms (Phase 1) — generate room pages / picker / state sensors from
+# rooms.json into AURORA_ROOM_* marker regions, mirroring the home-grid pattern.
+# ===========================================================================
+ROOMS_JSON = os.path.join(HERE, "rooms.json")
+ROOM_TYPES = {"light", "fan", "switch"}
+ROOM_MAX_ENTITIES = 6                 # column geometry: x=100+140*i, i in 0..5
+ROOM_X0, ROOM_PITCH = 100, 140        # entity-card columns on a room page
+PICK_Y0, PICK_PITCH = 110, 78         # room buttons on the picker
+ROOM_MAX = 6                          # picker rows that fit (y=110+78*5=500<600)
+# (start-marker, end-marker, indent-of-the-end-marker) per generated region.
+ROOM_MARKERS = {
+    "picker":  ("# >>> AURORA_ROOM_PICKER", "# <<< AURORA_ROOM_PICKER", "        "),
+    "pages":   ("# >>> AURORA_ROOM_PAGES",  "# <<< AURORA_ROOM_PAGES",  "    "),
+    "bri":     ("# >>> AURORA_ROOM_STATE_SENSOR", "# <<< AURORA_ROOM_STATE_SENSOR", "  "),
+    "text":    ("# >>> AURORA_ROOM_STATE_TEXT", "# <<< AURORA_ROOM_STATE_TEXT", "  "),
+    "counts":  ("# >>> AURORA_ROOM_COUNTS", "# <<< AURORA_ROOM_COUNTS", "  "),
+}
+TYPE_ICON = {"fan": "\\U000F0210", "switch": "\\U000F0425"}  # power-button glyphs
+
+
+def _fmt(tmpl, **kw):
+    """Token substitution (avoids YAML brace-escaping that str.format needs)."""
+    for k, v in kw.items():
+        tmpl = tmpl.replace("%" + k + "%", str(v))
+    return tmpl
+
+
+def slug(eid):
+    return re.sub(r"[^a-z0-9_]", "_", (eid or "").lower())
+
+
+# ---- templates (consistent room-scoped ids: <S> = <roomid>_<entity-slug>) ----
+PICK_TMPL = """        - button:
+            x: 100
+            y: %Y%
+            width: 772
+            height: 64
+            styles: st_glass
+            widgets:
+              - label: { text: "%ICON%", align: left_mid, x: 8, text_font: f_icon, text_color: 0x2ED5B8 }
+              - label: { text: "%NAME%", align: left_mid, x: 60, text_font: f_title, text_color: 0xEEF0F6 }
+              - label: { id: lbl_roomcount_%ID%, text: "", align: right_mid, x: -16, text_font: f_small, text_color: 0x8A8F9E }
+            on_click: [lvgl.page.show: page_room_%ID%]
+"""
+
+PAGE_HEAD_TMPL = """    - id: page_room_%ID%
+      bg_opa: 0
+      on_load:
+        - lvgl.widget.update: { id: nav_home, bg_color: 0x10121A }
+        - lvgl.widget.update: { id: nav_rooms, bg_color: 0x2ED5B8 }
+        - lvgl.widget.update: { id: nav_lights, bg_color: 0x10121A }
+        - lvgl.widget.update: { id: nav_climate, bg_color: 0x10121A }
+        - lvgl.widget.update: { id: nav_media, bg_color: 0x10121A }
+        - lvgl.widget.update: { id: nav_security, bg_color: 0x10121A }
+        - lvgl.widget.update: { id: nav_network, bg_color: 0x10121A }
+        - lvgl.widget.update: { id: nav_settings, bg_color: 0x10121A }
+      widgets:
+        - image: { src: img_aurora_bg, x: 0, y: 0 }
+        - label: { text: "%NAME%", x: 100, y: 26, text_font: f_title, text_color: 0xEEF0F6 }
+        - button:
+            align: top_right
+            x: -12
+            y: 12
+            width: 104
+            height: 44
+            radius: 8
+            bg_color: 0x1B2230
+            border_width: 2
+            border_color: 0x2ED5B8
+            widgets: [label: { text: "Back", align: center, text_font: f_body, text_color: 0x2ED5B8 }]
+            on_click: [lvgl.page.show: page_rooms]
+"""
+
+CARD_LIGHT = """        - obj:
+            x: %X%
+            y: 80
+            width: 120
+            height: 432
+            bg_opa: 0
+            border_width: 0
+            pad_all: 0
+            scrollable: false
+            widgets:
+              - label: { text: "%L%", x: 0, y: 0, width: 120, text_align: center, text_font: f_body, text_color: 0xEEF0F6 }
+              - label: { id: pct_sld_room_%S%, text: "OFF", x: 0, y: 24, width: 120, text_align: center, text_font: f_body, text_color: 0x8A8F9E }
+              - slider:
+                  id: sld_room_%S%
+                  x: 0
+                  y: 52
+                  width: 120
+                  height: 268
+                  min_value: 0
+                  max_value: 100
+                  value: 0
+                  radius: 24
+                  bg_color: 0x12141C
+                  bg_opa: 100%
+                  border_width: 2
+                  border_color: 0x2A2F3A
+                  indicator:
+                    bg_color: 0xF2C94C
+                    radius: 24
+                  knob:
+                    bg_color: 0xFFFFFF
+                    pad_left: -24
+                    pad_right: -24
+                    pad_top: -56
+                    pad_bottom: -56
+                    radius: 2
+                  on_release:
+                    - if:
+                        condition:
+                          lambda: 'return x > 0;'
+                        then:
+                          - homeassistant.action:
+                              action: light.turn_on
+                              data:
+                                entity_id: %E%
+                                brightness_pct: !lambda 'return std::to_string((int) x);'
+                        else:
+                          - homeassistant.action: { action: light.turn_off, data: { entity_id: %E% } }
+                  on_value:
+                    - lvgl.label.update: { id: pct_sld_room_%S%, text: !lambda 'int v=(int)x; char b[8]; if(v<=0) return std::string("OFF"); snprintf(b,sizeof(b),"%d%%",v); return std::string(b);' }
+              - button:
+                  id: pwr_ic_%S%
+                  align: bottom_mid
+                  y: 0
+                  width: 120
+                  height: 100
+                  radius: 24
+                  bg_color: 0x12141C
+                  border_width: 2
+                  border_color: 0x2A2F3A
+                  widgets: [label: { id: ic_%S%, text: "\\U000F0425", align: center, text_font: f_icon, text_color: 0x8A8F9E }]
+                  on_click: [homeassistant.action: { action: light.toggle, data: { entity_id: %E% } }]
+"""
+
+CARD_TOGGLE = """        - obj:
+            x: %X%
+            y: 80
+            width: 120
+            height: 432
+            bg_opa: 0
+            border_width: 0
+            pad_all: 0
+            scrollable: false
+            widgets:
+              - label: { text: "%L%", x: 0, y: 0, width: 120, text_align: center, text_font: f_body, text_color: 0xEEF0F6 }
+              - label: { id: lbl_st_room_%S%, text: "Off", x: 0, y: 24, width: 120, text_align: center, text_font: f_body, text_color: 0x8A8F9E }
+              - obj:
+                  id: trk_room_%S%
+                  x: 0
+                  y: 52
+                  width: 120
+                  height: 268
+                  radius: 24
+                  bg_color: 0x12141C
+                  border_width: 2
+                  border_color: 0x2A2F3A
+                  clickable: false
+                  scrollable: false
+              - slider:
+                  id: sld_room_%S%
+                  x: 0
+                  y: 96
+                  width: 120
+                  height: 180
+                  min_value: 0
+                  max_value: 100
+                  value: 0
+                  bg_opa: 0%
+                  indicator:
+                    bg_opa: 0%
+                  knob:
+                    bg_color: 0x56C5DD
+                    pad_left: -6
+                    pad_right: -6
+                    pad_top: -16
+                    pad_bottom: -16
+                    radius: 18
+                  on_release:
+                    - if:
+                        condition:
+                          lambda: 'return x >= 50;'
+                        then:
+                          - homeassistant.action: { action: %ACT%.turn_on, data: { entity_id: %E% } }
+                          - lvgl.slider.update: { id: sld_room_%S%, value: 100 }
+                        else:
+                          - homeassistant.action: { action: %ACT%.turn_off, data: { entity_id: %E% } }
+                          - lvgl.slider.update: { id: sld_room_%S%, value: 0 }
+              - button:
+                  id: pwr_ic_%S%
+                  align: bottom_mid
+                  y: 0
+                  width: 120
+                  height: 100
+                  radius: 24
+                  bg_color: 0x12141C
+                  border_width: 2
+                  border_color: 0x2A2F3A
+                  widgets: [label: { id: ic_%S%, text: "%TICON%", align: center, text_font: f_icon, text_color: 0x8A8F9E }]
+                  on_click: [homeassistant.action: { action: %ACT%.toggle, data: { entity_id: %E% } }]
+"""
+
+BRI_SENSOR_TMPL = """  - platform: homeassistant
+    id: ha_roombri_%S%
+    entity_id: %E%
+    attribute: brightness
+    on_value:
+      then:
+        - lvgl.slider.update:
+            id: sld_room_%S%
+            value: !lambda 'return (x == x) ? (int) roundf(x / 2.55f) : 0;'
+        - lvgl.label.update:
+            id: pct_sld_room_%S%
+            text: !lambda 'int v=(x==x)?(int)roundf(x/2.55f):0; char b[8]; if(v<=0) return std::string("OFF"); snprintf(b,sizeof(b),"%d%%",v); return std::string(b);'
+"""
+
+LIGHT_TEXT_TMPL = """  - platform: homeassistant
+    id: ha_roomst_%S%
+    entity_id: %E%
+    on_value:
+      then:
+        - if:
+            condition:
+              lambda: 'return x == std::string("on");'
+            then:
+              - lvgl.widget.update: { id: pwr_ic_%S%, bg_color: 0x2563EB }
+              - lvgl.label.update: { id: ic_%S%, text_color: 0xFFFFFF }
+            else:
+              - lvgl.widget.update: { id: pwr_ic_%S%, bg_color: 0x12141C }
+              - lvgl.label.update: { id: ic_%S%, text_color: 0x8A8F9E }
+"""
+
+TOGGLE_TEXT_TMPL = """  - platform: homeassistant
+    id: ha_roomst_%S%
+    entity_id: %E%
+    on_value:
+      then:
+        - lvgl.slider.update: { id: sld_room_%S%, value: !lambda 'return x == std::string("on") ? 100 : 0;' }
+        - lvgl.label.update: { id: lbl_st_room_%S%, text: !lambda 'return x == std::string("on") ? std::string("On") : std::string("Off");' }
+        - lvgl.widget.update: { id: pwr_ic_%S%, bg_color: !lambda 'return x == std::string("on") ? lv_color_hex(0x2563EB) : lv_color_hex(0x12141C);' }
+        - lvgl.label.update: { id: ic_%S%, text_color: !lambda 'return x == std::string("on") ? lv_color_hex(0xFFFFFF) : lv_color_hex(0x8A8F9E);' }
+"""
+
+COUNT_SENSOR_TMPL = """  - platform: homeassistant
+    id: ha_count_%ID%
+    entity_id: sensor.aurora_room_%ID%
+    on_value:
+      then:
+        - lvgl.label.update: { id: lbl_roomcount_%ID%, text: !lambda 'int v=(int)x; if(v<=0) return std::string("All off"); char b[16]; snprintf(b,sizeof(b),"%d on",v); return std::string(b);' }
+"""
+
+
+def validate_rooms(data):
+    rooms = (data or {}).get("rooms", [])
+    if not isinstance(rooms, list) or not rooms:
+        raise ValueError("at least one room is required")
+    if len(rooms) > ROOM_MAX:
+        raise ValueError(f"Phase 1 supports at most {ROOM_MAX} rooms")
+    seen_ids, seen_widgets = set(), set()
+    for r in rooms:
+        rid = r.get("id", "")
+        if not re.fullmatch(r"[a-z][a-z0-9_]*", rid):
+            raise ValueError(f"room id '{rid}' must be a lowercase slug")
+        if rid in seen_ids:
+            raise ValueError(f"duplicate room id '{rid}'")
+        seen_ids.add(rid)
+        if not r.get("name"):
+            raise ValueError(f"room '{rid}' needs a name")
+        ents = r.get("entities", [])
+        if len(ents) > ROOM_MAX_ENTITIES:
+            raise ValueError(f"room '{rid}' has >{ROOM_MAX_ENTITIES} entities")
+        for e in ents:
+            eid, typ = e.get("entity_id", ""), e.get("type", "")
+            if not re.fullmatch(r"[a-z_]+\.[A-Za-z0-9_]+", eid):
+                raise ValueError(f"bad entity_id '{eid}' in room '{rid}'")
+            if typ not in ROOM_TYPES:
+                raise ValueError(f"unsupported type '{typ}' in room '{rid}' (Phase 1: {sorted(ROOM_TYPES)})")
+            wid = f"{rid}_{slug(eid)}"
+            if wid in seen_widgets:
+                raise ValueError(f"entity {eid} appears twice in room '{rid}'")
+            seen_widgets.add(wid)
+    return rooms
+
+
+def read_rooms():
+    return json.load(open(ROOMS_JSON, encoding="utf-8"))
+
+
+def write_rooms(data):
+    validate_rooms(data)
+    json.dump(data, open(ROOMS_JSON, "w", encoding="utf-8"), indent=2)
+
+
+def gen_picker(rooms):
+    return "".join(_fmt(PICK_TMPL, Y=PICK_Y0 + PICK_PITCH * i,
+                        ICON=r["icon"], NAME=r["name"], ID=r["id"])
+                   for i, r in enumerate(rooms))
+
+
+def _card(e, i):
+    s = f'{e["_rid"]}_{slug(e["entity_id"])}'
+    x = ROOM_X0 + ROOM_PITCH * i
+    if e["type"] == "light":
+        return _fmt(CARD_LIGHT, X=x, S=s, E=e["entity_id"], L=e["label"])
+    return _fmt(CARD_TOGGLE, X=x, S=s, E=e["entity_id"], L=e["label"],
+                ACT=e["type"], TICON=TYPE_ICON[e["type"]])
+
+
+def gen_pages(rooms):
+    out = ""
+    for r in rooms:
+        cards = "".join(_card(dict(e, _rid=r["id"]), i) for i, e in enumerate(r["entities"]))
+        out += _fmt(PAGE_HEAD_TMPL, ID=r["id"], NAME=r["name"]) + cards
+    return out
+
+
+def gen_bri(rooms):
+    out = ""
+    for r in rooms:
+        for e in r["entities"]:
+            if e["type"] == "light":
+                out += _fmt(BRI_SENSOR_TMPL, S=f'{r["id"]}_{slug(e["entity_id"])}', E=e["entity_id"])
+    return out
+
+
+def gen_text(rooms):
+    out = ""
+    for r in rooms:
+        for e in r["entities"]:
+            s = f'{r["id"]}_{slug(e["entity_id"])}'
+            tmpl = LIGHT_TEXT_TMPL if e["type"] == "light" else TOGGLE_TEXT_TMPL
+            out += _fmt(tmpl, S=s, E=e["entity_id"], ACT=e["type"])
+    return out
+
+
+def gen_counts(rooms):
+    return "".join(_fmt(COUNT_SENSOR_TMPL, ID=r["id"]) for r in rooms)
+
+
+def _replace_region(text, key, payload):
+    start, end, indent = ROOM_MARKERS[key]
+    if start not in text or end not in text:
+        raise ValueError(f"marker {start} / {end} missing from aurora.yaml")
+    head, rest = text.split(start, 1)
+    _, tail = rest.split(end, 1)
+    return (head + start + " (generated by the configurator — do not hand-edit)\n"
+            + payload + indent + end + tail)
+
+
+def write_rooms_to_yaml():
+    rooms = validate_rooms(read_rooms())
+    text = open(YAML, encoding="utf-8").read()
+    for key, gen in (("picker", gen_picker), ("pages", gen_pages),
+                     ("bri", gen_bri), ("text", gen_text), ("counts", gen_counts)):
+        text = _replace_region(text, key, gen(rooms))
+    open(YAML, "w", encoding="utf-8").write(text)
+    return {"rooms": len(rooms),
+            "entities": sum(len(r["entities"]) for r in rooms)}
+
+
 def ha_entities(url, token):
     req = urllib.request.Request(
         url.rstrip("/") + "/api/states",
@@ -288,6 +651,8 @@ class H(BaseHTTPRequestHandler):
             return self._send(200, json.dumps(read_slots()))
         if self.path == "/api/home":
             return self._send(200, json.dumps({"order": read_home_layout(), "meta": CARD_META}))
+        if self.path == "/api/rooms":
+            return self._send(200, json.dumps(read_rooms()))
         if self.path == "/api/flash-status":
             return self._send(200, json.dumps(FLASH))
         return self._send(404, "{}")
@@ -301,6 +666,9 @@ class H(BaseHTTPRequestHandler):
                 return self._send(200, json.dumps({"saved": write_bindings(d["bindings"])}))
             if self.path == "/api/home":
                 return self._send(200, json.dumps({"order": write_home_layout(d["order"])}))
+            if self.path == "/api/rooms":
+                write_rooms(d)                       # validate + persist rooms.json
+                return self._send(200, json.dumps({"saved": True, **write_rooms_to_yaml()}))
             if self.path == "/api/flash":
                 if not FLASH["running"]:
                     threading.Thread(target=flash_job, args=(d["device"],), daemon=True).start()

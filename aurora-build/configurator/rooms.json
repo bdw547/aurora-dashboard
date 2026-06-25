@@ -1,0 +1,52 @@
+{
+  "version": 1,
+  "_comment": "Source of truth for Aurora's dynamic rooms. The configurator (serve.py) regenerates the AURORA_ROOM_* marker regions in aurora.yaml from this file, then OTA-flashes. id: lowercase slug, unique. icon: MDI codepoint (\\Uxxxxxxxx escape, rendered by f_icon). entities[].type: light | fan | switch (Phase 1). Max 6 entities per room (column geometry).",
+  "rooms": [
+    {
+      "id": "living",
+      "name": "Living Room",
+      "icon": "\\U000F04B9",
+      "entities": [
+        { "entity_id": "light.living_room_main", "type": "light", "label": "Main Light" },
+        { "entity_id": "fan.living_room_pendant", "type": "fan", "label": "Ceiling Fan" }
+      ]
+    },
+    {
+      "id": "kitchen",
+      "name": "Kitchen",
+      "icon": "\\U000F04B9",
+      "entities": [
+        { "entity_id": "light.kitchen_kitchen", "type": "light", "label": "Main Light" }
+      ]
+    },
+    {
+      "id": "office",
+      "name": "Office",
+      "icon": "\\U000F04B9",
+      "entities": [
+        { "entity_id": "light.office_shelves", "type": "light", "label": "Shelves" },
+        { "entity_id": "light.office_main_lights", "type": "light", "label": "Main Lights" },
+        { "entity_id": "light.office_desk_lamp", "type": "light", "label": "Desk Lamp" },
+        { "entity_id": "fan.office_ceiling_fan", "type": "fan", "label": "Ceiling Fan" }
+      ]
+    },
+    {
+      "id": "master",
+      "name": "Master",
+      "icon": "\\U000F04B9",
+      "entities": [
+        { "entity_id": "light.reading_lamp", "type": "light", "label": "Reading Lamp" },
+        { "entity_id": "light.master_bedroom_ceiling_fan_light", "type": "light", "label": "Ceiling Light" }
+      ]
+    },
+    {
+      "id": "exterior",
+      "name": "Exterior",
+      "icon": "\\U000F04B9",
+      "entities": [
+        { "entity_id": "light.outdoor_patio_back_porch_lights", "type": "light", "label": "Patio Lights" },
+        { "entity_id": "switch.outdoor_patio_putting_green", "type": "switch", "label": "Putting Green" }
+      ]
+    }
+  ]
+}
