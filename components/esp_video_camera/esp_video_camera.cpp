@@ -1005,15 +1005,41 @@ void ESPVideoCamera::build_sdp_(char *out, size_t out_size, uint32_t server_ip) 
 
 // Send one NAL (start-code stripped, including its 1-byte header) as RTP,
 // fragmenting with FU-A when larger than the payload limit.
-void ESPVideoCamera::rtp_send_nal_(const uint8_t *nal, size_t len, uint32_t ts, bool marker) {
-  if (this->rtp_fd_ < 0 || len == 0)
-    return;
-  struct sockaddr_in dst;
-  memset(&dst, 0, sizeof(dst));
-  dst.sin_family = AF_INET;
-  dst.sin_addr.s_addr = this->rtp_client_ip_;
-  dst.sin_port = htons(this->rtp_client_port_);
+// Send one RTP packet over UDP (sendto) or, when the client negotiated
+// RTP/AVP/TCP, interleaved on the RTSP control connection (RFC 2326: '$',
+// channel, 16-bit big-endian length, then the packet).
+void ESPVideoCamera::send_rtp_packet_(const uint8_t *pkt, size_t len) {
+  if (this->rtp_over_tcp_) {
+    if (this->rtsp_client_fd_ < 0)
+      return;
+    uint8_t hdr[4] = {'$', this->rtp_tcp_channel_, (uint8_t) (len >> 8), (uint8_t) (len & 0xFF)};
+    std::lock_guard<std::mutex> lk(this->tcp_send_mutex_);
+    send(this->rtsp_client_fd_, hdr, 4, 0);
+    send(this->rtsp_client_fd_, pkt, len, 0);
+  } else {
+    if (this->rtp_fd_ < 0)
+      return;
+    struct sockaddr_in dst;
+    memset(&dst, 0, sizeof(dst));
+    dst.sin_family = AF_INET;
+    dst.sin_addr.s_addr = this->rtp_client_ip_;
+    dst.sin_port = htons(this->rtp_client_port_);
+    sendto(this->rtp_fd_, pkt, len, 0, (struct sockaddr *) &dst, sizeof(dst));
+  }
+}
 
+// Mutex-guarded send on the control socket (RTSP responses), so they can't
+// interleave with RTP packets when the stream runs over TCP.
+void ESPVideoCamera::locked_send_(const void *buf, size_t len) {
+  if (this->rtsp_client_fd_ < 0)
+    return;
+  std::lock_guard<std::mutex> lk(this->tcp_send_mutex_);
+  send(this->rtsp_client_fd_, buf, len, 0);
+}
+
+void ESPVideoCamera::rtp_send_nal_(const uint8_t *nal, size_t len, uint32_t ts, bool marker) {
+  if (len == 0)
+    return;
   static const size_t MAX_PAYLOAD = 1400;
   uint8_t pkt[1460];
   if (len <= MAX_PAYLOAD) {
@@ -1030,7 +1056,7 @@ void ESPVideoCamera::rtp_send_nal_(const uint8_t *nal, size_t len, uint32_t ts, 
     pkt[10] = this->rtp_ssrc_ >> 8;
     pkt[11] = this->rtp_ssrc_;
     memcpy(pkt + 12, nal, len);
-    sendto(this->rtp_fd_, pkt, 12 + len, 0, (struct sockaddr *) &dst, sizeof(dst));
+    this->send_rtp_packet_(pkt, 12 + len);
     this->rtp_seq_++;
     return;
   }
@@ -1058,7 +1084,7 @@ void ESPVideoCamera::rtp_send_nal_(const uint8_t *nal, size_t len, uint32_t ts, 
     pkt[12] = (uint8_t) (nri | 28);                                       // FU indicator: F=0, NRI, type=28
     pkt[13] = (uint8_t) ((first ? 0x80 : 0) | (last ? 0x40 : 0) | type);  // FU header
     memcpy(pkt + 14, p, frag);
-    sendto(this->rtp_fd_, pkt, 14 + frag, 0, (struct sockaddr *) &dst, sizeof(dst));
+    this->send_rtp_packet_(pkt, 14 + frag);
     this->rtp_seq_++;
     p += frag;
     rem -= frag;
@@ -1255,11 +1281,11 @@ void ESPVideoCamera::handle_rtsp_client_(int fd) {
     if (strncmp(req, "OPTIONS", 7) == 0) {
       snprintf(resp, sizeof(resp),
                "RTSP/1.0 200 OK\r\nCSeq: %d\r\nPublic: OPTIONS, DESCRIBE, SETUP, PLAY, TEARDOWN\r\n\r\n", cseq);
-      send(fd, resp, strlen(resp), 0);
+      this->locked_send_(resp, strlen(resp));
     } else if (strncmp(req, "DESCRIBE", 8) == 0) {
       if (!this->ensure_params_()) {
         snprintf(resp, sizeof(resp), "RTSP/1.0 500 Internal Server Error\r\nCSeq: %d\r\n\r\n", cseq);
-        send(fd, resp, strlen(resp), 0);
+        this->locked_send_(resp, strlen(resp));
         continue;
       }
       struct sockaddr_in sa;
@@ -1270,37 +1296,52 @@ void ESPVideoCamera::handle_rtsp_client_(int fd) {
       snprintf(resp, sizeof(resp),
                "RTSP/1.0 200 OK\r\nCSeq: %d\r\nContent-Type: application/sdp\r\nContent-Length: %u\r\n\r\n%s",
                cseq, (unsigned) strlen(sdp), sdp);
-      send(fd, resp, strlen(resp), 0);
+      this->locked_send_(resp, strlen(resp));
     } else if (strncmp(req, "SETUP", 5) == 0) {
-      uint16_t cport = 0;
-      const char *t = strstr(req, "client_port=");
-      if (t != nullptr)
-        cport = (uint16_t) atoi(t + 12);
-      this->rtp_client_port_ = cport;
-      struct sockaddr_in pa;
-      socklen_t pl = sizeof(pa);
-      getpeername(fd, (struct sockaddr *) &pa, &pl);
-      this->rtp_client_ip_ = pa.sin_addr.s_addr;
       this->rtp_seq_ = 0;
-      snprintf(resp, sizeof(resp),
-               "RTSP/1.0 200 OK\r\nCSeq: %d\r\n"
-               "Transport: RTP/AVP;unicast;client_port=%u-%u;server_port=6970-6971\r\n"
-               "Session: %08X\r\n\r\n",
-               cseq, cport, cport + 1, (unsigned) this->rtsp_session_id_);
-      send(fd, resp, strlen(resp), 0);
+      const char *itl = strstr(req, "interleaved=");
+      if (itl != nullptr) {
+        // RTP/AVP/TCP: stream RTP interleaved on this control connection (what
+        // ffmpeg / HA's stream component request by default).
+        this->rtp_over_tcp_ = true;
+        this->rtp_tcp_channel_ = (uint8_t) atoi(itl + 12);
+        snprintf(resp, sizeof(resp),
+                 "RTSP/1.0 200 OK\r\nCSeq: %d\r\n"
+                 "Transport: RTP/AVP/TCP;unicast;interleaved=%u-%u\r\n"
+                 "Session: %08X\r\n\r\n",
+                 cseq, (unsigned) this->rtp_tcp_channel_, (unsigned) (this->rtp_tcp_channel_ + 1),
+                 (unsigned) this->rtsp_session_id_);
+      } else {
+        this->rtp_over_tcp_ = false;
+        uint16_t cport = 0;
+        const char *t = strstr(req, "client_port=");
+        if (t != nullptr)
+          cport = (uint16_t) atoi(t + 12);
+        this->rtp_client_port_ = cport;
+        struct sockaddr_in pa;
+        socklen_t pl = sizeof(pa);
+        getpeername(fd, (struct sockaddr *) &pa, &pl);
+        this->rtp_client_ip_ = pa.sin_addr.s_addr;
+        snprintf(resp, sizeof(resp),
+                 "RTSP/1.0 200 OK\r\nCSeq: %d\r\n"
+                 "Transport: RTP/AVP;unicast;client_port=%u-%u;server_port=6970-6971\r\n"
+                 "Session: %08X\r\n\r\n",
+                 cseq, cport, cport + 1, (unsigned) this->rtsp_session_id_);
+      }
+      this->locked_send_(resp, strlen(resp));
     } else if (strncmp(req, "PLAY", 4) == 0) {
       snprintf(resp, sizeof(resp),
                "RTSP/1.0 200 OK\r\nCSeq: %d\r\nSession: %08X\r\nRTP-Info: url=trackID=0;seq=%u\r\n\r\n", cseq,
                (unsigned) this->rtsp_session_id_, (unsigned) this->rtp_seq_);
-      send(fd, resp, strlen(resp), 0);
+      this->locked_send_(resp, strlen(resp));
       this->rtsp_playing_ = true;
     } else if (strncmp(req, "TEARDOWN", 8) == 0) {
       snprintf(resp, sizeof(resp), "RTSP/1.0 200 OK\r\nCSeq: %d\r\n\r\n", cseq);
-      send(fd, resp, strlen(resp), 0);
+      this->locked_send_(resp, strlen(resp));
       break;
     } else {
       snprintf(resp, sizeof(resp), "RTSP/1.0 501 Not Implemented\r\nCSeq: %d\r\n\r\n", cseq);
-      send(fd, resp, strlen(resp), 0);
+      this->locked_send_(resp, strlen(resp));
     }
   }
   this->rtsp_playing_ = false;
@@ -1353,7 +1394,10 @@ void ESPVideoCamera::rtsp_server_task_(void *arg) {
       rcv_to.tv_sec = 60;
       setsockopt(fd, SOL_SOCKET, SO_RCVTIMEO, &rcv_to, sizeof(rcv_to));
     }
+    self->rtsp_client_fd_ = fd;
     self->handle_rtsp_client_(fd);
+    self->rtp_over_tcp_ = false;
+    self->rtsp_client_fd_ = -1;
     close(fd);
     ESP_LOGI(TAG, "RTSP: client disconnected");
   }

@@ -14,6 +14,7 @@
 #include "esp_h264_enc_single_hw.h"
 
 #include <memory>
+#include <mutex>
 #include <string>
 #include <vector>
 
@@ -201,6 +202,9 @@ class ESPVideoCamera : public camera::Camera {
   uint16_t rtp_seq_{0};
   uint32_t rtp_ssrc_{0x4155524F};    // 'AURO'
   uint32_t rtsp_session_id_{0x4155524F};
+  bool rtp_over_tcp_{false};          // RTP interleaved over the RTSP TCP control conn
+  uint8_t rtp_tcp_channel_{0};        // RTP interleaved channel (from SETUP)
+  std::mutex tcp_send_mutex_;         // serialize writes to the control socket
   // SPS/PPS captured once for the SDP (sprop-parameter-sets).
   uint8_t sps_[96];
   size_t sps_len_{0};
@@ -217,6 +221,8 @@ class ESPVideoCamera : public camera::Camera {
   bool capture_h264_(const uint8_t **nal, size_t *len);  // one encoded frame (Annex-B)
   void rtp_send_access_unit_(const uint8_t *annexb, size_t len, uint32_t ts);
   void rtp_send_nal_(const uint8_t *nal, size_t len, uint32_t ts, bool marker);
+  void send_rtp_packet_(const uint8_t *pkt, size_t len);  // one RTP pkt: UDP or TCP-interleaved
+  void locked_send_(const void *buf, size_t len);         // mutex-guarded send on the control socket
   void build_sdp_(char *out, size_t out_size, uint32_t server_ip);
 
   // Auto-configure the ISP for a bright, clear, colour-accurate image: set
