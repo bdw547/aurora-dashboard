@@ -3156,11 +3156,10 @@ lvgl:
                   value: 34
                   on_release:
                     - homeassistant.action:
-                        action: spotifyplus.player_set_volume_level
+                        action: media_player.volume_set
                         data:
                           entity_id: $ent_media_spotify
-                          device_id: !lambda 'return id(g_room);'
-                          volume_level: !lambda 'char b[8]; snprintf(b, sizeof(b), "%d", (int) x); return std::string(b);'
+                          volume_level: !lambda 'char b[8]; snprintf(b, sizeof(b), "%.2f", x / 100.0f); return std::string(b);'
 
         # Spotify source selector (room playback target)
         - label: { text: "PLAY ON", x: 560, y: 70, text_font: f_small, text_color: $c_text2 }
@@ -3290,7 +3289,6 @@ lvgl:
         - lvgl.widget.update: { id: nav_network, bg_color: 0x10121A }
         - lvgl.widget.update: { id: nav_settings, bg_color: 0x10121A }
         - lambda: 'id(g_cam_view) = 1;'
-        - script.execute: cam_snap_once
       on_unload:
         - lambda: 'id(g_cam_view) = 0;'
         - script.stop: cam_snap_once
@@ -3312,6 +3310,16 @@ lvgl:
             on_click: [lvgl.page.show: page_doorbell]
             widgets:
               - image: { id: img_cam_security, src: cam_image, align: center }
+              - button:
+                  align: top_right
+                  x: -8
+                  y: 8
+                  width: 104
+                  height: 40
+                  radius: 8
+                  bg_color: 0x1B2230
+                  widgets: [label: { text: "Refresh", align: center, text_font: f_small, text_color: 0xEEF0F6 }]
+                  on_click: [script.execute: cam_snap_once]
               - spinner:
                   id: spin_cam
                   align: center
@@ -6055,7 +6063,6 @@ lvgl:
         - lvgl.widget.update: { id: lbl_ssid, hidden: true }
         - lvgl.widget.update: { id: lbl_ip, hidden: true }
         - lambda: 'id(g_cam_view) = 2;'
-        - script.execute: cam_snap_big
       on_unload:
         - lambda: 'id(g_cam_view) = 0;'
         - script.stop: cam_snap_big
