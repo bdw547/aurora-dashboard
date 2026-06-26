@@ -96,6 +96,9 @@ esp32:
       CONFIG_ESP_HOSTED_DFLT_TASK_FROM_SPIRAM: "y"
       CONFIG_FREERTOS_THREAD_LOCAL_STORAGE_POINTERS: "1"
       CONFIG_LOG_DEFAULT_LEVEL: "2"
+      # Socket headroom: HA API + custom RTSP server (8554) + the on-device
+      # web_server (80, incl. its event websocket) now share LWIP sockets.
+      CONFIG_LWIP_MAX_SOCKETS: "16"
       # --- On-board OV02C10 MIPI-CSI camera ---
       # The esp_video_camera component only auto-enables SC202CS/OV5647/SC2336.
       # This board's sensor is an OV02C10, so we enable its esp_cam_sensor
@@ -191,6 +194,18 @@ ota:
 # catching a genuine boot crash (which happens in the first few seconds).
 safe_mode:
   boot_is_good_after: 10s
+
+# --- On-device web UI (control + diagnostics at http://<panel-ip>/) ---
+# Served by the ESP-IDF http server on port 80. The configurator's
+# "Open device page ↗" button links here. Lets you view/toggle entities,
+# watch logs, and OTA-upload firmware from any browser on the LAN.
+# local: true embeds the web assets in flash so the page renders with no
+# external CDN dependency (fitting for a self-contained kiosk panel).
+web_server:
+  id: aurora_web
+  port: 80
+  version: 2
+  local: true
 
 logger:
   level: INFO
@@ -1301,6 +1316,11 @@ text_sensor:
               if (c=="lightning-rainy") return std::string("\U000F067E");
               if (c=="windy" || c=="windy-variant") return std::string("\U000F059D");
               return std::string("\U000F0026");
+        # Mirror the just-computed home glyph onto the screensaver weather icon
+        # (reuses the mapping above — no extra HA subscription).
+        - lvgl.label.update:
+            id: lbl_ss_wx_icon
+            text: !lambda 'return std::string(lv_label_get_text(id(lbl_home_wx_icon)));'
   - platform: homeassistant
     id: ha_spotify_source
     entity_id: $ent_media_spotify
@@ -1946,6 +1966,8 @@ script:
       - lvgl.label.update: { id: lbl_greeting, text: "Good afternoon, Ben" }
       - lvgl.label.update: { id: lbl_ss_time, text: "2:45" }
       - lvgl.label.update: { id: lbl_ss_date, text: "Saturday, June 21" }
+      - lvgl.label.update: { id: lbl_ss_temp, text: "82°" }
+      - lvgl.label.update: { id: lbl_ss_wx_icon, text: "\U000F0595" }
       # home
       - lvgl.label.update: { id: lbl_home_temp_big, text: "72" }
       - lvgl.label.update: { id: lbl_home_cond, text: "Sunny" }
@@ -5465,6 +5487,7 @@ lvgl:
         - label: { id: lbl_ss_time, text: "--:--", align: bottom_left, x: 44, y: -86, text_font: f_display, text_color: 0xFFFFFF }
         - label: { id: lbl_ss_date, text: "", align: bottom_left, x: 48, y: -36, text_font: f_body, text_color: 0xC8CCD6 }
         - label: { id: lbl_ss_temp, text: "", align: bottom_right, x: -44, y: -62, text_font: f_title, text_color: 0xFFFFFF }
+        - label: { id: lbl_ss_wx_icon, text: "", align: bottom_right, x: -46, y: -104, text_font: f_icon, text_color: 0xFFFFFF }
     - id: page_settings
       bg_opa: 0
       on_load:
