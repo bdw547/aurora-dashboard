@@ -1,6 +1,6 @@
 # Aurora Dashboard
 
-A custom, high-end **Home Assistant touch dashboard** for the **Guition ESP32‑P4 7‑inch panel** (model **JC1060P470C**, 1024×600). Aurora is a standalone [ESPHome](https://esphome.io) + LVGL firmware with a hand-designed dark/glass UI — a clock + greeting home screen, per-room controls, a full Spotify experience (now-playing with album art, room/zone selection, a browsable library), climate, security, network status, an LG webOS TV remote, and device settings.
+A custom, high-end **Home Assistant touch dashboard** for the **Guition ESP32‑P4 7‑inch panel** (model **JC1060P470C**, 1024×600). Aurora is a standalone [ESPHome](https://esphome.io) + LVGL firmware with a hand-designed dark/glass UI — a clock + greeting home screen, configurable per-room controls, a full Spotify experience (now-playing with album art, room/zone selection, a browsable library), climate, security **with a live camera feed**, network status, an LG webOS TV remote, a photo screensaver, and device settings. The panel's onboard camera also drives **night-time wake-on-approach** — it lights up when you walk toward it.
 
 > **Heritage / credit:** Aurora began as a fork of [jtenniswood/espcontrol](https://github.com/jtenniswood/espcontrol) and reuses its proven hardware bring-up (display, touch, WiFi). The dashboard UI here (`devices/guition-esp32-p4-jc1060p470/aurora.yaml`) is a complete, independent rewrite and no longer uses the espcontrol button-grid engine. See `LICENSE`/`NOTICE` for upstream attribution.
 
@@ -11,20 +11,21 @@ A custom, high-end **Home Assistant touch dashboard** for the **Guition ESP32‑
 | Screen | What it does |
 |---|---|
 | **Home** | Live clock + greeting, weather/presence/secured chips, a large Now-Playing card (album art + transport), and a 2×2 grid (Climate, Lights, Doors & Sensors, Quick nav). |
-| **Rooms** | Pick a room → control that room's lights (tap to toggle, slider to dim), fans (with spin animation), and switches. |
+| **Rooms** | Pick a room → control that room's lights (tap to toggle, slider to dim), fans (with spin animation), and switches. Rooms are **data-driven** — generated from `rooms.json` by the configurator, so you can add/rename/reassign rooms and entities without editing YAML. |
 | **Lights** | Selectable light list with a brightness arc + on/off. |
 | **Media** | Spotify (SpotifyPlus): now-playing with progress bar + elapsed/remaining, play/pause/skip/volume, an 8-room speaker selector, and a Library (playlist → scrollable track list → tap to play). |
 | **Climate** | Outdoor temperature, condition, humidity, wind (from `weather.forecast_home`). |
-| **Security** | Front/back door lock state + control, presence. |
+| **Security** | Front/back door lock state + control, presence, and a **live camera feed** from the panel's onboard camera (streamed to HA over RTSP/H.264). |
 | **Network** | Panel WiFi signal, Synology status. |
-| **Settings** | Display brightness, screen timeout, wake-on-presence, screen saver. |
+| **Settings** | Display brightness, screen timeout, wake-on-presence, screen saver, and **Approach wake** (night-time camera wake-on-approach). |
+| **Screensaver** | Photo slideshow (images served from HA) with a clock + outdoor temperature overlay. |
 | **TV Remote** | Full LG webOS remote (D-pad, Power/Home/Back/Exit/Menu/Info, volume/mute, channel, media transport, app shortcuts) — reached from the Living Room view. |
 
 ---
 
 ## Hardware
 
-- **Panel:** Guition **JC1060P470C_I_W** — ESP32‑P4 + ESP32‑C6, 7" 1024×600 IPS, JD9165 driver (MIPI‑DSI), GT911 capacitive touch, 32 MB PSRAM / 16 MB flash. (The `C` variant also has a MIPI‑CSI camera — not used by this firmware; see *Roadmap*.)
+- **Panel:** Guition **JC1060P470C_I_W** — ESP32‑P4 + ESP32‑C6, 7" 1024×600 IPS, JD9165 driver (MIPI‑DSI), GT911 capacitive touch, 32 MB PSRAM / 16 MB flash, plus a **MIPI‑CSI camera (OV02C10)** — now used for the live security feed and wake-on-approach (see *Camera & wake-on-approach* below).
 - **Power:** USB‑C (5 V).
 - A computer with a USB‑C cable for the **first** flash (after that, updates are wireless / OTA).
 
@@ -157,24 +158,57 @@ The package provides `sensor.aurora_spotify_playlists` / `sensor.aurora_spotify_
 devices/guition-esp32-p4-jc1060p470/
   aurora.yaml          ← the entire Aurora firmware (pages, bindings, logic)
   secrets.yaml         ← your WiFi (gitignored; you create this)
+components/
+  esp_video_camera/    ← camera: V4L2 capture, HW H.264, RTSP server, motion detect
+  ov02c10_support/     ← injects the OV02C10 camera-sensor driver
 aurora-build/
   aurora_spotify_library.yaml   ← HA package for the Spotify Library
+  configurator/        ← no-code web configurator (rooms.json + Rooms wizard)
   assets/              ← baked background + fan animation frames
 ```
 
-Everything else in the repo is inherited from upstream espcontrol and is not used by the Aurora firmware.
+Most of the rest of the repo is inherited from upstream espcontrol and is unused by Aurora.
 
 ---
 
-## Roadmap
+## Camera & wake-on-approach
 
-- **No-code web configurator** — a drag-and-drop dashboard builder with live preview, so anyone can point Aurora at their own Home Assistant, rebind entities, and rearrange the home screen without editing YAML. (Design in progress.)
-- **Camera (JC1060P470C):** the board's MIPI-CSI OV5647 camera builds and the sensor is detected, but ESPHome's MIPI-CSI camera support is still pre-release; parked pending the camera's XCLK pin + upstream support. Tracked on the `camera-experiment` branch.
+The panel's onboard **OV02C10** MIPI‑CSI camera is driven by a custom ESPHome component (`components/esp_video_camera/`) on Espressif's `esp_video` (V4L2) stack. It hardware‑encodes **H.264** and serves an RTSP stream on the device:
+
+```
+rtsp://<panel-ip>:8554/cam
+```
+
+RTP is sent **TCP‑interleaved**, so it works through Home Assistant / ffmpeg's default transport. **Add it to HA** as a **Generic Camera** (or to go2rtc) with **RTSP transport = TCP**.
+
+**Wake-on-approach (night).** The same captured frames feed an on-device frame‑difference motion detector: it downsamples the luma plane to a 32×24 grid and counts cells that changed beyond a per-cell floor. During the **night window (9 PM–6 AM)** the panel auto‑sleeps (backlight off) after ~1 minute idle and **wakes when the camera sees someone approach** — alongside the usual touch and presence wakes. Toggle it with **Approach wake** in Settings; tune the **Panel Wake Sensitivity** number in HA (empty scene ≈ 0, a walk‑up scores in the dozens–hundreds). Extra HA diagnostic sensors: `Panel Motion Level`, `Panel Motion MaxDelta`, `Panel Hour`, `Panel Inactive Secs`, `Panel Night Flags`.
+
+> The camera captures continuously (to keep the H.264 encoder warm), so wake-on-approach adds no extra capture cost — and the detector only *reads* frames, it never alters the stream.
+
+---
+
+## Status & roadmap
+
+Active development is on the **`camera-experiment`** branch.
+
+**Recently shipped:**
+- **Live camera** — OV02C10 → hardware H.264 → on-device RTSP, viewable in Home Assistant. ✅
+- **Wake-on-approach + evening-gated screen sleep** — the camera wakes the panel when you walk up at night. ✅
+- **Dynamic rooms** — room pages/picker/state sensors generated from `rooms.json`; add/rename/reassign via the configurator's Rooms wizard. ✅
+- **Photo screensaver** with clock + outdoor-temperature overlay. ✅
+
+**In progress / planned:**
+- **No-code web configurator** — the Rooms wizard works today; next is drag-and-drop home-screen layout, per-card entity selection, and live preview, so anyone can point Aurora at their own HA without editing YAML.
+- **Notifications** surfaced on the panel.
+- **Weather radar** on the Climate screen.
+- **Intercom** — video calls between multiple panels *(long-term)*.
+- **Voice control** *(long-term)*.
 
 ---
 
 ## Troubleshooting
 
 - **OTA "connection reset by peer":** retry — usually transient. (WiFi `fast_connect` + `power_save_mode: none` are enabled to minimize this.)
+- **OTA upload succeeds but the panel keeps running the old build:** the ESP32‑P4's OTA boot‑confirm is flaky — an intermittent early‑boot reset can roll a freshly‑flashed image back to the previous partition. Re‑flash until it sticks (verify the device's `compilation_time` over the API matches your build), or — most reliably — **flash over USB‑serial** (`esphome run … --device /dev/ttyACM0`), which writes the factory image directly and bypasses the rollback entirely.
 - **A control does nothing but the clock/lights still work:** the entity ID in `aurora.yaml` doesn't match your HA entity — rebind it.
 - **Spotify plays but you can't control it / switch rooms:** the target must be an *available* Spotify Connect device, and not "restricted" (Sonos/Roku/Chromecast can be started but not controlled via the API).

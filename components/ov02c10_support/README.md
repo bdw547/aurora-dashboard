@@ -43,5 +43,9 @@ registry version `esp_video` would download, because the vendored version
 
 ## Status
 
-Compiles clean under the native ESP-IDF toolchain (`.venv-dev`). **Runtime
-sensor bring-up is unverified** — pending a flash on the physical panel.
+**Working / verified on hardware.** Compiles clean under the native ESP-IDF
+toolchain (`.venv-dev`), and the sensor is confirmed on the physical panel: live
+RAW capture → hardware H.264 → the on-device RTSP stream
+(`rtsp://<panel-ip>:8554/cam`), viewable in Home Assistant and feeding the
+on-device frame-difference motion detector for night wake-on-approach. See the
+**Camera & wake-on-approach** section of the repo `README.md` for usage.
