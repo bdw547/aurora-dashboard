@@ -292,7 +292,7 @@ def write_home_layout(order):
 # rooms.json into AURORA_ROOM_* marker regions, mirroring the home-grid pattern.
 # ===========================================================================
 ROOMS_JSON = os.path.join(HERE, "rooms.json")
-ROOM_TYPES = {"light", "fan", "switch"}
+ROOM_TYPES = {"light", "fan", "switch", "sensor"}
 ROOM_MAX_ENTITIES = 6                 # column geometry: x=100+140*i, i in 0..5
 ROOM_X0, ROOM_PITCH = 100, 140        # entity-card columns on a room page
 PICK_Y0, PICK_PITCH = 110, 78         # room buttons on the picker
@@ -492,6 +492,34 @@ CARD_TOGGLE = """        - obj:
                   on_click: [homeassistant.action: { action: %ACT%.toggle, data: { entity_id: %E% } }]
 """
 
+# Read-only sensor card: live value + unit in a panel, no control (#21).
+CARD_SENSOR = """        - obj:
+            x: %X%
+            y: 80
+            width: 120
+            height: 432
+            bg_opa: 0
+            border_width: 0
+            pad_all: 0
+            scrollable: false
+            widgets:
+              - label: { text: "%L%", x: 0, y: 0, width: 120, text_align: center, text_font: f_body, text_color: 0xEEF0F6 }
+              - obj:
+                  x: 0
+                  y: 52
+                  width: 120
+                  height: 360
+                  radius: 24
+                  bg_color: 0x12141C
+                  border_width: 2
+                  border_color: 0x2A2F3A
+                  clickable: false
+                  scrollable: false
+                  widgets:
+                    - label: { id: val_room_%S%, text: "--", align: center, y: -14, width: 112, text_align: center, text_font: f_head, text_color: 0xEEF0F6 }
+                    - label: { id: unit_room_%S%, text: "", align: center, y: 26, width: 112, text_align: center, text_font: f_small, text_color: 0x8A8F9E }
+"""
+
 BRI_SENSOR_TMPL = """  - platform: homeassistant
     id: ha_roombri_%S%
     entity_id: %E%
@@ -531,6 +559,24 @@ TOGGLE_TEXT_TMPL = """  - platform: homeassistant
         - lvgl.label.update: { id: lbl_st_room_%S%, text: !lambda 'return x == std::string("on") ? std::string("On") : std::string("Off");' }
         - lvgl.widget.update: { id: pwr_ic_%S%, bg_color: !lambda 'return x == std::string("on") ? lv_color_hex(0x2563EB) : lv_color_hex(0x12141C);' }
         - lvgl.label.update: { id: ic_%S%, text_color: !lambda 'return x == std::string("on") ? lv_color_hex(0xFFFFFF) : lv_color_hex(0x8A8F9E);' }
+"""
+
+# Sensor card feeders: live state -> value label, unit_of_measurement -> unit.
+SENSOR_VAL_TMPL = """  - platform: homeassistant
+    id: ha_roomval_%S%
+    entity_id: %E%
+    on_value:
+      then:
+        - lvgl.label.update: { id: val_room_%S%, text: !lambda 'return x.empty() ? std::string("--") : x;' }
+"""
+
+SENSOR_UNIT_TMPL = """  - platform: homeassistant
+    id: ha_roomunit_%S%
+    entity_id: %E%
+    attribute: unit_of_measurement
+    on_value:
+      then:
+        - lvgl.label.update: { id: unit_room_%S%, text: !lambda 'return x;' }
 """
 
 COUNT_SENSOR_TMPL = """  - platform: homeassistant
@@ -594,6 +640,8 @@ def _card(e, i):
     x = ROOM_X0 + ROOM_PITCH * i
     if e["type"] == "light":
         return _fmt(CARD_LIGHT, X=x, S=s, E=e["entity_id"], L=e["label"])
+    if e["type"] == "sensor":
+        return _fmt(CARD_SENSOR, X=x, S=s, L=e["label"])
     return _fmt(CARD_TOGGLE, X=x, S=s, E=e["entity_id"], L=e["label"],
                 ACT=e["type"], TICON=TYPE_ICON[e["type"]])
 
@@ -620,8 +668,14 @@ def gen_text(rooms):
     for r in rooms:
         for e in r["entities"]:
             s = f'{r["id"]}_{slug(e["entity_id"])}'
-            tmpl = LIGHT_TEXT_TMPL if e["type"] == "light" else TOGGLE_TEXT_TMPL
-            out += _fmt(tmpl, S=s, E=e["entity_id"], ACT=e["type"])
+            t = e["type"]
+            if t == "light":
+                out += _fmt(LIGHT_TEXT_TMPL, S=s, E=e["entity_id"])
+            elif t == "sensor":
+                out += _fmt(SENSOR_VAL_TMPL, S=s, E=e["entity_id"])
+                out += _fmt(SENSOR_UNIT_TMPL, S=s, E=e["entity_id"])
+            else:
+                out += _fmt(TOGGLE_TEXT_TMPL, S=s, E=e["entity_id"], ACT=t)
     return out
 
 
@@ -831,7 +885,7 @@ async function flash(){
   if(s.done){clearInterval(t);fmsg.textContent=s.ok?'Flashed ✓':'Flash failed — see log';fmsg.className=s.ok?'ok':'err'}},1500)}
 function opendev(){let ip=device_.value.trim();if(!ip){fmsg.textContent='Enter the panel IP first';fmsg.className='err';return}if(!/^https?:\/\//.test(ip))ip='http://'+ip;window.open(ip,'_blank')}
 // ---- Rooms wizard ----
-let ROOMS=[];const RTYPES=['light','fan','switch'];
+let ROOMS=[];const RTYPES=['light','fan','switch','sensor'];
 function esc(s){return (s||'').replace(/"/g,'&quot;')}
 function slugify(s){return ((s||'').toLowerCase().replace(/[^a-z0-9_]/g,'_').replace(/^_+/,'')||'room')}
 async function loadRooms(){try{const r=await j('/api/rooms');ROOMS=(r&&r.rooms)||[]}catch(e){ROOMS=[]}}
