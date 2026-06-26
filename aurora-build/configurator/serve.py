@@ -299,7 +299,7 @@ PICK_Y0, PICK_PITCH = 110, 78         # room buttons on the picker
 ROOM_MAX = 6                          # picker rows that fit (y=110+78*5=500<600)
 # (start-marker, end-marker, indent-of-the-end-marker) per generated region.
 ROOM_MARKERS = {
-    "picker":  ("# >>> AURORA_ROOM_PICKER", "# <<< AURORA_ROOM_PICKER", "        "),
+    "picker":  ("# >>> AURORA_ROOM_PICKER", "# <<< AURORA_ROOM_PICKER", "              "),
     "pages":   ("# >>> AURORA_ROOM_PAGES",  "# <<< AURORA_ROOM_PAGES",  "    "),
     "bri":     ("# >>> AURORA_ROOM_STATE_SENSOR", "# <<< AURORA_ROOM_STATE_SENSOR", "  "),
     "text":    ("# >>> AURORA_ROOM_STATE_TEXT", "# <<< AURORA_ROOM_STATE_TEXT", "  "),
@@ -320,17 +320,17 @@ def slug(eid):
 
 
 # ---- templates (consistent room-scoped ids: <S> = <roomid>_<entity-slug>) ----
-PICK_TMPL = """        - button:
-            x: 100
-            y: %Y%
-            width: 772
-            height: 64
-            styles: st_glass
-            widgets:
-              - label: { text: "%ICON%", align: left_mid, x: 8, text_font: f_icon, text_color: 0x2ED5B8 }
-              - label: { text: "%NAME%", align: left_mid, x: 60, text_font: f_title, text_color: 0xEEF0F6 }
-              - label: { id: lbl_roomcount_%ID%, text: "", align: right_mid, x: -16, text_font: f_small, text_color: 0x8A8F9E }
-            on_click: [lvgl.page.show: page_room_%ID%]
+PICK_TMPL = """              - button:
+                  x: 26
+                  y: %Y%
+                  width: 772
+                  height: 64
+                  styles: st_glass
+                  widgets:
+                    - label: { text: "%ICON%", align: left_mid, x: 8, text_font: f_icon, text_color: 0x2ED5B8 }
+                    - label: { text: "%NAME%", align: left_mid, x: 60, text_font: f_title, text_color: 0xEEF0F6 }
+                    - label: { id: lbl_roomcount_%ID%, text: "", align: right_mid, x: -16, text_font: f_small, text_color: 0x8A8F9E }
+                  on_click: [lvgl.page.show: page_room_%ID%]
 """
 
 PAGE_HEAD_TMPL = """    - id: page_room_%ID%
@@ -836,8 +836,7 @@ def validate_rooms(data):
     rooms = (data or {}).get("rooms", [])
     if not isinstance(rooms, list) or not rooms:
         raise ValueError("at least one room is required")
-    if len(rooms) > ROOM_MAX:
-        raise ValueError(f"Phase 1 supports at most {ROOM_MAX} rooms")
+    # No room-count cap: the on-device picker scrolls, so any number is fine.
     seen_ids, seen_widgets = set(), set()
     for r in rooms:
         rid = r.get("id", "")
@@ -874,8 +873,9 @@ def write_rooms(data):
 
 
 def gen_picker(rooms):
-    return "".join(_fmt(PICK_TMPL, Y=PICK_Y0 + PICK_PITCH * i,
-                        ICON=r["icon"], NAME=r["name"], ID=r["id"])
+    # Buttons stack at y = 78*i inside the scrollable room_scroll container in
+    # page_rooms, so the list scrolls for any number of rooms.
+    return "".join(_fmt(PICK_TMPL, Y=78 * i, ICON=r["icon"], NAME=r["name"], ID=r["id"])
                    for i, r in enumerate(rooms))
 
 
@@ -1100,7 +1100,7 @@ pre{background:#06070a;border:1px solid var(--hair);border-radius:10px;padding:1
 <div class=card><h2>3 · Home screen layout <span class=muted>(pick a card per cell, then drag to rearrange)</span></h2>
 <div class=preview><div class=np>Now&nbsp;Playing<br><small>(fixed)</small></div><div id=homegrid class=hgrid></div></div></div>
 
-<div class=card id=roomcard style=display:none><h2>4 · Rooms <span class=muted>(add / rename / assign entities — max 6 rooms, 6 entities each)</span></h2>
+<div class=card id=roomcard style=display:none><h2>4 · Rooms <span class=muted>(add / rename / assign entities — any number of rooms; up to 6 entities each)</span></h2>
 <div id=roomlist></div>
 <div style="margin-top:10px" class=bar><button class=ghost onclick=addRoom()>+ Add room</button><button onclick=saveRooms()>Save rooms</button><span id=rmsg class=muted></span></div>
 <div class=muted style="margin-top:6px;font-size:12px">Saving regenerates the firmware source. Then click “Save &amp; flash panel” below to push the changes to the device.</div></div>
@@ -1113,7 +1113,11 @@ pre{background:#06070a;border:1px solid var(--hair);border-radius:10px;padding:1
 <script>
 let SLOTS=[],ENTS=[],HORDER=[],HMETA={};
 async function j(u,o){const r=await fetch(u,o);if(!r.ok)throw new Error((await r.json()).error||r.status);return r.json()}
-async function boot(){SLOTS=await j('/api/slots');loadHome()}
+async function boot(){SLOTS=await j('/api/slots');loadHome();
+ restoreCreds();[url_,token_,device_].forEach(el=>el&&el.addEventListener('change',saveCreds));
+ if(url_.value&&token_.value)connect();}
+function saveCreds(){try{localStorage.setItem('aurora_url',url_.value.trim());localStorage.setItem('aurora_token',token_.value.trim());localStorage.setItem('aurora_device',device_.value.trim());}catch(e){}}
+function restoreCreds(){try{const u=localStorage.getItem('aurora_url'),t=localStorage.getItem('aurora_token'),d=localStorage.getItem('aurora_device');if(u)url_.value=u;if(t)token_.value=t;if(d)device_.value=d;}catch(e){}}
 async function loadHome(){const r=await j('/api/home');HORDER=r.order;HMETA=r.meta;renderHome()}
 function renderHome(){const cat=Object.keys(HMETA);
  homegrid.innerHTML=HORDER.map((k,i)=>{
@@ -1131,7 +1135,7 @@ function renderHome(){const cat=Object.keys(HMETA);
 function pickCard(i,v){HORDER[i]=v;renderHome()}
 async function saveHome(){await j('/api/home',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({order:HORDER})})}
 async function connect(){
- const url=url_.value.trim(),token=token_.value.trim();cmsg.textContent='Loading…';cmsg.className='muted';
+ const url=url_.value.trim(),token=token_.value.trim();saveCreds();cmsg.textContent='Loading…';cmsg.className='muted';
  try{ENTS=await j('/api/entities',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({url,token})});
   cmsg.textContent='Loaded '+ENTS.length+' entities ✓';cmsg.className='ok';render();slotcard.style.display='';flashcard.style.display='';await loadRooms();renderRooms();roomcard.style.display=''}
  catch(e){cmsg.textContent='Failed: '+e.message+' (check URL/token & that this PC can reach HA)';cmsg.className='err'}}
@@ -1178,7 +1182,7 @@ function syncRooms(){ROOMS=[...roomlist.querySelectorAll('.room')].map(rb=>({
   id:rb.querySelector('.r-id').value.trim(),name:rb.querySelector('.r-name').value.trim(),icon:rb.querySelector('.r-icon').value.trim(),
   entities:[...rb.querySelectorAll('.ent')].map(eb=>({type:eb.querySelector('.e-type').value,entity_id:eb.querySelector('.e-id').value.trim(),label:eb.querySelector('.e-label').value.trim()}))}))}
 function onType(ri,ei){syncRooms();renderRooms()}
-function addRoom(){syncRooms();if(ROOMS.length>=6){rmsg.textContent='Max 6 rooms (Phase 1)';rmsg.className='err';return}const n='Room '+(ROOMS.length+1);ROOMS.push({id:slugify(n),name:n,icon:'\\U000F04B9',entities:[]});renderRooms()}
+function addRoom(){syncRooms();const n='Room '+(ROOMS.length+1);ROOMS.push({id:slugify(n),name:n,icon:'\\U000F04B9',entities:[]});renderRooms()}
 function removeRoom(ri){syncRooms();ROOMS.splice(ri,1);renderRooms()}
 function addEntity(ri){syncRooms();if((ROOMS[ri].entities||[]).length>=6){rmsg.textContent='Max 6 entities per room';rmsg.className='err';return}ROOMS[ri].entities.push({type:'light',entity_id:'',label:''});renderRooms()}
 function removeEntity(ri,ei){syncRooms();ROOMS[ri].entities.splice(ei,1);renderRooms()}
