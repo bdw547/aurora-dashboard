@@ -292,7 +292,7 @@ def write_home_layout(order):
 # rooms.json into AURORA_ROOM_* marker regions, mirroring the home-grid pattern.
 # ===========================================================================
 ROOMS_JSON = os.path.join(HERE, "rooms.json")
-ROOM_TYPES = {"light", "fan", "switch", "sensor", "lock", "climate", "media"}
+ROOM_TYPES = {"light", "fan", "switch", "sensor", "lock", "climate", "media", "cover"}
 ROOM_MAX_ENTITIES = 6                 # column geometry: x=100+140*i, i in 0..5
 ROOM_X0, ROOM_PITCH = 100, 140        # entity-card columns on a room page
 PICK_Y0, PICK_PITCH = 110, 78         # room buttons on the picker
@@ -642,6 +642,53 @@ CARD_MEDIA = """        - obj:
                   on_click: [homeassistant.action: { action: media_player.media_next_track, data: { entity_id: %E% } }]
 """
 
+# Cover card: open / stop / close buttons + state label (#21).
+CARD_COVER = """        - obj:
+            x: %X%
+            y: 80
+            width: 120
+            height: 432
+            bg_opa: 0
+            border_width: 0
+            pad_all: 0
+            scrollable: false
+            widgets:
+              - label: { text: "%L%", x: 0, y: 0, width: 120, text_align: center, text_font: f_body, text_color: 0xEEF0F6 }
+              - label: { id: lbl_st_room_%S%, text: "--", x: 0, y: 24, width: 120, text_align: center, text_font: f_body, text_color: 0x8A8F9E }
+              - button:
+                  x: 0
+                  y: 52
+                  width: 120
+                  height: 140
+                  radius: 24
+                  bg_color: 0x12141C
+                  border_width: 2
+                  border_color: 0x2A2F3A
+                  widgets: [label: { text: "\\U000F0143", align: center, text_font: f_icon, text_color: 0xEEF0F6 }]
+                  on_click: [homeassistant.action: { action: cover.open_cover, data: { entity_id: %E% } }]
+              - button:
+                  x: 0
+                  y: 196
+                  width: 120
+                  height: 72
+                  radius: 18
+                  bg_color: 0x161B24
+                  border_width: 0
+                  widgets: [label: { text: "\\U000F03E4", align: center, text_font: f_icon, text_color: 0x8A8F9E }]
+                  on_click: [homeassistant.action: { action: cover.stop_cover, data: { entity_id: %E% } }]
+              - button:
+                  x: 0
+                  y: 272
+                  width: 120
+                  height: 140
+                  radius: 24
+                  bg_color: 0x12141C
+                  border_width: 2
+                  border_color: 0x2A2F3A
+                  widgets: [label: { text: "\\U000F0140", align: center, text_font: f_icon, text_color: 0xEEF0F6 }]
+                  on_click: [homeassistant.action: { action: cover.close_cover, data: { entity_id: %E% } }]
+"""
+
 BRI_SENSOR_TMPL = """  - platform: homeassistant
     id: ha_roombri_%S%
     entity_id: %E%
@@ -765,6 +812,17 @@ MEDIA_TITLE_TMPL = """  - platform: homeassistant
         - lvgl.label.update: { id: lbl_title_room_%S%, text: !lambda 'return x.empty() ? std::string("--") : x;' }
 """
 
+# Cover feeder: state -> capitalized label (Open / Closed / Opening / Closing).
+COVER_TEXT_TMPL = """  - platform: homeassistant
+    id: ha_roomst_%S%
+    entity_id: %E%
+    on_value:
+      then:
+        - lvgl.label.update:
+            id: lbl_st_room_%S%
+            text: !lambda 'std::string r=x; if(!r.empty()) r[0]=toupper(r[0]); return r;'
+"""
+
 COUNT_SENSOR_TMPL = """  - platform: homeassistant
     id: ha_count_%ID%
     entity_id: sensor.aurora_room_%ID%
@@ -834,6 +892,8 @@ def _card(e, i):
         return _fmt(CARD_CLIMATE, X=x, S=s, E=e["entity_id"], L=e["label"])
     if e["type"] == "media":
         return _fmt(CARD_MEDIA, X=x, S=s, E=e["entity_id"], L=e["label"])
+    if e["type"] == "cover":
+        return _fmt(CARD_COVER, X=x, S=s, E=e["entity_id"], L=e["label"])
     return _fmt(CARD_TOGGLE, X=x, S=s, E=e["entity_id"], L=e["label"],
                 ACT=e["type"], TICON=TYPE_ICON[e["type"]])
 
@@ -877,6 +937,8 @@ def gen_text(rooms):
                 out += _fmt(MEDIA_TITLE_TMPL, S=s, E=e["entity_id"])
             elif t == "climate":
                 pass  # climate feeders are numeric -> emitted by gen_bri
+            elif t == "cover":
+                out += _fmt(COVER_TEXT_TMPL, S=s, E=e["entity_id"])
             else:
                 out += _fmt(TOGGLE_TEXT_TMPL, S=s, E=e["entity_id"], ACT=t)
     return out
@@ -1088,7 +1150,7 @@ async function flash(){
   if(s.done){clearInterval(t);fmsg.textContent=s.ok?'Flashed ✓':'Flash failed — see log';fmsg.className=s.ok?'ok':'err'}},1500)}
 function opendev(){let ip=device_.value.trim();if(!ip){fmsg.textContent='Enter the panel IP first';fmsg.className='err';return}if(!/^https?:\/\//.test(ip))ip='http://'+ip;window.open(ip,'_blank')}
 // ---- Rooms wizard ----
-let ROOMS=[];const RTYPES=['light','fan','switch','sensor','lock','climate','media'];
+let ROOMS=[];const RTYPES=['light','fan','switch','sensor','lock','climate','media','cover'];
 function esc(s){return (s||'').replace(/"/g,'&quot;')}
 function slugify(s){return ((s||'').toLowerCase().replace(/[^a-z0-9_]/g,'_').replace(/^_+/,'')||'room')}
 async function loadRooms(){try{const r=await j('/api/rooms');ROOMS=(r&&r.rooms)||[]}catch(e){ROOMS=[]}}
