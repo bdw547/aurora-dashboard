@@ -1056,6 +1056,7 @@ class H(BaseHTTPRequestHandler):
 
 PAGE = r"""<!doctype html><html><head><meta charset=utf-8>
 <title>Aurora Configurator</title><meta name=viewport content="width=device-width,initial-scale=1">
+<link rel=stylesheet href="https://cdn.jsdelivr.net/npm/@mdi/font@7.4.47/css/materialdesignicons.min.css">
 <style>
 :root{--bg:#08090d;--card:#141720;--hair:#2a2e38;--text:#eef0f6;--t2:#8a8f9e;--teal:#2ed5b8;--purple:#7b6cff}
 *{box-sizing:border-box}body{margin:0;background:var(--bg);color:var(--text);font:15px/1.5 system-ui,Segoe UI,sans-serif}
@@ -1087,6 +1088,15 @@ pre{background:#06070a;border:1px solid var(--hair);border-radius:10px;padding:1
 .ent{display:grid;grid-template-columns:110px 1fr 1fr 56px;gap:8px;align-items:center;margin-top:6px}
 .x{background:#2a1416;color:#ff9b9b;border:1px solid #50232a}
 .sm{font-size:11px;color:var(--t2);margin:6px 0 2px}
+.mdig{font-family:'Material Design Icons';font-size:22px;line-height:1}
+.iconsw{background:#10121a;border:1px solid var(--hair);border-radius:10px;color:var(--teal);width:100%;height:42px;cursor:pointer;padding:0}
+.iconsw:hover{border-color:var(--teal)}
+#iconpop{display:none;position:fixed;inset:0;background:rgba(0,0,0,.6);align-items:center;justify-content:center;z-index:50}
+.iconpop-box{background:var(--card);border:1px solid var(--hair);border-radius:16px;padding:16px;max-width:560px;width:90%;max-height:80vh;overflow:auto}
+.iconpop-hd{display:flex;justify-content:space-between;align-items:center;margin-bottom:10px;color:var(--t2);font-size:13px}
+.iconpop-grid{display:grid;grid-template-columns:repeat(6,1fr);gap:8px}
+.iconopt{background:#10121a;border:1px solid var(--hair);border-radius:10px;color:var(--text);padding:8px 4px;cursor:pointer;display:flex;flex-direction:column;align-items:center;gap:4px}
+.iconopt:hover{border-color:var(--teal)}.iconopt .mdig{font-size:26px;color:var(--teal)}.iconopt small{font-size:10px;color:var(--t2)}
 </style></head><body>
 <header><h1><span>Aurora</span> Configurator</h1><div class=sub>Point the panel at your Home Assistant — no code.</div></header>
 <main>
@@ -1110,6 +1120,7 @@ pre{background:#06070a;border:1px solid var(--hair);border-radius:10px;padding:1
 <div style="margin-top:12px" class=bar><button class=ghost onclick=save()>Save bindings</button><button onclick=flash()>Save &amp; flash panel</button><button class=ghost onclick=opendev()>Open device page ↗</button><span id=fmsg class=muted></span></div>
 <pre id=flog style=display:none></pre></div>
 </main>
+<div id=iconpop onclick="if(event.target===this)closeIconPicker()"><div class=iconpop-box><div class=iconpop-hd><span>Pick a room icon</span><button class=ghost onclick=closeIconPicker()>✕</button></div><div class=iconpop-grid></div></div></div>
 <script>
 let SLOTS=[],ENTS=[],HORDER=[],HMETA={};
 async function j(u,o){const r=await fetch(u,o);if(!r.ok)throw new Error((await r.json()).error||r.status);return r.json()}
@@ -1155,6 +1166,17 @@ async function flash(){
 function opendev(){let ip=device_.value.trim();if(!ip){fmsg.textContent='Enter the panel IP first';fmsg.className='err';return}if(!/^https?:\/\//.test(ip))ip='http://'+ip;window.open(ip,'_blank')}
 // ---- Rooms wizard ----
 let ROOMS=[];const RTYPES=['light','fan','switch','sensor','lock','climate','media','cover'];
+// Room-icon picker. Each entry is [label, MDI codepoint]; the codepoints match
+// glyphs added to the panel's f_icon font, so the device renders them too.
+const ICONS=[['Living','F04B9'],['Sofa','F156E'],['Bedroom','F02E3'],['Master','F0FD2'],['Nursery','F068F'],['Dining','F0A70'],['Kitchen','F0290'],['Stove','F04DE'],['Counter','F181C'],['Coffee','F0176'],['Bath','F09A0'],['Toilet','F09AB'],['Spa','F0828'],['Office','F1239'],['Computer','F0379'],['Building','F0991'],['Game','F0297'],['Books','F125F'],['Laundry','F072A'],['Garage','F06D9'],['Car','F010B'],['Workshop','F1064'],['Gym','F01E6'],['Stairs','F04CD'],['Entry','F081A'],['Yard','F0531'],['Garden','F09F0'],['Patio','F0E45'],['Pool','F0606'],['Pets','F03E9'],['Dog','F0A43'],['Cat','F011B'],['TV','F0502'],['Home','F02DC'],['Star','F04CE'],['Lights','F1253']];
+function iconCode(s){const m=(s||'').match(/F[0-9A-Fa-f]{4,5}$/);return m?m[0].toUpperCase():'F04B9';}
+function iconGlyph(s){return `<span class=mdig>&#x${iconCode(s)};</span>`;}
+let iconForRoom=-1;
+function openIconPicker(ri){syncRooms();iconForRoom=ri;
+ document.querySelector('#iconpop .iconpop-grid').innerHTML=ICONS.map(([lbl,code])=>`<button type=button class=iconopt title="${lbl}" onclick="pickIcon('${code}')"><span class=mdig>&#x${code};</span><small>${lbl}</small></button>`).join('');
+ iconpop.style.display='flex';}
+function pickIcon(code){if(iconForRoom>=0)ROOMS[iconForRoom].icon='\\U000'+code;iconpop.style.display='none';iconForRoom=-1;renderRooms();}
+function closeIconPicker(){iconpop.style.display='none';iconForRoom=-1;}
 function esc(s){return (s||'').replace(/"/g,'&quot;')}
 function slugify(s){return ((s||'').toLowerCase().replace(/[^a-z0-9_]/g,'_').replace(/^_+/,'')||'room')}
 async function loadRooms(){try{const r=await j('/api/rooms');ROOMS=(r&&r.rooms)||[]}catch(e){ROOMS=[]}}
@@ -1163,11 +1185,11 @@ function entOpts(type,cur){const list=ENTS.filter(e=>e.domain===type);
  if(cur&&!list.some(e=>e.entity_id===cur))o=`<option value="${cur}" selected>${cur}</option>`+o;
  return `<option value="">— select ${type} —</option>`+o}
 function renderRooms(){roomlist.innerHTML=ROOMS.map((r,ri)=>`
- <div class=room data-ri="${ri}">
+ <div class=room data-ri="${ri}" data-icon="${esc(r.icon)}">
   <div class=rh>
    <div><div class=sm>Room name</div><input class=r-name value="${esc(r.name)}"></div>
    <div><div class=sm>id (slug)</div><input class=r-id value="${esc(r.id)}"></div>
-   <div><div class=sm>icon (\\U…)</div><input class=r-icon value="${esc(r.icon)}"></div>
+   <div><div class=sm>icon</div><button type=button class=iconsw onclick="openIconPicker(${ri})">${iconGlyph(r.icon)}</button></div>
    <div><div class=sm>&nbsp;</div><button class="ghost x" onclick="removeRoom(${ri})">Remove</button></div>
   </div>
   <div class=sm>Entities (${(r.entities||[]).length}/6)</div>
@@ -1179,7 +1201,7 @@ function renderRooms(){roomlist.innerHTML=ROOMS.map((r,ri)=>`
   <div style="margin-top:8px"><button class=ghost onclick="addEntity(${ri})" ${(r.entities||[]).length>=6?'disabled':''}>+ Add entity</button></div>
  </div>`).join('')||'<div class=muted>No rooms yet — add one.</div>'}
 function syncRooms(){ROOMS=[...roomlist.querySelectorAll('.room')].map(rb=>({
-  id:rb.querySelector('.r-id').value.trim(),name:rb.querySelector('.r-name').value.trim(),icon:rb.querySelector('.r-icon').value.trim(),
+  id:rb.querySelector('.r-id').value.trim(),name:rb.querySelector('.r-name').value.trim(),icon:rb.dataset.icon||'\\U000F04B9',
   entities:[...rb.querySelectorAll('.ent')].map(eb=>({type:eb.querySelector('.e-type').value,entity_id:eb.querySelector('.e-id').value.trim(),label:eb.querySelector('.e-label').value.trim()}))}))}
 function onType(ri,ei){syncRooms();renderRooms()}
 function addRoom(){syncRooms();const n='Room '+(ROOMS.length+1);ROOMS.push({id:slugify(n),name:n,icon:'\\U000F04B9',entities:[]});renderRooms()}

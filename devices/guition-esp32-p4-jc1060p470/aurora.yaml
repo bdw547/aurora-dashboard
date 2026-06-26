@@ -555,6 +555,40 @@ font:
       - "\U000F0F31"  # weather-night-partly-cloudy
       - "\U000F0026"  # alert (exceptional)
       - "\U000F0425"  # power
+      # --- Room/area icons for the configurator icon picker ---
+      - "\U000F156E"  # sofa-single
+      - "\U000F02E3"  # bed
+      - "\U000F0FD2"  # bed-king
+      - "\U000F068F"  # baby-carriage
+      - "\U000F0A70"  # silverware-fork-knife (dining)
+      - "\U000F0290"  # fridge
+      - "\U000F04DE"  # stove
+      - "\U000F181C"  # countertop
+      - "\U000F0176"  # coffee
+      - "\U000F09A0"  # shower
+      - "\U000F09AB"  # toilet
+      - "\U000F0828"  # hot-tub
+      - "\U000F1239"  # desk
+      - "\U000F0379"  # monitor
+      - "\U000F0991"  # office-building
+      - "\U000F0297"  # gamepad-variant
+      - "\U000F125F"  # bookshelf
+      - "\U000F072A"  # washing-machine
+      - "\U000F06D9"  # garage
+      - "\U000F010B"  # car
+      - "\U000F1064"  # tools
+      - "\U000F01E6"  # dumbbell
+      - "\U000F04CD"  # stairs
+      - "\U000F081A"  # door
+      - "\U000F0531"  # tree
+      - "\U000F09F0"  # flower-outline
+      - "\U000F0E45"  # grill
+      - "\U000F0606"  # pool
+      - "\U000F03E9"  # paw
+      - "\U000F0A43"  # dog
+      - "\U000F011B"  # cat
+      - "\U000F04CE"  # star
+      - "\U000F1253"  # lightbulb-group
 
 # --- Live HA state (selected light = Living Room for v1) ---
 sensor:
