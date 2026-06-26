@@ -95,6 +95,13 @@ class ESPVideoCamera : public camera::Camera {
   void start_stream(camera::CameraRequester requester) override;
   void stop_stream(camera::CameraRequester requester) override;
 
+  // Frame-difference motion level (0..MOTION_GW*MOTION_GH) computed from the
+  // captured luma plane, read by the panel's night wake-on-approach. Updated on
+  // the RTSP stream task; a plain volatile int read is fine for a wake trigger.
+  int get_motion_level() const { return this->motion_level_; }
+  // Largest per-cell luma delta last frame — diagnostic for tuning the threshold.
+  int get_motion_maxdelta() const { return this->motion_maxdelta_; }
+
  protected:
   bool init_pipeline_();
   // Retrying SCCB probe of the OV02C10 chip ID (0x300a/0x300b == 0x5602) before
@@ -232,6 +239,21 @@ class ESPVideoCamera : public camera::Camera {
   void apply_image_tuning_();
   void tune_ctrl_(int fd, uint32_t id, float frac, bool use_default, const char *name);
   void tune_ctrl_abs_(int fd, uint32_t id, int32_t value, const char *name);
+
+  // ---- Wake-on-approach motion detection -----------------------------------
+  // A cheap frame-difference detector that taps the luma (Y) plane of frames
+  // already captured for the H.264 stream — no extra capture, no new task. The
+  // Y plane is downsampled to a coarse grid; motion_level_ is the count of grid
+  // cells that changed beyond a noise floor since the last sampled frame. The
+  // panel reads it (get_motion_level()) to wake the screen at night.
+  static constexpr int MOTION_GW = 32;
+  static constexpr int MOTION_GH = 24;
+  void compute_motion_(const uint8_t *y, uint32_t w, uint32_t h);
+  uint8_t motion_prev_[MOTION_GW * MOTION_GH] = {};
+  bool motion_have_prev_{false};
+  uint32_t motion_last_ms_{0};
+  volatile int motion_level_{0};
+  volatile int motion_maxdelta_{0};
 };
 
 }  // namespace esphome::esp_video_camera

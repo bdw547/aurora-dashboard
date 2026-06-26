@@ -228,6 +228,7 @@ external_components:
 ov02c10_support:
 
 esp_video_camera:
+  id: aurora_cam
   name: "Aurora Camera"
   i2c_id: bus_a
   device: jpeg
@@ -529,6 +530,44 @@ font:
 
 # --- Live HA state (selected light = Living Room for v1) ---
 sensor:
+  # Wake-on-approach: live frame-diff motion level (0..768) from the panel camera.
+  # Exposed so the wake threshold can be calibrated over the API without flashing.
+  - platform: template
+    name: "Panel Motion Level"
+    id: panel_motion_level
+    icon: "mdi:run-fast"
+    accuracy_decimals: 0
+    update_interval: 1s
+    lambda: 'return id(aurora_cam).get_motion_level();'
+  - platform: template
+    name: "Panel Motion MaxDelta"
+    id: panel_motion_maxd
+    icon: "mdi:delta"
+    accuracy_decimals: 0
+    update_interval: 1s
+    lambda: 'return id(aurora_cam).get_motion_maxdelta();'
+  # Night-mode diagnostics — read over the API to verify the state machine live.
+  - platform: template
+    name: "Panel Hour"
+    id: panel_hour
+    accuracy_decimals: 0
+    update_interval: 2s
+    lambda: |-
+      auto t = id(ha_time).now();
+      return t.is_valid() ? (float) t.hour : -1.0f;
+  - platform: template
+    name: "Panel Inactive Secs"
+    id: panel_inactive_s
+    accuracy_decimals: 0
+    update_interval: 2s
+    lambda: 'return (float)(lv_display_get_inactive_time(lv_display_get_default()) / 1000);'
+  - platform: template
+    name: "Panel Night Flags"
+    id: panel_flags
+    accuracy_decimals: 0
+    update_interval: 2s
+    # 2 = approach-wake on, +1 = screen currently off  (3 = on+asleep, 2 = on+awake)
+    lambda: 'return (float)((id(g_cam_wake) ? 2 : 0) + (id(g_screen_off) ? 1 : 0));'
   - platform: homeassistant
     id: ha_media_volume
     entity_id: $ent_media_spotify
@@ -1747,6 +1786,12 @@ globals:
     type: bool
     restore_value: true
     initial_value: 'false'
+  # Night mode (9pm-6am): auto-sleep after a short idle + wake when the panel's
+  # own camera sees someone approach. Default on (the user asked for it).
+  - id: g_cam_wake
+    type: bool
+    restore_value: true
+    initial_value: 'true'
   - id: g_screen_off
     type: bool
     restore_value: false
@@ -2102,6 +2147,22 @@ time:
   - platform: homeassistant
     id: ha_time
 
+# Wake-on-approach sensitivity: number of changed luma grid cells (0..768) that
+# counts as "someone's there". Tunable live from HA so we can calibrate without
+# reflashing; restored across reboots.
+number:
+  - platform: template
+    name: "Panel Wake Sensitivity"
+    id: motion_threshold
+    icon: "mdi:motion-sensor"
+    entity_category: config
+    optimistic: true
+    restore_value: true
+    initial_value: 40
+    min_value: 1
+    max_value: 768
+    step: 1
+
 interval:
   # NOTE: camera images are NOT polled on an interval. ESPHome's image fetch is
   # synchronous (blocks the UI loop) and the cloud-Nest camera_proxy is slow, so
@@ -2129,6 +2190,55 @@ interval:
                 data:
                   dy: !lambda 'return std::to_string(id(g_tp_scroll) / 10);'
             - lambda: 'id(g_tp_scroll) = id(g_tp_scroll) % 10;'
+  # Night wake-on-approach (9pm-6am): while the screen is asleep and the night
+  # toggle is on, the panel's own camera watches for motion (frame-diff on the
+  # captured luma). Enough motion -> wake to the home page. Touch + presence
+  # remain as backup wake sources.
+  - interval: 500ms
+    then:
+      # Asleep at night + camera sees someone approach -> wake. lv_display_trigger_activity
+      # resets LVGL's idle clock so on_idle re-arms and auto-sleeps ~1 min later if
+      # they walk away (a non-touch wake otherwise leaves the screen lit forever).
+      - if:
+          condition:
+            lambda: |-
+              if (!id(g_cam_wake) || !id(g_screen_off)) return false;
+              auto t = id(ha_time).now();
+              if (!t.is_valid()) return false;
+              if (!(t.hour >= 21 || t.hour < 6)) return false;
+              return id(aurora_cam).get_motion_level() >= (int) id(motion_threshold).state;
+          then:
+            - lambda: 'id(g_screen_off) = false; lv_display_trigger_activity(lv_display_get_default());'
+            - light.turn_on:
+                id: display_backlight
+                brightness: !lambda 'return id(g_bri) / 100.0f;'
+            - lvgl.page.show: page_home
+      # Already awake at night + motion continues -> keep it alive (so it doesn't
+      # sleep while you're standing in front of it).
+      - if:
+          condition:
+            lambda: |-
+              if (!id(g_cam_wake) || id(g_screen_off)) return false;
+              auto t = id(ha_time).now();
+              if (!t.is_valid()) return false;
+              if (!(t.hour >= 21 || t.hour < 6)) return false;
+              return id(aurora_cam).get_motion_level() >= (int) id(motion_threshold).state;
+          then:
+            - lambda: 'lv_display_trigger_activity(lv_display_get_default());'
+      # Awake at night + no touch/motion for 60s -> go dark. Self-contained here
+      # rather than relying on the LVGL on_idle trigger, which never fired in
+      # testing. Uses the same LVGL inactivity counter (resets on touch).
+      - if:
+          condition:
+            lambda: |-
+              if (!id(g_cam_wake) || id(g_screen_off)) return false;
+              auto t = id(ha_time).now();
+              if (!t.is_valid()) return false;
+              if (!(t.hour >= 21 || t.hour < 6)) return false;
+              return lv_display_get_inactive_time(lv_display_get_default()) > 60000;
+          then:
+            - lambda: 'id(g_screen_off) = true;'
+            - light.turn_off: display_backlight
   - interval: 10s
     then:
       - lvgl.label.update:
@@ -2192,11 +2302,18 @@ lvgl:
   touchscreens:
     - touchscreen_id: my_touchscreen
   on_idle:
+    # Daytime screen timeout only (Settings: Never/1/5/15). Night sleep + wake is
+    # handled by the always-running 500ms interval, so it never depends on this
+    # LVGL trigger firing. Gated to !night so the two never fight.
     timeout: !lambda 'return id(g_timeout_ms) == 0 ? 86400000 : id(g_timeout_ms);'
     then:
       - if:
           condition:
-            lambda: 'return id(g_timeout_ms) > 0;'
+            lambda: |-
+              if (id(g_timeout_ms) <= 0) return false;
+              auto t = id(ha_time).now();
+              bool night = t.is_valid() && (t.hour >= 21 || t.hour < 6);
+              return !night;
           then:
             - lambda: 'id(g_screen_off) = true;'
             - if:
@@ -5362,6 +5479,7 @@ lvgl:
         - lvgl.slider.update: { id: sld_brightness, value: !lambda 'return id(g_bri);' }
         - lvgl.widget.update: { id: sw_wake, state: { checked: !lambda 'return id(g_wake_presence);' } }
         - lvgl.widget.update: { id: sw_screensaver, state: { checked: !lambda 'return id(g_screensaver);' } }
+        - lvgl.widget.update: { id: sw_cam_wake, state: { checked: !lambda 'return id(g_cam_wake);' } }
       widgets:
         - image: { src: img_aurora_bg, x: 0, y: 0 }
         - label: { text: "Settings", x: 100, y: 26, text_font: f_title, text_color: 0xEEF0F6 }
@@ -5459,12 +5577,12 @@ lvgl:
         - obj:
             x: 96
             y: 380
-            width: 400
+            width: 266
             height: 92
             styles: st_glass
             scrollable: false
             widgets:
-              - label: { text: "Wake on presence", x: 8, align: left_mid, text_font: f_body, text_color: 0xEEF0F6 }
+              - label: { text: "Presence wake", x: 8, align: left_mid, text_font: f_body, text_color: 0xEEF0F6 }
               - switch:
                   id: sw_wake
                   align: right_mid
@@ -5472,20 +5590,35 @@ lvgl:
                   on_value:
                     - lambda: 'id(g_wake_presence) = x;'
         - obj:
-            x: 512
+            x: 370
             y: 380
-            width: 400
+            width: 266
             height: 92
             styles: st_glass
             scrollable: false
             widgets:
-              - label: { text: "Screen saver (clock)", x: 8, align: left_mid, text_font: f_body, text_color: 0xEEF0F6 }
+              - label: { text: "Screensaver", x: 8, align: left_mid, text_font: f_body, text_color: 0xEEF0F6 }
               - switch:
                   id: sw_screensaver
                   align: right_mid
                   x: -8
                   on_value:
                     - lambda: 'id(g_screensaver) = x;'
+        - obj:
+            x: 644
+            y: 380
+            width: 266
+            height: 92
+            styles: st_glass
+            scrollable: false
+            widgets:
+              - label: { text: "Approach wake", x: 8, align: left_mid, text_font: f_body, text_color: 0xEEF0F6 }
+              - switch:
+                  id: sw_cam_wake
+                  align: right_mid
+                  x: -8
+                  on_value:
+                    - lambda: 'id(g_cam_wake) = x;'
 
     - id: page_tvremote
       bg_opa: 0

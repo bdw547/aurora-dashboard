@@ -920,6 +920,11 @@ bool ESPVideoCamera::capture_h264_(const uint8_t **nal, size_t *len) {
       copy_len = this->h264_in_cap_;
     memcpy(this->h264_in_buf_, this->capture_buffers_[cap_buf.index].start, copy_len);
 
+    // Wake-on-approach: diff the freshly captured luma (Y = first w*h bytes of the
+    // YUV420 frame). THIS is the live capture path — the RTSP stream task owns the
+    // camera, so the ESPHome-loop path (loop_jpeg_pipeline_) is never called.
+    this->compute_motion_(this->h264_in_buf_, this->capture_width_, this->capture_height_);
+
     esp_h264_enc_in_frame_t in_frame = {};
     in_frame.raw_data.buffer = this->h264_in_buf_;
     in_frame.raw_data.len = copy_len;
@@ -938,6 +943,56 @@ bool ESPVideoCamera::capture_h264_(const uint8_t **nal, size_t *len) {
   if (ioctl(this->capture_fd_, VIDIOC_QBUF, &cap_buf) < 0)
     ESP_LOGW(TAG, "capture QBUF failed: %s", strerror(errno));
   return ok;
+}
+
+// Cheap frame-difference motion detector for night wake-on-approach. Downsamples
+// the luma (Y) plane into an MOTION_GW x MOTION_GH grid (each cell = the mean of
+// a strided sample of its block), then counts cells whose mean changed beyond a
+// noise floor vs the previous sampled frame. Cell-averaging suppresses per-pixel
+// sensor noise; the count (0..MOTION_GW*MOTION_GH) is robust and easy to
+// threshold. Sampled at ~3 Hz so it costs almost nothing on the stream task.
+void ESPVideoCamera::compute_motion_(const uint8_t *y, uint32_t w, uint32_t h) {
+  if (y == nullptr || w < (uint32_t) MOTION_GW || h < (uint32_t) MOTION_GH)
+    return;
+  uint32_t now = (uint32_t) (esp_timer_get_time() / 1000);
+  if (now - this->motion_last_ms_ < 300)
+    return;  // ~3 Hz is plenty for wake-on-approach
+  this->motion_last_ms_ = now;
+
+  const uint32_t cell_w = w / MOTION_GW;
+  const uint32_t cell_h = h / MOTION_GH;
+  const uint32_t step = 4;  // sample every 4th pixel — cheap on a ~937 kB plane
+  uint8_t cur[MOTION_GW * MOTION_GH];
+  for (int gy = 0; gy < MOTION_GH; gy++) {
+    const uint32_t y0 = (uint32_t) gy * cell_h;
+    for (int gx = 0; gx < MOTION_GW; gx++) {
+      const uint32_t x0 = (uint32_t) gx * cell_w;
+      uint32_t sum = 0, cnt = 0;
+      for (uint32_t yy = 0; yy < cell_h; yy += step) {
+        const uint8_t *row = y + (size_t) (y0 + yy) * w + x0;
+        for (uint32_t xx = 0; xx < cell_w; xx += step) {
+          sum += row[xx];
+          cnt++;
+        }
+      }
+      cur[gy * MOTION_GW + gx] = cnt ? (uint8_t) (sum / cnt) : 0;
+    }
+  }
+
+  if (this->motion_have_prev_) {
+    int changed = 0, maxd = 0;
+    for (int i = 0; i < MOTION_GW * MOTION_GH; i++) {
+      int d = (int) cur[i] - (int) this->motion_prev_[i];
+      if (d < 0) d = -d;
+      if (d > maxd) maxd = d;
+      if (d >= 6)  // per-cell luma delta floor: noise is ~2-3, a walk-up is ~10-12
+        changed++;
+    }
+    this->motion_level_ = changed;
+    this->motion_maxdelta_ = maxd;
+  }
+  memcpy(this->motion_prev_, cur, sizeof(cur));
+  this->motion_have_prev_ = true;
 }
 
 // Capture frames until we have both SPS (type 7) and PPS (type 8) for the SDP.
