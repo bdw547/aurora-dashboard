@@ -90,10 +90,17 @@ CARD_META = {
     "lights":  {"name": "Lights",  "hint": "Tap to control"},
     "doors":   {"name": "Doors & Sensors", "hint": "Locks + presence"},
     "quick":   {"name": "Quick",   "hint": "Rooms / Media / Network / Library"},
+    "media":   {"name": "Media",   "hint": "Now playing"},
+    "weather": {"name": "Weather", "hint": "Forecast & radar"},
 }
+# Cards whose widget ids are referenced by HA sensor handlers elsewhere (live
+# temp/condition/locks/presence). They must stay present or those lambdas hit an
+# undefined id and the build fails — so every layout must include them.
+REQUIRED_CARDS = ("climate", "doors")
 
 CARD_TEMPLATES = {
     "climate": '''        - obj:
+            # aurora-card: climate
             x: {X}
             y: {Y}
             width: 288
@@ -101,14 +108,16 @@ CARD_TEMPLATES = {
             styles: st_glass
             scrollable: false
             clickable: true
-            on_click: [lvgl.page.show: page_climate]
+            on_click: [lvgl.page.show: page_weather]
             widgets:
               - label: {{ text: "CLIMATE", x: 4, y: 2, text_font: f_small, text_color: 0x8A8F9E }}
+              - label: {{ id: lbl_home_wx_icon, text: "", align: top_right, x: -6, y: 0, text_font: f_icon, text_color: 0xFFCE54 }}
               - label: {{ id: lbl_home_temp_big, text: "--", x: 2, y: 46, text_font: f_display, text_color: 0xEEF0F6 }}
               - label: {{ id: lbl_home_cond, text: "--", x: 4, y: 138, text_font: f_body, text_color: 0x2ED5B8 }}
               - label: {{ text: "Outdoor", x: 4, y: 168, text_font: f_small, text_color: 0x8A8F9E }}
 ''',
     "lights": '''        - obj:
+            # aurora-card: lights
             x: {X}
             y: {Y}
             width: 288
@@ -123,6 +132,7 @@ CARD_TEMPLATES = {
               - label: {{ text: "Tap to control", x: 8, y: 170, text_font: f_small, text_color: 0x8A8F9E }}
 ''',
     "doors": '''        - obj:
+            # aurora-card: doors
             x: {X}
             y: {Y}
             width: 288
@@ -141,6 +151,7 @@ CARD_TEMPLATES = {
               - label: {{ id: lbl_home_presence2, text: "--", x: -4, y: 134, align: top_right, text_font: f_body, text_color: 0x2ED5B8 }}
 ''',
     "quick": '''        - obj:
+            # aurora-card: quick
             x: {X}
             y: {Y}
             width: 288
@@ -187,13 +198,51 @@ CARD_TEMPLATES = {
                   widgets: [label: {{ text: "Library", align: center, text_font: f_body, text_color: 0xEEF0F6 }}]
                   on_click: [lvgl.page.show: page_library]
 ''',
+    "media": '''        - obj:
+            # aurora-card: media
+            x: {X}
+            y: {Y}
+            width: 288
+            height: 218
+            styles: st_glass
+            scrollable: false
+            clickable: true
+            on_click: [lvgl.page.show: page_media]
+            widgets:
+              - label: {{ text: "\\U000F075A", x: 8, y: 8, text_font: f_icon, text_color: 0x7B6CFF }}
+              - label: {{ text: "Media", x: 50, y: 16, text_font: f_title, text_color: 0xEEF0F6 }}
+              - label: {{ text: "Now playing", x: 8, y: 170, text_font: f_small, text_color: 0x8A8F9E }}
+''',
+    "weather": '''        - obj:
+            # aurora-card: weather
+            x: {X}
+            y: {Y}
+            width: 288
+            height: 218
+            styles: st_glass
+            scrollable: false
+            clickable: true
+            on_click: [lvgl.page.show: page_weather]
+            widgets:
+              - label: {{ text: "\\U000F0599", x: 8, y: 8, text_font: f_icon, text_color: 0xFFCE54 }}
+              - label: {{ text: "Weather", x: 50, y: 16, text_font: f_title, text_color: 0xEEF0F6 }}
+              - label: {{ text: "Forecast", x: 8, y: 170, text_font: f_small, text_color: 0x8A8F9E }}
+''',
 }
 
 
 def _card_type(block):
+    # Generated cards carry an explicit "# aurora-card: <type>" marker; fall
+    # back to page-link detection for any legacy block written before markers.
+    m = re.search(r"#\s*aurora-card:\s*(\w+)", block)
+    if m and m.group(1) in CARD_TEMPLATES:
+        return m.group(1)
     if "page_climate" in block: return "climate"
     if "page_lights" in block: return "lights"
     if "page_security" in block: return "doors"
+    if "page_rooms" in block: return "quick"   # quick card carries a page_media button
+    if "page_weather" in block: return "weather"
+    if "page_media" in block: return "media"
     return "quick"
 
 
@@ -217,8 +266,16 @@ def read_home_layout():
 
 
 def write_home_layout(order):
-    if sorted(order) != sorted(CARD_TEMPLATES):
-        raise ValueError("layout must use each of the 4 cards exactly once")
+    # 4 cells, each filled by a distinct catalog card. Distinctness avoids
+    # duplicate LVGL widget ids from the id-bearing cards (climate/doors).
+    if len(order) != 4 or any(k not in CARD_TEMPLATES for k in order):
+        raise ValueError("layout must list 4 cards from the catalog")
+    if len(set(order)) != 4:
+        raise ValueError("each home card may be used at most once")
+    missing = [c for c in REQUIRED_CARDS if c not in order]
+    if missing:
+        raise ValueError("required cards missing (other screens use their state): "
+                         + ", ".join(missing))
     text = open(YAML, encoding="utf-8").read()
     cards = "".join(CARD_TEMPLATES[order[i]].format(X=HOME_CELLS[i][0], Y=HOME_CELLS[i][1])
                     for i in range(4))
@@ -705,6 +762,7 @@ pre{background:#06070a;border:1px solid var(--hair);border-radius:10px;padding:1
 .hcell{background:var(--card);border:1px solid var(--hair);border-radius:14px;padding:14px;min-height:96px;cursor:grab;transition:.12s}
 .hcell:hover{border-color:var(--teal)}.hcell.drag{opacity:.4}.hcell.over{border-color:var(--purple);background:#1a1d28}
 .hcell .n{font-weight:600}.hcell .h{color:var(--t2);font-size:12px;margin-top:4px}.hcell .d{color:var(--t2);font-size:11px;margin-top:8px}
+.hcell .cardsel{margin-top:10px;padding:6px 8px;font-size:12px;cursor:pointer}
 .room{border:1px solid var(--hair);border-radius:12px;padding:12px 14px;margin:10px 0;background:#10121a}
 .room .rh{display:grid;grid-template-columns:1fr 120px 150px 90px;gap:8px;align-items:end}
 .ent{display:grid;grid-template-columns:110px 1fr 1fr 56px;gap:8px;align-items:center;margin-top:6px}
@@ -720,7 +778,7 @@ pre{background:#06070a;border:1px solid var(--hair);border-radius:10px;padding:1
 
 <div class=card id=slotcard style=display:none><h2>2 · Map entities</h2><div id=slots></div></div>
 
-<div class=card><h2>3 · Home screen layout <span class=muted>(drag the cards to rearrange)</span></h2>
+<div class=card><h2>3 · Home screen layout <span class=muted>(pick a card per cell, then drag to rearrange)</span></h2>
 <div class=preview><div class=np>Now&nbsp;Playing<br><small>(fixed)</small></div><div id=homegrid class=hgrid></div></div></div>
 
 <div class=card id=roomcard style=display:none><h2>4 · Rooms <span class=muted>(add / rename / assign entities — max 6 rooms, 6 entities each)</span></h2>
@@ -738,13 +796,20 @@ let SLOTS=[],ENTS=[],HORDER=[],HMETA={};
 async function j(u,o){const r=await fetch(u,o);if(!r.ok)throw new Error((await r.json()).error||r.status);return r.json()}
 async function boot(){SLOTS=await j('/api/slots');loadHome()}
 async function loadHome(){const r=await j('/api/home');HORDER=r.order;HMETA=r.meta;renderHome()}
-function renderHome(){homegrid.innerHTML=HORDER.map((k,i)=>`<div class=hcell draggable=true data-i="${i}"><div class=n>${HMETA[k].name}</div><div class=h>${HMETA[k].hint}</div><div class=d>cell ${i+1}</div></div>`).join('');
+function renderHome(){const cat=Object.keys(HMETA);
+ homegrid.innerHTML=HORDER.map((k,i)=>{
+  const used=HORDER.filter((_,j)=>j!==i);
+  const opts=cat.map(c=>`<option value="${c}" ${c===k?'selected':''} ${used.includes(c)?'disabled':''}>${HMETA[c].name}</option>`).join('');
+  return `<div class=hcell draggable=true data-i="${i}"><div class=n>${HMETA[k].name}</div><div class=h>${HMETA[k].hint}</div>`
+   +`<select class=cardsel onmousedown="event.stopPropagation()" onclick="event.stopPropagation()" onchange="pickCard(${i},this.value)">${opts}</select>`
+   +`<div class=d>cell ${i+1}</div></div>`}).join('');
  document.querySelectorAll('.hcell').forEach(c=>{
   c.ondragstart=e=>{e.dataTransfer.setData('i',c.dataset.i);c.classList.add('drag')};
   c.ondragend=()=>c.classList.remove('drag');
   c.ondragover=e=>{e.preventDefault();c.classList.add('over')};
   c.ondragleave=()=>c.classList.remove('over');
   c.ondrop=e=>{e.preventDefault();c.classList.remove('over');const a=+e.dataTransfer.getData('i'),b=+c.dataset.i;[HORDER[a],HORDER[b]]=[HORDER[b],HORDER[a]];renderHome()}})}
+function pickCard(i,v){HORDER[i]=v;renderHome()}
 async function saveHome(){await j('/api/home',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({order:HORDER})})}
 async function connect(){
  const url=url_.value.trim(),token=token_.value.trim();cmsg.textContent='Loading…';cmsg.className='muted';
@@ -757,7 +822,9 @@ function render(){let g='',h='';for(const s of SLOTS){if(s.group!=g){g=s.group;h
  slots.innerHTML=h}
 function bindings(){const b={};document.querySelectorAll('#slots select').forEach(x=>b[x.dataset.v]=x.value);return b}
 async function save(){fmsg.className='muted';fmsg.textContent='Saving…';try{const r=await j('/api/save',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({bindings:bindings()})});fmsg.textContent='Saved '+r.saved+' bindings ✓';fmsg.className='ok'}catch(e){fmsg.textContent=e.message;fmsg.className='err'}}
-async function flash(){await save();await saveHome();const device=device_.value.trim();if(!device){fmsg.textContent='Enter the panel IP';fmsg.className='err';return}
+async function flash(){
+ if(!HORDER.includes('climate')||!HORDER.includes('doors')){fmsg.textContent='Keep the Climate and Doors cards — other screens use their live state.';fmsg.className='err';return}
+ await save();await saveHome();const device=device_.value.trim();if(!device){fmsg.textContent='Enter the panel IP';fmsg.className='err';return}
  flog.style.display='';flog.textContent='';fmsg.textContent='Building + flashing…';fmsg.className='muted';
  await j('/api/flash',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({device})});
  const t=setInterval(async()=>{const s=await j('/api/flash-status');flog.textContent=s.log;flog.scrollTop=flog.scrollHeight;
