@@ -1,51 +1,193 @@
 {
   "version": 1,
-  "_comment": "Source of truth for Aurora's dynamic rooms. The configurator (serve.py) regenerates the AURORA_ROOM_* marker regions in aurora.yaml from this file, then OTA-flashes. id: lowercase slug, unique. icon: MDI codepoint (\\Uxxxxxxxx escape, rendered by f_icon). entities[].type: light | fan | switch (Phase 1). Max 6 entities per room (column geometry).",
   "rooms": [
     {
       "id": "living",
       "name": "Living Room",
       "icon": "\\U000F04B9",
       "entities": [
-        { "entity_id": "light.living_room_main", "type": "light", "label": "Main Light" },
-        { "entity_id": "fan.living_room_pendant", "type": "fan", "label": "Ceiling Fan" }
+        {
+          "type": "light",
+          "entity_id": "light.living_room_main",
+          "label": "Main Lights"
+        },
+        {
+          "type": "fan",
+          "entity_id": "fan.living_room_pendant",
+          "label": "Ceiling Fan"
+        },
+        {
+          "type": "climate",
+          "entity_id": "climate.main_floor",
+          "label": "Main Climate"
+        }
       ]
     },
     {
       "id": "kitchen",
       "name": "Kitchen",
-      "icon": "\\U000F04B9",
+      "icon": "\\U000F0A70",
       "entities": [
-        { "entity_id": "light.kitchen_kitchen", "type": "light", "label": "Main Light" }
+        {
+          "type": "light",
+          "entity_id": "light.kitchen_kitchen",
+          "label": "Main Lights"
+        },
+        {
+          "type": "light",
+          "entity_id": "light.kitchen_stair_lights",
+          "label": "Stair Lights"
+        },
+        {
+          "type": "light",
+          "entity_id": "light.kitchen_breakfast",
+          "label": "Breakfast Light"
+        }
       ]
     },
     {
       "id": "office",
       "name": "Office",
-      "icon": "\\U000F04B9",
+      "icon": "\\U000F1239",
       "entities": [
-        { "entity_id": "light.office_shelves", "type": "light", "label": "Shelves" },
-        { "entity_id": "light.office_main_lights", "type": "light", "label": "Main Lights" },
-        { "entity_id": "light.office_desk_lamp", "type": "light", "label": "Desk Lamp" },
-        { "entity_id": "fan.office_ceiling_fan", "type": "fan", "label": "Ceiling Fan" }
+        {
+          "type": "light",
+          "entity_id": "light.office_shelves",
+          "label": "Shelves"
+        },
+        {
+          "type": "light",
+          "entity_id": "light.office_main_lights",
+          "label": "Main Lights"
+        },
+        {
+          "type": "light",
+          "entity_id": "light.office_desk_lamp",
+          "label": "Desk Lamp"
+        },
+        {
+          "type": "fan",
+          "entity_id": "fan.office_ceiling_fan",
+          "label": "Ceiling Fan"
+        }
       ]
     },
     {
       "id": "master",
       "name": "Master",
-      "icon": "\\U000F04B9",
+      "icon": "\\U000F02E3",
       "entities": [
-        { "entity_id": "light.reading_lamp", "type": "light", "label": "Reading Lamp" },
-        { "entity_id": "light.master_bedroom_ceiling_fan_light", "type": "light", "label": "Ceiling Light" }
+        {
+          "type": "light",
+          "entity_id": "light.reading_lamp",
+          "label": "Reading Lamp"
+        },
+        {
+          "type": "light",
+          "entity_id": "light.master_bedroom_ceiling_fan_light",
+          "label": "Ceiling Lights"
+        },
+        {
+          "type": "fan",
+          "entity_id": "fan.master_bedroom_master_bedroom_ceiling_fan",
+          "label": "Ceiling Fan"
+        },
+        {
+          "type": "climate",
+          "entity_id": "climate.master_bedroom_master_bedroom",
+          "label": "Master Climate"
+        }
       ]
     },
     {
       "id": "exterior",
       "name": "Exterior",
-      "icon": "\\U000F04B9",
+      "icon": "\\U000F0531",
       "entities": [
-        { "entity_id": "light.outdoor_patio_back_porch_lights", "type": "light", "label": "Patio Lights" },
-        { "entity_id": "switch.outdoor_patio_putting_green", "type": "switch", "label": "Putting Green" }
+        {
+          "type": "light",
+          "entity_id": "light.outdoor_patio_back_porch_lights",
+          "label": "Patio Lights"
+        },
+        {
+          "type": "switch",
+          "entity_id": "switch.outdoor_patio_putting_green",
+          "label": "Putting Green"
+        },
+        {
+          "type": "light",
+          "entity_id": "light.garage_wall_lights",
+          "label": "Garage Sconces"
+        },
+        {
+          "type": "light",
+          "entity_id": "light.front_porch_overhead_light",
+          "label": "Front Porch"
+        },
+        {
+          "type": "switch",
+          "entity_id": "switch.outdoor_patio_ceiling_fan",
+          "label": "Table Lights"
+        }
+      ]
+    },
+    {
+      "id": "entry",
+      "name": "Entryway",
+      "icon": "\\U000F081A",
+      "entities": [
+        {
+          "type": "light",
+          "entity_id": "light.front_foyer_door_chandelier",
+          "label": "Entry Chandelier"
+        },
+        {
+          "type": "light",
+          "entity_id": "light.front_foyer_stair_chandelier",
+          "label": "Stair Chandelier"
+        },
+        {
+          "type": "light",
+          "entity_id": "light.dining_room_chandelier",
+          "label": "Dining Room"
+        },
+        {
+          "type": "light",
+          "entity_id": "light.family_room_main",
+          "label": "Front Room"
+        },
+        {
+          "type": "lock",
+          "entity_id": "lock.front_door",
+          "label": "Front Door"
+        },
+        {
+          "type": "switch",
+          "entity_id": "switch.front_stairs_outlet_socket_1",
+          "label": "Stairs Outlet"
+        }
+      ]
+    },
+    {
+      "id": "game",
+      "name": "Gameroom",
+      "icon": "\\U000F04CD",
+      "entities": [
+        {
+          "type": "light",
+          "entity_id": "light.gameroom_ceiling_fan_light",
+          "label": "Gameroom Lights"
+        },
+        {
+          "type": "switch",
+          "entity_id": "switch.gameroom_ceiling_fan",
+          "label": "Ceiling Fan"
+        },
+        {
+          "type": "climate",
+          "entity_id": "climate.upstairs_upstairs",
+          "label": "Upstairs Climate"
+        }
       ]
     }
   ]

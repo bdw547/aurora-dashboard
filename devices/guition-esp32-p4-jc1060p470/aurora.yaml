@@ -844,6 +844,18 @@ sensor:
     on_value:
       then:
         - lvgl.label.update: { id: lbl_roomcount_exterior, text: !lambda 'int v=(int)x; if(v<=0) return std::string("All off"); char b[16]; snprintf(b,sizeof(b),"%d on",v); return std::string(b);' }
+  - platform: homeassistant
+    id: ha_count_entry
+    entity_id: sensor.aurora_room_entry
+    on_value:
+      then:
+        - lvgl.label.update: { id: lbl_roomcount_entry, text: !lambda 'int v=(int)x; if(v<=0) return std::string("All off"); char b[16]; snprintf(b,sizeof(b),"%d on",v); return std::string(b);' }
+  - platform: homeassistant
+    id: ha_count_game
+    entity_id: sensor.aurora_room_game
+    on_value:
+      then:
+        - lvgl.label.update: { id: lbl_roomcount_game, text: !lambda 'int v=(int)x; if(v<=0) return std::string("All off"); char b[16]; snprintf(b,sizeof(b),"%d on",v); return std::string(b);' }
   # <<< AURORA_ROOM_COUNTS
   - platform: wifi_signal
     id: panel_rssi
@@ -1022,6 +1034,21 @@ sensor:
             id: pct_sld_room_living_light_living_room_main
             text: !lambda 'int v=(x==x)?(int)roundf(x/2.55f):0; char b[8]; if(v<=0) return std::string("OFF"); snprintf(b,sizeof(b),"%d%%",v); return std::string(b);'
   - platform: homeassistant
+    id: ha_roomtgt_living_climate_main_floor
+    entity_id: climate.main_floor
+    attribute: temperature
+    on_value:
+      then:
+        - lvgl.slider.update: { id: sld_room_living_climate_main_floor, value: !lambda 'return (x == x) ? (int) x : 70;' }
+        - lvgl.label.update: { id: pct_sld_room_living_climate_main_floor, text: !lambda 'if (x != x) return std::string("--°"); char b[8]; snprintf(b, sizeof(b), "%d°", (int) x); return std::string(b);' }
+  - platform: homeassistant
+    id: ha_roomcur_living_climate_main_floor
+    entity_id: climate.main_floor
+    attribute: current_temperature
+    on_value:
+      then:
+        - lvgl.label.update: { id: lbl_cur_room_living_climate_main_floor, text: !lambda 'if (x != x) return std::string(""); char b[16]; snprintf(b, sizeof(b), "now %d°", (int) x); return std::string(b);' }
+  - platform: homeassistant
     id: ha_roombri_kitchen_light_kitchen_kitchen
     entity_id: light.kitchen_kitchen
     attribute: brightness
@@ -1032,6 +1059,30 @@ sensor:
             value: !lambda 'return (x == x) ? (int) roundf(x / 2.55f) : 0;'
         - lvgl.label.update:
             id: pct_sld_room_kitchen_light_kitchen_kitchen
+            text: !lambda 'int v=(x==x)?(int)roundf(x/2.55f):0; char b[8]; if(v<=0) return std::string("OFF"); snprintf(b,sizeof(b),"%d%%",v); return std::string(b);'
+  - platform: homeassistant
+    id: ha_roombri_kitchen_light_kitchen_stair_lights
+    entity_id: light.kitchen_stair_lights
+    attribute: brightness
+    on_value:
+      then:
+        - lvgl.slider.update:
+            id: sld_room_kitchen_light_kitchen_stair_lights
+            value: !lambda 'return (x == x) ? (int) roundf(x / 2.55f) : 0;'
+        - lvgl.label.update:
+            id: pct_sld_room_kitchen_light_kitchen_stair_lights
+            text: !lambda 'int v=(x==x)?(int)roundf(x/2.55f):0; char b[8]; if(v<=0) return std::string("OFF"); snprintf(b,sizeof(b),"%d%%",v); return std::string(b);'
+  - platform: homeassistant
+    id: ha_roombri_kitchen_light_kitchen_breakfast
+    entity_id: light.kitchen_breakfast
+    attribute: brightness
+    on_value:
+      then:
+        - lvgl.slider.update:
+            id: sld_room_kitchen_light_kitchen_breakfast
+            value: !lambda 'return (x == x) ? (int) roundf(x / 2.55f) : 0;'
+        - lvgl.label.update:
+            id: pct_sld_room_kitchen_light_kitchen_breakfast
             text: !lambda 'int v=(x==x)?(int)roundf(x/2.55f):0; char b[8]; if(v<=0) return std::string("OFF"); snprintf(b,sizeof(b),"%d%%",v); return std::string(b);'
   - platform: homeassistant
     id: ha_roombri_office_light_office_shelves
@@ -1094,6 +1145,21 @@ sensor:
             id: pct_sld_room_master_light_master_bedroom_ceiling_fan_light
             text: !lambda 'int v=(x==x)?(int)roundf(x/2.55f):0; char b[8]; if(v<=0) return std::string("OFF"); snprintf(b,sizeof(b),"%d%%",v); return std::string(b);'
   - platform: homeassistant
+    id: ha_roomtgt_master_climate_master_bedroom_master_bedroom
+    entity_id: climate.master_bedroom_master_bedroom
+    attribute: temperature
+    on_value:
+      then:
+        - lvgl.slider.update: { id: sld_room_master_climate_master_bedroom_master_bedroom, value: !lambda 'return (x == x) ? (int) x : 70;' }
+        - lvgl.label.update: { id: pct_sld_room_master_climate_master_bedroom_master_bedroom, text: !lambda 'if (x != x) return std::string("--°"); char b[8]; snprintf(b, sizeof(b), "%d°", (int) x); return std::string(b);' }
+  - platform: homeassistant
+    id: ha_roomcur_master_climate_master_bedroom_master_bedroom
+    entity_id: climate.master_bedroom_master_bedroom
+    attribute: current_temperature
+    on_value:
+      then:
+        - lvgl.label.update: { id: lbl_cur_room_master_climate_master_bedroom_master_bedroom, text: !lambda 'if (x != x) return std::string(""); char b[16]; snprintf(b, sizeof(b), "now %d°", (int) x); return std::string(b);' }
+  - platform: homeassistant
     id: ha_roombri_exterior_light_outdoor_patio_back_porch_lights
     entity_id: light.outdoor_patio_back_porch_lights
     attribute: brightness
@@ -1105,6 +1171,105 @@ sensor:
         - lvgl.label.update:
             id: pct_sld_room_exterior_light_outdoor_patio_back_porch_lights
             text: !lambda 'int v=(x==x)?(int)roundf(x/2.55f):0; char b[8]; if(v<=0) return std::string("OFF"); snprintf(b,sizeof(b),"%d%%",v); return std::string(b);'
+  - platform: homeassistant
+    id: ha_roombri_exterior_light_garage_wall_lights
+    entity_id: light.garage_wall_lights
+    attribute: brightness
+    on_value:
+      then:
+        - lvgl.slider.update:
+            id: sld_room_exterior_light_garage_wall_lights
+            value: !lambda 'return (x == x) ? (int) roundf(x / 2.55f) : 0;'
+        - lvgl.label.update:
+            id: pct_sld_room_exterior_light_garage_wall_lights
+            text: !lambda 'int v=(x==x)?(int)roundf(x/2.55f):0; char b[8]; if(v<=0) return std::string("OFF"); snprintf(b,sizeof(b),"%d%%",v); return std::string(b);'
+  - platform: homeassistant
+    id: ha_roombri_exterior_light_front_porch_overhead_light
+    entity_id: light.front_porch_overhead_light
+    attribute: brightness
+    on_value:
+      then:
+        - lvgl.slider.update:
+            id: sld_room_exterior_light_front_porch_overhead_light
+            value: !lambda 'return (x == x) ? (int) roundf(x / 2.55f) : 0;'
+        - lvgl.label.update:
+            id: pct_sld_room_exterior_light_front_porch_overhead_light
+            text: !lambda 'int v=(x==x)?(int)roundf(x/2.55f):0; char b[8]; if(v<=0) return std::string("OFF"); snprintf(b,sizeof(b),"%d%%",v); return std::string(b);'
+  - platform: homeassistant
+    id: ha_roombri_entry_light_front_foyer_door_chandelier
+    entity_id: light.front_foyer_door_chandelier
+    attribute: brightness
+    on_value:
+      then:
+        - lvgl.slider.update:
+            id: sld_room_entry_light_front_foyer_door_chandelier
+            value: !lambda 'return (x == x) ? (int) roundf(x / 2.55f) : 0;'
+        - lvgl.label.update:
+            id: pct_sld_room_entry_light_front_foyer_door_chandelier
+            text: !lambda 'int v=(x==x)?(int)roundf(x/2.55f):0; char b[8]; if(v<=0) return std::string("OFF"); snprintf(b,sizeof(b),"%d%%",v); return std::string(b);'
+  - platform: homeassistant
+    id: ha_roombri_entry_light_front_foyer_stair_chandelier
+    entity_id: light.front_foyer_stair_chandelier
+    attribute: brightness
+    on_value:
+      then:
+        - lvgl.slider.update:
+            id: sld_room_entry_light_front_foyer_stair_chandelier
+            value: !lambda 'return (x == x) ? (int) roundf(x / 2.55f) : 0;'
+        - lvgl.label.update:
+            id: pct_sld_room_entry_light_front_foyer_stair_chandelier
+            text: !lambda 'int v=(x==x)?(int)roundf(x/2.55f):0; char b[8]; if(v<=0) return std::string("OFF"); snprintf(b,sizeof(b),"%d%%",v); return std::string(b);'
+  - platform: homeassistant
+    id: ha_roombri_entry_light_dining_room_chandelier
+    entity_id: light.dining_room_chandelier
+    attribute: brightness
+    on_value:
+      then:
+        - lvgl.slider.update:
+            id: sld_room_entry_light_dining_room_chandelier
+            value: !lambda 'return (x == x) ? (int) roundf(x / 2.55f) : 0;'
+        - lvgl.label.update:
+            id: pct_sld_room_entry_light_dining_room_chandelier
+            text: !lambda 'int v=(x==x)?(int)roundf(x/2.55f):0; char b[8]; if(v<=0) return std::string("OFF"); snprintf(b,sizeof(b),"%d%%",v); return std::string(b);'
+  - platform: homeassistant
+    id: ha_roombri_entry_light_family_room_main
+    entity_id: light.family_room_main
+    attribute: brightness
+    on_value:
+      then:
+        - lvgl.slider.update:
+            id: sld_room_entry_light_family_room_main
+            value: !lambda 'return (x == x) ? (int) roundf(x / 2.55f) : 0;'
+        - lvgl.label.update:
+            id: pct_sld_room_entry_light_family_room_main
+            text: !lambda 'int v=(x==x)?(int)roundf(x/2.55f):0; char b[8]; if(v<=0) return std::string("OFF"); snprintf(b,sizeof(b),"%d%%",v); return std::string(b);'
+  - platform: homeassistant
+    id: ha_roombri_game_light_gameroom_ceiling_fan_light
+    entity_id: light.gameroom_ceiling_fan_light
+    attribute: brightness
+    on_value:
+      then:
+        - lvgl.slider.update:
+            id: sld_room_game_light_gameroom_ceiling_fan_light
+            value: !lambda 'return (x == x) ? (int) roundf(x / 2.55f) : 0;'
+        - lvgl.label.update:
+            id: pct_sld_room_game_light_gameroom_ceiling_fan_light
+            text: !lambda 'int v=(x==x)?(int)roundf(x/2.55f):0; char b[8]; if(v<=0) return std::string("OFF"); snprintf(b,sizeof(b),"%d%%",v); return std::string(b);'
+  - platform: homeassistant
+    id: ha_roomtgt_game_climate_upstairs_upstairs
+    entity_id: climate.upstairs_upstairs
+    attribute: temperature
+    on_value:
+      then:
+        - lvgl.slider.update: { id: sld_room_game_climate_upstairs_upstairs, value: !lambda 'return (x == x) ? (int) x : 70;' }
+        - lvgl.label.update: { id: pct_sld_room_game_climate_upstairs_upstairs, text: !lambda 'if (x != x) return std::string("--°"); char b[8]; snprintf(b, sizeof(b), "%d°", (int) x); return std::string(b);' }
+  - platform: homeassistant
+    id: ha_roomcur_game_climate_upstairs_upstairs
+    entity_id: climate.upstairs_upstairs
+    attribute: current_temperature
+    on_value:
+      then:
+        - lvgl.label.update: { id: lbl_cur_room_game_climate_upstairs_upstairs, text: !lambda 'if (x != x) return std::string(""); char b[16]; snprintf(b, sizeof(b), "now %d°", (int) x); return std::string(b);' }
   # <<< AURORA_ROOM_STATE_SENSOR
 text_sensor:
   # ---- Screensaver photo list (from the aurora_screensaver HA package) ----
@@ -1723,6 +1888,34 @@ text_sensor:
               - lvgl.widget.update: { id: pwr_ic_kitchen_light_kitchen_kitchen, bg_color: 0x12141C }
               - lvgl.label.update: { id: ic_kitchen_light_kitchen_kitchen, text_color: 0x8A8F9E }
   - platform: homeassistant
+    id: ha_roomst_kitchen_light_kitchen_stair_lights
+    entity_id: light.kitchen_stair_lights
+    on_value:
+      then:
+        - if:
+            condition:
+              lambda: 'return x == std::string("on");'
+            then:
+              - lvgl.widget.update: { id: pwr_ic_kitchen_light_kitchen_stair_lights, bg_color: 0x2563EB }
+              - lvgl.label.update: { id: ic_kitchen_light_kitchen_stair_lights, text_color: 0xFFFFFF }
+            else:
+              - lvgl.widget.update: { id: pwr_ic_kitchen_light_kitchen_stair_lights, bg_color: 0x12141C }
+              - lvgl.label.update: { id: ic_kitchen_light_kitchen_stair_lights, text_color: 0x8A8F9E }
+  - platform: homeassistant
+    id: ha_roomst_kitchen_light_kitchen_breakfast
+    entity_id: light.kitchen_breakfast
+    on_value:
+      then:
+        - if:
+            condition:
+              lambda: 'return x == std::string("on");'
+            then:
+              - lvgl.widget.update: { id: pwr_ic_kitchen_light_kitchen_breakfast, bg_color: 0x2563EB }
+              - lvgl.label.update: { id: ic_kitchen_light_kitchen_breakfast, text_color: 0xFFFFFF }
+            else:
+              - lvgl.widget.update: { id: pwr_ic_kitchen_light_kitchen_breakfast, bg_color: 0x12141C }
+              - lvgl.label.update: { id: ic_kitchen_light_kitchen_breakfast, text_color: 0x8A8F9E }
+  - platform: homeassistant
     id: ha_roomst_office_light_office_shelves
     entity_id: light.office_shelves
     on_value:
@@ -1802,6 +1995,15 @@ text_sensor:
               - lvgl.widget.update: { id: pwr_ic_master_light_master_bedroom_ceiling_fan_light, bg_color: 0x12141C }
               - lvgl.label.update: { id: ic_master_light_master_bedroom_ceiling_fan_light, text_color: 0x8A8F9E }
   - platform: homeassistant
+    id: ha_roomst_master_fan_master_bedroom_master_bedroom_ceiling_fan
+    entity_id: fan.master_bedroom_master_bedroom_ceiling_fan
+    on_value:
+      then:
+        - lvgl.slider.update: { id: sld_room_master_fan_master_bedroom_master_bedroom_ceiling_fan, value: !lambda 'return x == std::string("on") ? 100 : 0;' }
+        - lvgl.label.update: { id: lbl_st_room_master_fan_master_bedroom_master_bedroom_ceiling_fan, text: !lambda 'return x == std::string("on") ? std::string("On") : std::string("Off");' }
+        - lvgl.widget.update: { id: pwr_ic_master_fan_master_bedroom_master_bedroom_ceiling_fan, bg_color: !lambda 'return x == std::string("on") ? lv_color_hex(0x2563EB) : lv_color_hex(0x12141C);' }
+        - lvgl.label.update: { id: ic_master_fan_master_bedroom_master_bedroom_ceiling_fan, text_color: !lambda 'return x == std::string("on") ? lv_color_hex(0xFFFFFF) : lv_color_hex(0x8A8F9E);' }
+  - platform: homeassistant
     id: ha_roomst_exterior_light_outdoor_patio_back_porch_lights
     entity_id: light.outdoor_patio_back_porch_lights
     on_value:
@@ -1824,6 +2026,148 @@ text_sensor:
         - lvgl.label.update: { id: lbl_st_room_exterior_switch_outdoor_patio_putting_green, text: !lambda 'return x == std::string("on") ? std::string("On") : std::string("Off");' }
         - lvgl.widget.update: { id: pwr_ic_exterior_switch_outdoor_patio_putting_green, bg_color: !lambda 'return x == std::string("on") ? lv_color_hex(0x2563EB) : lv_color_hex(0x12141C);' }
         - lvgl.label.update: { id: ic_exterior_switch_outdoor_patio_putting_green, text_color: !lambda 'return x == std::string("on") ? lv_color_hex(0xFFFFFF) : lv_color_hex(0x8A8F9E);' }
+  - platform: homeassistant
+    id: ha_roomst_exterior_light_garage_wall_lights
+    entity_id: light.garage_wall_lights
+    on_value:
+      then:
+        - if:
+            condition:
+              lambda: 'return x == std::string("on");'
+            then:
+              - lvgl.widget.update: { id: pwr_ic_exterior_light_garage_wall_lights, bg_color: 0x2563EB }
+              - lvgl.label.update: { id: ic_exterior_light_garage_wall_lights, text_color: 0xFFFFFF }
+            else:
+              - lvgl.widget.update: { id: pwr_ic_exterior_light_garage_wall_lights, bg_color: 0x12141C }
+              - lvgl.label.update: { id: ic_exterior_light_garage_wall_lights, text_color: 0x8A8F9E }
+  - platform: homeassistant
+    id: ha_roomst_exterior_light_front_porch_overhead_light
+    entity_id: light.front_porch_overhead_light
+    on_value:
+      then:
+        - if:
+            condition:
+              lambda: 'return x == std::string("on");'
+            then:
+              - lvgl.widget.update: { id: pwr_ic_exterior_light_front_porch_overhead_light, bg_color: 0x2563EB }
+              - lvgl.label.update: { id: ic_exterior_light_front_porch_overhead_light, text_color: 0xFFFFFF }
+            else:
+              - lvgl.widget.update: { id: pwr_ic_exterior_light_front_porch_overhead_light, bg_color: 0x12141C }
+              - lvgl.label.update: { id: ic_exterior_light_front_porch_overhead_light, text_color: 0x8A8F9E }
+  - platform: homeassistant
+    id: ha_roomst_exterior_switch_outdoor_patio_ceiling_fan
+    entity_id: switch.outdoor_patio_ceiling_fan
+    on_value:
+      then:
+        - lvgl.slider.update: { id: sld_room_exterior_switch_outdoor_patio_ceiling_fan, value: !lambda 'return x == std::string("on") ? 100 : 0;' }
+        - lvgl.label.update: { id: lbl_st_room_exterior_switch_outdoor_patio_ceiling_fan, text: !lambda 'return x == std::string("on") ? std::string("On") : std::string("Off");' }
+        - lvgl.widget.update: { id: pwr_ic_exterior_switch_outdoor_patio_ceiling_fan, bg_color: !lambda 'return x == std::string("on") ? lv_color_hex(0x2563EB) : lv_color_hex(0x12141C);' }
+        - lvgl.label.update: { id: ic_exterior_switch_outdoor_patio_ceiling_fan, text_color: !lambda 'return x == std::string("on") ? lv_color_hex(0xFFFFFF) : lv_color_hex(0x8A8F9E);' }
+  - platform: homeassistant
+    id: ha_roomst_entry_light_front_foyer_door_chandelier
+    entity_id: light.front_foyer_door_chandelier
+    on_value:
+      then:
+        - if:
+            condition:
+              lambda: 'return x == std::string("on");'
+            then:
+              - lvgl.widget.update: { id: pwr_ic_entry_light_front_foyer_door_chandelier, bg_color: 0x2563EB }
+              - lvgl.label.update: { id: ic_entry_light_front_foyer_door_chandelier, text_color: 0xFFFFFF }
+            else:
+              - lvgl.widget.update: { id: pwr_ic_entry_light_front_foyer_door_chandelier, bg_color: 0x12141C }
+              - lvgl.label.update: { id: ic_entry_light_front_foyer_door_chandelier, text_color: 0x8A8F9E }
+  - platform: homeassistant
+    id: ha_roomst_entry_light_front_foyer_stair_chandelier
+    entity_id: light.front_foyer_stair_chandelier
+    on_value:
+      then:
+        - if:
+            condition:
+              lambda: 'return x == std::string("on");'
+            then:
+              - lvgl.widget.update: { id: pwr_ic_entry_light_front_foyer_stair_chandelier, bg_color: 0x2563EB }
+              - lvgl.label.update: { id: ic_entry_light_front_foyer_stair_chandelier, text_color: 0xFFFFFF }
+            else:
+              - lvgl.widget.update: { id: pwr_ic_entry_light_front_foyer_stair_chandelier, bg_color: 0x12141C }
+              - lvgl.label.update: { id: ic_entry_light_front_foyer_stair_chandelier, text_color: 0x8A8F9E }
+  - platform: homeassistant
+    id: ha_roomst_entry_light_dining_room_chandelier
+    entity_id: light.dining_room_chandelier
+    on_value:
+      then:
+        - if:
+            condition:
+              lambda: 'return x == std::string("on");'
+            then:
+              - lvgl.widget.update: { id: pwr_ic_entry_light_dining_room_chandelier, bg_color: 0x2563EB }
+              - lvgl.label.update: { id: ic_entry_light_dining_room_chandelier, text_color: 0xFFFFFF }
+            else:
+              - lvgl.widget.update: { id: pwr_ic_entry_light_dining_room_chandelier, bg_color: 0x12141C }
+              - lvgl.label.update: { id: ic_entry_light_dining_room_chandelier, text_color: 0x8A8F9E }
+  - platform: homeassistant
+    id: ha_roomst_entry_light_family_room_main
+    entity_id: light.family_room_main
+    on_value:
+      then:
+        - if:
+            condition:
+              lambda: 'return x == std::string("on");'
+            then:
+              - lvgl.widget.update: { id: pwr_ic_entry_light_family_room_main, bg_color: 0x2563EB }
+              - lvgl.label.update: { id: ic_entry_light_family_room_main, text_color: 0xFFFFFF }
+            else:
+              - lvgl.widget.update: { id: pwr_ic_entry_light_family_room_main, bg_color: 0x12141C }
+              - lvgl.label.update: { id: ic_entry_light_family_room_main, text_color: 0x8A8F9E }
+  - platform: homeassistant
+    id: ha_roomst_entry_lock_front_door
+    entity_id: lock.front_door
+    on_value:
+      then:
+        - lvgl.label.update:
+            id: lbl_st_room_entry_lock_front_door
+            text: !lambda 'std::string r=x; if(!r.empty()) r[0]=toupper(r[0]); return r;'
+        - if:
+            condition:
+              lambda: 'return x == std::string("locked");'
+            then:
+              - lvgl.widget.update: { id: pwr_ic_entry_lock_front_door, bg_color: 0x1E7F4F }
+              - lvgl.label.update: { id: ic_entry_lock_front_door, text: "\U000F033E", text_color: 0xFFFFFF }
+            else:
+              - lvgl.widget.update: { id: pwr_ic_entry_lock_front_door, bg_color: 0x12141C }
+              - lvgl.label.update: { id: ic_entry_lock_front_door, text: "\U000F033F", text_color: 0xFF9F6B }
+  - platform: homeassistant
+    id: ha_roomst_entry_switch_front_stairs_outlet_socket_1
+    entity_id: switch.front_stairs_outlet_socket_1
+    on_value:
+      then:
+        - lvgl.slider.update: { id: sld_room_entry_switch_front_stairs_outlet_socket_1, value: !lambda 'return x == std::string("on") ? 100 : 0;' }
+        - lvgl.label.update: { id: lbl_st_room_entry_switch_front_stairs_outlet_socket_1, text: !lambda 'return x == std::string("on") ? std::string("On") : std::string("Off");' }
+        - lvgl.widget.update: { id: pwr_ic_entry_switch_front_stairs_outlet_socket_1, bg_color: !lambda 'return x == std::string("on") ? lv_color_hex(0x2563EB) : lv_color_hex(0x12141C);' }
+        - lvgl.label.update: { id: ic_entry_switch_front_stairs_outlet_socket_1, text_color: !lambda 'return x == std::string("on") ? lv_color_hex(0xFFFFFF) : lv_color_hex(0x8A8F9E);' }
+  - platform: homeassistant
+    id: ha_roomst_game_light_gameroom_ceiling_fan_light
+    entity_id: light.gameroom_ceiling_fan_light
+    on_value:
+      then:
+        - if:
+            condition:
+              lambda: 'return x == std::string("on");'
+            then:
+              - lvgl.widget.update: { id: pwr_ic_game_light_gameroom_ceiling_fan_light, bg_color: 0x2563EB }
+              - lvgl.label.update: { id: ic_game_light_gameroom_ceiling_fan_light, text_color: 0xFFFFFF }
+            else:
+              - lvgl.widget.update: { id: pwr_ic_game_light_gameroom_ceiling_fan_light, bg_color: 0x12141C }
+              - lvgl.label.update: { id: ic_game_light_gameroom_ceiling_fan_light, text_color: 0x8A8F9E }
+  - platform: homeassistant
+    id: ha_roomst_game_switch_gameroom_ceiling_fan
+    entity_id: switch.gameroom_ceiling_fan
+    on_value:
+      then:
+        - lvgl.slider.update: { id: sld_room_game_switch_gameroom_ceiling_fan, value: !lambda 'return x == std::string("on") ? 100 : 0;' }
+        - lvgl.label.update: { id: lbl_st_room_game_switch_gameroom_ceiling_fan, text: !lambda 'return x == std::string("on") ? std::string("On") : std::string("Off");' }
+        - lvgl.widget.update: { id: pwr_ic_game_switch_gameroom_ceiling_fan, bg_color: !lambda 'return x == std::string("on") ? lv_color_hex(0x2563EB) : lv_color_hex(0x12141C);' }
+        - lvgl.label.update: { id: ic_game_switch_gameroom_ceiling_fan, text_color: !lambda 'return x == std::string("on") ? lv_color_hex(0xFFFFFF) : lv_color_hex(0x8A8F9E);' }
   # <<< AURORA_ROOM_STATE_TEXT
 
 globals:
@@ -3780,7 +4124,7 @@ lvgl:
                   height: 64
                   styles: st_glass
                   widgets:
-                    - label: { text: "\U000F04B9", align: left_mid, x: 8, text_font: f_icon, text_color: 0x2ED5B8 }
+                    - label: { text: "\U000F0A70", align: left_mid, x: 8, text_font: f_icon, text_color: 0x2ED5B8 }
                     - label: { text: "Kitchen", align: left_mid, x: 60, text_font: f_title, text_color: 0xEEF0F6 }
                     - label: { id: lbl_roomcount_kitchen, text: "", align: right_mid, x: -16, text_font: f_small, text_color: 0x8A8F9E }
                   on_click: [lvgl.page.show: page_room_kitchen]
@@ -3791,7 +4135,7 @@ lvgl:
                   height: 64
                   styles: st_glass
                   widgets:
-                    - label: { text: "\U000F04B9", align: left_mid, x: 8, text_font: f_icon, text_color: 0x2ED5B8 }
+                    - label: { text: "\U000F1239", align: left_mid, x: 8, text_font: f_icon, text_color: 0x2ED5B8 }
                     - label: { text: "Office", align: left_mid, x: 60, text_font: f_title, text_color: 0xEEF0F6 }
                     - label: { id: lbl_roomcount_office, text: "", align: right_mid, x: -16, text_font: f_small, text_color: 0x8A8F9E }
                   on_click: [lvgl.page.show: page_room_office]
@@ -3802,7 +4146,7 @@ lvgl:
                   height: 64
                   styles: st_glass
                   widgets:
-                    - label: { text: "\U000F04B9", align: left_mid, x: 8, text_font: f_icon, text_color: 0x2ED5B8 }
+                    - label: { text: "\U000F02E3", align: left_mid, x: 8, text_font: f_icon, text_color: 0x2ED5B8 }
                     - label: { text: "Master", align: left_mid, x: 60, text_font: f_title, text_color: 0xEEF0F6 }
                     - label: { id: lbl_roomcount_master, text: "", align: right_mid, x: -16, text_font: f_small, text_color: 0x8A8F9E }
                   on_click: [lvgl.page.show: page_room_master]
@@ -3813,10 +4157,32 @@ lvgl:
                   height: 64
                   styles: st_glass
                   widgets:
-                    - label: { text: "\U000F04B9", align: left_mid, x: 8, text_font: f_icon, text_color: 0x2ED5B8 }
+                    - label: { text: "\U000F0531", align: left_mid, x: 8, text_font: f_icon, text_color: 0x2ED5B8 }
                     - label: { text: "Exterior", align: left_mid, x: 60, text_font: f_title, text_color: 0xEEF0F6 }
                     - label: { id: lbl_roomcount_exterior, text: "", align: right_mid, x: -16, text_font: f_small, text_color: 0x8A8F9E }
                   on_click: [lvgl.page.show: page_room_exterior]
+              - button:
+                  x: 26
+                  y: 390
+                  width: 772
+                  height: 64
+                  styles: st_glass
+                  widgets:
+                    - label: { text: "\U000F081A", align: left_mid, x: 8, text_font: f_icon, text_color: 0x2ED5B8 }
+                    - label: { text: "Entryway", align: left_mid, x: 60, text_font: f_title, text_color: 0xEEF0F6 }
+                    - label: { id: lbl_roomcount_entry, text: "", align: right_mid, x: -16, text_font: f_small, text_color: 0x8A8F9E }
+                  on_click: [lvgl.page.show: page_room_entry]
+              - button:
+                  x: 26
+                  y: 468
+                  width: 772
+                  height: 64
+                  styles: st_glass
+                  widgets:
+                    - label: { text: "\U000F04CD", align: left_mid, x: 8, text_font: f_icon, text_color: 0x2ED5B8 }
+                    - label: { text: "Gameroom", align: left_mid, x: 60, text_font: f_title, text_color: 0xEEF0F6 }
+                    - label: { id: lbl_roomcount_game, text: "", align: right_mid, x: -16, text_font: f_small, text_color: 0x8A8F9E }
+                  on_click: [lvgl.page.show: page_room_game]
               # <<< AURORA_ROOM_PICKER
     # >>> AURORA_ROOM_PAGES (generated by the configurator — do not hand-edit)
     - id: page_room_living
@@ -3855,7 +4221,7 @@ lvgl:
             pad_all: 0
             scrollable: false
             widgets:
-              - label: { text: "Main Light", x: 0, y: 0, width: 120, text_align: center, text_font: f_body, text_color: 0xEEF0F6 }
+              - label: { text: "Main Lights", x: 0, y: 0, width: 120, text_align: center, text_font: f_body, text_color: 0xEEF0F6 }
               - label: { id: pct_sld_room_living_light_living_room_main, text: "OFF", x: 0, y: 24, width: 120, text_align: center, text_font: f_body, text_color: 0x8A8F9E }
               - slider:
                   id: sld_room_living_light_living_room_main
@@ -3972,6 +4338,51 @@ lvgl:
                   border_color: 0x2A2F3A
                   widgets: [label: { id: ic_living_fan_living_room_pendant, text: "\U000F0210", align: center, text_font: f_icon, text_color: 0x8A8F9E }]
                   on_click: [homeassistant.action: { action: fan.toggle, data: { entity_id: fan.living_room_pendant } }]
+        - obj:
+            x: 380
+            y: 80
+            width: 120
+            height: 432
+            bg_opa: 0
+            border_width: 0
+            pad_all: 0
+            scrollable: false
+            widgets:
+              - label: { text: "Main Climate", x: 0, y: 0, width: 120, text_align: center, text_font: f_body, text_color: 0xEEF0F6 }
+              - label: { id: pct_sld_room_living_climate_main_floor, text: "--°", x: 0, y: 24, width: 120, text_align: center, text_font: f_body, text_color: 0x8A8F9E }
+              - slider:
+                  id: sld_room_living_climate_main_floor
+                  x: 0
+                  y: 52
+                  width: 120
+                  height: 268
+                  min_value: 50
+                  max_value: 90
+                  value: 70
+                  radius: 24
+                  bg_color: 0x12141C
+                  bg_opa: 100%
+                  border_width: 2
+                  border_color: 0x2A2F3A
+                  indicator:
+                    bg_color: 0x4F91FF
+                    radius: 24
+                  knob:
+                    bg_color: 0xFFFFFF
+                    pad_left: -24
+                    pad_right: -24
+                    pad_top: -56
+                    pad_bottom: -56
+                    radius: 2
+                  on_release:
+                    - homeassistant.action:
+                        action: climate.set_temperature
+                        data:
+                          entity_id: climate.main_floor
+                          temperature: !lambda 'return std::to_string((int) x);'
+                  on_value:
+                    - lvgl.label.update: { id: pct_sld_room_living_climate_main_floor, text: !lambda 'char b[8]; snprintf(b, sizeof(b), "%d°", (int) x); return std::string(b);' }
+              - label: { id: lbl_cur_room_living_climate_main_floor, text: "", align: bottom_mid, y: -28, width: 120, text_align: center, text_font: f_small, text_color: 0x8A8F9E }
     - id: page_room_kitchen
       bg_opa: 0
       on_load:
@@ -4008,7 +4419,7 @@ lvgl:
             pad_all: 0
             scrollable: false
             widgets:
-              - label: { text: "Main Light", x: 0, y: 0, width: 120, text_align: center, text_font: f_body, text_color: 0xEEF0F6 }
+              - label: { text: "Main Lights", x: 0, y: 0, width: 120, text_align: center, text_font: f_body, text_color: 0xEEF0F6 }
               - label: { id: pct_sld_room_kitchen_light_kitchen_kitchen, text: "OFF", x: 0, y: 24, width: 120, text_align: center, text_font: f_body, text_color: 0x8A8F9E }
               - slider:
                   id: sld_room_kitchen_light_kitchen_kitchen
@@ -4060,6 +4471,130 @@ lvgl:
                   border_color: 0x2A2F3A
                   widgets: [label: { id: ic_kitchen_light_kitchen_kitchen, text: "\U000F0425", align: center, text_font: f_icon, text_color: 0x8A8F9E }]
                   on_click: [homeassistant.action: { action: light.toggle, data: { entity_id: light.kitchen_kitchen } }]
+        - obj:
+            x: 240
+            y: 80
+            width: 120
+            height: 432
+            bg_opa: 0
+            border_width: 0
+            pad_all: 0
+            scrollable: false
+            widgets:
+              - label: { text: "Stair Lights", x: 0, y: 0, width: 120, text_align: center, text_font: f_body, text_color: 0xEEF0F6 }
+              - label: { id: pct_sld_room_kitchen_light_kitchen_stair_lights, text: "OFF", x: 0, y: 24, width: 120, text_align: center, text_font: f_body, text_color: 0x8A8F9E }
+              - slider:
+                  id: sld_room_kitchen_light_kitchen_stair_lights
+                  x: 0
+                  y: 52
+                  width: 120
+                  height: 268
+                  min_value: 0
+                  max_value: 100
+                  value: 0
+                  radius: 24
+                  bg_color: 0x12141C
+                  bg_opa: 100%
+                  border_width: 2
+                  border_color: 0x2A2F3A
+                  indicator:
+                    bg_color: 0xF2C94C
+                    radius: 24
+                  knob:
+                    bg_color: 0xFFFFFF
+                    pad_left: -24
+                    pad_right: -24
+                    pad_top: -56
+                    pad_bottom: -56
+                    radius: 2
+                  on_release:
+                    - if:
+                        condition:
+                          lambda: 'return x > 0;'
+                        then:
+                          - homeassistant.action:
+                              action: light.turn_on
+                              data:
+                                entity_id: light.kitchen_stair_lights
+                                brightness_pct: !lambda 'return std::to_string((int) x);'
+                        else:
+                          - homeassistant.action: { action: light.turn_off, data: { entity_id: light.kitchen_stair_lights } }
+                  on_value:
+                    - lvgl.label.update: { id: pct_sld_room_kitchen_light_kitchen_stair_lights, text: !lambda 'int v=(int)x; char b[8]; if(v<=0) return std::string("OFF"); snprintf(b,sizeof(b),"%d%%",v); return std::string(b);' }
+              - button:
+                  id: pwr_ic_kitchen_light_kitchen_stair_lights
+                  align: bottom_mid
+                  y: 0
+                  width: 120
+                  height: 100
+                  radius: 24
+                  bg_color: 0x12141C
+                  border_width: 2
+                  border_color: 0x2A2F3A
+                  widgets: [label: { id: ic_kitchen_light_kitchen_stair_lights, text: "\U000F0425", align: center, text_font: f_icon, text_color: 0x8A8F9E }]
+                  on_click: [homeassistant.action: { action: light.toggle, data: { entity_id: light.kitchen_stair_lights } }]
+        - obj:
+            x: 380
+            y: 80
+            width: 120
+            height: 432
+            bg_opa: 0
+            border_width: 0
+            pad_all: 0
+            scrollable: false
+            widgets:
+              - label: { text: "Breakfast Light", x: 0, y: 0, width: 120, text_align: center, text_font: f_body, text_color: 0xEEF0F6 }
+              - label: { id: pct_sld_room_kitchen_light_kitchen_breakfast, text: "OFF", x: 0, y: 24, width: 120, text_align: center, text_font: f_body, text_color: 0x8A8F9E }
+              - slider:
+                  id: sld_room_kitchen_light_kitchen_breakfast
+                  x: 0
+                  y: 52
+                  width: 120
+                  height: 268
+                  min_value: 0
+                  max_value: 100
+                  value: 0
+                  radius: 24
+                  bg_color: 0x12141C
+                  bg_opa: 100%
+                  border_width: 2
+                  border_color: 0x2A2F3A
+                  indicator:
+                    bg_color: 0xF2C94C
+                    radius: 24
+                  knob:
+                    bg_color: 0xFFFFFF
+                    pad_left: -24
+                    pad_right: -24
+                    pad_top: -56
+                    pad_bottom: -56
+                    radius: 2
+                  on_release:
+                    - if:
+                        condition:
+                          lambda: 'return x > 0;'
+                        then:
+                          - homeassistant.action:
+                              action: light.turn_on
+                              data:
+                                entity_id: light.kitchen_breakfast
+                                brightness_pct: !lambda 'return std::to_string((int) x);'
+                        else:
+                          - homeassistant.action: { action: light.turn_off, data: { entity_id: light.kitchen_breakfast } }
+                  on_value:
+                    - lvgl.label.update: { id: pct_sld_room_kitchen_light_kitchen_breakfast, text: !lambda 'int v=(int)x; char b[8]; if(v<=0) return std::string("OFF"); snprintf(b,sizeof(b),"%d%%",v); return std::string(b);' }
+              - button:
+                  id: pwr_ic_kitchen_light_kitchen_breakfast
+                  align: bottom_mid
+                  y: 0
+                  width: 120
+                  height: 100
+                  radius: 24
+                  bg_color: 0x12141C
+                  border_width: 2
+                  border_color: 0x2A2F3A
+                  widgets: [label: { id: ic_kitchen_light_kitchen_breakfast, text: "\U000F0425", align: center, text_font: f_icon, text_color: 0x8A8F9E }]
+                  on_click: [homeassistant.action: { action: light.toggle, data: { entity_id: light.kitchen_breakfast } }]
     - id: page_room_office
       bg_opa: 0
       on_load:
@@ -4435,7 +4970,7 @@ lvgl:
             pad_all: 0
             scrollable: false
             widgets:
-              - label: { text: "Ceiling Light", x: 0, y: 0, width: 120, text_align: center, text_font: f_body, text_color: 0xEEF0F6 }
+              - label: { text: "Ceiling Lights", x: 0, y: 0, width: 120, text_align: center, text_font: f_body, text_color: 0xEEF0F6 }
               - label: { id: pct_sld_room_master_light_master_bedroom_ceiling_fan_light, text: "OFF", x: 0, y: 24, width: 120, text_align: center, text_font: f_body, text_color: 0x8A8F9E }
               - slider:
                   id: sld_room_master_light_master_bedroom_ceiling_fan_light
@@ -4487,6 +5022,116 @@ lvgl:
                   border_color: 0x2A2F3A
                   widgets: [label: { id: ic_master_light_master_bedroom_ceiling_fan_light, text: "\U000F0425", align: center, text_font: f_icon, text_color: 0x8A8F9E }]
                   on_click: [homeassistant.action: { action: light.toggle, data: { entity_id: light.master_bedroom_ceiling_fan_light } }]
+        - obj:
+            x: 380
+            y: 80
+            width: 120
+            height: 432
+            bg_opa: 0
+            border_width: 0
+            pad_all: 0
+            scrollable: false
+            widgets:
+              - label: { text: "Ceiling Fan", x: 0, y: 0, width: 120, text_align: center, text_font: f_body, text_color: 0xEEF0F6 }
+              - label: { id: lbl_st_room_master_fan_master_bedroom_master_bedroom_ceiling_fan, text: "Off", x: 0, y: 24, width: 120, text_align: center, text_font: f_body, text_color: 0x8A8F9E }
+              - obj:
+                  id: trk_room_master_fan_master_bedroom_master_bedroom_ceiling_fan
+                  x: 0
+                  y: 52
+                  width: 120
+                  height: 268
+                  radius: 24
+                  bg_color: 0x12141C
+                  border_width: 2
+                  border_color: 0x2A2F3A
+                  clickable: false
+                  scrollable: false
+              - slider:
+                  id: sld_room_master_fan_master_bedroom_master_bedroom_ceiling_fan
+                  x: 0
+                  y: 96
+                  width: 120
+                  height: 180
+                  min_value: 0
+                  max_value: 100
+                  value: 0
+                  bg_opa: 0%
+                  indicator:
+                    bg_opa: 0%
+                  knob:
+                    bg_color: 0x56C5DD
+                    pad_left: -6
+                    pad_right: -6
+                    pad_top: -16
+                    pad_bottom: -16
+                    radius: 18
+                  on_release:
+                    - if:
+                        condition:
+                          lambda: 'return x >= 50;'
+                        then:
+                          - homeassistant.action: { action: fan.turn_on, data: { entity_id: fan.master_bedroom_master_bedroom_ceiling_fan } }
+                          - lvgl.slider.update: { id: sld_room_master_fan_master_bedroom_master_bedroom_ceiling_fan, value: 100 }
+                        else:
+                          - homeassistant.action: { action: fan.turn_off, data: { entity_id: fan.master_bedroom_master_bedroom_ceiling_fan } }
+                          - lvgl.slider.update: { id: sld_room_master_fan_master_bedroom_master_bedroom_ceiling_fan, value: 0 }
+              - button:
+                  id: pwr_ic_master_fan_master_bedroom_master_bedroom_ceiling_fan
+                  align: bottom_mid
+                  y: 0
+                  width: 120
+                  height: 100
+                  radius: 24
+                  bg_color: 0x12141C
+                  border_width: 2
+                  border_color: 0x2A2F3A
+                  widgets: [label: { id: ic_master_fan_master_bedroom_master_bedroom_ceiling_fan, text: "\U000F0210", align: center, text_font: f_icon, text_color: 0x8A8F9E }]
+                  on_click: [homeassistant.action: { action: fan.toggle, data: { entity_id: fan.master_bedroom_master_bedroom_ceiling_fan } }]
+        - obj:
+            x: 520
+            y: 80
+            width: 120
+            height: 432
+            bg_opa: 0
+            border_width: 0
+            pad_all: 0
+            scrollable: false
+            widgets:
+              - label: { text: "Master Climate", x: 0, y: 0, width: 120, text_align: center, text_font: f_body, text_color: 0xEEF0F6 }
+              - label: { id: pct_sld_room_master_climate_master_bedroom_master_bedroom, text: "--°", x: 0, y: 24, width: 120, text_align: center, text_font: f_body, text_color: 0x8A8F9E }
+              - slider:
+                  id: sld_room_master_climate_master_bedroom_master_bedroom
+                  x: 0
+                  y: 52
+                  width: 120
+                  height: 268
+                  min_value: 50
+                  max_value: 90
+                  value: 70
+                  radius: 24
+                  bg_color: 0x12141C
+                  bg_opa: 100%
+                  border_width: 2
+                  border_color: 0x2A2F3A
+                  indicator:
+                    bg_color: 0x4F91FF
+                    radius: 24
+                  knob:
+                    bg_color: 0xFFFFFF
+                    pad_left: -24
+                    pad_right: -24
+                    pad_top: -56
+                    pad_bottom: -56
+                    radius: 2
+                  on_release:
+                    - homeassistant.action:
+                        action: climate.set_temperature
+                        data:
+                          entity_id: climate.master_bedroom_master_bedroom
+                          temperature: !lambda 'return std::to_string((int) x);'
+                  on_value:
+                    - lvgl.label.update: { id: pct_sld_room_master_climate_master_bedroom_master_bedroom, text: !lambda 'char b[8]; snprintf(b, sizeof(b), "%d°", (int) x); return std::string(b);' }
+              - label: { id: lbl_cur_room_master_climate_master_bedroom_master_bedroom, text: "", align: bottom_mid, y: -28, width: 120, text_align: center, text_font: f_small, text_color: 0x8A8F9E }
     - id: page_room_exterior
       bg_opa: 0
       on_load:
@@ -4640,6 +5285,756 @@ lvgl:
                   border_color: 0x2A2F3A
                   widgets: [label: { id: ic_exterior_switch_outdoor_patio_putting_green, text: "\U000F0425", align: center, text_font: f_icon, text_color: 0x8A8F9E }]
                   on_click: [homeassistant.action: { action: switch.toggle, data: { entity_id: switch.outdoor_patio_putting_green } }]
+        - obj:
+            x: 380
+            y: 80
+            width: 120
+            height: 432
+            bg_opa: 0
+            border_width: 0
+            pad_all: 0
+            scrollable: false
+            widgets:
+              - label: { text: "Garage Sconces", x: 0, y: 0, width: 120, text_align: center, text_font: f_body, text_color: 0xEEF0F6 }
+              - label: { id: pct_sld_room_exterior_light_garage_wall_lights, text: "OFF", x: 0, y: 24, width: 120, text_align: center, text_font: f_body, text_color: 0x8A8F9E }
+              - slider:
+                  id: sld_room_exterior_light_garage_wall_lights
+                  x: 0
+                  y: 52
+                  width: 120
+                  height: 268
+                  min_value: 0
+                  max_value: 100
+                  value: 0
+                  radius: 24
+                  bg_color: 0x12141C
+                  bg_opa: 100%
+                  border_width: 2
+                  border_color: 0x2A2F3A
+                  indicator:
+                    bg_color: 0xF2C94C
+                    radius: 24
+                  knob:
+                    bg_color: 0xFFFFFF
+                    pad_left: -24
+                    pad_right: -24
+                    pad_top: -56
+                    pad_bottom: -56
+                    radius: 2
+                  on_release:
+                    - if:
+                        condition:
+                          lambda: 'return x > 0;'
+                        then:
+                          - homeassistant.action:
+                              action: light.turn_on
+                              data:
+                                entity_id: light.garage_wall_lights
+                                brightness_pct: !lambda 'return std::to_string((int) x);'
+                        else:
+                          - homeassistant.action: { action: light.turn_off, data: { entity_id: light.garage_wall_lights } }
+                  on_value:
+                    - lvgl.label.update: { id: pct_sld_room_exterior_light_garage_wall_lights, text: !lambda 'int v=(int)x; char b[8]; if(v<=0) return std::string("OFF"); snprintf(b,sizeof(b),"%d%%",v); return std::string(b);' }
+              - button:
+                  id: pwr_ic_exterior_light_garage_wall_lights
+                  align: bottom_mid
+                  y: 0
+                  width: 120
+                  height: 100
+                  radius: 24
+                  bg_color: 0x12141C
+                  border_width: 2
+                  border_color: 0x2A2F3A
+                  widgets: [label: { id: ic_exterior_light_garage_wall_lights, text: "\U000F0425", align: center, text_font: f_icon, text_color: 0x8A8F9E }]
+                  on_click: [homeassistant.action: { action: light.toggle, data: { entity_id: light.garage_wall_lights } }]
+        - obj:
+            x: 520
+            y: 80
+            width: 120
+            height: 432
+            bg_opa: 0
+            border_width: 0
+            pad_all: 0
+            scrollable: false
+            widgets:
+              - label: { text: "Front Porch", x: 0, y: 0, width: 120, text_align: center, text_font: f_body, text_color: 0xEEF0F6 }
+              - label: { id: pct_sld_room_exterior_light_front_porch_overhead_light, text: "OFF", x: 0, y: 24, width: 120, text_align: center, text_font: f_body, text_color: 0x8A8F9E }
+              - slider:
+                  id: sld_room_exterior_light_front_porch_overhead_light
+                  x: 0
+                  y: 52
+                  width: 120
+                  height: 268
+                  min_value: 0
+                  max_value: 100
+                  value: 0
+                  radius: 24
+                  bg_color: 0x12141C
+                  bg_opa: 100%
+                  border_width: 2
+                  border_color: 0x2A2F3A
+                  indicator:
+                    bg_color: 0xF2C94C
+                    radius: 24
+                  knob:
+                    bg_color: 0xFFFFFF
+                    pad_left: -24
+                    pad_right: -24
+                    pad_top: -56
+                    pad_bottom: -56
+                    radius: 2
+                  on_release:
+                    - if:
+                        condition:
+                          lambda: 'return x > 0;'
+                        then:
+                          - homeassistant.action:
+                              action: light.turn_on
+                              data:
+                                entity_id: light.front_porch_overhead_light
+                                brightness_pct: !lambda 'return std::to_string((int) x);'
+                        else:
+                          - homeassistant.action: { action: light.turn_off, data: { entity_id: light.front_porch_overhead_light } }
+                  on_value:
+                    - lvgl.label.update: { id: pct_sld_room_exterior_light_front_porch_overhead_light, text: !lambda 'int v=(int)x; char b[8]; if(v<=0) return std::string("OFF"); snprintf(b,sizeof(b),"%d%%",v); return std::string(b);' }
+              - button:
+                  id: pwr_ic_exterior_light_front_porch_overhead_light
+                  align: bottom_mid
+                  y: 0
+                  width: 120
+                  height: 100
+                  radius: 24
+                  bg_color: 0x12141C
+                  border_width: 2
+                  border_color: 0x2A2F3A
+                  widgets: [label: { id: ic_exterior_light_front_porch_overhead_light, text: "\U000F0425", align: center, text_font: f_icon, text_color: 0x8A8F9E }]
+                  on_click: [homeassistant.action: { action: light.toggle, data: { entity_id: light.front_porch_overhead_light } }]
+        - obj:
+            x: 660
+            y: 80
+            width: 120
+            height: 432
+            bg_opa: 0
+            border_width: 0
+            pad_all: 0
+            scrollable: false
+            widgets:
+              - label: { text: "Table Lights", x: 0, y: 0, width: 120, text_align: center, text_font: f_body, text_color: 0xEEF0F6 }
+              - label: { id: lbl_st_room_exterior_switch_outdoor_patio_ceiling_fan, text: "Off", x: 0, y: 24, width: 120, text_align: center, text_font: f_body, text_color: 0x8A8F9E }
+              - obj:
+                  id: trk_room_exterior_switch_outdoor_patio_ceiling_fan
+                  x: 0
+                  y: 52
+                  width: 120
+                  height: 268
+                  radius: 24
+                  bg_color: 0x12141C
+                  border_width: 2
+                  border_color: 0x2A2F3A
+                  clickable: false
+                  scrollable: false
+              - slider:
+                  id: sld_room_exterior_switch_outdoor_patio_ceiling_fan
+                  x: 0
+                  y: 96
+                  width: 120
+                  height: 180
+                  min_value: 0
+                  max_value: 100
+                  value: 0
+                  bg_opa: 0%
+                  indicator:
+                    bg_opa: 0%
+                  knob:
+                    bg_color: 0x56C5DD
+                    pad_left: -6
+                    pad_right: -6
+                    pad_top: -16
+                    pad_bottom: -16
+                    radius: 18
+                  on_release:
+                    - if:
+                        condition:
+                          lambda: 'return x >= 50;'
+                        then:
+                          - homeassistant.action: { action: switch.turn_on, data: { entity_id: switch.outdoor_patio_ceiling_fan } }
+                          - lvgl.slider.update: { id: sld_room_exterior_switch_outdoor_patio_ceiling_fan, value: 100 }
+                        else:
+                          - homeassistant.action: { action: switch.turn_off, data: { entity_id: switch.outdoor_patio_ceiling_fan } }
+                          - lvgl.slider.update: { id: sld_room_exterior_switch_outdoor_patio_ceiling_fan, value: 0 }
+              - button:
+                  id: pwr_ic_exterior_switch_outdoor_patio_ceiling_fan
+                  align: bottom_mid
+                  y: 0
+                  width: 120
+                  height: 100
+                  radius: 24
+                  bg_color: 0x12141C
+                  border_width: 2
+                  border_color: 0x2A2F3A
+                  widgets: [label: { id: ic_exterior_switch_outdoor_patio_ceiling_fan, text: "\U000F0425", align: center, text_font: f_icon, text_color: 0x8A8F9E }]
+                  on_click: [homeassistant.action: { action: switch.toggle, data: { entity_id: switch.outdoor_patio_ceiling_fan } }]
+    - id: page_room_entry
+      bg_opa: 0
+      on_load:
+        - lvgl.widget.update: { id: nav_home, bg_color: 0x10121A }
+        - lvgl.widget.update: { id: nav_rooms, bg_color: 0x2ED5B8 }
+        - lvgl.widget.update: { id: nav_lights, bg_color: 0x10121A }
+        - lvgl.widget.update: { id: nav_climate, bg_color: 0x10121A }
+        - lvgl.widget.update: { id: nav_media, bg_color: 0x10121A }
+        - lvgl.widget.update: { id: nav_security, bg_color: 0x10121A }
+        - lvgl.widget.update: { id: nav_network, bg_color: 0x10121A }
+        - lvgl.widget.update: { id: nav_settings, bg_color: 0x10121A }
+      widgets:
+        - image: { src: img_aurora_bg, x: 0, y: 0 }
+        - label: { text: "Entryway", x: 100, y: 26, text_font: f_title, text_color: 0xEEF0F6 }
+        - button:
+            align: top_right
+            x: -12
+            y: 12
+            width: 104
+            height: 44
+            radius: 8
+            bg_color: 0x1B2230
+            border_width: 2
+            border_color: 0x2ED5B8
+            widgets: [label: { text: "Back", align: center, text_font: f_body, text_color: 0x2ED5B8 }]
+            on_click: [lvgl.page.show: page_rooms]
+        - obj:
+            x: 100
+            y: 80
+            width: 120
+            height: 432
+            bg_opa: 0
+            border_width: 0
+            pad_all: 0
+            scrollable: false
+            widgets:
+              - label: { text: "Entry Chandelier", x: 0, y: 0, width: 120, text_align: center, text_font: f_body, text_color: 0xEEF0F6 }
+              - label: { id: pct_sld_room_entry_light_front_foyer_door_chandelier, text: "OFF", x: 0, y: 24, width: 120, text_align: center, text_font: f_body, text_color: 0x8A8F9E }
+              - slider:
+                  id: sld_room_entry_light_front_foyer_door_chandelier
+                  x: 0
+                  y: 52
+                  width: 120
+                  height: 268
+                  min_value: 0
+                  max_value: 100
+                  value: 0
+                  radius: 24
+                  bg_color: 0x12141C
+                  bg_opa: 100%
+                  border_width: 2
+                  border_color: 0x2A2F3A
+                  indicator:
+                    bg_color: 0xF2C94C
+                    radius: 24
+                  knob:
+                    bg_color: 0xFFFFFF
+                    pad_left: -24
+                    pad_right: -24
+                    pad_top: -56
+                    pad_bottom: -56
+                    radius: 2
+                  on_release:
+                    - if:
+                        condition:
+                          lambda: 'return x > 0;'
+                        then:
+                          - homeassistant.action:
+                              action: light.turn_on
+                              data:
+                                entity_id: light.front_foyer_door_chandelier
+                                brightness_pct: !lambda 'return std::to_string((int) x);'
+                        else:
+                          - homeassistant.action: { action: light.turn_off, data: { entity_id: light.front_foyer_door_chandelier } }
+                  on_value:
+                    - lvgl.label.update: { id: pct_sld_room_entry_light_front_foyer_door_chandelier, text: !lambda 'int v=(int)x; char b[8]; if(v<=0) return std::string("OFF"); snprintf(b,sizeof(b),"%d%%",v); return std::string(b);' }
+              - button:
+                  id: pwr_ic_entry_light_front_foyer_door_chandelier
+                  align: bottom_mid
+                  y: 0
+                  width: 120
+                  height: 100
+                  radius: 24
+                  bg_color: 0x12141C
+                  border_width: 2
+                  border_color: 0x2A2F3A
+                  widgets: [label: { id: ic_entry_light_front_foyer_door_chandelier, text: "\U000F0425", align: center, text_font: f_icon, text_color: 0x8A8F9E }]
+                  on_click: [homeassistant.action: { action: light.toggle, data: { entity_id: light.front_foyer_door_chandelier } }]
+        - obj:
+            x: 240
+            y: 80
+            width: 120
+            height: 432
+            bg_opa: 0
+            border_width: 0
+            pad_all: 0
+            scrollable: false
+            widgets:
+              - label: { text: "Stair Chandelier", x: 0, y: 0, width: 120, text_align: center, text_font: f_body, text_color: 0xEEF0F6 }
+              - label: { id: pct_sld_room_entry_light_front_foyer_stair_chandelier, text: "OFF", x: 0, y: 24, width: 120, text_align: center, text_font: f_body, text_color: 0x8A8F9E }
+              - slider:
+                  id: sld_room_entry_light_front_foyer_stair_chandelier
+                  x: 0
+                  y: 52
+                  width: 120
+                  height: 268
+                  min_value: 0
+                  max_value: 100
+                  value: 0
+                  radius: 24
+                  bg_color: 0x12141C
+                  bg_opa: 100%
+                  border_width: 2
+                  border_color: 0x2A2F3A
+                  indicator:
+                    bg_color: 0xF2C94C
+                    radius: 24
+                  knob:
+                    bg_color: 0xFFFFFF
+                    pad_left: -24
+                    pad_right: -24
+                    pad_top: -56
+                    pad_bottom: -56
+                    radius: 2
+                  on_release:
+                    - if:
+                        condition:
+                          lambda: 'return x > 0;'
+                        then:
+                          - homeassistant.action:
+                              action: light.turn_on
+                              data:
+                                entity_id: light.front_foyer_stair_chandelier
+                                brightness_pct: !lambda 'return std::to_string((int) x);'
+                        else:
+                          - homeassistant.action: { action: light.turn_off, data: { entity_id: light.front_foyer_stair_chandelier } }
+                  on_value:
+                    - lvgl.label.update: { id: pct_sld_room_entry_light_front_foyer_stair_chandelier, text: !lambda 'int v=(int)x; char b[8]; if(v<=0) return std::string("OFF"); snprintf(b,sizeof(b),"%d%%",v); return std::string(b);' }
+              - button:
+                  id: pwr_ic_entry_light_front_foyer_stair_chandelier
+                  align: bottom_mid
+                  y: 0
+                  width: 120
+                  height: 100
+                  radius: 24
+                  bg_color: 0x12141C
+                  border_width: 2
+                  border_color: 0x2A2F3A
+                  widgets: [label: { id: ic_entry_light_front_foyer_stair_chandelier, text: "\U000F0425", align: center, text_font: f_icon, text_color: 0x8A8F9E }]
+                  on_click: [homeassistant.action: { action: light.toggle, data: { entity_id: light.front_foyer_stair_chandelier } }]
+        - obj:
+            x: 380
+            y: 80
+            width: 120
+            height: 432
+            bg_opa: 0
+            border_width: 0
+            pad_all: 0
+            scrollable: false
+            widgets:
+              - label: { text: "Dining Room", x: 0, y: 0, width: 120, text_align: center, text_font: f_body, text_color: 0xEEF0F6 }
+              - label: { id: pct_sld_room_entry_light_dining_room_chandelier, text: "OFF", x: 0, y: 24, width: 120, text_align: center, text_font: f_body, text_color: 0x8A8F9E }
+              - slider:
+                  id: sld_room_entry_light_dining_room_chandelier
+                  x: 0
+                  y: 52
+                  width: 120
+                  height: 268
+                  min_value: 0
+                  max_value: 100
+                  value: 0
+                  radius: 24
+                  bg_color: 0x12141C
+                  bg_opa: 100%
+                  border_width: 2
+                  border_color: 0x2A2F3A
+                  indicator:
+                    bg_color: 0xF2C94C
+                    radius: 24
+                  knob:
+                    bg_color: 0xFFFFFF
+                    pad_left: -24
+                    pad_right: -24
+                    pad_top: -56
+                    pad_bottom: -56
+                    radius: 2
+                  on_release:
+                    - if:
+                        condition:
+                          lambda: 'return x > 0;'
+                        then:
+                          - homeassistant.action:
+                              action: light.turn_on
+                              data:
+                                entity_id: light.dining_room_chandelier
+                                brightness_pct: !lambda 'return std::to_string((int) x);'
+                        else:
+                          - homeassistant.action: { action: light.turn_off, data: { entity_id: light.dining_room_chandelier } }
+                  on_value:
+                    - lvgl.label.update: { id: pct_sld_room_entry_light_dining_room_chandelier, text: !lambda 'int v=(int)x; char b[8]; if(v<=0) return std::string("OFF"); snprintf(b,sizeof(b),"%d%%",v); return std::string(b);' }
+              - button:
+                  id: pwr_ic_entry_light_dining_room_chandelier
+                  align: bottom_mid
+                  y: 0
+                  width: 120
+                  height: 100
+                  radius: 24
+                  bg_color: 0x12141C
+                  border_width: 2
+                  border_color: 0x2A2F3A
+                  widgets: [label: { id: ic_entry_light_dining_room_chandelier, text: "\U000F0425", align: center, text_font: f_icon, text_color: 0x8A8F9E }]
+                  on_click: [homeassistant.action: { action: light.toggle, data: { entity_id: light.dining_room_chandelier } }]
+        - obj:
+            x: 520
+            y: 80
+            width: 120
+            height: 432
+            bg_opa: 0
+            border_width: 0
+            pad_all: 0
+            scrollable: false
+            widgets:
+              - label: { text: "Front Room", x: 0, y: 0, width: 120, text_align: center, text_font: f_body, text_color: 0xEEF0F6 }
+              - label: { id: pct_sld_room_entry_light_family_room_main, text: "OFF", x: 0, y: 24, width: 120, text_align: center, text_font: f_body, text_color: 0x8A8F9E }
+              - slider:
+                  id: sld_room_entry_light_family_room_main
+                  x: 0
+                  y: 52
+                  width: 120
+                  height: 268
+                  min_value: 0
+                  max_value: 100
+                  value: 0
+                  radius: 24
+                  bg_color: 0x12141C
+                  bg_opa: 100%
+                  border_width: 2
+                  border_color: 0x2A2F3A
+                  indicator:
+                    bg_color: 0xF2C94C
+                    radius: 24
+                  knob:
+                    bg_color: 0xFFFFFF
+                    pad_left: -24
+                    pad_right: -24
+                    pad_top: -56
+                    pad_bottom: -56
+                    radius: 2
+                  on_release:
+                    - if:
+                        condition:
+                          lambda: 'return x > 0;'
+                        then:
+                          - homeassistant.action:
+                              action: light.turn_on
+                              data:
+                                entity_id: light.family_room_main
+                                brightness_pct: !lambda 'return std::to_string((int) x);'
+                        else:
+                          - homeassistant.action: { action: light.turn_off, data: { entity_id: light.family_room_main } }
+                  on_value:
+                    - lvgl.label.update: { id: pct_sld_room_entry_light_family_room_main, text: !lambda 'int v=(int)x; char b[8]; if(v<=0) return std::string("OFF"); snprintf(b,sizeof(b),"%d%%",v); return std::string(b);' }
+              - button:
+                  id: pwr_ic_entry_light_family_room_main
+                  align: bottom_mid
+                  y: 0
+                  width: 120
+                  height: 100
+                  radius: 24
+                  bg_color: 0x12141C
+                  border_width: 2
+                  border_color: 0x2A2F3A
+                  widgets: [label: { id: ic_entry_light_family_room_main, text: "\U000F0425", align: center, text_font: f_icon, text_color: 0x8A8F9E }]
+                  on_click: [homeassistant.action: { action: light.toggle, data: { entity_id: light.family_room_main } }]
+        - obj:
+            x: 660
+            y: 80
+            width: 120
+            height: 432
+            bg_opa: 0
+            border_width: 0
+            pad_all: 0
+            scrollable: false
+            widgets:
+              - label: { text: "Front Door", x: 0, y: 0, width: 120, text_align: center, text_font: f_body, text_color: 0xEEF0F6 }
+              - label: { id: lbl_st_room_entry_lock_front_door, text: "--", x: 0, y: 24, width: 120, text_align: center, text_font: f_body, text_color: 0x8A8F9E }
+              - button:
+                  id: pwr_ic_entry_lock_front_door
+                  x: 0
+                  y: 52
+                  width: 120
+                  height: 360
+                  radius: 24
+                  bg_color: 0x12141C
+                  border_width: 2
+                  border_color: 0x2A2F3A
+                  widgets: [label: { id: ic_entry_lock_front_door, text: "\U000F033E", align: center, text_font: f_icon, text_color: 0x8A8F9E }]
+                  on_click: [homeassistant.action: { action: lock.toggle, data: { entity_id: lock.front_door } }]
+        - obj:
+            x: 800
+            y: 80
+            width: 120
+            height: 432
+            bg_opa: 0
+            border_width: 0
+            pad_all: 0
+            scrollable: false
+            widgets:
+              - label: { text: "Stairs Outlet", x: 0, y: 0, width: 120, text_align: center, text_font: f_body, text_color: 0xEEF0F6 }
+              - label: { id: lbl_st_room_entry_switch_front_stairs_outlet_socket_1, text: "Off", x: 0, y: 24, width: 120, text_align: center, text_font: f_body, text_color: 0x8A8F9E }
+              - obj:
+                  id: trk_room_entry_switch_front_stairs_outlet_socket_1
+                  x: 0
+                  y: 52
+                  width: 120
+                  height: 268
+                  radius: 24
+                  bg_color: 0x12141C
+                  border_width: 2
+                  border_color: 0x2A2F3A
+                  clickable: false
+                  scrollable: false
+              - slider:
+                  id: sld_room_entry_switch_front_stairs_outlet_socket_1
+                  x: 0
+                  y: 96
+                  width: 120
+                  height: 180
+                  min_value: 0
+                  max_value: 100
+                  value: 0
+                  bg_opa: 0%
+                  indicator:
+                    bg_opa: 0%
+                  knob:
+                    bg_color: 0x56C5DD
+                    pad_left: -6
+                    pad_right: -6
+                    pad_top: -16
+                    pad_bottom: -16
+                    radius: 18
+                  on_release:
+                    - if:
+                        condition:
+                          lambda: 'return x >= 50;'
+                        then:
+                          - homeassistant.action: { action: switch.turn_on, data: { entity_id: switch.front_stairs_outlet_socket_1 } }
+                          - lvgl.slider.update: { id: sld_room_entry_switch_front_stairs_outlet_socket_1, value: 100 }
+                        else:
+                          - homeassistant.action: { action: switch.turn_off, data: { entity_id: switch.front_stairs_outlet_socket_1 } }
+                          - lvgl.slider.update: { id: sld_room_entry_switch_front_stairs_outlet_socket_1, value: 0 }
+              - button:
+                  id: pwr_ic_entry_switch_front_stairs_outlet_socket_1
+                  align: bottom_mid
+                  y: 0
+                  width: 120
+                  height: 100
+                  radius: 24
+                  bg_color: 0x12141C
+                  border_width: 2
+                  border_color: 0x2A2F3A
+                  widgets: [label: { id: ic_entry_switch_front_stairs_outlet_socket_1, text: "\U000F0425", align: center, text_font: f_icon, text_color: 0x8A8F9E }]
+                  on_click: [homeassistant.action: { action: switch.toggle, data: { entity_id: switch.front_stairs_outlet_socket_1 } }]
+    - id: page_room_game
+      bg_opa: 0
+      on_load:
+        - lvgl.widget.update: { id: nav_home, bg_color: 0x10121A }
+        - lvgl.widget.update: { id: nav_rooms, bg_color: 0x2ED5B8 }
+        - lvgl.widget.update: { id: nav_lights, bg_color: 0x10121A }
+        - lvgl.widget.update: { id: nav_climate, bg_color: 0x10121A }
+        - lvgl.widget.update: { id: nav_media, bg_color: 0x10121A }
+        - lvgl.widget.update: { id: nav_security, bg_color: 0x10121A }
+        - lvgl.widget.update: { id: nav_network, bg_color: 0x10121A }
+        - lvgl.widget.update: { id: nav_settings, bg_color: 0x10121A }
+      widgets:
+        - image: { src: img_aurora_bg, x: 0, y: 0 }
+        - label: { text: "Gameroom", x: 100, y: 26, text_font: f_title, text_color: 0xEEF0F6 }
+        - button:
+            align: top_right
+            x: -12
+            y: 12
+            width: 104
+            height: 44
+            radius: 8
+            bg_color: 0x1B2230
+            border_width: 2
+            border_color: 0x2ED5B8
+            widgets: [label: { text: "Back", align: center, text_font: f_body, text_color: 0x2ED5B8 }]
+            on_click: [lvgl.page.show: page_rooms]
+        - obj:
+            x: 100
+            y: 80
+            width: 120
+            height: 432
+            bg_opa: 0
+            border_width: 0
+            pad_all: 0
+            scrollable: false
+            widgets:
+              - label: { text: "Gameroom Lights", x: 0, y: 0, width: 120, text_align: center, text_font: f_body, text_color: 0xEEF0F6 }
+              - label: { id: pct_sld_room_game_light_gameroom_ceiling_fan_light, text: "OFF", x: 0, y: 24, width: 120, text_align: center, text_font: f_body, text_color: 0x8A8F9E }
+              - slider:
+                  id: sld_room_game_light_gameroom_ceiling_fan_light
+                  x: 0
+                  y: 52
+                  width: 120
+                  height: 268
+                  min_value: 0
+                  max_value: 100
+                  value: 0
+                  radius: 24
+                  bg_color: 0x12141C
+                  bg_opa: 100%
+                  border_width: 2
+                  border_color: 0x2A2F3A
+                  indicator:
+                    bg_color: 0xF2C94C
+                    radius: 24
+                  knob:
+                    bg_color: 0xFFFFFF
+                    pad_left: -24
+                    pad_right: -24
+                    pad_top: -56
+                    pad_bottom: -56
+                    radius: 2
+                  on_release:
+                    - if:
+                        condition:
+                          lambda: 'return x > 0;'
+                        then:
+                          - homeassistant.action:
+                              action: light.turn_on
+                              data:
+                                entity_id: light.gameroom_ceiling_fan_light
+                                brightness_pct: !lambda 'return std::to_string((int) x);'
+                        else:
+                          - homeassistant.action: { action: light.turn_off, data: { entity_id: light.gameroom_ceiling_fan_light } }
+                  on_value:
+                    - lvgl.label.update: { id: pct_sld_room_game_light_gameroom_ceiling_fan_light, text: !lambda 'int v=(int)x; char b[8]; if(v<=0) return std::string("OFF"); snprintf(b,sizeof(b),"%d%%",v); return std::string(b);' }
+              - button:
+                  id: pwr_ic_game_light_gameroom_ceiling_fan_light
+                  align: bottom_mid
+                  y: 0
+                  width: 120
+                  height: 100
+                  radius: 24
+                  bg_color: 0x12141C
+                  border_width: 2
+                  border_color: 0x2A2F3A
+                  widgets: [label: { id: ic_game_light_gameroom_ceiling_fan_light, text: "\U000F0425", align: center, text_font: f_icon, text_color: 0x8A8F9E }]
+                  on_click: [homeassistant.action: { action: light.toggle, data: { entity_id: light.gameroom_ceiling_fan_light } }]
+        - obj:
+            x: 240
+            y: 80
+            width: 120
+            height: 432
+            bg_opa: 0
+            border_width: 0
+            pad_all: 0
+            scrollable: false
+            widgets:
+              - label: { text: "Ceiling Fan", x: 0, y: 0, width: 120, text_align: center, text_font: f_body, text_color: 0xEEF0F6 }
+              - label: { id: lbl_st_room_game_switch_gameroom_ceiling_fan, text: "Off", x: 0, y: 24, width: 120, text_align: center, text_font: f_body, text_color: 0x8A8F9E }
+              - obj:
+                  id: trk_room_game_switch_gameroom_ceiling_fan
+                  x: 0
+                  y: 52
+                  width: 120
+                  height: 268
+                  radius: 24
+                  bg_color: 0x12141C
+                  border_width: 2
+                  border_color: 0x2A2F3A
+                  clickable: false
+                  scrollable: false
+              - slider:
+                  id: sld_room_game_switch_gameroom_ceiling_fan
+                  x: 0
+                  y: 96
+                  width: 120
+                  height: 180
+                  min_value: 0
+                  max_value: 100
+                  value: 0
+                  bg_opa: 0%
+                  indicator:
+                    bg_opa: 0%
+                  knob:
+                    bg_color: 0x56C5DD
+                    pad_left: -6
+                    pad_right: -6
+                    pad_top: -16
+                    pad_bottom: -16
+                    radius: 18
+                  on_release:
+                    - if:
+                        condition:
+                          lambda: 'return x >= 50;'
+                        then:
+                          - homeassistant.action: { action: switch.turn_on, data: { entity_id: switch.gameroom_ceiling_fan } }
+                          - lvgl.slider.update: { id: sld_room_game_switch_gameroom_ceiling_fan, value: 100 }
+                        else:
+                          - homeassistant.action: { action: switch.turn_off, data: { entity_id: switch.gameroom_ceiling_fan } }
+                          - lvgl.slider.update: { id: sld_room_game_switch_gameroom_ceiling_fan, value: 0 }
+              - button:
+                  id: pwr_ic_game_switch_gameroom_ceiling_fan
+                  align: bottom_mid
+                  y: 0
+                  width: 120
+                  height: 100
+                  radius: 24
+                  bg_color: 0x12141C
+                  border_width: 2
+                  border_color: 0x2A2F3A
+                  widgets: [label: { id: ic_game_switch_gameroom_ceiling_fan, text: "\U000F0425", align: center, text_font: f_icon, text_color: 0x8A8F9E }]
+                  on_click: [homeassistant.action: { action: switch.toggle, data: { entity_id: switch.gameroom_ceiling_fan } }]
+        - obj:
+            x: 380
+            y: 80
+            width: 120
+            height: 432
+            bg_opa: 0
+            border_width: 0
+            pad_all: 0
+            scrollable: false
+            widgets:
+              - label: { text: "Upstairs Climate", x: 0, y: 0, width: 120, text_align: center, text_font: f_body, text_color: 0xEEF0F6 }
+              - label: { id: pct_sld_room_game_climate_upstairs_upstairs, text: "--°", x: 0, y: 24, width: 120, text_align: center, text_font: f_body, text_color: 0x8A8F9E }
+              - slider:
+                  id: sld_room_game_climate_upstairs_upstairs
+                  x: 0
+                  y: 52
+                  width: 120
+                  height: 268
+                  min_value: 50
+                  max_value: 90
+                  value: 70
+                  radius: 24
+                  bg_color: 0x12141C
+                  bg_opa: 100%
+                  border_width: 2
+                  border_color: 0x2A2F3A
+                  indicator:
+                    bg_color: 0x4F91FF
+                    radius: 24
+                  knob:
+                    bg_color: 0xFFFFFF
+                    pad_left: -24
+                    pad_right: -24
+                    pad_top: -56
+                    pad_bottom: -56
+                    radius: 2
+                  on_release:
+                    - homeassistant.action:
+                        action: climate.set_temperature
+                        data:
+                          entity_id: climate.upstairs_upstairs
+                          temperature: !lambda 'return std::to_string((int) x);'
+                  on_value:
+                    - lvgl.label.update: { id: pct_sld_room_game_climate_upstairs_upstairs, text: !lambda 'char b[8]; snprintf(b, sizeof(b), "%d°", (int) x); return std::string(b);' }
+              - label: { id: lbl_cur_room_game_climate_upstairs_upstairs, text: "", align: bottom_mid, y: -28, width: 120, text_align: center, text_font: f_small, text_color: 0x8A8F9E }
     # <<< AURORA_ROOM_PAGES
     - id: page_network
       bg_opa: 0
