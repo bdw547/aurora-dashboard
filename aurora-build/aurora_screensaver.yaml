@@ -1,0 +1,37 @@
+# =============================================================================
+# Aurora · Screensaver photo list package
+# -----------------------------------------------------------------------------
+# Lets the panel cycle screensaver photos with ANY filename. The panel pulls
+# images from HA over HTTP but HA exposes no directory listing, so this package
+# publishes the list of image files for the panel to read.
+#
+# 1. Put photos in:  <HA config>/www/screensaver/
+#    Any names. Supported types: .jpg .jpeg .png  (GIF is NOT supported by the
+#    panel's image decoder; BMP would work but is large — convert to JPG/PNG.)
+# 2. INSTALL: in configuration.yaml:
+#        homeassistant:
+#          packages:
+#            aurora_screensaver: !include aurora_screensaver.yaml
+#    then restart Home Assistant.
+# 3. On the panel, set "Screensaver Photo Seconds" (default 30) to taste — it's
+#    a Number entity, adjustable in HA or on the device web page (http://<panel>/).
+#
+# sensor.aurora_screensaver:  state = image count, attribute `list` = the image
+# basenames joined by "|". Rescans every 60s, so new photos appear within a
+# minute (no HA restart needed after the first install). Avoid '"', '\' and '|'
+# in filenames (they'd break the list encoding).
+# =============================================================================
+
+command_line:
+  - sensor:
+      name: Aurora Screensaver
+      unique_id: aurora_screensaver
+      command: >-
+        d=/config/www/screensaver;
+        files=$(ls -1 "$d" 2>/dev/null | grep -iE '\.(jpe?g|png)$' | tr '\n' '|' | sed 's/|$//');
+        n=$(printf '%s' "$files" | tr '|' '\n' | grep -c .);
+        printf '{"count":%s,"list":"%s"}' "$n" "$files"
+      value_template: "{{ value_json.count }}"
+      json_attributes:
+        - list
+      scan_interval: 60

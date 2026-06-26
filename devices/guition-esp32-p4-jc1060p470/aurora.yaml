@@ -393,6 +393,19 @@ online_image:
       - lvgl.image.update: { id: ss_photo, src: ss_image }
     on_error:
       - logger.log: "SS: photo download error"
+  # Second screensaver decoder for PNG photos (runtime_image has no auto-detect,
+  # and one online_image is locked to a single format). ss_next picks jpg vs png
+  # by file extension and updates ss_photo from whichever finishes.
+  - id: ss_image_png
+    url: "http://127.0.0.1/none.png"
+    format: PNG
+    type: RGB565
+    resize: 1024x600
+    update_interval: never
+    on_download_finished:
+      - lvgl.image.update: { id: ss_photo, src: ss_image_png }
+    on_error:
+      - logger.log: "SS: png download error"
   - id: cam_big
     url: "http://127.0.0.1/none.jpg"
     format: JPEG
@@ -1060,6 +1073,24 @@ sensor:
             text: !lambda 'int v=(x==x)?(int)roundf(x/2.55f):0; char b[8]; if(v<=0) return std::string("OFF"); snprintf(b,sizeof(b),"%d%%",v); return std::string(b);'
   # <<< AURORA_ROOM_STATE_SENSOR
 text_sensor:
+  # ---- Screensaver photo list (from the aurora_screensaver HA package) ----
+  # `list` attribute = pipe-delimited image basenames in config/www/screensaver/.
+  - platform: homeassistant
+    id: ha_ss_list
+    entity_id: sensor.aurora_screensaver
+    attribute: list
+    on_value:
+      then:
+        - lambda: |-
+            id(g_ss_files).clear();
+            std::string s = x, cur;
+            for (size_t i = 0; i < s.size(); i++) {
+              if (s[i] == '|') { if (!cur.empty()) id(g_ss_files).push_back(cur); cur.clear(); }
+              else cur += s[i];
+            }
+            if (!cur.empty()) id(g_ss_files).push_back(cur);
+            id(g_ss_i) = 0;
+            ESP_LOGI("aurora", "screensaver: %d photos", (int) id(g_ss_files).size());
   # ---- Thermostat hvac_action (Main Floor / Master / Upstairs) ----
   - platform: homeassistant
     id: ha_mf_action
@@ -1824,6 +1855,25 @@ globals:
     type: bool
     restore_value: false
     initial_value: 'false'
+  # Screensaver photo cycler: file list from HA (any names) + index/timing state
+  - id: g_ss_files
+    type: std::vector<std::string>
+    restore_value: false
+  - id: g_ss_i
+    type: int
+    restore_value: false
+    initial_value: '0'
+  - id: g_ss_elapsed
+    type: int
+    restore_value: false
+    initial_value: '0'
+  - id: g_ss_url
+    type: std::string
+    restore_value: false
+  - id: g_ss_is_png
+    type: bool
+    restore_value: false
+    initial_value: 'false'
   - id: g_room
     type: std::string
     restore_value: true
@@ -2058,11 +2108,39 @@ script:
   - id: ss_next
     mode: restart
     then:
-      - lambda: 'id(ss_idx) = (id(ss_idx) % $ss_count) + 1;'
-      - online_image.set_url:
-          id: ss_image
-          url: !lambda 'return std::string("$ha_base") + "$ss_base/" + std::to_string(id(ss_idx)) + ".jpg";'
-      - component.update: ss_image
+      - lambda: |-
+          // Choose the next photo. Prefer the HA-published file list (any
+          // filename); fall back to legacy 1.jpg..$ss_count.jpg if it's absent.
+          std::string base = std::string("$ha_base") + "$ss_base/";
+          std::string fname;
+          int n = (int) id(g_ss_files).size();
+          if (n > 0) {
+            if (id(g_ss_i) >= n) id(g_ss_i) = 0;
+            fname = id(g_ss_files)[id(g_ss_i)];
+            id(g_ss_i) = (id(g_ss_i) + 1) % n;
+          } else {
+            id(ss_idx) = (id(ss_idx) % $ss_count) + 1;
+            fname = std::to_string(id(ss_idx)) + ".jpg";
+          }
+          // URL-encode spaces (common in photo names); other chars pass through.
+          std::string url = base;
+          for (size_t i = 0; i < fname.size(); i++) {
+            if (fname[i] == ' ') url += "%20"; else url += fname[i];
+          }
+          id(g_ss_url) = url;
+          // Pick the decoder by extension: .png -> PNG instance, else JPEG.
+          std::string lo = fname;
+          for (size_t i = 0; i < lo.size(); i++) lo[i] = tolower(lo[i]);
+          id(g_ss_is_png) = (lo.size() >= 4 && lo.compare(lo.size() - 4, 4, ".png") == 0);
+      - if:
+          condition:
+            lambda: 'return id(g_ss_is_png);'
+          then:
+            - online_image.set_url: { id: ss_image_png, url: !lambda 'return id(g_ss_url);' }
+            - component.update: ss_image_png
+          else:
+            - online_image.set_url: { id: ss_image, url: !lambda 'return id(g_ss_url);' }
+            - component.update: ss_image
   - id: cam_snap_once
     mode: restart
     then:
@@ -2184,6 +2262,18 @@ number:
     min_value: 1
     max_value: 768
     step: 1
+  - platform: template
+    name: "Screensaver Photo Seconds"
+    id: ss_seconds
+    icon: "mdi:timer-outline"
+    entity_category: config
+    unit_of_measurement: s
+    optimistic: true
+    restore_value: true
+    initial_value: 30
+    min_value: 5
+    max_value: 600
+    step: 5
 
 interval:
   # NOTE: camera images are NOT polled on an interval. ESPHome's image fetch is
@@ -2308,13 +2398,23 @@ interval:
           then:
             - lambda: 'id(np_pos) += 1;'
             - script.execute: np_update
-  - interval: 20s
+  # Screensaver photo cycler: advance every "Screensaver Photo Seconds" while shown.
+  - interval: 1s
     then:
       - if:
           condition:
             lambda: 'return id(g_ss_showing);'
           then:
-            - script.execute: ss_next
+            - lambda: 'id(g_ss_elapsed) += 1;'
+            - if:
+                condition:
+                  lambda: |-
+                    int secs = (int) id(ss_seconds).state;
+                    if (secs < 5) secs = 30;
+                    return id(g_ss_elapsed) >= secs;
+                then:
+                  - lambda: 'id(g_ss_elapsed) = 0;'
+                  - script.execute: ss_next
 
 lvgl:
   id: main_lvgl
@@ -5470,12 +5570,12 @@ lvgl:
         - lvgl.widget.update: { id: nav_rail, hidden: true }
         - lvgl.widget.update: { id: lbl_ssid, hidden: true }
         - lvgl.widget.update: { id: lbl_ip, hidden: true }
-        - lambda: 'id(g_ss_showing) = true;'
+        - lambda: 'id(g_ss_showing) = true; id(g_ss_elapsed) = 0; id(g_ss_i) = 0;'
         - script.execute: ss_next
       on_unload:
         - lambda: 'id(g_ss_showing) = false;'
       widgets:
-        - image: { id: ss_photo, src: ss_image, x: 0, y: 0 }
+        - image: { id: ss_photo, src: ss_image, align: center }
         - obj:
             id: ss_scrim
             align: bottom_mid
