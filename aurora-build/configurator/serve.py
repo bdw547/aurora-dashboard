@@ -292,7 +292,7 @@ def write_home_layout(order):
 # rooms.json into AURORA_ROOM_* marker regions, mirroring the home-grid pattern.
 # ===========================================================================
 ROOMS_JSON = os.path.join(HERE, "rooms.json")
-ROOM_TYPES = {"light", "fan", "switch", "sensor"}
+ROOM_TYPES = {"light", "fan", "switch", "sensor", "lock"}
 ROOM_MAX_ENTITIES = 6                 # column geometry: x=100+140*i, i in 0..5
 ROOM_X0, ROOM_PITCH = 100, 140        # entity-card columns on a room page
 PICK_Y0, PICK_PITCH = 110, 78         # room buttons on the picker
@@ -520,6 +520,33 @@ CARD_SENSOR = """        - obj:
                     - label: { id: unit_room_%S%, text: "", align: center, y: 26, width: 112, text_align: center, text_font: f_small, text_color: 0x8A8F9E }
 """
 
+# Lock card: state label + a big lock/unlock toggle button (#21).
+CARD_LOCK = """        - obj:
+            x: %X%
+            y: 80
+            width: 120
+            height: 432
+            bg_opa: 0
+            border_width: 0
+            pad_all: 0
+            scrollable: false
+            widgets:
+              - label: { text: "%L%", x: 0, y: 0, width: 120, text_align: center, text_font: f_body, text_color: 0xEEF0F6 }
+              - label: { id: lbl_st_room_%S%, text: "--", x: 0, y: 24, width: 120, text_align: center, text_font: f_body, text_color: 0x8A8F9E }
+              - button:
+                  id: pwr_ic_%S%
+                  x: 0
+                  y: 52
+                  width: 120
+                  height: 360
+                  radius: 24
+                  bg_color: 0x12141C
+                  border_width: 2
+                  border_color: 0x2A2F3A
+                  widgets: [label: { id: ic_%S%, text: "\\U000F033E", align: center, text_font: f_icon, text_color: 0x8A8F9E }]
+                  on_click: [homeassistant.action: { action: lock.toggle, data: { entity_id: %E% } }]
+"""
+
 BRI_SENSOR_TMPL = """  - platform: homeassistant
     id: ha_roombri_%S%
     entity_id: %E%
@@ -577,6 +604,26 @@ SENSOR_UNIT_TMPL = """  - platform: homeassistant
     on_value:
       then:
         - lvgl.label.update: { id: unit_room_%S%, text: !lambda 'return x;' }
+"""
+
+# Lock feeder: locked -> green + lock glyph; otherwise dim + lock-open glyph.
+LOCK_TEXT_TMPL = """  - platform: homeassistant
+    id: ha_roomst_%S%
+    entity_id: %E%
+    on_value:
+      then:
+        - lvgl.label.update:
+            id: lbl_st_room_%S%
+            text: !lambda 'std::string r=x; if(!r.empty()) r[0]=toupper(r[0]); return r;'
+        - if:
+            condition:
+              lambda: 'return x == std::string("locked");'
+            then:
+              - lvgl.widget.update: { id: pwr_ic_%S%, bg_color: 0x1E7F4F }
+              - lvgl.label.update: { id: ic_%S%, text: "\\U000F033E", text_color: 0xFFFFFF }
+            else:
+              - lvgl.widget.update: { id: pwr_ic_%S%, bg_color: 0x12141C }
+              - lvgl.label.update: { id: ic_%S%, text: "\\U000F033F", text_color: 0xFF9F6B }
 """
 
 COUNT_SENSOR_TMPL = """  - platform: homeassistant
@@ -642,6 +689,8 @@ def _card(e, i):
         return _fmt(CARD_LIGHT, X=x, S=s, E=e["entity_id"], L=e["label"])
     if e["type"] == "sensor":
         return _fmt(CARD_SENSOR, X=x, S=s, L=e["label"])
+    if e["type"] == "lock":
+        return _fmt(CARD_LOCK, X=x, S=s, E=e["entity_id"], L=e["label"])
     return _fmt(CARD_TOGGLE, X=x, S=s, E=e["entity_id"], L=e["label"],
                 ACT=e["type"], TICON=TYPE_ICON[e["type"]])
 
@@ -674,6 +723,8 @@ def gen_text(rooms):
             elif t == "sensor":
                 out += _fmt(SENSOR_VAL_TMPL, S=s, E=e["entity_id"])
                 out += _fmt(SENSOR_UNIT_TMPL, S=s, E=e["entity_id"])
+            elif t == "lock":
+                out += _fmt(LOCK_TEXT_TMPL, S=s, E=e["entity_id"])
             else:
                 out += _fmt(TOGGLE_TEXT_TMPL, S=s, E=e["entity_id"], ACT=t)
     return out
@@ -885,7 +936,7 @@ async function flash(){
   if(s.done){clearInterval(t);fmsg.textContent=s.ok?'Flashed ✓':'Flash failed — see log';fmsg.className=s.ok?'ok':'err'}},1500)}
 function opendev(){let ip=device_.value.trim();if(!ip){fmsg.textContent='Enter the panel IP first';fmsg.className='err';return}if(!/^https?:\/\//.test(ip))ip='http://'+ip;window.open(ip,'_blank')}
 // ---- Rooms wizard ----
-let ROOMS=[];const RTYPES=['light','fan','switch','sensor'];
+let ROOMS=[];const RTYPES=['light','fan','switch','sensor','lock'];
 function esc(s){return (s||'').replace(/"/g,'&quot;')}
 function slugify(s){return ((s||'').toLowerCase().replace(/[^a-z0-9_]/g,'_').replace(/^_+/,'')||'room')}
 async function loadRooms(){try{const r=await j('/api/rooms');ROOMS=(r&&r.rooms)||[]}catch(e){ROOMS=[]}}
