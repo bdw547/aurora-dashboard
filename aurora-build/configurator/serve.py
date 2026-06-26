@@ -988,18 +988,82 @@ def ha_entities(url, token):
 FLASH = {"running": False, "log": "", "done": False, "ok": False}
 
 
-def flash_job(device):
-    FLASH.update(running=True, log="", done=False, ok=False)
+def _device_compile_time(host):
+    """Best-effort read of the panel's running compilation_time via the API."""
     try:
-        proc = subprocess.Popen(
-            [ESPHOME, "run", YAML, "--device", device, "--no-logs"],
-            stdout=subprocess.PIPE, stderr=subprocess.STDOUT, text=True,
-            cwd=os.path.join(HERE, "..", ".."))
+        import asyncio
+        from aioesphomeapi import APIClient
+
+        async def go():
+            cli = APIClient(host, 6053, "")
+            await cli.connect(login=True)
+            di = await cli.device_info()
+            await cli.disconnect()
+            return di.compilation_time
+
+        return asyncio.run(go())
+    except Exception:  # noqa: BLE001
+        return None
+
+
+def flash_job(device):
+    # OTA on this panel sometimes rolls back at boot-confirm, so after an OTA
+    # upload we read the panel's running compile time and re-flash until it
+    # matches the build. Serial uploads (/dev/tty*) stick first try — no retry.
+    FLASH.update(running=True, log="", done=False, ok=False)
+    import re as _re
+    import time
+    cwd = os.path.join(HERE, "..", "..")
+
+    def run(cmd):
+        proc = subprocess.Popen(cmd, stdout=subprocess.PIPE,
+                                stderr=subprocess.STDOUT, text=True, cwd=cwd)
         for line in proc.stdout:
             FLASH["log"] += line
         proc.wait()
-        FLASH["ok"] = proc.returncode == 0
-    except Exception as e:  # noqa
+        return proc.returncode
+
+    try:
+        FLASH["log"] += "== Compiling ==\n"
+        if run([ESPHOME, "compile", YAML]) != 0:
+            FLASH["log"] += "\n[compile failed]\n"
+            FLASH.update(running=False, done=True, ok=False)
+            return
+        m = _re.search(r"build_time_str=(\d\S* \S+ \S+)", FLASH["log"])
+        target = m.group(1).strip() if m else None
+        is_serial = "/" in device          # /dev/ttyACM0 = serial; else OTA (IP)
+        attempts = 1 if is_serial else 4
+        ok = False
+        for i in range(1, attempts + 1):
+            FLASH["log"] += f"\n== Upload attempt {i}/{attempts} -> {device} ==\n"
+            if run([ESPHOME, "upload", YAML, "--device", device]) != 0:
+                FLASH["log"] += "[upload error]\n"
+                continue
+            if is_serial:
+                ok = True
+                break
+            FLASH["log"] += "verifying the panel booted the new build...\n"
+            live = None
+            for _ in range(12):
+                time.sleep(4)
+                live = _device_compile_time(device)
+                if live:
+                    break
+            if live is None:
+                FLASH["log"] += "(couldn't reach the panel API to verify; upload reported OK)\n"
+                ok = True
+                break
+            FLASH["log"] += f"panel build: {live}  |  target: {target}\n"
+            if target and live.strip() == target:
+                FLASH["log"] += "MATCH — the new build is running.\n"
+                ok = True
+                break
+            FLASH["log"] += "MISMATCH — OTA rolled back; re-flashing...\n"
+        FLASH["ok"] = ok
+        if not ok:
+            FLASH["log"] += ("\n[!] Could not confirm the new build after "
+                             f"{attempts} tries. If this persists, flash over USB/serial.\n")
+    except Exception as e:  # noqa: BLE001
         FLASH["log"] += f"\n[error] {e}\n"
     FLASH.update(running=False, done=True)
 
