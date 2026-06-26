@@ -292,7 +292,7 @@ def write_home_layout(order):
 # rooms.json into AURORA_ROOM_* marker regions, mirroring the home-grid pattern.
 # ===========================================================================
 ROOMS_JSON = os.path.join(HERE, "rooms.json")
-ROOM_TYPES = {"light", "fan", "switch", "sensor", "lock"}
+ROOM_TYPES = {"light", "fan", "switch", "sensor", "lock", "climate", "media"}
 ROOM_MAX_ENTITIES = 6                 # column geometry: x=100+140*i, i in 0..5
 ROOM_X0, ROOM_PITCH = 100, 140        # entity-card columns on a room page
 PICK_Y0, PICK_PITCH = 110, 78         # room buttons on the picker
@@ -547,6 +547,101 @@ CARD_LOCK = """        - obj:
                   on_click: [homeassistant.action: { action: lock.toggle, data: { entity_id: %E% } }]
 """
 
+# Climate card: target-temp slider (50-90F) + current temp readout (#21).
+CARD_CLIMATE = """        - obj:
+            x: %X%
+            y: 80
+            width: 120
+            height: 432
+            bg_opa: 0
+            border_width: 0
+            pad_all: 0
+            scrollable: false
+            widgets:
+              - label: { text: "%L%", x: 0, y: 0, width: 120, text_align: center, text_font: f_body, text_color: 0xEEF0F6 }
+              - label: { id: pct_sld_room_%S%, text: "--°", x: 0, y: 24, width: 120, text_align: center, text_font: f_body, text_color: 0x8A8F9E }
+              - slider:
+                  id: sld_room_%S%
+                  x: 0
+                  y: 52
+                  width: 120
+                  height: 268
+                  min_value: 50
+                  max_value: 90
+                  value: 70
+                  radius: 24
+                  bg_color: 0x12141C
+                  bg_opa: 100%
+                  border_width: 2
+                  border_color: 0x2A2F3A
+                  indicator:
+                    bg_color: 0x4F91FF
+                    radius: 24
+                  knob:
+                    bg_color: 0xFFFFFF
+                    pad_left: -24
+                    pad_right: -24
+                    pad_top: -56
+                    pad_bottom: -56
+                    radius: 2
+                  on_release:
+                    - homeassistant.action:
+                        action: climate.set_temperature
+                        data:
+                          entity_id: %E%
+                          temperature: !lambda 'return std::to_string((int) x);'
+                  on_value:
+                    - lvgl.label.update: { id: pct_sld_room_%S%, text: !lambda 'char b[8]; snprintf(b, sizeof(b), "%d°", (int) x); return std::string(b);' }
+              - label: { id: lbl_cur_room_%S%, text: "", align: bottom_mid, y: -28, width: 120, text_align: center, text_font: f_small, text_color: 0x8A8F9E }
+"""
+
+# Media card: now-playing title + play/pause + prev/next transport (#21).
+CARD_MEDIA = """        - obj:
+            x: %X%
+            y: 80
+            width: 120
+            height: 432
+            bg_opa: 0
+            border_width: 0
+            pad_all: 0
+            scrollable: false
+            widgets:
+              - label: { text: "%L%", x: 0, y: 0, width: 120, text_align: center, text_font: f_body, text_color: 0xEEF0F6 }
+              - label: { id: lbl_title_room_%S%, text: "--", x: 4, y: 24, width: 112, long_mode: dot, text_align: center, text_font: f_small, text_color: 0x8A8F9E }
+              - button:
+                  id: pwr_ic_%S%
+                  x: 0
+                  y: 52
+                  width: 120
+                  height: 200
+                  radius: 24
+                  bg_color: 0x12141C
+                  border_width: 2
+                  border_color: 0x2A2F3A
+                  widgets: [label: { id: ic_%S%, text: "\\U000F040A", align: center, text_font: f_icon, text_color: 0xEEF0F6 }]
+                  on_click: [homeassistant.action: { action: media_player.media_play_pause, data: { entity_id: %E% } }]
+              - button:
+                  x: 0
+                  y: 262
+                  width: 58
+                  height: 60
+                  radius: 18
+                  bg_color: 0x161B24
+                  border_width: 0
+                  widgets: [label: { text: "\\U000F04AE", align: center, text_font: f_icon, text_color: 0xEEF0F6 }]
+                  on_click: [homeassistant.action: { action: media_player.media_previous_track, data: { entity_id: %E% } }]
+              - button:
+                  x: 62
+                  y: 262
+                  width: 58
+                  height: 60
+                  radius: 18
+                  bg_color: 0x161B24
+                  border_width: 0
+                  widgets: [label: { text: "\\U000F04AD", align: center, text_font: f_icon, text_color: 0xEEF0F6 }]
+                  on_click: [homeassistant.action: { action: media_player.media_next_track, data: { entity_id: %E% } }]
+"""
+
 BRI_SENSOR_TMPL = """  - platform: homeassistant
     id: ha_roombri_%S%
     entity_id: %E%
@@ -559,6 +654,26 @@ BRI_SENSOR_TMPL = """  - platform: homeassistant
         - lvgl.label.update:
             id: pct_sld_room_%S%
             text: !lambda 'int v=(x==x)?(int)roundf(x/2.55f):0; char b[8]; if(v<=0) return std::string("OFF"); snprintf(b,sizeof(b),"%d%%",v); return std::string(b);'
+"""
+
+# Climate feeders (numeric attributes): target setpoint + current temperature.
+CLIMATE_TGT_TMPL = """  - platform: homeassistant
+    id: ha_roomtgt_%S%
+    entity_id: %E%
+    attribute: temperature
+    on_value:
+      then:
+        - lvgl.slider.update: { id: sld_room_%S%, value: !lambda 'return (x == x) ? (int) x : 70;' }
+        - lvgl.label.update: { id: pct_sld_room_%S%, text: !lambda 'if (x != x) return std::string("--°"); char b[8]; snprintf(b, sizeof(b), "%d°", (int) x); return std::string(b);' }
+"""
+
+CLIMATE_CUR_TMPL = """  - platform: homeassistant
+    id: ha_roomcur_%S%
+    entity_id: %E%
+    attribute: current_temperature
+    on_value:
+      then:
+        - lvgl.label.update: { id: lbl_cur_room_%S%, text: !lambda 'if (x != x) return std::string(""); char b[16]; snprintf(b, sizeof(b), "now %d°", (int) x); return std::string(b);' }
 """
 
 LIGHT_TEXT_TMPL = """  - platform: homeassistant
@@ -626,6 +741,30 @@ LOCK_TEXT_TMPL = """  - platform: homeassistant
               - lvgl.label.update: { id: ic_%S%, text: "\\U000F033F", text_color: 0xFF9F6B }
 """
 
+# Media feeders: playing-state -> play/pause glyph; media_title -> title label.
+MEDIA_STATE_TMPL = """  - platform: homeassistant
+    id: ha_roomst_%S%
+    entity_id: %E%
+    on_value:
+      then:
+        - if:
+            condition:
+              lambda: 'return x == std::string("playing");'
+            then:
+              - lvgl.label.update: { id: ic_%S%, text: "\\U000F03E4" }
+            else:
+              - lvgl.label.update: { id: ic_%S%, text: "\\U000F040A" }
+"""
+
+MEDIA_TITLE_TMPL = """  - platform: homeassistant
+    id: ha_roomtitle_%S%
+    entity_id: %E%
+    attribute: media_title
+    on_value:
+      then:
+        - lvgl.label.update: { id: lbl_title_room_%S%, text: !lambda 'return x.empty() ? std::string("--") : x;' }
+"""
+
 COUNT_SENSOR_TMPL = """  - platform: homeassistant
     id: ha_count_%ID%
     entity_id: sensor.aurora_room_%ID%
@@ -691,6 +830,10 @@ def _card(e, i):
         return _fmt(CARD_SENSOR, X=x, S=s, L=e["label"])
     if e["type"] == "lock":
         return _fmt(CARD_LOCK, X=x, S=s, E=e["entity_id"], L=e["label"])
+    if e["type"] == "climate":
+        return _fmt(CARD_CLIMATE, X=x, S=s, E=e["entity_id"], L=e["label"])
+    if e["type"] == "media":
+        return _fmt(CARD_MEDIA, X=x, S=s, E=e["entity_id"], L=e["label"])
     return _fmt(CARD_TOGGLE, X=x, S=s, E=e["entity_id"], L=e["label"],
                 ACT=e["type"], TICON=TYPE_ICON[e["type"]])
 
@@ -707,8 +850,12 @@ def gen_bri(rooms):
     out = ""
     for r in rooms:
         for e in r["entities"]:
+            s = f'{r["id"]}_{slug(e["entity_id"])}'
             if e["type"] == "light":
-                out += _fmt(BRI_SENSOR_TMPL, S=f'{r["id"]}_{slug(e["entity_id"])}', E=e["entity_id"])
+                out += _fmt(BRI_SENSOR_TMPL, S=s, E=e["entity_id"])
+            elif e["type"] == "climate":
+                out += _fmt(CLIMATE_TGT_TMPL, S=s, E=e["entity_id"])
+                out += _fmt(CLIMATE_CUR_TMPL, S=s, E=e["entity_id"])
     return out
 
 
@@ -725,6 +872,11 @@ def gen_text(rooms):
                 out += _fmt(SENSOR_UNIT_TMPL, S=s, E=e["entity_id"])
             elif t == "lock":
                 out += _fmt(LOCK_TEXT_TMPL, S=s, E=e["entity_id"])
+            elif t == "media":
+                out += _fmt(MEDIA_STATE_TMPL, S=s, E=e["entity_id"])
+                out += _fmt(MEDIA_TITLE_TMPL, S=s, E=e["entity_id"])
+            elif t == "climate":
+                pass  # climate feeders are numeric -> emitted by gen_bri
             else:
                 out += _fmt(TOGGLE_TEXT_TMPL, S=s, E=e["entity_id"], ACT=t)
     return out
@@ -936,7 +1088,7 @@ async function flash(){
   if(s.done){clearInterval(t);fmsg.textContent=s.ok?'Flashed ✓':'Flash failed — see log';fmsg.className=s.ok?'ok':'err'}},1500)}
 function opendev(){let ip=device_.value.trim();if(!ip){fmsg.textContent='Enter the panel IP first';fmsg.className='err';return}if(!/^https?:\/\//.test(ip))ip='http://'+ip;window.open(ip,'_blank')}
 // ---- Rooms wizard ----
-let ROOMS=[];const RTYPES=['light','fan','switch','sensor','lock'];
+let ROOMS=[];const RTYPES=['light','fan','switch','sensor','lock','climate','media'];
 function esc(s){return (s||'').replace(/"/g,'&quot;')}
 function slugify(s){return ((s||'').toLowerCase().replace(/[^a-z0-9_]/g,'_').replace(/^_+/,'')||'room')}
 async function loadRooms(){try{const r=await j('/api/rooms');ROOMS=(r&&r.rooms)||[]}catch(e){ROOMS=[]}}
