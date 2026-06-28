@@ -3,51 +3,85 @@
 <link href="https://cdn.jsdelivr.net/npm/@mdi/font@7.4.47/css/materialdesignicons.min.css" rel="stylesheet">
 <style>
 html,body{margin:0;padding:0;background:#000}
-.aufr{position:relative;width:1024px;height:600px;background:#08090d;background-image:radial-gradient(120% 90% at 85% 0%,rgba(46,213,184,.10),rgba(123,108,255,.07) 40%,transparent 70%);font-family:'Sora',system-ui,sans-serif;color:#EEF0F6;overflow:hidden}
-.nav{position:absolute;left:8px;width:58px;height:58px;border-radius:14px;display:flex;align-items:center;justify-content:center;font-size:30px;color:#EEF0F6}
-.c{position:absolute;background:#141720;border:1px solid #2A2E38;border-radius:22px}
+.aufr{position:relative;width:1024px;height:600px;background:#08090D;background-image:radial-gradient(130% 100% at 88% -10%,rgba(46,213,184,.13),rgba(123,108,255,.08) 42%,transparent 70%);font-family:'Sora',system-ui,sans-serif;color:#EEF0F6;overflow:hidden}
+/* st_glass */
+.glass{position:absolute;background:rgba(20,23,32,.92);border:1px solid #2A2E38;border-radius:22px}
 .mdi{font-family:'Material Design Icons';font-style:normal;line-height:1}
-.lbl{position:absolute;white-space:nowrap}
-.zone{position:absolute;width:286px;height:74px;border-radius:16px;background:#161B24;display:flex;align-items:center}
+.l{position:absolute;white-space:nowrap}
+.f-disp{font-family:Sora;font-weight:600}
+.f-title{font-family:Sora;font-weight:600;font-size:24px}
+.f-head{font-family:Sora;font-weight:600;font-size:34px}
+.f-body{font-family:Sora;font-weight:500;font-size:14px}
+.f-small{font-family:Sora;font-weight:500;font-size:12px}
+/* nav rail */
+.rail{position:absolute;left:0;top:0;width:74px;height:600px;background:#10121A;opacity:.96}
+.nav{position:absolute;left:8px;width:58px;height:58px;border-radius:16px;display:flex;align-items:center;justify-content:center;font-size:30px;color:#EEF0F6}
+.qbtn{position:absolute;width:122px;height:62px;border-radius:12px;background:#161B24;display:flex;align-items:center;justify-content:center;font-size:14px}
 </style></head><body>
 <div class="aufr">
-  <div style="position:absolute;left:0;top:0;width:74px;height:600px;background:#10121A;opacity:.96"></div>
-  <div class="nav mdi mdi-home" style="top:22px"></div>
-  <div class="nav mdi mdi-sofa" style="top:92px"></div>
-  <div class="nav mdi mdi-lightbulb" style="top:162px"></div>
-  <div class="nav mdi mdi-thermostat" style="top:232px"></div>
-  <div class="nav mdi mdi-music" style="top:302px;background:#2ED5B8;color:#08090D"></div>
-  <div class="nav mdi mdi-shield-home" style="top:372px"></div>
-  <div class="nav mdi mdi-wifi" style="top:442px"></div>
-  <div class="nav mdi mdi-cog" style="top:512px"></div>
-  <div class="lbl" style="left:100px;top:26px;font-size:24px;font-weight:600">Media</div>
-  <div class="lbl" style="left:100px;top:60px;font-size:12px;color:#8A8F9E">Living Room &middot; Sonos</div>
+  <!-- nav rail (active: media) -->
+  <div class="rail"></div>
+  <div class="nav mdi mdi-home" style="top:22px;background:#10121A"></div>
+  <div class="nav mdi mdi-sofa" style="top:92px;background:#10121A"></div>
+  <div class="nav mdi mdi-lightbulb" style="top:162px;background:#10121A"></div>
+  <div class="nav mdi mdi-thermometer" style="top:232px;background:#10121A"></div>
+  <div class="nav mdi mdi-music" style="top:302px;background:#2ED5B8"></div>
+  <div class="nav mdi mdi-shield-home" style="top:372px;background:#10121A"></div>
+  <div class="nav mdi mdi-wifi" style="top:442px;background:#10121A"></div>
+  <div class="nav mdi mdi-cog" style="top:512px;background:#10121A"></div>
+  <div class="l f-small" style="right:10px;bottom:26px;color:#8A8F9E">Walton-Home</div>
+  <div class="l f-small" style="right:10px;bottom:8px;color:#2ED5B8">10.0.0.174</div>
 
-  <!-- now playing -->
-  <div class="c" style="left:100px;top:104px;width:452px;height:452px">
-    <div style="position:absolute;left:26px;top:26px;width:400px;height:240px;border-radius:16px;background:linear-gradient(135deg,#7B6CFF,#2ED5B8);display:flex;align-items:flex-end;padding:16px;box-sizing:border-box;color:rgba(255,255,255,.6);font-size:13px">album art</div>
-    <span class="lbl" style="left:26px;top:288px;font-size:26px;font-weight:600">Midnight City</span>
-    <span class="lbl" style="left:26px;top:328px;font-size:15px;color:#8A8F9E">M83 &middot; Hurry Up, We're Dreaming</span>
-    <div style="position:absolute;left:26px;top:368px;width:400px;height:6px;border-radius:3px;background:#161B24"></div>
-    <div style="position:absolute;left:26px;top:368px;width:160px;height:6px;border-radius:3px;background:#2ED5B8"></div>
-    <span class="lbl" style="left:26px;top:382px;font-size:12px;color:#8A8F9E">1:38</span><span class="lbl" style="right:26px;top:382px;font-size:12px;color:#8A8F9E">4:03</span>
-    <div style="position:absolute;left:120px;top:404px;width:56px;height:56px;border-radius:14px;background:#161B24;display:flex;align-items:center;justify-content:center"><span class="mdi mdi-skip-previous" style="font-size:30px"></span></div>
-    <div style="position:absolute;left:198px;top:398px;width:68px;height:68px;border-radius:34px;background:#2ED5B8;display:flex;align-items:center;justify-content:center"><span class="mdi mdi-pause" style="font-size:34px;color:#08090D"></span></div>
-    <div style="position:absolute;left:288px;top:404px;width:56px;height:56px;border-radius:14px;background:#161B24;display:flex;align-items:center;justify-content:center"><span class="mdi mdi-skip-next" style="font-size:30px"></span></div>
+  <!-- page title: label "Listening" x100 y26 f_title -->
+  <div class="l f-title" style="left:100px;top:26px;color:#EEF0F6">Listening</div>
+
+  <!-- header sub-buttons (st_glass, 112x40, centered f_small) -->
+  <div class="glass" style="left:512px;top:28px;width:112px;height:40px;display:flex;align-items:center;justify-content:center"><span class="f-small">TV Remote</span></div>
+  <div class="glass" style="left:636px;top:28px;width:112px;height:40px;display:flex;align-items:center;justify-content:center"><span class="f-small">Sonos</span></div>
+  <div class="glass" style="left:760px;top:28px;width:112px;height:40px;display:flex;align-items:center;justify-content:center"><span class="f-small">Library</span></div>
+
+  <!-- Now-playing card (st_glass pad20): x96 y70 440x360 -> children offset +(20,20) -->
+  <div class="glass" style="left:96px;top:70px;width:440px;height:360px">
+    <!-- album art: obj placeholder (c_purple) + image at (4,4) 120x120 radius16 -->
+    <div style="position:absolute;left:24px;top:24px;width:120px;height:120px;border-radius:16px;background:linear-gradient(135deg,#7B6CFF,#2ED5B8)"></div>
+    <!-- title (138,14) width286 f_title -->
+    <span class="l f-title" style="left:158px;top:34px;width:286px;overflow:hidden;text-overflow:ellipsis;color:#EEF0F6">Midnight City</span>
+    <!-- artist (138,50) f_body c_text2 -->
+    <span class="l f-body" style="left:158px;top:70px;color:#8A8F9E">M83</span>
+    <!-- position (138,86) / remaining (372,86) f_small c_text2 -->
+    <span class="l f-small" style="left:158px;top:106px;color:#8A8F9E">1:38</span>
+    <span class="l f-small" style="left:392px;top:106px;color:#8A8F9E">-2:25</span>
+    <!-- progress bar (138,108) 286x6 radius3 track 0x2A2F3A fill 0x2ED5B8 (~40%) -->
+    <div style="position:absolute;left:158px;top:128px;width:286px;height:6px;border-radius:3px;background:#2A2F3A">
+      <div style="position:absolute;left:0;top:0;width:114px;height:6px;border-radius:3px;background:#2ED5B8"></div>
+    </div>
+    <!-- transport prev: bottom_left x0 y-72, 78x52, radius12, bg #161B24 -->
+    <div style="position:absolute;left:20px;top:216px;width:78px;height:52px;border-radius:12px;background:#161B24;display:flex;align-items:center;justify-content:center"><span class="mdi" style="font-size:30px;color:#EEF0F6">&#xF04AE;</span></div>
+    <!-- play/pause: bottom_mid y-72, 88x52, teal->purple grad, icon c_bg -->
+    <div style="position:absolute;left:196px;top:216px;width:88px;height:52px;border-radius:12px;background:linear-gradient(135deg,#2ED5B8,#7B6CFF);display:flex;align-items:center;justify-content:center"><span class="mdi" style="font-size:30px;color:#08090D">&#xF03E4;</span></div>
+    <!-- transport next: bottom_right x0 y-72, 78x52 -->
+    <div style="position:absolute;left:342px;top:216px;width:78px;height:52px;border-radius:12px;background:#161B24;display:flex;align-items:center;justify-content:center"><span class="mdi" style="font-size:30px;color:#EEF0F6">&#xF04AD;</span></div>
+    <!-- volume icon: bottom_left x4 y-16 f_icon c_text2 -->
+    <span class="mdi l" style="left:24px;top:300px;font-size:30px;color:#8A8F9E">&#xF057E;</span>
+    <!-- volume slider: bottom_right x-4 y-14 width372 value34 -->
+    <div style="position:absolute;left:44px;top:312px;width:372px;height:6px;border-radius:3px;background:#2A2F3A">
+      <div style="position:absolute;left:0;top:0;width:126px;height:6px;border-radius:3px;background:#2ED5B8"></div>
+      <div style="position:absolute;left:116px;top:-7px;width:20px;height:20px;border-radius:10px;background:#EEF0F6"></div>
+    </div>
   </div>
 
-  <!-- zones + volume -->
-  <div class="c" style="left:568px;top:104px;width:436px;height:452px">
-    <span class="lbl" style="left:24px;top:20px;font-size:12px;color:#8A8F9E;letter-spacing:.06em">SPEAKERS</span>
-    <div class="zone" style="left:24px;top:48px"><span class="mdi mdi-speaker" style="position:absolute;left:16px;color:#2ED5B8;font-size:28px"></span><span style="position:absolute;left:56px;top:14px;font-size:15px;font-weight:600">Living Room</span><span style="position:absolute;left:56px;top:40px;font-size:12px;color:#2ED5B8">Playing</span><span class="mdi mdi-volume-high" style="position:absolute;right:16px;font-size:24px;color:#8A8F9E"></span></div>
-    <div class="zone" style="left:24px;top:132px"><span class="mdi mdi-speaker" style="position:absolute;left:16px;color:#8A8F9E;font-size:28px"></span><span style="position:absolute;left:56px;top:14px;font-size:15px;font-weight:600">Kitchen</span><span style="position:absolute;left:56px;top:40px;font-size:12px;color:#8A8F9E">Idle</span><span class="mdi mdi-volume-medium" style="position:absolute;right:16px;font-size:24px;color:#8A8F9E"></span></div>
-    <div class="zone" style="left:24px;top:216px"><span class="mdi mdi-speaker-multiple" style="position:absolute;left:16px;color:#8A8F9E;font-size:28px"></span><span style="position:absolute;left:56px;top:14px;font-size:15px;font-weight:600">Whole House</span><span style="position:absolute;left:56px;top:40px;font-size:12px;color:#8A8F9E">Group</span><span class="mdi mdi-volume-off" style="position:absolute;right:16px;font-size:24px;color:#8A8F9E"></span></div>
-    <span class="lbl" style="left:24px;top:312px;font-size:12px;color:#8A8F9E;letter-spacing:.06em">VOLUME</span>
-    <span class="mdi mdi-volume-low lbl" style="left:24px;top:344px;font-size:24px;color:#8A8F9E"></span>
-    <div style="position:absolute;left:64px;top:352px;width:300px;height:10px;border-radius:5px;background:#161B24"></div>
-    <div style="position:absolute;left:64px;top:352px;width:170px;height:10px;border-radius:5px;background:linear-gradient(90deg,#2ED5B8,#7BE8D6)"></div>
-    <span class="mdi mdi-volume-high lbl" style="right:24px;top:344px;font-size:24px"></span>
-    <span class="lbl" style="left:0;width:436px;text-align:center;top:392px;font-size:14px;color:#8A8F9E">57%</span>
-  </div>
+  <!-- PLAY ON label (560,70) f_small c_text2 -->
+  <div class="l f-small" style="left:560px;top:70px;color:#8A8F9E">PLAY ON</div>
+
+  <!-- zone buttons: 210x48 (st_glass) bg #161B24, centered f_body -->
+  <div class="glass" style="left:560px;top:96px;width:210px;height:48px;background:#161B24;display:flex;align-items:center;justify-content:center"><span class="f-body">Dining Room</span></div>
+  <div class="glass" style="left:786px;top:96px;width:210px;height:48px;background:#161B24;display:flex;align-items:center;justify-content:center"><span class="f-body">Gameroom</span></div>
+  <div class="glass" style="left:560px;top:156px;width:210px;height:48px;background:#161B24;display:flex;align-items:center;justify-content:center"><span class="f-body">JOHN-WICK</span></div>
+  <div class="glass" style="left:786px;top:156px;width:210px;height:48px;background:#161B24;display:flex;align-items:center;justify-content:center"><span class="f-body">Kitchen</span></div>
+  <!-- Living Room = active highlight (teal) per demo-data rule -->
+  <div class="glass" style="left:560px;top:216px;width:210px;height:48px;background:#2ED5B8;border-color:#2ED5B8;display:flex;align-items:center;justify-content:center"><span class="f-body" style="color:#08090D;font-weight:600">Living Room</span></div>
+  <div class="glass" style="left:786px;top:216px;width:210px;height:48px;background:#161B24;display:flex;align-items:center;justify-content:center"><span class="f-body">Office</span></div>
+  <div class="glass" style="left:560px;top:276px;width:210px;height:48px;background:#161B24;display:flex;align-items:center;justify-content:center"><span class="f-body">Patio</span></div>
+  <div class="glass" style="left:786px;top:276px;width:210px;height:48px;background:#161B24;display:flex;align-items:center;justify-content:center"><span class="f-body">Roku Ultra</span></div>
 </div>
 </body></html>

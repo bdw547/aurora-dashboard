@@ -5,6 +5,11 @@ Standalone HTML renders of every Aurora panel screen at the device's native
 visual mockups (demo data, exact panel coords/colors) — not the firmware. The
 real UI lives in [`../../devices/guition-esp32-p4-jc1060p470/aurora.yaml`](../../devices/guition-esp32-p4-jc1060p470/aurora.yaml).
 
+Each mockup is translated **directly from its `page_*` widget tree** in
+`aurora.yaml` — same coordinates, fonts (Sora 600/500), `st_glass` cards
+(pad_all 20 unless overridden), the 74px nav rail, and the `#2ED5B8` accent —
+so the layout matches what's actually drawn on the panel, not a redesign.
+
 ## Files
 
 Each `*.html` is a self-contained page (CDN Sora + Material Design Icons, dark
@@ -25,6 +30,8 @@ Each `*.html` is a self-contained page (CDN Sora + Material Design Icons, dark
 | Settings | `settings.html` | `page_settings` |
 | Screensaver | `screensaver.html` | `page_screensaver` |
 | TV Remote | `tvremote.html` | `page_tvremote` |
+| TV Apps launcher | `tvapps.html` | `page_tvapps` |
+| TV Trackpad | `trackpad.html` | `page_trackpad` |
 | Sonos multi-zone | `sonos.html` | `page_sonos` |
 | Doorbell (fullscreen) | `doorbell.html` | `page_doorbell` |
 | All card types (reference) | `allcards.html` | room-card archetypes |

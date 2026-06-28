@@ -3,39 +3,107 @@
 <link href="https://cdn.jsdelivr.net/npm/@mdi/font@7.4.47/css/materialdesignicons.min.css" rel="stylesheet">
 <style>
 html,body{margin:0;padding:0;background:#000}
-.aufr{position:relative;width:1024px;height:600px;background:#08090d;background-image:radial-gradient(120% 90% at 85% 0%,rgba(46,213,184,.10),rgba(123,108,255,.07) 40%,transparent 70%);font-family:'Sora',system-ui,sans-serif;color:#EEF0F6;overflow:hidden}
-.nav{position:absolute;left:8px;width:58px;height:58px;border-radius:14px;display:flex;align-items:center;justify-content:center;font-size:30px;color:#EEF0F6}
-.lt{position:absolute;width:286px;height:150px;background:#141720;border:1px solid #2A2E38;border-radius:22px}
+.aufr{position:relative;width:1024px;height:600px;background:#08090D;background-image:radial-gradient(130% 100% at 88% -10%,rgba(46,213,184,.13),rgba(123,108,255,.08) 42%,transparent 70%);font-family:'Sora',system-ui,sans-serif;color:#EEF0F6;overflow:hidden}
+/* st_glass */
+.glass{position:absolute;background:rgba(20,23,32,.92);border:1px solid #2A2E38;border-radius:22px}
 .mdi{font-family:'Material Design Icons';font-style:normal;line-height:1}
-.lbl{position:absolute;white-space:nowrap}
-.tr{position:absolute;height:14px;border-radius:7px;background:#161B24;overflow:hidden}
-.fl{position:absolute;height:14px;border-radius:7px;background:linear-gradient(90deg,#2ED5B8,#7BE8D6)}
+.l{position:absolute;white-space:nowrap}
+.f-disp{font-family:Sora;font-weight:600}
+.f-title{font-family:Sora;font-weight:600;font-size:24px}
+.f-head{font-family:Sora;font-weight:600;font-size:34px}
+.f-body{font-family:Sora;font-weight:500;font-size:14px}
+.f-small{font-family:Sora;font-weight:500;font-size:12px}
+/* nav rail */
+.rail{position:absolute;left:0;top:0;width:74px;height:600px;background:#10121A;opacity:.96}
+.nav{position:absolute;left:8px;width:58px;height:58px;border-radius:16px;display:flex;align-items:center;justify-content:center;font-size:30px;color:#EEF0F6}
+.qbtn{position:absolute;width:122px;height:62px;border-radius:12px;background:#161B24;display:flex;align-items:center;justify-content:center;font-size:14px}
 </style></head><body>
 <div class="aufr">
-  <div style="position:absolute;left:0;top:0;width:74px;height:600px;background:#10121A;opacity:.96"></div>
-  <div class="nav mdi mdi-home" style="top:22px"></div>
-  <div class="nav mdi mdi-sofa" style="top:92px"></div>
-  <div class="nav mdi mdi-lightbulb" style="top:162px;background:#2ED5B8;color:#08090D"></div>
-  <div class="nav mdi mdi-thermostat" style="top:232px"></div>
-  <div class="nav mdi mdi-music" style="top:302px"></div>
-  <div class="nav mdi mdi-shield-home" style="top:372px"></div>
-  <div class="nav mdi mdi-wifi" style="top:442px"></div>
-  <div class="nav mdi mdi-cog" style="top:512px"></div>
-  <div class="lbl" style="left:100px;top:26px;font-size:24px;font-weight:600">Lights</div>
-  <div class="lbl" style="left:100px;top:60px;font-size:12px;color:#8A8F9E">3 on &middot; 74% avg</div>
-  <div style="position:absolute;left:792px;top:24px;width:206px;height:44px;border-radius:14px;background:#2ED5B8;display:flex;align-items:center;justify-content:center;gap:8px"><span class="mdi mdi-power" style="font-size:22px;color:#08090D"></span><span style="font-size:14px;color:#08090D;font-weight:600">All Off</span></div>
+  <!-- nav rail (active: lights) -->
+  <div class="rail"></div>
+  <div class="nav mdi mdi-home" style="top:22px;background:#10121A"></div>
+  <div class="nav mdi mdi-sofa" style="top:92px;background:#10121A"></div>
+  <div class="nav mdi mdi-lightbulb" style="top:162px;background:#2ED5B8"></div>
+  <div class="nav mdi mdi-thermometer" style="top:232px;background:#10121A"></div>
+  <div class="nav mdi mdi-music" style="top:302px;background:#10121A"></div>
+  <div class="nav mdi mdi-shield-home" style="top:372px;background:#10121A"></div>
+  <div class="nav mdi mdi-wifi" style="top:442px;background:#10121A"></div>
+  <div class="nav mdi mdi-cog" style="top:512px;background:#10121A"></div>
+  <div class="l f-small" style="right:10px;bottom:26px;color:#8A8F9E">Walton-Home</div>
+  <div class="l f-small" style="right:10px;bottom:8px;color:#2ED5B8">10.0.0.174</div>
 
-  <!-- light tile macro: icon, name, % , track -->
-  <div class="lt" style="left:100px;top:104px"><span class="mdi mdi-lightbulb lbl" style="left:18px;top:18px;color:#FFCE54;font-size:30px"></span><span class="lbl" style="left:58px;top:24px;font-size:16px;font-weight:600">Main Lights</span><span class="lbl" style="right:18px;top:22px;font-size:18px;font-weight:600">74%</span><div class="tr" style="left:18px;top:108px;width:250px"></div><div class="fl" style="left:18px;top:108px;width:185px"></div></div>
-  <div class="lt" style="left:402px;top:104px"><span class="mdi mdi-lightbulb lbl" style="left:18px;top:18px;color:#FFCE54;font-size:30px"></span><span class="lbl" style="left:58px;top:24px;font-size:16px;font-weight:600">Kitchen</span><span class="lbl" style="right:18px;top:22px;font-size:18px;font-weight:600">60%</span><div class="tr" style="left:18px;top:108px;width:250px"></div><div class="fl" style="left:18px;top:108px;width:150px"></div></div>
-  <div class="lt" style="left:704px;top:104px"><span class="mdi mdi-lightbulb-off lbl" style="left:18px;top:18px;color:#6E727E;font-size:30px"></span><span class="lbl" style="left:58px;top:24px;font-size:16px;font-weight:600;color:#8A8F9E">Office</span><span class="lbl" style="right:18px;top:22px;font-size:18px;font-weight:600;color:#6E727E">Off</span><div class="tr" style="left:18px;top:108px;width:250px"></div></div>
+  <!-- header labels (page root, x measured from screen) -->
+  <div class="l f-title" style="left:100px;top:26px;color:#EEF0F6">Lights</div>
+  <div class="l f-small" style="left:100px;top:60px;color:#8A8F9E">Tap a light to control</div>
 
-  <div class="lt" style="left:100px;top:270px"><span class="mdi mdi-lightbulb lbl" style="left:18px;top:18px;color:#FFCE54;font-size:30px"></span><span class="lbl" style="left:58px;top:24px;font-size:16px;font-weight:600">Bedroom</span><span class="lbl" style="right:18px;top:22px;font-size:18px;font-weight:600">35%</span><div class="tr" style="left:18px;top:108px;width:250px"></div><div class="fl" style="left:18px;top:108px;width:88px"></div></div>
-  <div class="lt" style="left:402px;top:270px"><span class="mdi mdi-lightbulb-off lbl" style="left:18px;top:18px;color:#6E727E;font-size:30px"></span><span class="lbl" style="left:58px;top:24px;font-size:16px;font-weight:600;color:#8A8F9E">Hallway</span><span class="lbl" style="right:18px;top:22px;font-size:18px;font-weight:600;color:#6E727E">Off</span><div class="tr" style="left:18px;top:108px;width:250px"></div></div>
-  <div class="lt" style="left:704px;top:270px"><span class="mdi mdi-string-lights lbl" style="left:18px;top:18px;color:#FFCE54;font-size:30px"></span><span class="lbl" style="left:58px;top:24px;font-size:16px;font-weight:600">Exterior</span><span class="lbl" style="right:18px;top:22px;font-size:18px;font-weight:600">100%</span><div class="tr" style="left:18px;top:108px;width:250px"></div><div class="fl" style="left:18px;top:108px;width:250px"></div></div>
+  <!-- light list buttons: x96 w266 h54, st_glass pad10, radius12.
+       child dot: obj 11x11 r6 align left_mid x4 -> left=10+4=14, vcenter
+       child label: align left_mid x24 -> left=10+24=34, vcenter -->
+  <!-- Living Room -->
+  <div class="glass" style="left:96px;top:92px;width:266px;height:54px;border-radius:12px">
+    <span class="l" style="left:14px;top:50%;transform:translateY(-50%);width:11px;height:11px;border-radius:6px;background:#FFD9A0"></span>
+    <span class="l f-body" style="left:34px;top:50%;transform:translateY(-50%);color:#EEF0F6">Living Room</span>
+    <span class="l f-small" style="right:14px;top:50%;transform:translateY(-50%);color:#2ED5B8">82%</span>
+  </div>
+  <!-- Office Shelves -->
+  <div class="glass" style="left:96px;top:148px;width:266px;height:54px;border-radius:12px">
+    <span class="l" style="left:14px;top:50%;transform:translateY(-50%);width:11px;height:11px;border-radius:6px;background:#7B6CFF"></span>
+    <span class="l f-body" style="left:34px;top:50%;transform:translateY(-50%);color:#EEF0F6">Office Shelves</span>
+    <span class="l f-small" style="right:14px;top:50%;transform:translateY(-50%);color:#8A8F9E">Off</span>
+  </div>
+  <!-- Kitchen -->
+  <div class="glass" style="left:96px;top:204px;width:266px;height:54px;border-radius:12px">
+    <span class="l" style="left:14px;top:50%;transform:translateY(-50%);width:11px;height:11px;border-radius:6px;background:#FFF3DF"></span>
+    <span class="l f-body" style="left:34px;top:50%;transform:translateY(-50%);color:#EEF0F6">Kitchen</span>
+    <span class="l f-small" style="right:14px;top:50%;transform:translateY(-50%);color:#2ED5B8">100%</span>
+  </div>
+  <!-- Reading Lamp -->
+  <div class="glass" style="left:96px;top:260px;width:266px;height:54px;border-radius:12px">
+    <span class="l" style="left:14px;top:50%;transform:translateY(-50%);width:11px;height:11px;border-radius:6px;background:#FF9F6B"></span>
+    <span class="l f-body" style="left:34px;top:50%;transform:translateY(-50%);color:#EEF0F6">Reading Lamp</span>
+    <span class="l f-small" style="right:14px;top:50%;transform:translateY(-50%);color:#2ED5B8">45%</span>
+  </div>
+  <!-- Patio Lights -->
+  <div class="glass" style="left:96px;top:316px;width:266px;height:54px;border-radius:12px">
+    <span class="l" style="left:14px;top:50%;transform:translateY(-50%);width:11px;height:11px;border-radius:6px;background:#2ED5B8"></span>
+    <span class="l f-body" style="left:34px;top:50%;transform:translateY(-50%);color:#EEF0F6">Patio Lights</span>
+    <span class="l f-small" style="right:14px;top:50%;transform:translateY(-50%);color:#8A8F9E">Off</span>
+  </div>
+  <!-- Office Main -->
+  <div class="glass" style="left:96px;top:372px;width:266px;height:54px;border-radius:12px">
+    <span class="l" style="left:14px;top:50%;transform:translateY(-50%);width:11px;height:11px;border-radius:6px;background:#CFE6FF"></span>
+    <span class="l f-body" style="left:34px;top:50%;transform:translateY(-50%);color:#EEF0F6">Office Main</span>
+    <span class="l f-small" style="right:14px;top:50%;transform:translateY(-50%);color:#2ED5B8">70%</span>
+  </div>
+  <!-- Dining Chandelier -->
+  <div class="glass" style="left:96px;top:428px;width:266px;height:54px;border-radius:12px">
+    <span class="l" style="left:14px;top:50%;transform:translateY(-50%);width:11px;height:11px;border-radius:6px;background:#FFDCA8"></span>
+    <span class="l f-body" style="left:34px;top:50%;transform:translateY(-50%);color:#EEF0F6">Dining Chandelier</span>
+    <span class="l f-small" style="right:14px;top:50%;transform:translateY(-50%);color:#8A8F9E">Off</span>
+  </div>
+  <!-- Master Ceiling -->
+  <div class="glass" style="left:96px;top:484px;width:266px;height:54px;border-radius:12px">
+    <span class="l" style="left:14px;top:50%;transform:translateY(-50%);width:11px;height:11px;border-radius:6px;background:#FFE6C0"></span>
+    <span class="l f-body" style="left:34px;top:50%;transform:translateY(-50%);color:#EEF0F6">Master Ceiling</span>
+    <span class="l f-small" style="right:14px;top:50%;transform:translateY(-50%);color:#2ED5B8">30%</span>
+  </div>
 
-  <div class="lt" style="left:100px;top:436px"><span class="mdi mdi-lightbulb-group lbl" style="left:18px;top:18px;color:#FFCE54;font-size:30px"></span><span class="lbl" style="left:58px;top:24px;font-size:16px;font-weight:600">Game Room</span><span class="lbl" style="right:18px;top:22px;font-size:18px;font-weight:600">50%</span><div class="tr" style="left:18px;top:108px;width:250px"></div><div class="fl" style="left:18px;top:108px;width:125px"></div></div>
-  <div class="lt" style="left:402px;top:436px"><span class="mdi mdi-lightbulb-off lbl" style="left:18px;top:18px;color:#6E727E;font-size:30px"></span><span class="lbl" style="left:58px;top:24px;font-size:16px;font-weight:600;color:#8A8F9E">Entryway</span><span class="lbl" style="right:18px;top:22px;font-size:18px;font-weight:600;color:#6E727E">Off</span><div class="tr" style="left:18px;top:108px;width:250px"></div></div>
-  <div class="lt" style="left:704px;top:436px;border-style:dashed;display:flex;align-items:center;justify-content:center;background:transparent"><span class="mdi mdi-plus" style="font-size:36px;color:#3A3F4A"></span></div>
+  <!-- detail panel obj: x386 y26 w612 h548 st_glass (pad20).
+       content box origin = 386+20=406 , 26+20=46 -->
+  <div class="glass" style="left:386px;top:26px;width:612px;height:548px">
+    <!-- lbl_sel_name x4 y0 f_title -->
+    <span class="l f-title" style="left:24px;top:20px;color:#EEF0F6">Living Room</span>
+    <!-- sw_sel switch align top_right x-4 y2 (checked/on -> teal track, knob right) -->
+    <div style="position:absolute;right:24px;top:22px;width:52px;height:30px;border-radius:15px;background:#2ED5B8">
+      <span style="position:absolute;right:3px;top:3px;width:24px;height:24px;border-radius:12px;background:#08090D"></span>
+    </div>
+    <!-- arc_brightness align center y-6, 244x244, arc_width16, indicator gold 0xC8A45D, demo value 82 -->
+    <div style="position:absolute;left:50%;top:50%;transform:translate(-50%,calc(-50% - 6px));width:244px;height:244px;border-radius:50%;background:conic-gradient(#C8A45D 0% 82%,#161B24 82% 100%)"></div>
+    <div style="position:absolute;left:50%;top:50%;transform:translate(-50%,calc(-50% - 6px));width:212px;height:212px;border-radius:50%;background:rgba(20,23,32,.92)"></div>
+    <!-- lbl_bri_pct align center y-18 f_display 52px -->
+    <span class="l f-disp" style="left:50%;top:50%;transform:translate(-50%,calc(-50% - 18px));font-size:52px;color:#EEF0F6">82%</span>
+    <!-- "Brightness" align center y40 f_small -->
+    <span class="l f-small" style="left:50%;top:50%;transform:translate(-50%,calc(-50% + 40px));color:#8A8F9E">Brightness</span>
+  </div>
 </div>
 </body></html>

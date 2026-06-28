@@ -17,40 +17,48 @@ html,body{margin:0;padding:0;background:#000}
 .rail{position:absolute;left:0;top:0;width:74px;height:600px;background:#10121A;opacity:.96}
 .nav{position:absolute;left:8px;width:58px;height:58px;border-radius:16px;display:flex;align-items:center;justify-content:center;font-size:30px;color:#EEF0F6}
 .qbtn{position:absolute;width:122px;height:62px;border-radius:12px;background:#161B24;display:flex;align-items:center;justify-content:center;font-size:14px}
+/* app launcher buttons */
+.app{position:absolute;width:200px;height:120px;border-radius:14px;display:flex;align-items:center;justify-content:center;font-family:Sora;font-weight:600;font-size:24px}
 </style></head><body>
 <div class="aufr">
-  <!-- nav rail (active: network) -->
+  <!-- nav rail (active: rooms) -->
   <div class="rail"></div>
   <div class="nav mdi mdi-home" style="top:22px;background:#10121A"></div>
-  <div class="nav mdi mdi-sofa" style="top:92px;background:#10121A"></div>
+  <div class="nav mdi mdi-sofa" style="top:92px;background:#2ED5B8"></div>
   <div class="nav mdi mdi-lightbulb" style="top:162px;background:#10121A"></div>
   <div class="nav mdi mdi-thermometer" style="top:232px;background:#10121A"></div>
   <div class="nav mdi mdi-music" style="top:302px;background:#10121A"></div>
   <div class="nav mdi mdi-shield-home" style="top:372px;background:#10121A"></div>
-  <div class="nav mdi mdi-wifi" style="top:442px;background:#2ED5B8"></div>
+  <div class="nav mdi mdi-wifi" style="top:442px;background:#10121A"></div>
   <div class="nav mdi mdi-cog" style="top:512px;background:#10121A"></div>
   <div class="l f-small" style="right:10px;bottom:26px;color:#8A8F9E">Walton-Home</div>
   <div class="l f-small" style="right:10px;bottom:8px;color:#2ED5B8">10.0.0.174</div>
 
-  <!-- page title: label x:100 y:26 f_title c_text -->
-  <div class="l f-title" style="left:100px;top:26px;color:#EEF0F6">Network</div>
+  <!-- page title -->
+  <div class="l f-title" style="left:100px;top:26px;color:#EEF0F6">TV Apps</div>
 
-  <!-- THIS PANEL card: obj x:100 y:80 380x90, st_glass (pad_all 20) -->
-  <div class="glass" style="left:100px;top:80px;width:380px;height:90px">
-    <!-- label "THIS PANEL" x:4 y:0 f_small c_text2  -> 20+4=24, 20+0=20 -->
-    <span class="l f-small" style="left:24px;top:20px;color:#8A8F9E">THIS PANEL</span>
-    <!-- label lbl_wifi_signal x:4 y:30 f_title c_teal -> 24, 20+30=50 -->
-    <span class="l f-title" style="left:24px;top:50px;color:#2ED5B8">-48 dBm</span>
-  </div>
+  <!-- Back pill (align top_right, x:-12 y:12 -> right:12 top:12) -->
+  <div class="l" style="right:12px;top:12px;width:104px;height:44px;border-radius:8px;background:#1B2230;border:2px solid #2ED5B8;box-sizing:border-box;display:flex;align-items:center;justify-content:center"><span class="f-body" style="color:#2ED5B8">Back</span></div>
 
-  <!-- SYNOLOGY card: obj x:100 y:186 380x120, st_glass (pad_all 20) -->
-  <div class="glass" style="left:100px;top:186px;width:380px;height:120px">
-    <!-- label "SYNOLOGY" x:4 y:0 f_small c_text2 -> 24, 20 -->
-    <span class="l f-small" style="left:24px;top:20px;color:#8A8F9E">SYNOLOGY</span>
-    <!-- label lbl_nas_status x:4 y:28 f_body c_text -> 24, 20+28=48 -->
-    <span class="l f-body" style="left:24px;top:48px;color:#EEF0F6">Online</span>
-    <!-- label lbl_nas_used x:4 y:54 f_body c_text2 -> 24, 20+54=74 -->
-    <span class="l f-body" style="left:24px;top:74px;color:#8A8F9E">Storage 38% used</span>
-  </div>
+  <!-- Row 0 -->
+  <div class="app" style="left:96px;top:110px;background:#E50914;color:#FFFFFF">Netflix</div>
+  <div class="app" style="left:312px;top:110px;background:#FF0000;color:#FFFFFF">YouTube</div>
+  <div class="app" style="left:528px;top:110px;background:#282828;color:#FF4D4D">YouTube TV</div>
+  <div class="app" style="left:744px;top:110px;background:#0E2A6E;color:#FFFFFF">Disney+</div>
+
+  <!-- Row 1 -->
+  <div class="app" style="left:96px;top:246px;background:#1399FF;color:#FFFFFF">Prime Video</div>
+  <div class="app" style="left:312px;top:246px;background:#3C1AD6;color:#FFFFFF">HBO Max</div>
+  <div class="app" style="left:528px;top:246px;background:#1A1A1A;color:#FFFFFF">Apple TV</div>
+  <div class="app" style="left:744px;top:246px;background:#E5A00D;color:#1A1A1A">Plex</div>
+
+  <!-- Row 2 -->
+  <div class="app" style="left:96px;top:382px;background:#000000;color:#FFFFFF">Peacock</div>
+  <div class="app" style="left:312px;top:382px;background:#1DB954;color:#06210F">Spotify</div>
+  <div class="app" style="left:528px;top:382px;background:#1CE783;color:#06210F">Hulu</div>
+  <div class="app" style="left:744px;top:382px;background:#0064FF;color:#FFFFFF">Paramount+</div>
+
+  <!-- now-playing status label (lbl_tvapps_now, empty by default) -->
+  <div class="l f-small" style="left:96px;top:520px;width:848px;color:#8A8F9E"></div>
 </div>
 </body></html>

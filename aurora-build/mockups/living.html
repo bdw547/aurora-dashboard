@@ -3,56 +3,97 @@
 <link href="https://cdn.jsdelivr.net/npm/@mdi/font@7.4.47/css/materialdesignicons.min.css" rel="stylesheet">
 <style>
 html,body{margin:0;padding:0;background:#000}
-.aufr{position:relative;width:1024px;height:600px;background:#08090d;background-image:radial-gradient(120% 90% at 85% 0%,rgba(46,213,184,.10),rgba(123,108,255,.07) 40%,transparent 70%);font-family:'Sora',system-ui,sans-serif;color:#EEF0F6;overflow:hidden}
-.nav{position:absolute;left:8px;width:58px;height:58px;border-radius:14px;display:flex;align-items:center;justify-content:center;font-size:30px;color:#EEF0F6}
-.card{position:absolute;top:96px;width:120px;height:440px;background:#141720;border:1px solid #2A2E38;border-radius:22px}
+.aufr{position:relative;width:1024px;height:600px;background:#08090D;background-image:radial-gradient(130% 100% at 88% -10%,rgba(46,213,184,.13),rgba(123,108,255,.08) 42%,transparent 70%);font-family:'Sora',system-ui,sans-serif;color:#EEF0F6;overflow:hidden}
+/* st_glass */
+.glass{position:absolute;background:rgba(20,23,32,.92);border:1px solid #2A2E38;border-radius:22px}
 .mdi{font-family:'Material Design Icons';font-style:normal;line-height:1}
-.lbl{position:absolute;white-space:nowrap}
+.l{position:absolute;white-space:nowrap}
+.f-disp{font-family:Sora;font-weight:600}
+.f-title{font-family:Sora;font-weight:600;font-size:24px}
+.f-head{font-family:Sora;font-weight:600;font-size:34px}
+.f-body{font-family:Sora;font-weight:500;font-size:14px}
+.f-small{font-family:Sora;font-weight:500;font-size:12px}
+/* nav rail */
+.rail{position:absolute;left:0;top:0;width:74px;height:600px;background:#10121A;opacity:.96}
+.nav{position:absolute;left:8px;width:58px;height:58px;border-radius:16px;display:flex;align-items:center;justify-content:center;font-size:30px;color:#EEF0F6}
+.qbtn{position:absolute;width:122px;height:62px;border-radius:12px;background:#161B24;display:flex;align-items:center;justify-content:center;font-size:14px}
 </style></head><body>
 <div class="aufr">
-  <div style="position:absolute;left:0;top:0;width:74px;height:600px;background:#10121A;opacity:.96"></div>
-  <div class="nav mdi mdi-home" style="top:22px"></div>
-  <div class="nav mdi mdi-sofa" style="top:92px;background:#2ED5B8;color:#08090D"></div>
-  <div class="nav mdi mdi-lightbulb" style="top:162px"></div>
-  <div class="nav mdi mdi-thermostat" style="top:232px"></div>
-  <div class="nav mdi mdi-music" style="top:302px"></div>
-  <div class="nav mdi mdi-shield-home" style="top:372px"></div>
-  <div class="nav mdi mdi-wifi" style="top:442px"></div>
-  <div class="nav mdi mdi-cog" style="top:512px"></div>
-  <div class="lbl" style="left:100px;top:26px;font-size:24px;font-weight:600">Living Room</div>
-  <div class="lbl" style="left:100px;top:60px;font-size:12px;color:#8A8F9E">2 of 3 active</div>
-  <div style="position:absolute;left:846px;top:24px;width:152px;height:44px;border-radius:14px;background:#141720;border:1px solid #2A2E38;display:flex;align-items:center;justify-content:center;gap:8px"><span class="mdi mdi-chevron-left" style="font-size:24px;color:#8A8F9E"></span><span style="font-size:14px;color:#8A8F9E">Rooms</span></div>
+  <!-- nav rail (active: rooms = nav_rooms #2ED5B8) -->
+  <div class="rail"></div>
+  <div class="nav mdi mdi-home" style="top:22px;background:#10121A"></div>
+  <div class="nav mdi mdi-sofa" style="top:92px;background:#2ED5B8"></div>
+  <div class="nav mdi mdi-lightbulb" style="top:162px;background:#10121A"></div>
+  <div class="nav mdi mdi-thermometer" style="top:232px;background:#10121A"></div>
+  <div class="nav mdi mdi-music" style="top:302px;background:#10121A"></div>
+  <div class="nav mdi mdi-shield-home" style="top:372px;background:#10121A"></div>
+  <div class="nav mdi mdi-wifi" style="top:442px;background:#10121A"></div>
+  <div class="nav mdi mdi-cog" style="top:512px;background:#10121A"></div>
+  <div class="l f-small" style="right:10px;bottom:26px;color:#8A8F9E">Walton-Home</div>
+  <div class="l f-small" style="right:10px;bottom:8px;color:#2ED5B8">10.0.0.174</div>
 
-  <!-- Main Lights : light slider card -->
-  <div class="card" style="left:100px">
-    <span class="mdi mdi-lightbulb lbl" style="left:50%;transform:translateX(-50%);top:24px;color:#FFCE54;font-size:40px"></span>
-    <span class="lbl" style="left:0;width:120px;text-align:center;top:78px;font-size:15px;font-weight:600">Main Lights</span>
-    <div style="position:absolute;left:42px;top:118px;width:36px;height:250px;border-radius:18px;background:#161B24;overflow:hidden"><div style="position:absolute;bottom:0;width:36px;height:185px;background:linear-gradient(0deg,#2ED5B8,#7BE8D6)"></div></div>
-    <span class="lbl" style="left:0;width:120px;text-align:center;top:380px;font-size:26px;font-weight:600">74%</span>
-    <div style="position:absolute;left:30px;top:424px;width:60px;height:0"></div>
+  <!-- page header: room title (label x:100 y:26 f_title #EEF0F6) -->
+  <div class="l f-title" style="left:100px;top:26px;color:#EEF0F6">Living Room</div>
+
+  <!-- Back button (align top_right, x:-12 y:12 -> right:12 top:12; 104x44 radius8 bg#1B2230 border2 #2ED5B8, label "Back" teal) -->
+  <div style="position:absolute;right:12px;top:12px;width:104px;height:44px;border-radius:8px;background:#1B2230;border:2px solid #2ED5B8;display:flex;align-items:center;justify-content:center">
+    <span class="f-body" style="color:#2ED5B8">Back</span>
   </div>
 
-  <!-- Ceiling Fan : fan card -->
-  <div class="card" style="left:240px">
-    <span class="mdi mdi-fan lbl" style="left:50%;transform:translateX(-50%);top:24px;color:#2ED5B8;font-size:40px"></span>
-    <span class="lbl" style="left:0;width:120px;text-align:center;top:78px;font-size:15px;font-weight:600">Ceiling Fan</span>
-    <div style="position:absolute;left:42px;top:118px;width:36px;height:250px;border-radius:18px;background:#161B24;overflow:hidden"><div style="position:absolute;bottom:0;width:36px;height:125px;background:linear-gradient(0deg,#2ED5B8,#7BE8D6)"></div></div>
-    <span class="lbl" style="left:0;width:120px;text-align:center;top:380px;font-size:22px;font-weight:600">Med</span>
+  <!-- ===== Entity card 1: Main Lights (light, dimmer) ===== -->
+  <!-- obj x:100 y:80 w:120 h:432 pad_all:0 transparent -->
+  <div style="position:absolute;left:100px;top:80px;width:120px;height:432px">
+    <!-- name label x:0 y:0 w:120 center -->
+    <div class="l f-body" style="left:0;top:0;width:120px;text-align:center;color:#EEF0F6">Main Lights</div>
+    <!-- pct label x:0 y:24 w:120 center (demo 74%) -->
+    <div class="l f-body" style="left:0;top:24px;width:120px;text-align:center;color:#8A8F9E">74%</div>
+    <!-- vertical slider x:0 y:52 w:120 h:268 radius24 bg#12141C border2 #2A2F3A; indicator #F2C94C fills bottom-up -->
+    <div style="position:absolute;left:0;top:52px;width:120px;height:268px;border-radius:24px;background:#12141C;border:2px solid #2A2F3A;overflow:hidden">
+      <!-- indicator fill bottom-up: 74% of 268 ~ 198px -->
+      <div style="position:absolute;left:0;bottom:0;width:100%;height:198px;background:#F2C94C;border-radius:24px"></div>
+      <!-- knob: white thin bar (radius2), wide via pad left/right -24; at top of fill -->
+      <div style="position:absolute;left:-24px;right:-24px;height:8px;border-radius:2px;background:#FFFFFF;bottom:194px"></div>
+    </div>
+    <!-- power button align bottom_mid y:0 w:120 h:100 radius24 -> bottom of 432 column => top 332 -->
+    <div style="position:absolute;left:0;top:332px;width:120px;height:100px;border-radius:24px;background:#12141C;border:2px solid #2A2F3A;display:flex;align-items:center;justify-content:center">
+      <span class="mdi" style="font-size:30px;color:#8A8F9E">&#xF0425;</span>
+    </div>
   </div>
 
-  <!-- Main Climate : climate card -->
-  <div class="card" style="left:380px">
-    <span class="mdi mdi-thermostat lbl" style="left:50%;transform:translateX(-50%);top:24px;color:#FFCE54;font-size:40px"></span>
-    <span class="lbl" style="left:0;width:120px;text-align:center;top:78px;font-size:15px;font-weight:600">Climate</span>
-    <span class="lbl" style="left:0;width:120px;text-align:center;top:140px;font-size:44px;font-weight:600">72&deg;</span>
-    <span class="lbl" style="left:0;width:120px;text-align:center;top:206px;font-size:12px;color:#8A8F9E">target</span>
-    <div style="position:absolute;left:30px;top:250px;width:60px;height:60px;border-radius:14px;background:#161B24;display:flex;align-items:center;justify-content:center"><span class="mdi mdi-chevron-up" style="font-size:30px"></span></div>
-    <div style="position:absolute;left:30px;top:322px;width:60px;height:60px;border-radius:14px;background:#161B24;display:flex;align-items:center;justify-content:center"><span class="mdi mdi-chevron-down" style="font-size:30px"></span></div>
+  <!-- ===== Entity card 2: Ceiling Fan (fan) ===== -->
+  <!-- obj x:240 y:80 w:120 h:432 pad_all:0 transparent -->
+  <div style="position:absolute;left:240px;top:80px;width:120px;height:432px">
+    <div class="l f-body" style="left:0;top:0;width:120px;text-align:center;color:#EEF0F6">Ceiling Fan</div>
+    <!-- state label x:0 y:24 (demo Medium) -->
+    <div class="l f-body" style="left:0;top:24px;width:120px;text-align:center;color:#8A8F9E">Medium</div>
+    <!-- track obj x:0 y:52 w:120 h:268 radius24 bg#12141C border2 #2A2F3A -->
+    <div style="position:absolute;left:0;top:52px;width:120px;height:268px;border-radius:24px;background:#12141C;border:2px solid #2A2F3A"></div>
+    <!-- slider x:0 y:96 w:120 h:180 transparent bg/indicator; only knob visible (#56C5DD radius18) -->
+    <div style="position:absolute;left:0;top:96px;width:120px;height:180px">
+      <!-- knob round-ish #56C5DD pad left/right -6 (wider) top/bottom -16; medium => centered in 180 track -->
+      <div style="position:absolute;left:-6px;right:-6px;height:48px;border-radius:18px;background:#56C5DD;top:66px"></div>
+    </div>
+    <!-- power button align bottom_mid y:0 w:120 h:100 radius24 -> top 332 -->
+    <div style="position:absolute;left:0;top:332px;width:120px;height:100px;border-radius:24px;background:#12141C;border:2px solid #2A2F3A;display:flex;align-items:center;justify-content:center">
+      <span class="mdi" style="font-size:30px;color:#8A8F9E">&#xF0210;</span>
+    </div>
   </div>
 
-  <!-- empty add slot -->
-  <div class="card" style="left:520px;border-style:dashed;border-color:#2A2E38;background:transparent;display:flex;align-items:center;justify-content:center">
-    <span class="mdi mdi-plus" style="font-size:40px;color:#3A3F4A"></span>
+  <!-- ===== Entity card 3: Main Climate (climate) ===== -->
+  <!-- obj x:380 y:80 w:120 h:432 pad_all:0 transparent -->
+  <div style="position:absolute;left:380px;top:80px;width:120px;height:432px">
+    <div class="l f-body" style="left:0;top:0;width:120px;text-align:center;color:#EEF0F6">Main Climate</div>
+    <!-- target label x:0 y:24 (demo 72°) -->
+    <div class="l f-body" style="left:0;top:24px;width:120px;text-align:center;color:#8A8F9E">72&deg;</div>
+    <!-- vertical slider x:0 y:52 w:120 h:268 radius24 bg#12141C border2 #2A2F3A; indicator #4F91FF; min50 max90 val72 -->
+    <div style="position:absolute;left:0;top:52px;width:120px;height:268px;border-radius:24px;background:#12141C;border:2px solid #2A2F3A;overflow:hidden">
+      <!-- (72-50)/(90-50)=0.55 -> 268*0.55 ~ 147px fill bottom-up -->
+      <div style="position:absolute;left:0;bottom:0;width:100%;height:147px;background:#4F91FF;border-radius:24px"></div>
+      <!-- knob white thin bar at top of fill -->
+      <div style="position:absolute;left:-24px;right:-24px;height:8px;border-radius:2px;background:#FFFFFF;bottom:143px"></div>
+    </div>
+    <!-- current temp label align bottom_mid y:-28 w:120 f_small (empty text in YAML) -->
+    <div class="l f-small" style="left:0;bottom:28px;width:120px;text-align:center;color:#8A8F9E"></div>
   </div>
 </div>
 </body></html>

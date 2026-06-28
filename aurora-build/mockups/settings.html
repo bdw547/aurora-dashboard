@@ -3,51 +3,83 @@
 <link href="https://cdn.jsdelivr.net/npm/@mdi/font@7.4.47/css/materialdesignicons.min.css" rel="stylesheet">
 <style>
 html,body{margin:0;padding:0;background:#000}
-.aufr{position:relative;width:1024px;height:600px;background:#08090d;background-image:radial-gradient(120% 90% at 85% 0%,rgba(46,213,184,.10),rgba(123,108,255,.07) 40%,transparent 70%);font-family:'Sora',system-ui,sans-serif;color:#EEF0F6;overflow:hidden}
-.nav{position:absolute;left:8px;width:58px;height:58px;border-radius:14px;display:flex;align-items:center;justify-content:center;font-size:30px;color:#EEF0F6}
-.c{position:absolute;background:#141720;border:1px solid #2A2E38;border-radius:22px}
+.aufr{position:relative;width:1024px;height:600px;background:#08090D;background-image:radial-gradient(130% 100% at 88% -10%,rgba(46,213,184,.13),rgba(123,108,255,.08) 42%,transparent 70%);font-family:'Sora',system-ui,sans-serif;color:#EEF0F6;overflow:hidden}
+/* st_glass */
+.glass{position:absolute;background:rgba(20,23,32,.92);border:1px solid #2A2E38;border-radius:22px}
 .mdi{font-family:'Material Design Icons';font-style:normal;line-height:1}
-.lbl{position:absolute;white-space:nowrap}
-.row{position:absolute;width:404px;height:62px;border-radius:14px;background:#161B24;display:flex;align-items:center}
-.sw{position:absolute;right:16px;width:54px;height:30px;border-radius:15px}
-.kn{position:absolute;top:3px;width:24px;height:24px;border-radius:12px;background:#EEF0F6}
+.l{position:absolute;white-space:nowrap}
+.f-disp{font-family:Sora;font-weight:600}
+.f-title{font-family:Sora;font-weight:600;font-size:24px}
+.f-head{font-family:Sora;font-weight:600;font-size:34px}
+.f-body{font-family:Sora;font-weight:500;font-size:14px}
+.f-small{font-family:Sora;font-weight:500;font-size:12px}
+/* nav rail */
+.rail{position:absolute;left:0;top:0;width:74px;height:600px;background:#10121A;opacity:.96}
+.nav{position:absolute;left:8px;width:58px;height:58px;border-radius:16px;display:flex;align-items:center;justify-content:center;font-size:30px;color:#EEF0F6}
+.qbtn{position:absolute;width:122px;height:62px;border-radius:12px;background:#161B24;display:flex;align-items:center;justify-content:center;font-size:14px}
 </style></head><body>
 <div class="aufr">
-  <div style="position:absolute;left:0;top:0;width:74px;height:600px;background:#10121A;opacity:.96"></div>
-  <div class="nav mdi mdi-home" style="top:22px"></div>
-  <div class="nav mdi mdi-sofa" style="top:92px"></div>
-  <div class="nav mdi mdi-lightbulb" style="top:162px"></div>
-  <div class="nav mdi mdi-thermostat" style="top:232px"></div>
-  <div class="nav mdi mdi-music" style="top:302px"></div>
-  <div class="nav mdi mdi-shield-home" style="top:372px"></div>
-  <div class="nav mdi mdi-wifi" style="top:442px"></div>
-  <div class="nav mdi mdi-cog" style="top:512px;background:#2ED5B8;color:#08090D"></div>
-  <div class="lbl" style="left:100px;top:26px;font-size:24px;font-weight:600">Settings</div>
-  <div class="lbl" style="left:100px;top:60px;font-size:12px;color:#8A8F9E">Aurora &middot; firmware 2026.6</div>
+  <!-- nav rail (active: settings) -->
+  <div class="rail"></div>
+  <div class="nav mdi mdi-home" style="top:22px;background:#10121A"></div>
+  <div class="nav mdi mdi-sofa" style="top:92px;background:#10121A"></div>
+  <div class="nav mdi mdi-lightbulb" style="top:162px;background:#10121A"></div>
+  <div class="nav mdi mdi-thermometer" style="top:232px;background:#10121A"></div>
+  <div class="nav mdi mdi-music" style="top:302px;background:#10121A"></div>
+  <div class="nav mdi mdi-shield-home" style="top:372px;background:#10121A"></div>
+  <div class="nav mdi mdi-wifi" style="top:442px;background:#10121A"></div>
+  <div class="nav mdi mdi-cog" style="top:512px;background:#2ED5B8"></div>
+  <div class="l f-small" style="right:10px;bottom:26px;color:#8A8F9E">Walton-Home</div>
+  <div class="l f-small" style="right:10px;bottom:8px;color:#2ED5B8">10.0.0.174</div>
 
-  <!-- left: toggles -->
-  <div class="c" style="left:100px;top:104px;width:452px;height:452px">
-    <span class="lbl" style="left:24px;top:20px;font-size:12px;color:#8A8F9E;letter-spacing:.06em">DISPLAY</span>
-    <div class="row" style="left:24px;top:48px"><span class="mdi mdi-brightness-6" style="position:absolute;left:16px;color:#FFCE54;font-size:26px"></span><span style="position:absolute;left:54px;font-size:15px">Brightness</span><div style="position:absolute;right:16px;width:180px;height:8px;border-radius:4px;background:#0c0e13;top:27px"></div><div style="position:absolute;right:90px;width:106px;height:8px;border-radius:4px;background:#2ED5B8;top:27px"></div></div>
-    <div class="row" style="left:24px;top:122px"><span class="mdi mdi-theme-light-dark" style="position:absolute;left:16px;color:#7B6CFF;font-size:26px"></span><span style="position:absolute;left:54px;font-size:15px">Dark theme</span><div class="sw" style="background:#2ED5B8;top:16px"><div class="kn" style="right:3px;background:#08090D"></div></div></div>
-    <div class="row" style="left:24px;top:196px"><span class="mdi mdi-motion-sensor" style="position:absolute;left:16px;color:#2ED5B8;font-size:26px"></span><span style="position:absolute;left:54px;font-size:15px">Wake on motion</span><div class="sw" style="background:#2ED5B8;top:16px"><div class="kn" style="right:3px;background:#08090D"></div></div></div>
-    <span class="lbl" style="left:24px;top:286px;font-size:12px;color:#8A8F9E;letter-spacing:.06em">SCREENSAVER</span>
-    <div class="row" style="left:24px;top:314px"><span class="mdi mdi-image-multiple" style="position:absolute;left:16px;color:#2ED5B8;font-size:26px"></span><span style="position:absolute;left:54px;font-size:15px">Photo slideshow</span><div class="sw" style="background:#2ED5B8;top:16px"><div class="kn" style="right:3px;background:#08090D"></div></div></div>
-    <div class="row" style="left:24px;top:388px"><span class="mdi mdi-timer-sand" style="position:absolute;left:16px;color:#8A8F9E;font-size:26px"></span><span style="position:absolute;left:54px;font-size:15px">Per-image time</span><span style="position:absolute;right:16px;font-size:15px;font-weight:600;color:#2ED5B8">30s</span></div>
+  <!-- title: label x100 y26 f_title -->
+  <div class="l f-title" style="left:100px;top:26px;color:#EEF0F6">Settings</div>
+
+  <!-- DISPLAY BRIGHTNESS card (obj x96 y84 816x116, st_glass pad 20) -->
+  <div class="glass" style="left:96px;top:84px;width:816px;height:116px">
+    <!-- label child x4 y0 -> 24,20 -->
+    <span class="l f-small" style="left:24px;top:20px;color:#8A8F9E">DISPLAY BRIGHTNESS</span>
+    <!-- slider child x0 y48 width776 -> abs left20 top68; value 80 of 5..100 ~ 79% fill -->
+    <div style="position:absolute;left:20px;top:68px;width:776px;height:8px;border-radius:4px;background:#161B24">
+      <div style="position:absolute;left:0;top:0;width:79%;height:8px;border-radius:4px;background:#2ED5B8"></div>
+      <div style="position:absolute;left:79%;top:50%;transform:translate(-50%,-50%);width:24px;height:24px;border-radius:12px;background:#EEF0F6"></div>
+    </div>
   </div>
 
-  <!-- right: system -->
-  <div class="c" style="left:568px;top:104px;width:436px;height:452px">
-    <span class="lbl" style="left:24px;top:20px;font-size:12px;color:#8A8F9E;letter-spacing:.06em">SYSTEM</span>
-    <span class="lbl" style="left:24px;top:58px;font-size:15px;color:#8A8F9E">Device</span><span class="lbl" style="right:24px;top:58px;font-size:15px">aurora-panel</span>
-    <span class="lbl" style="left:24px;top:98px;font-size:15px;color:#8A8F9E">IP Address</span><span class="lbl" style="right:24px;top:98px;font-size:15px">10.0.0.174</span>
-    <span class="lbl" style="left:24px;top:138px;font-size:15px;color:#8A8F9E">Home Assistant</span><span class="lbl" style="right:24px;top:138px;font-size:15px;color:#2ED5B8">Connected</span>
-    <span class="lbl" style="left:24px;top:178px;font-size:15px;color:#8A8F9E">Uptime</span><span class="lbl" style="right:24px;top:178px;font-size:15px">4d 12h</span>
-    <span class="lbl" style="left:24px;top:218px;font-size:15px;color:#8A8F9E">Free heap</span><span class="lbl" style="right:24px;top:218px;font-size:15px">8.2 MB</span>
-    <div style="position:absolute;left:24px;top:262px;right:24px;height:1px;background:#2A2E38"></div>
-    <div style="position:absolute;left:24px;top:292px;width:184px;height:60px;border-radius:14px;background:#161B24;display:flex;align-items:center;justify-content:center;gap:8px"><span class="mdi mdi-restart" style="font-size:22px"></span><span style="font-size:14px">Restart</span></div>
-    <div style="position:absolute;right:24px;top:292px;width:184px;height:60px;border-radius:14px;background:#161B24;display:flex;align-items:center;justify-content:center;gap:8px"><span class="mdi mdi-update" style="font-size:22px;color:#2ED5B8"></span><span style="font-size:14px">Check update</span></div>
-    <span class="lbl" style="left:0;width:436px;text-align:center;top:392px;font-size:12px;color:#6E727E">Aurora &middot; ESP32-P4 &middot; JC1060P470</span>
+  <!-- SCREEN TIMEOUT card (obj x96 y210 816x150, st_glass pad 20) -->
+  <div class="glass" style="left:96px;top:210px;width:816px;height:150px">
+    <!-- label child x0 y0 -> 20,20 -->
+    <span class="l f-small" style="left:20px;top:20px;color:#8A8F9E">SCREEN TIMEOUT</span>
+    <!-- buttons child y44 -> abs top64; 182x60 radius12. Never active (teal) -->
+    <div style="position:absolute;left:20px;top:64px;width:182px;height:60px;border-radius:12px;background:#2ED5B8;display:flex;align-items:center;justify-content:center"><span class="f-body" style="color:#08090D">Never</span></div>
+    <!-- to_1 child x198 -> abs left218 -->
+    <div style="position:absolute;left:218px;top:64px;width:182px;height:60px;border-radius:12px;background:#161B24;display:flex;align-items:center;justify-content:center"><span class="f-body" style="color:#EEF0F6">1 min</span></div>
+    <!-- to_5 child x396 -> abs left416 -->
+    <div style="position:absolute;left:416px;top:64px;width:182px;height:60px;border-radius:12px;background:#161B24;display:flex;align-items:center;justify-content:center"><span class="f-body" style="color:#EEF0F6">5 min</span></div>
+    <!-- to_15 child x594 -> abs left614 -->
+    <div style="position:absolute;left:614px;top:64px;width:182px;height:60px;border-radius:12px;background:#161B24;display:flex;align-items:center;justify-content:center"><span class="f-body" style="color:#EEF0F6">15 min</span></div>
+  </div>
+
+  <!-- Presence wake card (obj x96 y380 266x92, st_glass pad 20) -->
+  <div class="glass" style="left:96px;top:380px;width:266px;height:92px">
+    <!-- label x8 left_mid -> left28 vertical center -->
+    <span class="l f-body" style="left:28px;top:50%;transform:translateY(-50%);color:#EEF0F6">Presence wake</span>
+    <!-- sw_wake right_mid x-8 ; ON (g_wake_presence) -> teal pill, knob right -->
+    <div style="position:absolute;right:28px;top:50%;transform:translateY(-50%);width:52px;height:28px;border-radius:14px;background:#2ED5B8"><div style="position:absolute;right:3px;top:3px;width:22px;height:22px;border-radius:11px;background:#fff"></div></div>
+  </div>
+
+  <!-- Screensaver card (obj x370 y380 266x92, st_glass pad 20) -->
+  <div class="glass" style="left:370px;top:380px;width:266px;height:92px">
+    <span class="l f-body" style="left:28px;top:50%;transform:translateY(-50%);color:#EEF0F6">Screensaver</span>
+    <!-- sw_screensaver ; OFF -> grey pill, knob left -->
+    <div style="position:absolute;right:28px;top:50%;transform:translateY(-50%);width:52px;height:28px;border-radius:14px;background:#2A2E38"><div style="position:absolute;left:3px;top:3px;width:22px;height:22px;border-radius:11px;background:#8A8F9E"></div></div>
+  </div>
+
+  <!-- Approach wake card (obj x644 y380 266x92, st_glass pad 20) -->
+  <div class="glass" style="left:644px;top:380px;width:266px;height:92px">
+    <span class="l f-body" style="left:28px;top:50%;transform:translateY(-50%);color:#EEF0F6">Approach wake</span>
+    <!-- sw_cam_wake ; ON -> teal pill, knob right -->
+    <div style="position:absolute;right:28px;top:50%;transform:translateY(-50%);width:52px;height:28px;border-radius:14px;background:#2ED5B8"><div style="position:absolute;right:3px;top:3px;width:22px;height:22px;border-radius:11px;background:#fff"></div></div>
   </div>
 </div>
 </body></html>

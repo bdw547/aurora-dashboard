@@ -3,31 +3,89 @@
 <link href="https://cdn.jsdelivr.net/npm/@mdi/font@7.4.47/css/materialdesignicons.min.css" rel="stylesheet">
 <style>
 html,body{margin:0;padding:0;background:#000}
-.aufr{position:relative;width:1024px;height:600px;background:#08090d;background-image:radial-gradient(120% 90% at 85% 0%,rgba(46,213,184,.10),rgba(123,108,255,.07) 40%,transparent 70%);font-family:'Sora',system-ui,sans-serif;color:#EEF0F6;overflow:hidden}
-.nav{position:absolute;left:8px;width:58px;height:58px;border-radius:14px;display:flex;align-items:center;justify-content:center;font-size:30px;color:#EEF0F6}
-.rbtn{position:absolute;left:126px;width:772px;height:64px;background:#141720;border:1px solid #2A2E38;border-radius:22px;display:flex;align-items:center}
+.aufr{position:relative;width:1024px;height:600px;background:#08090D;background-image:radial-gradient(130% 100% at 88% -10%,rgba(46,213,184,.13),rgba(123,108,255,.08) 42%,transparent 70%);font-family:'Sora',system-ui,sans-serif;color:#EEF0F6;overflow:hidden}
+/* st_glass */
+.glass{position:absolute;background:rgba(20,23,32,.92);border:1px solid #2A2E38;border-radius:22px}
 .mdi{font-family:'Material Design Icons';font-style:normal;line-height:1}
+.l{position:absolute;white-space:nowrap}
+.f-disp{font-family:Sora;font-weight:600}
+.f-title{font-family:Sora;font-weight:600;font-size:24px}
+.f-head{font-family:Sora;font-weight:600;font-size:34px}
+.f-body{font-family:Sora;font-weight:500;font-size:14px}
+.f-small{font-family:Sora;font-weight:500;font-size:12px}
+/* nav rail */
+.rail{position:absolute;left:0;top:0;width:74px;height:600px;background:#10121A;opacity:.96}
+.nav{position:absolute;left:8px;width:58px;height:58px;border-radius:16px;display:flex;align-items:center;justify-content:center;font-size:30px;color:#EEF0F6}
+.qbtn{position:absolute;width:122px;height:62px;border-radius:12px;background:#161B24;display:flex;align-items:center;justify-content:center;font-size:14px}
 </style></head><body>
 <div class="aufr">
-  <div style="position:absolute;left:0;top:0;width:74px;height:600px;background:#10121A;opacity:.96"></div>
-  <div class="nav mdi mdi-home" style="top:22px"></div>
-  <div class="nav mdi mdi-sofa" style="top:92px;background:#2ED5B8;color:#08090D"></div>
-  <div class="nav mdi mdi-lightbulb" style="top:162px"></div>
-  <div class="nav mdi mdi-thermostat" style="top:232px"></div>
-  <div class="nav mdi mdi-music" style="top:302px"></div>
-  <div class="nav mdi mdi-shield-home" style="top:372px"></div>
-  <div class="nav mdi mdi-wifi" style="top:442px"></div>
-  <div class="nav mdi mdi-cog" style="top:512px"></div>
-  <div style="position:absolute;left:100px;top:24px;font-size:24px;font-weight:600">Rooms</div>
-  <div style="position:absolute;left:100px;top:62px;font-size:12px;color:#8A8F9E">Choose a room to control</div>
-  <div class="rbtn" style="top:96px"><span class="mdi mdi-sofa" style="position:absolute;left:18px;color:#2ED5B8;font-size:30px"></span><span style="position:absolute;left:60px;font-size:24px;font-weight:600">Living Room</span><span style="position:absolute;right:18px;font-size:12px;color:#8A8F9E">2 on</span></div>
-  <div class="rbtn" style="top:174px"><span class="mdi mdi-silverware-fork-knife" style="position:absolute;left:18px;color:#2ED5B8;font-size:30px"></span><span style="position:absolute;left:60px;font-size:24px;font-weight:600">Kitchen</span><span style="position:absolute;right:18px;font-size:12px;color:#8A8F9E">All off</span></div>
-  <div class="rbtn" style="top:252px"><span class="mdi mdi-desk" style="position:absolute;left:18px;color:#2ED5B8;font-size:30px"></span><span style="position:absolute;left:60px;font-size:24px;font-weight:600">Office</span><span style="position:absolute;right:18px;font-size:12px;color:#8A8F9E">1 on</span></div>
-  <div class="rbtn" style="top:330px"><span class="mdi mdi-bed" style="position:absolute;left:18px;color:#2ED5B8;font-size:30px"></span><span style="position:absolute;left:60px;font-size:24px;font-weight:600">Master</span><span style="position:absolute;right:18px;font-size:12px;color:#8A8F9E">All off</span></div>
-  <div class="rbtn" style="top:408px"><span class="mdi mdi-tree" style="position:absolute;left:18px;color:#2ED5B8;font-size:30px"></span><span style="position:absolute;left:60px;font-size:24px;font-weight:600">Exterior</span><span style="position:absolute;right:18px;font-size:12px;color:#8A8F9E">3 on</span></div>
-  <div class="rbtn" style="top:486px"><span class="mdi mdi-door" style="position:absolute;left:18px;color:#2ED5B8;font-size:30px"></span><span style="position:absolute;left:60px;font-size:24px;font-weight:600">Entryway</span><span style="position:absolute;right:18px;font-size:12px;color:#8A8F9E">2 on</span></div>
-  <div class="rbtn" style="top:564px"><span class="mdi mdi-stairs" style="position:absolute;left:18px;color:#2ED5B8;font-size:30px"></span><span style="position:absolute;left:60px;font-size:24px;font-weight:600">Gameroom</span><span style="position:absolute;right:18px;font-size:12px;color:#8A8F9E">All off</span></div>
-  <div style="position:absolute;left:912px;top:100px;width:5px;height:300px;border-radius:3px;background:#2A2E38"></div>
-  <div style="position:absolute;left:912px;top:100px;width:5px;height:210px;border-radius:3px;background:#2ED5B8"></div>
+  <!-- nav rail (active: rooms) -->
+  <div class="rail"></div>
+  <div class="nav mdi mdi-home" style="top:22px;background:#10121A"></div>
+  <div class="nav mdi mdi-sofa" style="top:92px;background:#2ED5B8"></div>
+  <div class="nav mdi mdi-lightbulb" style="top:162px;background:#10121A"></div>
+  <div class="nav mdi mdi-thermometer" style="top:232px;background:#10121A"></div>
+  <div class="nav mdi mdi-music" style="top:302px;background:#10121A"></div>
+  <div class="nav mdi mdi-shield-home" style="top:372px;background:#10121A"></div>
+  <div class="nav mdi mdi-wifi" style="top:442px;background:#10121A"></div>
+  <div class="nav mdi mdi-cog" style="top:512px;background:#10121A"></div>
+  <div class="l f-small" style="right:10px;bottom:26px;color:#8A8F9E">Walton-Home</div>
+  <div class="l f-small" style="right:10px;bottom:8px;color:#2ED5B8">10.0.0.174</div>
+
+  <!-- header -->
+  <div class="l f-title" style="left:100px;top:26px;color:#EEF0F6">Rooms</div>
+  <div class="l f-small" style="left:100px;top:60px;color:#8A8F9E">Choose a room to control</div>
+
+  <!-- room_scroll (obj x:100 y:96 w:824 h:496, pad_all:0) -->
+  <!-- rows: button x:26 (abs 126) width 772 height 64, pitch 78; st_glass pad 20 -->
+
+  <!-- Living Room  (y:0 -> abs 96) -->
+  <div class="glass" style="left:126px;top:96px;width:772px;height:64px">
+    <span class="mdi l" style="left:28px;top:50%;transform:translateY(-50%);color:#2ED5B8;font-size:30px">&#xF04B9;</span>
+    <span class="l f-title" style="left:80px;top:50%;transform:translateY(-50%)">Living Room</span>
+    <span class="l f-small" style="right:36px;top:50%;transform:translateY(-50%);color:#8A8F9E">3 on</span>
+  </div>
+
+  <!-- Kitchen  (y:78 -> abs 174) -->
+  <div class="glass" style="left:126px;top:174px;width:772px;height:64px">
+    <span class="mdi l" style="left:28px;top:50%;transform:translateY(-50%);color:#2ED5B8;font-size:30px">&#xF0A70;</span>
+    <span class="l f-title" style="left:80px;top:50%;transform:translateY(-50%)">Kitchen</span>
+    <span class="l f-small" style="right:36px;top:50%;transform:translateY(-50%);color:#8A8F9E">2 on</span>
+  </div>
+
+  <!-- Office  (y:156 -> abs 252) -->
+  <div class="glass" style="left:126px;top:252px;width:772px;height:64px">
+    <span class="mdi l" style="left:28px;top:50%;transform:translateY(-50%);color:#2ED5B8;font-size:30px">&#xF1239;</span>
+    <span class="l f-title" style="left:80px;top:50%;transform:translateY(-50%)">Office</span>
+    <span class="l f-small" style="right:36px;top:50%;transform:translateY(-50%);color:#8A8F9E">All off</span>
+  </div>
+
+  <!-- Master  (y:234 -> abs 330) -->
+  <div class="glass" style="left:126px;top:330px;width:772px;height:64px">
+    <span class="mdi l" style="left:28px;top:50%;transform:translateY(-50%);color:#2ED5B8;font-size:30px">&#xF02E3;</span>
+    <span class="l f-title" style="left:80px;top:50%;transform:translateY(-50%)">Master</span>
+    <span class="l f-small" style="right:36px;top:50%;transform:translateY(-50%);color:#8A8F9E">1 on</span>
+  </div>
+
+  <!-- Exterior  (y:312 -> abs 408) -->
+  <div class="glass" style="left:126px;top:408px;width:772px;height:64px">
+    <span class="mdi l" style="left:28px;top:50%;transform:translateY(-50%);color:#2ED5B8;font-size:30px">&#xF0531;</span>
+    <span class="l f-title" style="left:80px;top:50%;transform:translateY(-50%)">Exterior</span>
+    <span class="l f-small" style="right:36px;top:50%;transform:translateY(-50%);color:#8A8F9E">4 on</span>
+  </div>
+
+  <!-- Entryway  (y:390 -> abs 486) -->
+  <div class="glass" style="left:126px;top:486px;width:772px;height:64px">
+    <span class="mdi l" style="left:28px;top:50%;transform:translateY(-50%);color:#2ED5B8;font-size:30px">&#xF081A;</span>
+    <span class="l f-title" style="left:80px;top:50%;transform:translateY(-50%)">Entryway</span>
+    <span class="l f-small" style="right:36px;top:50%;transform:translateY(-50%);color:#8A8F9E">All off</span>
+  </div>
+
+  <!-- Gameroom  (y:468 -> abs 564, last row partially within scroll bottom at 592) -->
+  <div class="glass" style="left:126px;top:564px;width:772px;height:64px">
+    <span class="mdi l" style="left:28px;top:50%;transform:translateY(-50%);color:#2ED5B8;font-size:30px">&#xF04CD;</span>
+    <span class="l f-title" style="left:80px;top:50%;transform:translateY(-50%)">Gameroom</span>
+    <span class="l f-small" style="right:36px;top:50%;transform:translateY(-50%);color:#8A8F9E">2 on</span>
+  </div>
 </div>
 </body></html>

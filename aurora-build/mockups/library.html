@@ -3,40 +3,99 @@
 <link href="https://cdn.jsdelivr.net/npm/@mdi/font@7.4.47/css/materialdesignicons.min.css" rel="stylesheet">
 <style>
 html,body{margin:0;padding:0;background:#000}
-.aufr{position:relative;width:1024px;height:600px;background:#08090d;background-image:radial-gradient(120% 90% at 85% 0%,rgba(46,213,184,.10),rgba(123,108,255,.07) 40%,transparent 70%);font-family:'Sora',system-ui,sans-serif;color:#EEF0F6;overflow:hidden}
-.nav{position:absolute;left:8px;width:58px;height:58px;border-radius:14px;display:flex;align-items:center;justify-content:center;font-size:30px;color:#EEF0F6}
+.aufr{position:relative;width:1024px;height:600px;background:#08090D;background-image:radial-gradient(130% 100% at 88% -10%,rgba(46,213,184,.13),rgba(123,108,255,.08) 42%,transparent 70%);font-family:'Sora',system-ui,sans-serif;color:#EEF0F6;overflow:hidden}
+/* st_glass */
+.glass{position:absolute;background:rgba(20,23,32,.92);border:1px solid #2A2E38;border-radius:22px}
 .mdi{font-family:'Material Design Icons';font-style:normal;line-height:1}
-.lbl{position:absolute;white-space:nowrap}
-.ph{position:absolute;width:212px;height:138px;border-radius:16px;overflow:hidden}
-.ph span{position:absolute;left:0;width:100%;text-align:center;top:54px;font-size:30px;color:rgba(255,255,255,.5)}
+.l{position:absolute;white-space:nowrap}
+.f-disp{font-family:Sora;font-weight:600}
+.f-title{font-family:Sora;font-weight:600;font-size:24px}
+.f-head{font-family:Sora;font-weight:600;font-size:34px}
+.f-body{font-family:Sora;font-weight:500;font-size:14px}
+.f-small{font-family:Sora;font-weight:500;font-size:12px}
+/* nav rail */
+.rail{position:absolute;left:0;top:0;width:74px;height:600px;background:#10121A;opacity:.96}
+.nav{position:absolute;left:8px;width:58px;height:58px;border-radius:16px;display:flex;align-items:center;justify-content:center;font-size:30px;color:#EEF0F6}
+.qbtn{position:absolute;width:122px;height:62px;border-radius:12px;background:#161B24;display:flex;align-items:center;justify-content:center;font-size:14px}
 </style></head><body>
 <div class="aufr">
-  <div style="position:absolute;left:0;top:0;width:74px;height:600px;background:#10121A;opacity:.96"></div>
-  <div class="nav mdi mdi-home" style="top:22px"></div>
-  <div class="nav mdi mdi-sofa" style="top:92px"></div>
-  <div class="nav mdi mdi-lightbulb" style="top:162px"></div>
-  <div class="nav mdi mdi-thermostat" style="top:232px"></div>
-  <div class="nav mdi mdi-music" style="top:302px"></div>
-  <div class="nav mdi mdi-shield-home" style="top:372px"></div>
-  <div class="nav mdi mdi-wifi" style="top:442px"></div>
-  <div class="nav mdi mdi-cog" style="top:512px"></div>
-  <div class="lbl" style="left:100px;top:26px;font-size:24px;font-weight:600">Photo Library</div>
-  <div class="lbl" style="left:100px;top:60px;font-size:12px;color:#8A8F9E">24 photos &middot; screensaver source</div>
-  <div style="position:absolute;left:760px;top:24px;width:238px;height:44px;border-radius:14px;background:#161B24;display:flex;align-items:center;justify-content:center;gap:8px"><span class="mdi mdi-play" style="font-size:22px;color:#2ED5B8"></span><span style="font-size:14px">Start slideshow</span></div>
+  <!-- nav rail (active: media) -->
+  <div class="rail"></div>
+  <div class="nav mdi mdi-home" style="top:22px;background:#10121A"></div>
+  <div class="nav mdi mdi-sofa" style="top:92px;background:#10121A"></div>
+  <div class="nav mdi mdi-lightbulb" style="top:162px;background:#10121A"></div>
+  <div class="nav mdi mdi-thermometer" style="top:232px;background:#10121A"></div>
+  <div class="nav mdi mdi-music" style="top:302px;background:#2ED5B8"></div>
+  <div class="nav mdi mdi-shield-home" style="top:372px;background:#10121A"></div>
+  <div class="nav mdi mdi-wifi" style="top:442px;background:#10121A"></div>
+  <div class="nav mdi mdi-cog" style="top:512px;background:#10121A"></div>
+  <div class="l f-small" style="right:10px;bottom:26px;color:#8A8F9E">Walton-Home</div>
+  <div class="l f-small" style="right:10px;bottom:8px;color:#2ED5B8">10.0.0.174</div>
 
-  <div class="ph" style="left:100px;top:104px;background:linear-gradient(135deg,#7B6CFF,#2ED5B8)"><span class="mdi mdi-image"></span></div>
-  <div class="ph" style="left:328px;top:104px;background:linear-gradient(135deg,#FF8A65,#FFCE54)"><span class="mdi mdi-image"></span></div>
-  <div class="ph" style="left:556px;top:104px;background:linear-gradient(135deg,#2ED5B8,#1E6E63)"><span class="mdi mdi-image"></span></div>
-  <div class="ph" style="left:784px;top:104px;background:linear-gradient(135deg,#5C6BC0,#7B6CFF)"><span class="mdi mdi-image"></span></div>
+  <!-- header: label "Library" x:100 y:26 f_title -->
+  <div class="l f-title" style="left:100px;top:26px;color:#EEF0F6">Library</div>
 
-  <div class="ph" style="left:100px;top:258px;background:linear-gradient(135deg,#26A69A,#2ED5B8)"><span class="mdi mdi-image"></span></div>
-  <div class="ph" style="left:328px;top:258px;background:linear-gradient(135deg,#EC407A,#FF8A65)"><span class="mdi mdi-image"></span></div>
-  <div class="ph" style="left:556px;top:258px;background:linear-gradient(135deg,#7B6CFF,#5C6BC0)"><span class="mdi mdi-image"></span></div>
-  <div class="ph" style="left:784px;top:258px;background:linear-gradient(135deg,#FFCE54,#FF8A65)"><span class="mdi mdi-image"></span></div>
+  <!-- Back button: align top_right, x:-12 y:12, 104x44, bg 0x1B2230, 2px teal border, radius 8
+       absolute left = 1024 - 12 - 104 = 908 -->
+  <div style="position:absolute;left:908px;top:12px;width:104px;height:44px;border-radius:8px;background:#1B2230;border:2px solid #2ED5B8;box-sizing:border-box;display:flex;align-items:center;justify-content:center"><span class="f-body" style="color:#2ED5B8">Back</span></div>
 
-  <div class="ph" style="left:100px;top:412px;background:linear-gradient(135deg,#42A5F5,#2ED5B8)"><span class="mdi mdi-image"></span></div>
-  <div class="ph" style="left:328px;top:412px;background:linear-gradient(135deg,#AB47BC,#7B6CFF)"><span class="mdi mdi-image"></span></div>
-  <div class="ph" style="left:556px;top:412px;background:linear-gradient(135deg,#1E6E63,#26A69A)"><span class="mdi mdi-image"></span></div>
-  <div class="ph" style="left:784px;top:412px;border:1px dashed #2A2E38;display:flex;align-items:center;justify-content:center;background:transparent"><span class="mdi mdi-plus" style="position:static;font-size:36px;color:#3A3F4A"></span></div>
+  <!-- PLAYLIST label x:100 y:80 f_small c_text2 -->
+  <div class="l f-small" style="left:100px;top:80px;color:#8A8F9E;letter-spacing:.04em">PLAYLIST</div>
+
+  <!-- playlist dropdown x:100 y:102 w:500 (h ~44) -->
+  <div style="position:absolute;left:100px;top:102px;width:500px;height:44px;border-radius:8px;background:#161B24;border:1px solid #2A2E38;box-sizing:border-box;display:flex;align-items:center;justify-content:space-between;padding:0 14px">
+    <span class="f-body" style="color:#EEF0F6">Liked Songs</span>
+    <span class="mdi" style="font-size:30px;color:#8A8F9E">&#xF0140;</span>
+  </div>
+
+  <!-- Play Playlist button x:620 y:102, 180x44, bg c_teal -> grad c_purple, dark text (c_bg), radius 12 -->
+  <div style="position:absolute;left:620px;top:102px;width:180px;height:44px;border-radius:12px;background:linear-gradient(135deg,#2ED5B8,#7B6CFF);display:flex;align-items:center;justify-content:center"><span class="f-body" style="color:#08090D">Play Playlist</span></div>
+
+  <!-- TRACKS section label x:100 y:162 f_small c_text2 -->
+  <div class="l f-small" style="left:100px;top:162px;color:#8A8F9E;letter-spacing:.04em">TRACKS &middot; tap to play</div>
+
+  <!-- track_list obj x:100 y:186, 824x380, st_glass, pad_all:8, flex COLUMN start.
+       Rows: button width 808 height 44, pad_all:4, label align left_mid.
+       Rendered as #161B24 row plates stacked from top with small gaps. -->
+  <div class="glass" style="left:100px;top:186px;width:824px;height:380px;padding:8px;box-sizing:border-box;overflow:hidden">
+
+    <div style="position:relative;width:808px;height:44px;border-radius:10px;background:#161B24;margin-bottom:5px;box-sizing:border-box;padding:4px">
+      <span class="l f-body" style="left:14px;top:50%;transform:translateY(-50%);color:#EEF0F6">Midnight City</span>
+      <span class="l f-small" style="right:16px;top:50%;transform:translateY(-50%);color:#8A8F9E">M83</span>
+    </div>
+    <div style="position:relative;width:808px;height:44px;border-radius:10px;background:#161B24;margin-bottom:5px;box-sizing:border-box;padding:4px">
+      <span class="l f-body" style="left:14px;top:50%;transform:translateY(-50%);color:#EEF0F6">Instant Crush</span>
+      <span class="l f-small" style="right:16px;top:50%;transform:translateY(-50%);color:#8A8F9E">Daft Punk</span>
+    </div>
+    <div style="position:relative;width:808px;height:44px;border-radius:10px;background:#161B24;margin-bottom:5px;box-sizing:border-box;padding:4px">
+      <span class="l f-body" style="left:14px;top:50%;transform:translateY(-50%);color:#EEF0F6">The Less I Know the Better</span>
+      <span class="l f-small" style="right:16px;top:50%;transform:translateY(-50%);color:#8A8F9E">Tame Impala</span>
+    </div>
+    <div style="position:relative;width:808px;height:44px;border-radius:10px;background:#161B24;margin-bottom:5px;box-sizing:border-box;padding:4px">
+      <span class="l f-body" style="left:14px;top:50%;transform:translateY(-50%);color:#EEF0F6">Dreams</span>
+      <span class="l f-small" style="right:16px;top:50%;transform:translateY(-50%);color:#8A8F9E">Fleetwood Mac</span>
+    </div>
+    <div style="position:relative;width:808px;height:44px;border-radius:10px;background:#161B24;margin-bottom:5px;box-sizing:border-box;padding:4px">
+      <span class="l f-body" style="left:14px;top:50%;transform:translateY(-50%);color:#EEF0F6">Redbone</span>
+      <span class="l f-small" style="right:16px;top:50%;transform:translateY(-50%);color:#8A8F9E">Childish Gambino</span>
+    </div>
+    <div style="position:relative;width:808px;height:44px;border-radius:10px;background:#161B24;margin-bottom:5px;box-sizing:border-box;padding:4px">
+      <span class="l f-body" style="left:14px;top:50%;transform:translateY(-50%);color:#EEF0F6">Electric Feel</span>
+      <span class="l f-small" style="right:16px;top:50%;transform:translateY(-50%);color:#8A8F9E">MGMT</span>
+    </div>
+    <div style="position:relative;width:808px;height:44px;border-radius:10px;background:#161B24;margin-bottom:5px;box-sizing:border-box;padding:4px">
+      <span class="l f-body" style="left:14px;top:50%;transform:translateY(-50%);color:#EEF0F6">Holocene</span>
+      <span class="l f-small" style="right:16px;top:50%;transform:translateY(-50%);color:#8A8F9E">Bon Iver</span>
+    </div>
+    <div style="position:relative;width:808px;height:44px;border-radius:10px;background:#161B24;margin-bottom:5px;box-sizing:border-box;padding:4px">
+      <span class="l f-body" style="left:14px;top:50%;transform:translateY(-50%);color:#EEF0F6">Lovely Day</span>
+      <span class="l f-small" style="right:16px;top:50%;transform:translateY(-50%);color:#8A8F9E">Bill Withers</span>
+    </div>
+    <div style="position:relative;width:808px;height:44px;border-radius:10px;background:#161B24;margin-bottom:5px;box-sizing:border-box;padding:4px">
+      <span class="l f-body" style="left:14px;top:50%;transform:translateY(-50%);color:#EEF0F6">Tadow</span>
+      <span class="l f-small" style="right:16px;top:50%;transform:translateY(-50%);color:#8A8F9E">Masego &amp; FKJ</span>
+    </div>
+
+  </div>
 </div>
 </body></html>

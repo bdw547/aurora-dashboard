@@ -3,46 +3,85 @@
 <link href="https://cdn.jsdelivr.net/npm/@mdi/font@7.4.47/css/materialdesignicons.min.css" rel="stylesheet">
 <style>
 html,body{margin:0;padding:0;background:#000}
-.aufr{position:relative;width:1024px;height:600px;background:#08090d;background-image:radial-gradient(120% 90% at 85% 0%,rgba(46,213,184,.10),rgba(123,108,255,.07) 40%,transparent 70%);font-family:'Sora',system-ui,sans-serif;color:#EEF0F6;overflow:hidden}
-.nav{position:absolute;left:8px;width:58px;height:58px;border-radius:14px;display:flex;align-items:center;justify-content:center;font-size:30px;color:#EEF0F6}
-.c{position:absolute;background:#141720;border:1px solid #2A2E38;border-radius:22px}
+.aufr{position:relative;width:1024px;height:600px;background:#08090D;background-image:radial-gradient(130% 100% at 88% -10%,rgba(46,213,184,.13),rgba(123,108,255,.08) 42%,transparent 70%);font-family:'Sora',system-ui,sans-serif;color:#EEF0F6;overflow:hidden}
+/* st_glass */
+.glass{position:absolute;background:rgba(20,23,32,.92);border:1px solid #2A2E38;border-radius:22px}
 .mdi{font-family:'Material Design Icons';font-style:normal;line-height:1}
-.lbl{position:absolute;white-space:nowrap}
-.row{position:absolute;width:404px;height:60px;border-radius:14px;background:#161B24;display:flex;align-items:center}
+.l{position:absolute;white-space:nowrap}
+.f-disp{font-family:Sora;font-weight:600}
+.f-title{font-family:Sora;font-weight:600;font-size:24px}
+.f-head{font-family:Sora;font-weight:600;font-size:34px}
+.f-body{font-family:Sora;font-weight:500;font-size:14px}
+.f-small{font-family:Sora;font-weight:500;font-size:12px}
+/* nav rail */
+.rail{position:absolute;left:0;top:0;width:74px;height:600px;background:#10121A;opacity:.96}
+.nav{position:absolute;left:8px;width:58px;height:58px;border-radius:16px;display:flex;align-items:center;justify-content:center;font-size:30px;color:#EEF0F6}
+.qbtn{position:absolute;width:122px;height:62px;border-radius:12px;background:#161B24;display:flex;align-items:center;justify-content:center;font-size:14px}
 </style></head><body>
 <div class="aufr">
-  <div style="position:absolute;left:0;top:0;width:74px;height:600px;background:#10121A;opacity:.96"></div>
-  <div class="nav mdi mdi-home" style="top:22px"></div>
-  <div class="nav mdi mdi-sofa" style="top:92px"></div>
-  <div class="nav mdi mdi-lightbulb" style="top:162px"></div>
-  <div class="nav mdi mdi-thermostat" style="top:232px"></div>
-  <div class="nav mdi mdi-music" style="top:302px"></div>
-  <div class="nav mdi mdi-shield-home" style="top:372px;background:#2ED5B8;color:#08090D"></div>
-  <div class="nav mdi mdi-wifi" style="top:442px"></div>
-  <div class="nav mdi mdi-cog" style="top:512px"></div>
-  <div class="lbl" style="left:100px;top:26px;font-size:24px;font-weight:600">Security</div>
-  <div class="lbl" style="left:100px;top:60px;font-size:12px;color:#2ED5B8">All secure &middot; Armed Home</div>
+  <!-- nav rail (active: security) -->
+  <div class="rail"></div>
+  <div class="nav mdi mdi-home" style="top:22px;background:#10121A"></div>
+  <div class="nav mdi mdi-sofa" style="top:92px;background:#10121A"></div>
+  <div class="nav mdi mdi-lightbulb" style="top:162px;background:#10121A"></div>
+  <div class="nav mdi mdi-thermometer" style="top:232px;background:#10121A"></div>
+  <div class="nav mdi mdi-music" style="top:302px;background:#10121A"></div>
+  <div class="nav mdi mdi-shield-home" style="top:372px;background:#2ED5B8"></div>
+  <div class="nav mdi mdi-wifi" style="top:442px;background:#10121A"></div>
+  <div class="nav mdi mdi-cog" style="top:512px;background:#10121A"></div>
+  <div class="l f-small" style="right:10px;bottom:26px;color:#8A8F9E">Walton-Home</div>
+  <div class="l f-small" style="right:10px;bottom:8px;color:#2ED5B8">10.0.0.174</div>
 
-  <!-- camera feed -->
-  <div class="c" style="left:100px;top:104px;width:452px;height:452px;overflow:hidden;padding:0">
-    <div style="position:absolute;inset:0;background:#0c0e13;background-image:radial-gradient(80% 60% at 50% 30%,rgba(123,108,255,.18),transparent)"></div>
-    <span class="mdi mdi-cctv lbl" style="left:0;width:452px;text-align:center;top:170px;font-size:64px;color:#2A2E38"></span>
-    <span class="lbl" style="left:0;width:452px;text-align:center;top:250px;font-size:14px;color:#6E727E">Front Door &middot; Live</span>
-    <div style="position:absolute;left:18px;top:18px;display:flex;align-items:center;gap:8px"><span style="width:9px;height:9px;border-radius:5px;background:#FF6B6B"></span><span style="font-size:12px;color:#EEF0F6">REC</span></div>
-    <span class="lbl" style="right:18px;top:18px;font-size:12px;color:#8A8F9E">2:45 PM</span>
-    <div style="position:absolute;left:18px;bottom:18px;width:60px;height:60px;border-radius:14px;background:rgba(20,23,32,.8);display:flex;align-items:center;justify-content:center"><span class="mdi mdi-microphone" style="font-size:26px"></span></div>
-    <div style="position:absolute;left:88px;bottom:18px;width:60px;height:60px;border-radius:14px;background:rgba(20,23,32,.8);display:flex;align-items:center;justify-content:center"><span class="mdi mdi-fullscreen" style="font-size:26px"></span></div>
+  <!-- page title (label x:100 y:26 f_title) -->
+  <div class="l f-title" style="left:100px;top:26px;color:#EEF0F6">Security</div>
+
+  <!-- main front-door camera card (button x:96 y:84 600x452, bg #000, r22, 1px #222734, pad 0) -->
+  <div style="position:absolute;left:96px;top:84px;width:600px;height:452px;background:#000000;border:1px solid #222734;border-radius:22px;overflow:hidden">
+    <!-- camera feed placeholder: dark gradient + camera motif (image align center) -->
+    <div style="position:absolute;inset:0;background:radial-gradient(120% 90% at 50% 32%,#1A2030,#0B0E16 68%,#06080C)"></div>
+    <span class="mdi l" style="left:50%;top:43%;transform:translate(-50%,-50%);font-size:118px;color:#1E2533">&#xF0100;</span>
+    <!-- spinner (align center, 64x64, faint teal arc) -->
+    <div style="position:absolute;left:50%;top:50%;transform:translate(-50%,-50%);width:64px;height:64px;border-radius:50%;border:6px solid #2A2F3A;border-top-color:#2ED5B8"></div>
+    <!-- LIVE pill (obj x:14 y:14 78x30 r15 bg #E5484D) -->
+    <div style="position:absolute;left:14px;top:14px;width:78px;height:30px;border-radius:15px;background:#E5484D;display:flex;align-items:center;justify-content:center"><span class="f-small" style="color:#FFFFFF">LIVE</span></div>
+    <!-- Refresh button (top_right x:-8 y:8 104x40 r8 bg #1B2230) -->
+    <div style="position:absolute;right:8px;top:8px;width:104px;height:40px;border-radius:8px;background:#1B2230;display:flex;align-items:center;justify-content:center"><span class="f-small" style="color:#EEF0F6">Refresh</span></div>
+    <!-- caption (label bottom_left x:14 y:-12 f_small #C8CCD6) -->
+    <span class="l f-small" style="left:14px;bottom:12px;color:#C8CCD6">Front Door &middot; tap for fullscreen</span>
   </div>
 
-  <!-- status panel -->
-  <div class="c" style="left:568px;top:104px;width:436px;height:452px">
-    <span class="lbl" style="left:24px;top:20px;font-size:12px;color:#8A8F9E;letter-spacing:.06em">DOORS &amp; LOCKS</span>
-    <div class="row" style="left:16px;top:48px"><span class="mdi mdi-lock" style="position:absolute;left:16px;color:#2ED5B8;font-size:26px"></span><span style="position:absolute;left:54px;font-size:15px">Front Door</span><span style="position:absolute;right:16px;font-size:14px;color:#2ED5B8">Locked</span></div>
-    <div class="row" style="left:16px;top:116px"><span class="mdi mdi-lock" style="position:absolute;left:16px;color:#2ED5B8;font-size:26px"></span><span style="position:absolute;left:54px;font-size:15px">Back Door</span><span style="position:absolute;right:16px;font-size:14px;color:#2ED5B8">Locked</span></div>
-    <div class="row" style="left:16px;top:184px"><span class="mdi mdi-garage" style="position:absolute;left:16px;color:#8A8F9E;font-size:26px"></span><span style="position:absolute;left:54px;font-size:15px">Garage</span><span style="position:absolute;right:16px;font-size:14px;color:#8A8F9E">Closed</span></div>
-    <span class="lbl" style="left:24px;top:264px;font-size:12px;color:#8A8F9E;letter-spacing:.06em">SENSORS</span>
-    <div class="row" style="left:16px;top:292px"><span class="mdi mdi-motion-sensor" style="position:absolute;left:16px;color:#8A8F9E;font-size:26px"></span><span style="position:absolute;left:54px;font-size:15px">Motion</span><span style="position:absolute;right:16px;font-size:14px;color:#8A8F9E">Clear</span></div>
-    <div class="row" style="left:16px;top:360px"><span class="mdi mdi-smoke-detector" style="position:absolute;left:16px;color:#2ED5B8;font-size:26px"></span><span style="position:absolute;left:54px;font-size:15px">Smoke / CO</span><span style="position:absolute;right:16px;font-size:14px;color:#2ED5B8">OK</span></div>
+  <!-- front-door lock card (obj st_glass x:716 y:84 288x214, pad 0) -->
+  <div class="glass" style="left:716px;top:84px;width:288px;height:214px">
+    <span class="l f-small" style="left:16px;top:16px;color:#8A8F9E">FRONT DOOR</span>
+    <span class="l f-small" style="right:16px;top:16px;color:#2ED5B8">98%</span>
+    <span class="l f-title" style="left:16px;top:42px;color:#EEF0F6">Locked</span>
+    <!-- Lock button (x:16 y:94 116x104 r12 bg #161B24) -->
+    <div style="position:absolute;left:16px;top:94px;width:116px;height:104px;border-radius:12px;background:#161B24">
+      <span class="mdi l" style="left:50%;top:14px;transform:translateX(-50%);font-size:30px;color:#EEF0F6">&#xF033E;</span>
+      <span class="l f-small" style="left:50%;bottom:12px;transform:translateX(-50%);color:#EEF0F6">Lock</span>
+    </div>
+    <!-- Unlock button (x:156 y:94 116x104 r12 bg #161B24) -->
+    <div style="position:absolute;left:156px;top:94px;width:116px;height:104px;border-radius:12px;background:#161B24">
+      <span class="mdi l" style="left:50%;top:14px;transform:translateX(-50%);font-size:30px;color:#EEF0F6">&#xF033F;</span>
+      <span class="l f-small" style="left:50%;bottom:12px;transform:translateX(-50%);color:#EEF0F6">Unlock</span>
+    </div>
+  </div>
+
+  <!-- back-door lock card (obj st_glass x:716 y:322 288x214, pad 0) -->
+  <div class="glass" style="left:716px;top:322px;width:288px;height:214px">
+    <span class="l f-small" style="left:16px;top:16px;color:#8A8F9E">BACK DOOR</span>
+    <span class="l f-small" style="right:16px;top:16px;color:#2ED5B8">76%</span>
+    <span class="l f-title" style="left:16px;top:42px;color:#EEF0F6">Locked</span>
+    <!-- Lock button (x:16 y:94 116x104 r12 bg #161B24) -->
+    <div style="position:absolute;left:16px;top:94px;width:116px;height:104px;border-radius:12px;background:#161B24">
+      <span class="mdi l" style="left:50%;top:14px;transform:translateX(-50%);font-size:30px;color:#EEF0F6">&#xF033E;</span>
+      <span class="l f-small" style="left:50%;bottom:12px;transform:translateX(-50%);color:#EEF0F6">Lock</span>
+    </div>
+    <!-- Unlock button (x:156 y:94 116x104 r12 bg #161B24) -->
+    <div style="position:absolute;left:156px;top:94px;width:116px;height:104px;border-radius:12px;background:#161B24">
+      <span class="mdi l" style="left:50%;top:14px;transform:translateX(-50%);font-size:30px;color:#EEF0F6">&#xF033F;</span>
+      <span class="l f-small" style="left:50%;bottom:12px;transform:translateX(-50%);color:#EEF0F6">Unlock</span>
+    </div>
   </div>
 </div>
 </body></html>

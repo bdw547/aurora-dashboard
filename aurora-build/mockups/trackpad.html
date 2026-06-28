@@ -19,38 +19,41 @@ html,body{margin:0;padding:0;background:#000}
 .qbtn{position:absolute;width:122px;height:62px;border-radius:12px;background:#161B24;display:flex;align-items:center;justify-content:center;font-size:14px}
 </style></head><body>
 <div class="aufr">
-  <!-- nav rail (active: network) -->
+  <!-- nav rail (active: rooms) -->
   <div class="rail"></div>
   <div class="nav mdi mdi-home" style="top:22px;background:#10121A"></div>
-  <div class="nav mdi mdi-sofa" style="top:92px;background:#10121A"></div>
+  <div class="nav mdi mdi-sofa" style="top:92px;background:#2ED5B8"></div>
   <div class="nav mdi mdi-lightbulb" style="top:162px;background:#10121A"></div>
   <div class="nav mdi mdi-thermometer" style="top:232px;background:#10121A"></div>
   <div class="nav mdi mdi-music" style="top:302px;background:#10121A"></div>
   <div class="nav mdi mdi-shield-home" style="top:372px;background:#10121A"></div>
-  <div class="nav mdi mdi-wifi" style="top:442px;background:#2ED5B8"></div>
+  <div class="nav mdi mdi-wifi" style="top:442px;background:#10121A"></div>
   <div class="nav mdi mdi-cog" style="top:512px;background:#10121A"></div>
   <div class="l f-small" style="right:10px;bottom:26px;color:#8A8F9E">Walton-Home</div>
   <div class="l f-small" style="right:10px;bottom:8px;color:#2ED5B8">10.0.0.174</div>
 
-  <!-- page title: label x:100 y:26 f_title c_text -->
-  <div class="l f-title" style="left:100px;top:26px;color:#EEF0F6">Network</div>
+  <!-- title -->
+  <div class="l f-title" style="left:100px;top:26px;color:#EEF0F6">Trackpad</div>
 
-  <!-- THIS PANEL card: obj x:100 y:80 380x90, st_glass (pad_all 20) -->
-  <div class="glass" style="left:100px;top:80px;width:380px;height:90px">
-    <!-- label "THIS PANEL" x:4 y:0 f_small c_text2  -> 20+4=24, 20+0=20 -->
-    <span class="l f-small" style="left:24px;top:20px;color:#8A8F9E">THIS PANEL</span>
-    <!-- label lbl_wifi_signal x:4 y:30 f_title c_teal -> 24, 20+30=50 -->
-    <span class="l f-title" style="left:24px;top:50px;color:#2ED5B8">-48 dBm</span>
+  <!-- Back pill (align top_right, x:-12 y:12, 104x44) -->
+  <div class="l" style="right:12px;top:12px;width:104px;height:44px;border-radius:8px;background:#1B2230;border:2px solid #2ED5B8;box-sizing:border-box;display:flex;align-items:center;justify-content:center"><span class="f-body" style="color:#2ED5B8">Back</span></div>
+
+  <!-- Move pad (left obj) x:96 y:120 760x350, bg #10121A 60% -->
+  <div style="position:absolute;left:96px;top:120px;width:760px;height:350px;background:rgba(16,18,26,.60);border:1px solid #2A2F3A;border-radius:22px;box-sizing:border-box;display:flex;align-items:center;justify-content:center">
+    <span class="f-body" style="color:#6E727E">Drag to move  &middot;  tap to click</span>
   </div>
 
-  <!-- SYNOLOGY card: obj x:100 y:186 380x120, st_glass (pad_all 20) -->
-  <div class="glass" style="left:100px;top:186px;width:380px;height:120px">
-    <!-- label "SYNOLOGY" x:4 y:0 f_small c_text2 -> 24, 20 -->
-    <span class="l f-small" style="left:24px;top:20px;color:#8A8F9E">SYNOLOGY</span>
-    <!-- label lbl_nas_status x:4 y:28 f_body c_text -> 24, 20+28=48 -->
-    <span class="l f-body" style="left:24px;top:48px;color:#EEF0F6">Online</span>
-    <!-- label lbl_nas_used x:4 y:54 f_body c_text2 -> 24, 20+54=74 -->
-    <span class="l f-body" style="left:24px;top:74px;color:#8A8F9E">Storage 38% used</span>
+  <!-- Scroll strip (right obj) x:872 y:120 132x350, bg #141A2A 70% -->
+  <div style="position:absolute;left:872px;top:120px;width:132px;height:350px;background:rgba(20,26,42,.70);border:1px solid #2A2F3A;border-radius:22px;box-sizing:border-box">
+    <span class="mdi l" style="left:50%;transform:translateX(-50%);top:16px;font-size:30px;color:#8A8F9E">&#xF0143;</span>
+    <span class="l f-small" style="left:50%;top:50%;transform:translate(-50%,-50%);color:#6E727E">SCROLL</span>
+    <span class="mdi l" style="left:50%;transform:translateX(-50%);bottom:16px;font-size:30px;color:#8A8F9E">&#xF0140;</span>
   </div>
+
+  <!-- Back button (bottom-left) x:96 y:486 380x54 st_glass -->
+  <div class="glass" style="left:96px;top:486px;width:380px;height:54px;display:flex;align-items:center;justify-content:center"><span class="f-body" style="color:#EEF0F6">Back</span></div>
+
+  <!-- Home button (bottom-right) x:490 y:486 366x54 st_glass -->
+  <div class="glass" style="left:490px;top:486px;width:366px;height:54px;display:flex;align-items:center;justify-content:center"><span class="f-body" style="color:#EEF0F6">Home</span></div>
 </div>
 </body></html>
