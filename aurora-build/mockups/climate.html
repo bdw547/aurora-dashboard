@@ -1,0 +1,53 @@
+<!doctype html><html><head><meta charset=utf-8>
+<link href="https://fonts.googleapis.com/css2?family=Sora:wght@500;600&display=swap" rel="stylesheet">
+<link href="https://cdn.jsdelivr.net/npm/@mdi/font@7.4.47/css/materialdesignicons.min.css" rel="stylesheet">
+<style>
+html,body{margin:0;padding:0;background:#000}
+.aufr{position:relative;width:1024px;height:600px;background:#08090d;background-image:radial-gradient(120% 90% at 85% 0%,rgba(46,213,184,.10),rgba(123,108,255,.07) 40%,transparent 70%);font-family:'Sora',system-ui,sans-serif;color:#EEF0F6;overflow:hidden}
+.nav{position:absolute;left:8px;width:58px;height:58px;border-radius:14px;display:flex;align-items:center;justify-content:center;font-size:30px;color:#EEF0F6}
+.c{position:absolute;background:#141720;border:1px solid #2A2E38;border-radius:22px}
+.mdi{font-family:'Material Design Icons';font-style:normal;line-height:1}
+.lbl{position:absolute;white-space:nowrap}
+.mode{position:absolute;width:120px;height:64px;border-radius:14px;background:#161B24;display:flex;align-items:center;justify-content:center;gap:8px;font-size:15px;color:#8A8F9E}
+</style></head><body>
+<div class="aufr">
+  <div style="position:absolute;left:0;top:0;width:74px;height:600px;background:#10121A;opacity:.96"></div>
+  <div class="nav mdi mdi-home" style="top:22px"></div>
+  <div class="nav mdi mdi-sofa" style="top:92px"></div>
+  <div class="nav mdi mdi-lightbulb" style="top:162px"></div>
+  <div class="nav mdi mdi-thermostat" style="top:232px;background:#2ED5B8;color:#08090D"></div>
+  <div class="nav mdi mdi-music" style="top:302px"></div>
+  <div class="nav mdi mdi-shield-home" style="top:372px"></div>
+  <div class="nav mdi mdi-wifi" style="top:442px"></div>
+  <div class="nav mdi mdi-cog" style="top:512px"></div>
+  <div class="lbl" style="left:100px;top:26px;font-size:24px;font-weight:600">Climate</div>
+  <div class="lbl" style="left:100px;top:60px;font-size:12px;color:#8A8F9E">Main Floor &middot; Heating</div>
+
+  <!-- dial card -->
+  <div class="c" style="left:100px;top:104px;width:452px;height:452px">
+    <div style="position:absolute;left:76px;top:56px;width:300px;height:300px;border-radius:150px;border:14px solid #161B24;box-sizing:border-box"></div>
+    <div style="position:absolute;left:76px;top:56px;width:300px;height:300px;border-radius:150px;border:14px solid transparent;border-top-color:#2ED5B8;border-right-color:#2ED5B8;box-sizing:border-box;transform:rotate(35deg)"></div>
+    <span class="lbl" style="left:0;width:452px;text-align:center;top:150px;font-size:96px;font-weight:600">72&deg;</span>
+    <span class="lbl" style="left:0;width:452px;text-align:center;top:260px;font-size:14px;color:#2ED5B8">Heating to 72&deg;</span>
+    <div style="position:absolute;left:40px;top:372px;width:80px;height:60px;border-radius:14px;background:#161B24;display:flex;align-items:center;justify-content:center"><span class="mdi mdi-minus" style="font-size:30px"></span></div>
+    <div style="position:absolute;right:40px;top:372px;width:80px;height:60px;border-radius:14px;background:#161B24;display:flex;align-items:center;justify-content:center"><span class="mdi mdi-plus" style="font-size:30px"></span></div>
+    <span class="lbl" style="left:0;width:452px;text-align:center;top:392px;font-size:13px;color:#8A8F9E">Currently 70&deg;</span>
+  </div>
+
+  <!-- mode + info card -->
+  <div class="c" style="left:568px;top:104px;width:436px;height:452px">
+    <span class="lbl" style="left:24px;top:20px;font-size:12px;color:#8A8F9E;letter-spacing:.06em">MODE</span>
+    <div class="mode" style="left:24px;top:48px"><span class="mdi mdi-fire" style="color:#FF6B6B;font-size:22px"></span>Heat</div>
+    <div class="mode" style="left:158px;top:48px"><span class="mdi mdi-snowflake" style="font-size:22px"></span>Cool</div>
+    <div class="mode" style="left:292px;top:48px"><span class="mdi mdi-autorenew" style="font-size:22px"></span>Auto</div>
+    <span class="lbl" style="left:24px;top:140px;font-size:12px;color:#8A8F9E;letter-spacing:.06em">FAN</span>
+    <div class="mode" style="left:24px;top:168px;color:#08090D;background:#2ED5B8"><span class="mdi mdi-fan" style="font-size:22px"></span>Auto</div>
+    <div class="mode" style="left:158px;top:168px"><span class="mdi mdi-fan-speed-1" style="font-size:22px"></span>Low</div>
+    <div class="mode" style="left:292px;top:168px"><span class="mdi mdi-fan-speed-3" style="font-size:22px"></span>High</div>
+    <div style="position:absolute;left:24px;top:268px;right:24px;height:1px;background:#2A2E38"></div>
+    <span class="lbl" style="left:24px;top:296px;font-size:14px;color:#8A8F9E">Humidity</span><span class="lbl" style="right:24px;top:296px;font-size:14px">44%</span>
+    <span class="lbl" style="left:24px;top:340px;font-size:14px;color:#8A8F9E">Outdoor</span><span class="lbl" style="right:24px;top:340px;font-size:14px">72&deg; Sunny</span>
+    <span class="lbl" style="left:24px;top:384px;font-size:14px;color:#8A8F9E">Schedule</span><span class="lbl" style="right:24px;top:384px;font-size:14px;color:#2ED5B8">Home</span>
+  </div>
+</div>
+</body></html>

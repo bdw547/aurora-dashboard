@@ -1,0 +1,62 @@
+<!doctype html><html><head><meta charset=utf-8>
+<link href="https://fonts.googleapis.com/css2?family=Sora:wght@500;600&display=swap" rel="stylesheet">
+<link href="https://cdn.jsdelivr.net/npm/@mdi/font@7.4.47/css/materialdesignicons.min.css" rel="stylesheet">
+<style>
+html,body{margin:0;padding:0;background:#000}
+.aufr{position:relative;width:1024px;height:600px;background:#08090d;background-image:radial-gradient(120% 90% at 85% 0%,rgba(46,213,184,.10),rgba(123,108,255,.07) 40%,transparent 70%);font-family:'Sora',system-ui,sans-serif;color:#EEF0F6;overflow:hidden}
+.nav{position:absolute;left:8px;width:58px;height:58px;border-radius:14px;display:flex;align-items:center;justify-content:center;font-size:30px;color:#EEF0F6}
+.glass{position:absolute;background:#141720;border:1px solid #2A2E38;border-radius:22px}
+.mdi{font-family:'Material Design Icons';font-style:normal;line-height:1}
+.lbl{position:absolute;white-space:nowrap}
+.tb{position:absolute;width:96px;height:74px;border-radius:14px;background:#161B24;display:flex;align-items:center;justify-content:center}
+</style></head><body>
+<div class="aufr">
+  <div style="position:absolute;left:0;top:0;width:74px;height:600px;background:#10121A;opacity:.96"></div>
+  <div class="nav mdi mdi-home" style="top:22px"></div>
+  <div class="nav mdi mdi-sofa" style="top:92px"></div>
+  <div class="nav mdi mdi-lightbulb" style="top:162px"></div>
+  <div class="nav mdi mdi-thermostat" style="top:232px"></div>
+  <div class="nav mdi mdi-music" style="top:302px;background:#2ED5B8;color:#08090D"></div>
+  <div class="nav mdi mdi-shield-home" style="top:372px"></div>
+  <div class="nav mdi mdi-wifi" style="top:442px"></div>
+  <div class="nav mdi mdi-cog" style="top:512px"></div>
+  <div class="lbl" style="left:100px;top:26px;font-size:24px;font-weight:600">Sonos</div>
+  <div style="position:absolute;right:12px;top:12px;width:104px;height:44px;border-radius:8px;background:#1B2230;border:2px solid #2ED5B8;display:flex;align-items:center;justify-content:center;color:#2ED5B8;font-size:15px">Back</div>
+
+  <!-- Living Room -->
+  <div class="glass" style="left:96px;top:84px;width:400px;height:300px">
+    <span class="lbl" style="left:16px;top:12px;font-size:12px;color:#8A8F9E;letter-spacing:.06em">LIVING ROOM</span>
+    <span class="lbl" style="left:16px;top:36px;font-size:22px;font-weight:600">Open Eye Signal</span>
+    <span class="lbl" style="left:16px;top:66px;font-size:13px;color:#8A8F9E">TV On The Radio</span>
+    <div class="tb" style="left:40px;top:118px"><span class="mdi mdi-skip-previous" style="font-size:32px"></span></div>
+    <div class="tb" style="left:152px;top:118px;background:#2ED5B8"><span class="mdi mdi-pause" style="font-size:32px;color:#08090D"></span></div>
+    <div class="tb" style="left:264px;top:118px"><span class="mdi mdi-skip-next" style="font-size:32px"></span></div>
+    <span class="lbl" style="left:16px;top:212px;font-size:12px;color:#8A8F9E;letter-spacing:.06em">VOLUME</span>
+    <div style="position:absolute;left:16px;top:248px;width:368px;height:8px;border-radius:4px;background:#0c0e13"></div>
+    <div style="position:absolute;left:16px;top:248px;width:210px;height:8px;border-radius:4px;background:#2ED5B8"></div>
+    <div style="position:absolute;left:218px;top:243px;width:18px;height:18px;border-radius:9px;background:#EEF0F6"></div>
+  </div>
+
+  <!-- Kitchen -->
+  <div class="glass" style="left:516px;top:84px;width:400px;height:300px">
+    <span class="lbl" style="left:16px;top:12px;font-size:12px;color:#8A8F9E;letter-spacing:.06em">KITCHEN</span>
+    <span class="lbl" style="left:16px;top:36px;font-size:22px;font-weight:600;color:#8A8F9E">Nothing playing</span>
+    <div class="tb" style="left:40px;top:118px"><span class="mdi mdi-skip-previous" style="font-size:32px"></span></div>
+    <div class="tb" style="left:152px;top:118px;background:#2ED5B8"><span class="mdi mdi-play" style="font-size:32px;color:#08090D"></span></div>
+    <div class="tb" style="left:264px;top:118px"><span class="mdi mdi-skip-next" style="font-size:32px"></span></div>
+    <span class="lbl" style="left:16px;top:212px;font-size:12px;color:#8A8F9E;letter-spacing:.06em">VOLUME</span>
+    <div style="position:absolute;left:16px;top:248px;width:368px;height:8px;border-radius:4px;background:#0c0e13"></div>
+    <div style="position:absolute;left:16px;top:248px;width:96px;height:8px;border-radius:4px;background:#2ED5B8"></div>
+    <div style="position:absolute;left:104px;top:243px;width:18px;height:18px;border-radius:9px;background:#EEF0F6"></div>
+  </div>
+
+  <!-- Group -->
+  <div class="glass" style="left:96px;top:404px;width:820px;height:130px">
+    <span class="lbl" style="left:16px;top:12px;font-size:12px;color:#8A8F9E;letter-spacing:.06em">GROUP</span>
+    <span class="lbl" style="left:16px;top:38px;font-size:22px;font-weight:600;color:#2ED5B8">Solo</span>
+    <span class="lbl" style="left:16px;top:84px;font-size:13px;color:#8A8F9E">Link to play the same music on both speakers</span>
+    <div style="position:absolute;left:506px;top:30px;width:146px;height:70px;border-radius:14px;background:#2ED5B8;display:flex;align-items:center;justify-content:center;color:#08090D;font-size:16px">Link</div>
+    <div style="position:absolute;left:664px;top:30px;width:146px;height:70px;border-radius:14px;background:#161B24;display:flex;align-items:center;justify-content:center;font-size:16px">Unlink</div>
+  </div>
+</div>
+</body></html>

@@ -1,0 +1,30 @@
+<!doctype html><html><head><meta charset=utf-8>
+<link href="https://fonts.googleapis.com/css2?family=Sora:wght@500;600&display=swap" rel="stylesheet">
+<link href="https://cdn.jsdelivr.net/npm/@mdi/font@7.4.47/css/materialdesignicons.min.css" rel="stylesheet">
+<style>
+html,body{margin:0;padding:0;background:#000}
+.aufr{position:relative;width:1024px;height:600px;background:#05060A;font-family:'Sora',system-ui,sans-serif;color:#fff;overflow:hidden}
+.mdi{font-family:'Material Design Icons';font-style:normal;line-height:1}
+.lbl{position:absolute;white-space:nowrap}
+.ovbtn{position:absolute;border-radius:14px;display:flex;flex-direction:column;align-items:center;justify-content:center}
+</style></head><body>
+<div class="aufr">
+  <!-- live feed (800x600 centered at x=112) -->
+  <div style="position:absolute;left:112px;top:0;width:800px;height:600px;background:#0c0e13;background-image:radial-gradient(70% 60% at 50% 35%,rgba(123,108,255,.20),transparent 60%)">
+    <span class="mdi mdi-account" style="position:absolute;left:50%;top:34%;transform:translateX(-50%);font-size:120px;color:#2A2E38"></span>
+    <span class="lbl" style="left:0;width:800px;text-align:center;top:64%;font-size:16px;color:#6E727E">Front Door Camera</span>
+  </div>
+  <!-- LIVE badge -->
+  <div style="position:absolute;left:20px;top:20px;width:78px;height:30px;border-radius:15px;background:#E5484D;display:flex;align-items:center;justify-content:center;font-size:13px;font-weight:600">LIVE</div>
+
+  <!-- bottom control overlay -->
+  <div style="position:absolute;left:0;top:452px;width:1024px;height:148px;background:rgba(5,6,10,.62)">
+    <span class="lbl" style="left:32px;top:18px;font-size:22px;font-weight:600">Front Door</span>
+    <span class="lbl" style="left:34px;top:64px;font-size:13px;color:#C8CCD6">Locked &middot; Ring 2s ago</span>
+    <div class="ovbtn" style="left:300px;top:34px;width:150px;height:80px;background:#1B2230;font-size:16px">Refresh</div>
+    <div class="ovbtn" style="left:470px;top:34px;width:156px;height:80px;background:#2ED5B8;color:#062018"><span class="mdi mdi-lock-open-variant" style="font-size:28px"></span><span style="font-size:13px;margin-top:4px">Unlock</span></div>
+    <div class="ovbtn" style="left:636px;top:34px;width:156px;height:80px;background:#1B2230"><span class="mdi mdi-lock" style="font-size:28px"></span><span style="font-size:13px;margin-top:4px">Lock</span></div>
+    <div class="ovbtn" style="left:802px;top:34px;width:190px;height:80px;background:#0E0F14;border:1px solid #3A4150;color:#C8CCD6;font-size:20px;font-weight:600">Dismiss</div>
+  </div>
+</div>
+</body></html>

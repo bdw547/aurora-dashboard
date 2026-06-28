@@ -1,0 +1,53 @@
+<!doctype html><html><head><meta charset=utf-8>
+<link href="https://fonts.googleapis.com/css2?family=Sora:wght@500;600&display=swap" rel="stylesheet">
+<link href="https://cdn.jsdelivr.net/npm/@mdi/font@7.4.47/css/materialdesignicons.min.css" rel="stylesheet">
+<style>
+html,body{margin:0;padding:0;background:#000}
+.aufr{position:relative;width:1024px;height:600px;background:#08090d;background-image:radial-gradient(120% 90% at 85% 0%,rgba(46,213,184,.10),rgba(123,108,255,.07) 40%,transparent 70%);font-family:'Sora',system-ui,sans-serif;color:#EEF0F6;overflow:hidden}
+.nav{position:absolute;left:8px;width:58px;height:58px;border-radius:14px;display:flex;align-items:center;justify-content:center;font-size:30px;color:#EEF0F6}
+.c{position:absolute;background:#141720;border:1px solid #2A2E38;border-radius:22px}
+.mdi{font-family:'Material Design Icons';font-style:normal;line-height:1}
+.lbl{position:absolute;white-space:nowrap}
+.row{position:absolute;width:404px;height:62px;border-radius:14px;background:#161B24;display:flex;align-items:center}
+.sw{position:absolute;right:16px;width:54px;height:30px;border-radius:15px}
+.kn{position:absolute;top:3px;width:24px;height:24px;border-radius:12px;background:#EEF0F6}
+</style></head><body>
+<div class="aufr">
+  <div style="position:absolute;left:0;top:0;width:74px;height:600px;background:#10121A;opacity:.96"></div>
+  <div class="nav mdi mdi-home" style="top:22px"></div>
+  <div class="nav mdi mdi-sofa" style="top:92px"></div>
+  <div class="nav mdi mdi-lightbulb" style="top:162px"></div>
+  <div class="nav mdi mdi-thermostat" style="top:232px"></div>
+  <div class="nav mdi mdi-music" style="top:302px"></div>
+  <div class="nav mdi mdi-shield-home" style="top:372px"></div>
+  <div class="nav mdi mdi-wifi" style="top:442px"></div>
+  <div class="nav mdi mdi-cog" style="top:512px;background:#2ED5B8;color:#08090D"></div>
+  <div class="lbl" style="left:100px;top:26px;font-size:24px;font-weight:600">Settings</div>
+  <div class="lbl" style="left:100px;top:60px;font-size:12px;color:#8A8F9E">Aurora &middot; firmware 2026.6</div>
+
+  <!-- left: toggles -->
+  <div class="c" style="left:100px;top:104px;width:452px;height:452px">
+    <span class="lbl" style="left:24px;top:20px;font-size:12px;color:#8A8F9E;letter-spacing:.06em">DISPLAY</span>
+    <div class="row" style="left:24px;top:48px"><span class="mdi mdi-brightness-6" style="position:absolute;left:16px;color:#FFCE54;font-size:26px"></span><span style="position:absolute;left:54px;font-size:15px">Brightness</span><div style="position:absolute;right:16px;width:180px;height:8px;border-radius:4px;background:#0c0e13;top:27px"></div><div style="position:absolute;right:90px;width:106px;height:8px;border-radius:4px;background:#2ED5B8;top:27px"></div></div>
+    <div class="row" style="left:24px;top:122px"><span class="mdi mdi-theme-light-dark" style="position:absolute;left:16px;color:#7B6CFF;font-size:26px"></span><span style="position:absolute;left:54px;font-size:15px">Dark theme</span><div class="sw" style="background:#2ED5B8;top:16px"><div class="kn" style="right:3px;background:#08090D"></div></div></div>
+    <div class="row" style="left:24px;top:196px"><span class="mdi mdi-motion-sensor" style="position:absolute;left:16px;color:#2ED5B8;font-size:26px"></span><span style="position:absolute;left:54px;font-size:15px">Wake on motion</span><div class="sw" style="background:#2ED5B8;top:16px"><div class="kn" style="right:3px;background:#08090D"></div></div></div>
+    <span class="lbl" style="left:24px;top:286px;font-size:12px;color:#8A8F9E;letter-spacing:.06em">SCREENSAVER</span>
+    <div class="row" style="left:24px;top:314px"><span class="mdi mdi-image-multiple" style="position:absolute;left:16px;color:#2ED5B8;font-size:26px"></span><span style="position:absolute;left:54px;font-size:15px">Photo slideshow</span><div class="sw" style="background:#2ED5B8;top:16px"><div class="kn" style="right:3px;background:#08090D"></div></div></div>
+    <div class="row" style="left:24px;top:388px"><span class="mdi mdi-timer-sand" style="position:absolute;left:16px;color:#8A8F9E;font-size:26px"></span><span style="position:absolute;left:54px;font-size:15px">Per-image time</span><span style="position:absolute;right:16px;font-size:15px;font-weight:600;color:#2ED5B8">30s</span></div>
+  </div>
+
+  <!-- right: system -->
+  <div class="c" style="left:568px;top:104px;width:436px;height:452px">
+    <span class="lbl" style="left:24px;top:20px;font-size:12px;color:#8A8F9E;letter-spacing:.06em">SYSTEM</span>
+    <span class="lbl" style="left:24px;top:58px;font-size:15px;color:#8A8F9E">Device</span><span class="lbl" style="right:24px;top:58px;font-size:15px">aurora-panel</span>
+    <span class="lbl" style="left:24px;top:98px;font-size:15px;color:#8A8F9E">IP Address</span><span class="lbl" style="right:24px;top:98px;font-size:15px">10.0.0.174</span>
+    <span class="lbl" style="left:24px;top:138px;font-size:15px;color:#8A8F9E">Home Assistant</span><span class="lbl" style="right:24px;top:138px;font-size:15px;color:#2ED5B8">Connected</span>
+    <span class="lbl" style="left:24px;top:178px;font-size:15px;color:#8A8F9E">Uptime</span><span class="lbl" style="right:24px;top:178px;font-size:15px">4d 12h</span>
+    <span class="lbl" style="left:24px;top:218px;font-size:15px;color:#8A8F9E">Free heap</span><span class="lbl" style="right:24px;top:218px;font-size:15px">8.2 MB</span>
+    <div style="position:absolute;left:24px;top:262px;right:24px;height:1px;background:#2A2E38"></div>
+    <div style="position:absolute;left:24px;top:292px;width:184px;height:60px;border-radius:14px;background:#161B24;display:flex;align-items:center;justify-content:center;gap:8px"><span class="mdi mdi-restart" style="font-size:22px"></span><span style="font-size:14px">Restart</span></div>
+    <div style="position:absolute;right:24px;top:292px;width:184px;height:60px;border-radius:14px;background:#161B24;display:flex;align-items:center;justify-content:center;gap:8px"><span class="mdi mdi-update" style="font-size:22px;color:#2ED5B8"></span><span style="font-size:14px">Check update</span></div>
+    <span class="lbl" style="left:0;width:436px;text-align:center;top:392px;font-size:12px;color:#6E727E">Aurora &middot; ESP32-P4 &middot; JC1060P470</span>
+  </div>
+</div>
+</body></html>

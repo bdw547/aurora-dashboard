@@ -1,0 +1,53 @@
+<!doctype html><html><head><meta charset=utf-8>
+<link href="https://fonts.googleapis.com/css2?family=Sora:wght@500;600&display=swap" rel="stylesheet">
+<link href="https://cdn.jsdelivr.net/npm/@mdi/font@7.4.47/css/materialdesignicons.min.css" rel="stylesheet">
+<style>
+html,body{margin:0;padding:0;background:#000}
+.aufr{position:relative;width:1024px;height:600px;background:#08090d;background-image:radial-gradient(120% 90% at 85% 0%,rgba(46,213,184,.10),rgba(123,108,255,.07) 40%,transparent 70%);font-family:'Sora',system-ui,sans-serif;color:#EEF0F6;overflow:hidden}
+.nav{position:absolute;left:8px;width:58px;height:58px;border-radius:14px;display:flex;align-items:center;justify-content:center;font-size:30px;color:#EEF0F6}
+.c{position:absolute;background:#141720;border:1px solid #2A2E38;border-radius:22px}
+.mdi{font-family:'Material Design Icons';font-style:normal;line-height:1}
+.lbl{position:absolute;white-space:nowrap}
+.zone{position:absolute;width:286px;height:74px;border-radius:16px;background:#161B24;display:flex;align-items:center}
+</style></head><body>
+<div class="aufr">
+  <div style="position:absolute;left:0;top:0;width:74px;height:600px;background:#10121A;opacity:.96"></div>
+  <div class="nav mdi mdi-home" style="top:22px"></div>
+  <div class="nav mdi mdi-sofa" style="top:92px"></div>
+  <div class="nav mdi mdi-lightbulb" style="top:162px"></div>
+  <div class="nav mdi mdi-thermostat" style="top:232px"></div>
+  <div class="nav mdi mdi-music" style="top:302px;background:#2ED5B8;color:#08090D"></div>
+  <div class="nav mdi mdi-shield-home" style="top:372px"></div>
+  <div class="nav mdi mdi-wifi" style="top:442px"></div>
+  <div class="nav mdi mdi-cog" style="top:512px"></div>
+  <div class="lbl" style="left:100px;top:26px;font-size:24px;font-weight:600">Media</div>
+  <div class="lbl" style="left:100px;top:60px;font-size:12px;color:#8A8F9E">Living Room &middot; Sonos</div>
+
+  <!-- now playing -->
+  <div class="c" style="left:100px;top:104px;width:452px;height:452px">
+    <div style="position:absolute;left:26px;top:26px;width:400px;height:240px;border-radius:16px;background:linear-gradient(135deg,#7B6CFF,#2ED5B8);display:flex;align-items:flex-end;padding:16px;box-sizing:border-box;color:rgba(255,255,255,.6);font-size:13px">album art</div>
+    <span class="lbl" style="left:26px;top:288px;font-size:26px;font-weight:600">Midnight City</span>
+    <span class="lbl" style="left:26px;top:328px;font-size:15px;color:#8A8F9E">M83 &middot; Hurry Up, We're Dreaming</span>
+    <div style="position:absolute;left:26px;top:368px;width:400px;height:6px;border-radius:3px;background:#161B24"></div>
+    <div style="position:absolute;left:26px;top:368px;width:160px;height:6px;border-radius:3px;background:#2ED5B8"></div>
+    <span class="lbl" style="left:26px;top:382px;font-size:12px;color:#8A8F9E">1:38</span><span class="lbl" style="right:26px;top:382px;font-size:12px;color:#8A8F9E">4:03</span>
+    <div style="position:absolute;left:120px;top:404px;width:56px;height:56px;border-radius:14px;background:#161B24;display:flex;align-items:center;justify-content:center"><span class="mdi mdi-skip-previous" style="font-size:30px"></span></div>
+    <div style="position:absolute;left:198px;top:398px;width:68px;height:68px;border-radius:34px;background:#2ED5B8;display:flex;align-items:center;justify-content:center"><span class="mdi mdi-pause" style="font-size:34px;color:#08090D"></span></div>
+    <div style="position:absolute;left:288px;top:404px;width:56px;height:56px;border-radius:14px;background:#161B24;display:flex;align-items:center;justify-content:center"><span class="mdi mdi-skip-next" style="font-size:30px"></span></div>
+  </div>
+
+  <!-- zones + volume -->
+  <div class="c" style="left:568px;top:104px;width:436px;height:452px">
+    <span class="lbl" style="left:24px;top:20px;font-size:12px;color:#8A8F9E;letter-spacing:.06em">SPEAKERS</span>
+    <div class="zone" style="left:24px;top:48px"><span class="mdi mdi-speaker" style="position:absolute;left:16px;color:#2ED5B8;font-size:28px"></span><span style="position:absolute;left:56px;top:14px;font-size:15px;font-weight:600">Living Room</span><span style="position:absolute;left:56px;top:40px;font-size:12px;color:#2ED5B8">Playing</span><span class="mdi mdi-volume-high" style="position:absolute;right:16px;font-size:24px;color:#8A8F9E"></span></div>
+    <div class="zone" style="left:24px;top:132px"><span class="mdi mdi-speaker" style="position:absolute;left:16px;color:#8A8F9E;font-size:28px"></span><span style="position:absolute;left:56px;top:14px;font-size:15px;font-weight:600">Kitchen</span><span style="position:absolute;left:56px;top:40px;font-size:12px;color:#8A8F9E">Idle</span><span class="mdi mdi-volume-medium" style="position:absolute;right:16px;font-size:24px;color:#8A8F9E"></span></div>
+    <div class="zone" style="left:24px;top:216px"><span class="mdi mdi-speaker-multiple" style="position:absolute;left:16px;color:#8A8F9E;font-size:28px"></span><span style="position:absolute;left:56px;top:14px;font-size:15px;font-weight:600">Whole House</span><span style="position:absolute;left:56px;top:40px;font-size:12px;color:#8A8F9E">Group</span><span class="mdi mdi-volume-off" style="position:absolute;right:16px;font-size:24px;color:#8A8F9E"></span></div>
+    <span class="lbl" style="left:24px;top:312px;font-size:12px;color:#8A8F9E;letter-spacing:.06em">VOLUME</span>
+    <span class="mdi mdi-volume-low lbl" style="left:24px;top:344px;font-size:24px;color:#8A8F9E"></span>
+    <div style="position:absolute;left:64px;top:352px;width:300px;height:10px;border-radius:5px;background:#161B24"></div>
+    <div style="position:absolute;left:64px;top:352px;width:170px;height:10px;border-radius:5px;background:linear-gradient(90deg,#2ED5B8,#7BE8D6)"></div>
+    <span class="mdi mdi-volume-high lbl" style="right:24px;top:344px;font-size:24px"></span>
+    <span class="lbl" style="left:0;width:436px;text-align:center;top:392px;font-size:14px;color:#8A8F9E">57%</span>
+  </div>
+</div>
+</body></html>

@@ -1,0 +1,48 @@
+<!doctype html><html><head><meta charset=utf-8>
+<link href="https://fonts.googleapis.com/css2?family=Sora:wght@500;600&display=swap" rel="stylesheet">
+<link href="https://cdn.jsdelivr.net/npm/@mdi/font@7.4.47/css/materialdesignicons.min.css" rel="stylesheet">
+<style>
+html,body{margin:0;padding:0;background:#000}
+.aufr{position:relative;width:1024px;height:600px;background:#08090d;background-image:radial-gradient(120% 90% at 85% 0%,rgba(46,213,184,.10),rgba(123,108,255,.07) 40%,transparent 70%);font-family:'Sora',system-ui,sans-serif;color:#EEF0F6;overflow:hidden}
+.nav{position:absolute;left:8px;width:58px;height:58px;border-radius:14px;display:flex;align-items:center;justify-content:center;font-size:30px;color:#EEF0F6}
+.c{position:absolute;background:#141720;border:1px solid #2A2E38;border-radius:22px}
+.mdi{font-family:'Material Design Icons';font-style:normal;line-height:1}
+.lbl{position:absolute;white-space:nowrap}
+.stat{position:absolute;width:288px;height:140px;background:#141720;border:1px solid #2A2E38;border-radius:22px}
+</style></head><body>
+<div class="aufr">
+  <div style="position:absolute;left:0;top:0;width:74px;height:600px;background:#10121A;opacity:.96"></div>
+  <div class="nav mdi mdi-home" style="top:22px"></div>
+  <div class="nav mdi mdi-sofa" style="top:92px"></div>
+  <div class="nav mdi mdi-lightbulb" style="top:162px"></div>
+  <div class="nav mdi mdi-thermostat" style="top:232px"></div>
+  <div class="nav mdi mdi-music" style="top:302px"></div>
+  <div class="nav mdi mdi-shield-home" style="top:372px"></div>
+  <div class="nav mdi mdi-wifi" style="top:442px;background:#2ED5B8;color:#08090D"></div>
+  <div class="nav mdi mdi-cog" style="top:512px"></div>
+  <div class="lbl" style="left:100px;top:26px;font-size:24px;font-weight:600">Network</div>
+  <div class="lbl" style="left:100px;top:60px;font-size:12px;color:#2ED5B8">Online &middot; 18 devices</div>
+
+  <div class="stat" style="left:100px;top:104px"><span class="mdi mdi-download lbl" style="left:18px;top:16px;color:#2ED5B8;font-size:28px"></span><span class="lbl" style="left:18px;top:64px;font-size:36px;font-weight:600">412<span style="font-size:16px;color:#8A8F9E">&nbsp;Mbps</span></span><span class="lbl" style="left:18px;top:112px;font-size:12px;color:#8A8F9E">Download</span></div>
+  <div class="stat" style="left:402px;top:104px"><span class="mdi mdi-upload lbl" style="left:18px;top:16px;color:#7B6CFF;font-size:28px"></span><span class="lbl" style="left:18px;top:64px;font-size:36px;font-weight:600">38<span style="font-size:16px;color:#8A8F9E">&nbsp;Mbps</span></span><span class="lbl" style="left:18px;top:112px;font-size:12px;color:#8A8F9E">Upload</span></div>
+  <div class="stat" style="left:704px;top:104px"><span class="mdi mdi-timer-outline lbl" style="left:18px;top:16px;color:#FFCE54;font-size:28px"></span><span class="lbl" style="left:18px;top:64px;font-size:36px;font-weight:600">8<span style="font-size:16px;color:#8A8F9E">&nbsp;ms</span></span><span class="lbl" style="left:18px;top:112px;font-size:12px;color:#8A8F9E">Latency</span></div>
+
+  <!-- device list -->
+  <div class="c" style="left:100px;top:270px;width:590px;height:286px">
+    <span class="lbl" style="left:20px;top:18px;font-size:12px;color:#8A8F9E;letter-spacing:.06em">TOP DEVICES</span>
+    <span class="lbl" style="left:20px;top:56px;font-size:15px"><span class="mdi mdi-television" style="color:#2ED5B8;margin-right:10px"></span>Living Room TV</span><span class="lbl" style="right:20px;top:56px;font-size:14px;color:#8A8F9E">182 Mbps</span>
+    <span class="lbl" style="left:20px;top:100px;font-size:15px"><span class="mdi mdi-laptop" style="color:#2ED5B8;margin-right:10px"></span>Ben's MacBook</span><span class="lbl" style="right:20px;top:100px;font-size:14px;color:#8A8F9E">64 Mbps</span>
+    <span class="lbl" style="left:20px;top:144px;font-size:15px"><span class="mdi mdi-cellphone" style="color:#2ED5B8;margin-right:10px"></span>iPhone 16 Pro</span><span class="lbl" style="right:20px;top:144px;font-size:14px;color:#8A8F9E">22 Mbps</span>
+    <span class="lbl" style="left:20px;top:188px;font-size:15px"><span class="mdi mdi-monitor-dashboard" style="color:#2ED5B8;margin-right:10px"></span>Aurora Panel</span><span class="lbl" style="right:20px;top:188px;font-size:14px;color:#8A8F9E">3 Mbps</span>
+    <span class="lbl" style="left:20px;top:232px;font-size:15px"><span class="mdi mdi-router-wireless" style="color:#8A8F9E;margin-right:10px"></span>+ 14 others</span>
+  </div>
+
+  <!-- router card -->
+  <div class="c" style="left:706px;top:270px;width:298px;height:286px">
+    <span class="mdi mdi-router-wireless lbl" style="left:0;width:298px;text-align:center;top:36px;font-size:56px;color:#2ED5B8"></span>
+    <span class="lbl" style="left:0;width:298px;text-align:center;top:120px;font-size:18px;font-weight:600">Walton-Home</span>
+    <span class="lbl" style="left:0;width:298px;text-align:center;top:152px;font-size:12px;color:#8A8F9E">Wi-Fi 6E &middot; -48 dBm</span>
+    <div style="position:absolute;left:40px;top:200px;width:218px;height:54px;border-radius:14px;background:#161B24;display:flex;align-items:center;justify-content:center;gap:8px"><span class="mdi mdi-restart" style="font-size:22px"></span><span style="font-size:14px">Restart router</span></div>
+  </div>
+</div>
+</body></html>
