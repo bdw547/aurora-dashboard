@@ -7,6 +7,7 @@
 #include "esphome/core/component.h"
 #include "esphome/components/camera/camera.h"
 #include "esphome/components/i2c/i2c.h"
+#include "esphome/components/microphone/microphone.h"
 
 #include "driver/gpio.h"
 #include "driver/jpeg_encode.h"
@@ -75,6 +76,7 @@ class ESPVideoCamera : public camera::Camera {
   void set_xclk_freq(uint32_t freq) { this->xclk_freq_ = freq; }
   void set_enable_xclk_init(bool enable) { this->enable_xclk_init_ = enable; }
   void set_enable_uvc(bool enable) { this->enable_uvc_ = enable; }
+  void set_microphone(microphone::Microphone *mic) { this->microphone_ = mic; }
 
   // Camera platform configuration ----------------------------------------------
   void set_device(const std::string &device) { this->device_ = device; }
@@ -226,6 +228,19 @@ class ESPVideoCamera : public camera::Camera {
   void apply_image_tuning_();
   void tune_ctrl_(int fd, uint32_t id, float frac, bool use_default, const char *name);
   void tune_ctrl_abs_(int fd, uint32_t id, int32_t value, const char *name);
+
+  // ---- Audio (one-way mic on the stream) ---------------------------------
+  // The ES8311 mic is captured by ESPHome's microphone component (es8311 +
+  // i2s_audio); we tap its PCM via add_data_callback. Capture-proof stage just
+  // measures the level; a later stage encodes + adds a 2nd RTP/audio track.
+  microphone::Microphone *microphone_{nullptr};
+  bool audio_started_{false};
+  void on_audio_data_(const std::vector<uint8_t> &data);
+  // Running RMS/peak accounting for the capture-proof level log.
+  uint64_t audio_sq_sum_{0};
+  uint32_t audio_samples_{0};
+  int16_t audio_peak_{0};
+  uint32_t audio_last_log_ms_{0};
 };
 
 }  // namespace esphome::esp_video_camera

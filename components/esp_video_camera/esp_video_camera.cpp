@@ -12,6 +12,7 @@
 #include <cerrno>
 #include <cstring>
 #include <cstdio>
+#include <cmath>
 #include <fcntl.h>
 #include <unistd.h>
 #include <sys/ioctl.h>
@@ -417,6 +418,16 @@ bool ESPVideoCamera::init_pipeline_() {
 // ESPVideoCamera — streaming / capture
 // ===========================================================================
 void ESPVideoCamera::loop() {
+  // Start microphone capture once, after all components have set up (the codec
+  // and I2S bus must be initialised first). Independent of the camera/RTSP path.
+  if (this->microphone_ != nullptr && !this->audio_started_) {
+    this->audio_started_ = true;
+    this->microphone_->add_data_callback(
+        [this](const std::vector<uint8_t> &data) { this->on_audio_data_(data); });
+    this->microphone_->start();
+    ESP_LOGI(TAG, "audio: microphone capture started");
+  }
+
   // When the RTSP server is enabled it owns the camera from its own task; the
   // ESPHome-loop capture path is disabled so the two never fight over the V4L2
   // device or the encoder. Start the server only once the network is connected:
@@ -442,6 +453,33 @@ void ESPVideoCamera::loop() {
 
   if (this->stream_requesters_ == 0 && this->single_requesters_ == 0)
     this->stop_capture_();
+}
+
+void ESPVideoCamera::on_audio_data_(const std::vector<uint8_t> &data) {
+  // Capture-proof stage: the mic PCM is signed 16-bit little-endian mono. Track
+  // RMS + peak and log every ~2 s so we can confirm the mic is actually picking
+  // up sound (non-zero, responsive level) before wiring it into RTP.
+  const int16_t *samples = reinterpret_cast<const int16_t *>(data.data());
+  size_t n = data.size() / 2;
+  for (size_t i = 0; i < n; i++) {
+    int32_t s = samples[i];
+    this->audio_sq_sum_ += (uint64_t) (s * s);
+    int16_t a = (s < 0) ? (int16_t) (-s) : (int16_t) s;
+    if (a > this->audio_peak_)
+      this->audio_peak_ = a;
+  }
+  this->audio_samples_ += n;
+
+  uint32_t now = millis();
+  if (now - this->audio_last_log_ms_ >= 5000 && this->audio_samples_ > 0) {
+    uint32_t rms = (uint32_t) sqrt((double) (this->audio_sq_sum_ / this->audio_samples_));
+    ESP_LOGI(TAG, "audio: mic level RMS=%u peak=%d over %u samples (16 kHz mono)", rms,
+             (int) this->audio_peak_, this->audio_samples_);
+    this->audio_sq_sum_ = 0;
+    this->audio_samples_ = 0;
+    this->audio_peak_ = 0;
+    this->audio_last_log_ms_ = now;
+  }
 }
 
 void ESPVideoCamera::deliver_frame_(const uint8_t *data, size_t length) {

@@ -227,6 +227,45 @@ esp_video_camera:
   max_framerate: 10
   enable_xclk: false
   xclk_pin: -1
+  microphone_id: aurora_mic    # tap the ES8311 mic for one-way audio on the stream
+
+# --- Audio: on-board ES8311 mono codec, microphone capture ------------------
+# ES8311 control over I2C on the shared bus_a (addr 0x18). I2S master clocks:
+# MCLK GPIO13, BCLK GPIO12, WS/LRCLK GPIO10; mic data-in (codec->ESP) GPIO48.
+# 16 kHz mono. Used for one-way room audio on the RTSP/WebRTC stream.
+i2s_audio:
+  - id: i2s_mic
+    i2s_lrclk_pin: GPIO10
+    i2s_bclk_pin: GPIO12
+    i2s_mclk_pin: GPIO13
+
+audio_dac:
+  - platform: es8311
+    id: aurora_es8311
+    address: 0x18
+    i2c_id: bus_a
+    # NOTE: ESPHome's `use_microphone: true` actually enables PDM *digital* mic
+    # mode (REG14 bit6). This board has an ANALOG mic (enabled by the base 0x1A
+    # regardless), so PDM mode silences it. Keep false for the analog mic.
+    use_microphone: false
+    mic_gain: 30DB
+    sample_rate: 16000
+    bits_per_sample: 16bit
+    # ESPHome's i2s microphone (RX) may not drive MCLK out on GPIO13; if the
+    # codec is starved of MCLK its ADC outputs silence. Derive clocks from SCLK
+    # (BCLK) instead — the ES8311 supports this and it's safe if MCLK is present.
+    use_mclk: false
+
+microphone:
+  - platform: i2s_audio
+    id: aurora_mic
+    i2s_audio_id: i2s_mic
+    adc_type: external
+    i2s_din_pin: GPIO48
+    pdm: false
+    sample_rate: 16000
+    bits_per_sample: 16bit
+    channel: left
 
 i2c:
   - id: bus_a

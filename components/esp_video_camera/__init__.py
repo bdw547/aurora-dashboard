@@ -11,7 +11,7 @@ components) — nothing is vendored.
 from pathlib import Path
 
 import esphome.codegen as cg
-from esphome.components import i2c
+from esphome.components import i2c, microphone
 from esphome.components.esp32 import (
     add_extra_build_file,
     add_idf_component,
@@ -39,6 +39,7 @@ CONF_XCLK_PIN = "xclk_pin"
 CONF_XCLK_FREQUENCY = "xclk_frequency"
 CONF_ENABLE_XCLK = "enable_xclk"
 CONF_ENABLE_UVC = "enable_uvc"
+CONF_MICROPHONE_ID = "microphone_id"
 
 _RESOLUTION_ALIASES = ("QVGA", "VGA", "480P", "720P", "1080P")
 
@@ -98,6 +99,7 @@ CONFIG_SCHEMA = (
             ),
             cv.Optional(CONF_ENABLE_XCLK, default=False): cv.boolean,
             cv.Optional(CONF_ENABLE_UVC, default=False): cv.boolean,
+            cv.Optional(CONF_MICROPHONE_ID): cv.use_id(microphone.Microphone),
         }
     )
     .extend(cv.ENTITY_BASE_SCHEMA)
@@ -132,6 +134,10 @@ async def to_code(config):
     cg.add(var.set_codec(config[CONF_CODEC]))
     cg.add(var.set_rtsp_port(config[CONF_RTSP_PORT]))
     cg.add(var.set_max_framerate(config[CONF_MAX_FRAMERATE]))
+
+    if CONF_MICROPHONE_ID in config:
+        mic = await cg.get_variable(config[CONF_MICROPHONE_ID])
+        cg.add(var.set_microphone(mic))
 
     # ESP32-P4 hardware H.264 encoder. esp_h264 is already in esp_video's
     # dependency graph on the P4; requiring it directly makes its headers
