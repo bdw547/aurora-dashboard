@@ -221,7 +221,12 @@ light:
     output: gpio_backlight_pwm
     name: Display Backlight
     id: display_backlight
-    restore_mode: RESTORE_DEFAULT_ON
+    # ALWAYS_ON (not RESTORE_DEFAULT_ON): a kiosk panel must never power up dark.
+    # The sleep/screensaver automations turn this off at runtime, and that OFF
+    # state used to persist to flash, so RESTORE_DEFAULT_ON would restore OFF on
+    # the next boot -> completely blank display. ALWAYS_ON ignores the saved
+    # state and brings the backlight up on every boot; sleep still works at runtime.
+    restore_mode: ALWAYS_ON
     default_transition_length: 0s
 
 # --- I2C + GT911 touch ---
