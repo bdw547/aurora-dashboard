@@ -603,6 +603,8 @@ font:
       - "\U000F011B"  # cat
       - "\U000F04CE"  # star
       - "\U000F1253"  # lightbulb-group
+      - "\U000F0374"  # minus (climate/setpoint -)
+      - "\U000F0415"  # plus (climate/setpoint +)
 
 # --- Live HA state (selected light = Living Room for v1) ---
 sensor:

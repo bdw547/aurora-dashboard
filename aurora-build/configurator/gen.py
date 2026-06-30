@@ -119,6 +119,13 @@ CARD_ICON = {
     "sonos_sources": "\\U000F075A", "group": "\\U000F1253", "lightgroup": "\\U000F1253",
     "person": "\\U000F02DC", "tvremote": "\\U000F0502", "vacuum": "\\U000F050F",
     "alarm": "\\U000F068A",
+    # Spotify / Sonos media cards
+    "playlist": "\\U000F075A", "sonos_fav": "\\U000F04CE", "songlist": "\\U000F075A",
+    "sonos_library": "\\U000F125F",
+    # TV control cards (purple family)
+    "tv_sources": "\\U000F0502", "tv_dpad": "\\U000F0297", "tv_transport": "\\U000F040A",
+    "tv_channel": "\\U000F0502", "tv_volume": "\\U000F057E", "tv_trackpad": "\\U000F0297",
+    "shortcuts": "\\U000F04CE",
 }
 
 
@@ -288,14 +295,30 @@ def c_camera(card, x, y, w, h, base):
 
 
 def c_group(card, x, y, w, h, base):
+    """Grid of entity tiles (not a text list). `lightgroup` tiles are tappable
+    toggles (amber); `group` tiles are status readouts (teal)."""
     ents = card.get("entities", [])
-    inner = ic(card["ck"])
-    inner += lbl(card.get("name", "Group"), 50, 16, "f_title")
-    yy = 56
-    for e in ents[: max(1, h * 2)]:
+    is_lights = card["ck"] == "lightgroup"
+    accent = "0xF2B84B" if is_lights else "0x2ED5B8"
+    inner = ic(card["ck"], color=accent)
+    inner += lbl(card.get("name", "Lights" if is_lights else "Group"), 50, 16, "f_title", width=w - 64)
+    cols = 2 if w >= 280 else 1
+    pad, gap, top, bh = 14, 8, 56, 46
+    rows_fit = max(1, (h - top - pad + gap) // (bh + gap))
+    cap = cols * rows_fit
+    bw = (w - pad * 2 - (cols - 1) * gap) // cols
+    for i, e in enumerate(ents[:cap]):
         nm = (e.split(".")[-1] if "." in e else e).replace("_", " ")
-        inner += lbl(nm, 16, yy, "f_body", "0xC2C7D2", width=w - 32)
-        yy += 28
+        cx = pad + (i % cols) * (bw + gap)
+        cy = top + (i // cols) * (bh + gap)
+        bg = "0x1A1606" if is_lights else "0x0F1117"
+        state_txt = "Off" if is_lights else "On"
+        click = (", clickable: true, on_click: [%s]" % ha("homeassistant.toggle", e)) if (is_lights and e) else ""
+        inner += ("              - obj: { x: %d, y: %d, width: %d, height: %d, bg_color: %s, "
+                  "border_width: 0, radius: 10, pad_all: 0, scrollable: false%s, widgets: ["
+                  "label: { text: %s, x: 10, y: 6, width: %d, text_font: f_small, text_color: 0xEEF0F6 }, "
+                  "label: { text: \"%s\", x: 10, y: -6, align: bottom_left, text_font: f_small, text_color: %s }] }\n"
+                  % (cx, cy, bw, bh, bg, click, esc(nm), bw - 20, state_txt, accent))
     return [card_obj(x, y, w, h, inner)], [], []
 
 
