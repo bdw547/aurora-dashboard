@@ -691,6 +691,42 @@ def assemble(layout):
     return out
 
 
+EMUL = os.path.join(os.path.dirname(AURORA), "aurora-emul.yaml")
+
+
+def host_assemble(layout):
+    """Emit a host+SDL desktop build of the generated UI for screenshotting.
+    Same LVGL pages/cards/fonts/styles as the device, but on the `host`
+    platform with an SDL window instead of the ESP32-P4 hardware. Drops the
+    HA-backed state sensors (no live data on the desktop) and the background
+    image; a bare api: keeps the cards' homeassistant.action refs valid."""
+    with open(AURORA, encoding="utf-8") as f:
+        secs = split_sections(f.read())
+    lvgl_text = dict(secs).get("lvgl", "")
+    keep = "".join(t for n, t in secs if n in ("substitutions", "globals", "font"))
+    keep = re.sub(r"(?m)^[ \t]*-?[ \t]*script\.(execute|stop):.*\n", "", keep)
+    keep = scrub_lvgl_actions(keep)
+    nav, pages, _sens, _txt, _ = build_lvgl(layout)
+    pages = re.sub(r"(?m)^\s*- image: \{ src: img_aurora_bg.*\n", "", pages)
+    return (
+        "# AUTO-GENERATED host/SDL emulator build of layout.json — DO NOT EDIT.\n"
+        "esphome:\n  name: aurora-emul\n\n"
+        "host:\n\n"
+        "api:\n\n"
+        "logger:\n  level: WARN\n\n"
+        + keep
+        + "\ndisplay:\n  - platform: sdl\n    id: emul_display\n"
+          "    dimensions:\n      width: 1024\n      height: 600\n    update_interval: 1s\n"
+        + "\nlvgl:\n  displays: [emul_display]\n  buffer_size: 100%\n"
+        + style_defs(lvgl_text)
+        + "  top_layer:\n      widgets:\n"
+          "      - obj:\n          id: nav_rail\n          x: 0\n          y: 0\n          width: 74\n          height: 600\n"
+          "          bg_color: 0x0C0D12\n          bg_opa: 90%\n          border_width: 0\n          radius: 0\n          pad_all: 0\n          widgets:\n"
+        + nav
+        + "  pages:\n" + pages
+    )
+
+
 def _loader():
     import yaml
 
@@ -739,6 +775,14 @@ def main():
                 print("ERROR: %s" % e)
             sys.exit(1)
         print("OK: %d pages, %d state sensors, %d text_sensors (generated YAML parses)" % (npages, ns, nt))
+        return
+    if "--host" in sys.argv:
+        out = host_assemble(layout)
+        if "--cycle" in sys.argv:   # auto-advance pages so a harness can screenshot each
+            out += "\ninterval:\n  - interval: 4s\n    then:\n      - lvgl.page.next:\n"
+        with open(EMUL, "w", encoding="utf-8") as f:
+            f.write(out)
+        print("wrote %s" % EMUL)
         return
     out = assemble(layout)
     with open(OUT, "w", encoding="utf-8") as f:
