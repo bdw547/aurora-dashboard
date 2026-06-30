@@ -19,5 +19,6 @@ docs/.vitepress/dist/
 node_modules/
 secrets.yaml
 secrets.yml
+aurora-build/configurator/config.json
 wifi-secrets*.yaml
 wifi_secrets*.yaml

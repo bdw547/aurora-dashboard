@@ -1019,6 +1019,69 @@ def write_layout(data):
     return True
 
 
+# --- admin config + auth (config.json holds HA url/token + panel IP; gitignored) ---
+import hashlib as _hashlib
+import secrets as _secrets
+
+CONFIG_JSON = os.path.join(HERE, "config.json")
+SESSIONS = set()   # valid session tokens, in-memory (cleared on restart)
+
+
+def _sha(s):
+    return _hashlib.sha256((s or "").encode()).hexdigest()
+
+
+def read_config():
+    try:
+        with open(CONFIG_JSON, encoding="utf-8") as f:
+            c = json.load(f)
+    except Exception:  # noqa: BLE001
+        c = {}
+    c.setdefault("password_sha256", _sha("Admin"))   # default login password: Admin
+    c.setdefault("ha_url", "")
+    c.setdefault("ha_token", "")
+    c.setdefault("panel_ip", "")
+    return c
+
+
+def write_config(c):
+    with open(CONFIG_JSON, "w", encoding="utf-8") as f:
+        json.dump(c, f, indent=2)
+    try:
+        os.chmod(CONFIG_JSON, 0o600)   # holds the HA token — restrict perms
+    except Exception:  # noqa: BLE001
+        pass
+    return True
+
+
+def ensure_config():
+    if not os.path.exists(CONFIG_JSON):
+        write_config(read_config())
+
+
+LOGIN_PAGE = """<!doctype html><html><head><meta charset=utf-8>
+<title>Aurora - Sign in</title><meta name=viewport content="width=device-width,initial-scale=1">
+<style>
+*{box-sizing:border-box}body{margin:0;height:100vh;display:flex;align-items:center;justify-content:center;background:#070809;color:#F3F5F8;font-family:system-ui,Segoe UI,sans-serif}
+.box{width:340px;background:#101116;border:1px solid #23262F;border-radius:16px;padding:26px}
+h1{font-size:20px;margin:0 0 4px}h1 b{background:linear-gradient(90deg,#2ED5B8,#B06CFF);-webkit-background-clip:text;background-clip:text;color:transparent}
+p{color:#868CA0;font-size:13px;margin:0 0 18px}
+input{width:100%;padding:11px 12px;background:#0F1117;border:1px solid #23262F;border-radius:10px;color:#F3F5F8;font:inherit;margin-bottom:12px}
+button{width:100%;padding:11px;background:#2ED5B8;color:#06231D;border:0;border-radius:10px;font-weight:700;font-size:14px;cursor:pointer}
+.err{color:#F2685A;font-size:12px;min-height:16px;margin-top:8px}
+</style></head><body>
+<div class="box"><h1>Aurora <b>Configurator</b></h1><p>Enter the access password to continue.</p>
+<input id=pw type=password placeholder="Password" autofocus>
+<button id=go>Sign in</button><div class="err" id=err></div></div>
+<script>
+async function login(){const pw=document.getElementById('pw').value;const e=document.getElementById('err');e.textContent='';
+ const r=await fetch('/api/login',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({password:pw})});
+ if(r.ok){location.reload()}else{e.textContent='Incorrect password.'}}
+document.getElementById('go').onclick=login;
+document.getElementById('pw').addEventListener('keydown',ev=>{if(ev.key==='Enter')login()});
+</script></body></html>"""
+
+
 # --- flash job (async, log captured for polling) ---
 FLASH = {"running": False, "log": "", "done": False, "ok": False}
 
@@ -1104,11 +1167,14 @@ def flash_job(device):
 
 
 class H(BaseHTTPRequestHandler):
-    def _send(self, code, body, ctype="application/json"):
+    def _send(self, code, body, ctype="application/json", headers=None):
         b = body if isinstance(body, bytes) else body.encode()
         self.send_response(code)
         self.send_header("Content-Type", ctype)
         self.send_header("Content-Length", str(len(b)))
+        if headers:
+            for k, v in headers.items():
+                self.send_header(k, v)
         self.end_headers()
         self.wfile.write(b)
 
@@ -1116,18 +1182,32 @@ class H(BaseHTTPRequestHandler):
         n = int(self.headers.get("Content-Length", 0))
         return json.loads(self.rfile.read(n) or "{}")
 
+    def _authed(self):
+        for part in self.headers.get("Cookie", "").split(";"):
+            p = part.strip()
+            if p.startswith("aurora_session=") and p.split("=", 1)[1] in SESSIONS:
+                return True
+        return False
+
     def log_message(self, *a):  # quiet
         pass
 
     def do_GET(self):
-        if self.path == "/":
-            return self._send(200, PAGE, "text/html")
-        if self.path == "/builder":
+        if self.path in ("/", "/builder"):
+            if not self._authed():
+                return self._send(200, LOGIN_PAGE, "text/html")
+            if self.path == "/":
+                return self._send(200, PAGE, "text/html")
             try:
                 with open(BUILDER_HTML, "rb") as f:
                     return self._send(200, f.read(), "text/html")
             except Exception as e:  # noqa: BLE001
                 return self._send(500, "builder.html missing: " + str(e), "text/plain")
+        if not self._authed():
+            return self._send(401, json.dumps({"error": "auth required"}))
+        if self.path == "/api/config":
+            c = read_config()
+            return self._send(200, json.dumps({"ha_url": c["ha_url"], "panel_ip": c["panel_ip"], "has_token": bool(c["ha_token"])}))
         if self.path == "/api/layout":
             return self._send(200, json.dumps(read_layout()))
         if self.path == "/api/slots":
@@ -1143,10 +1223,47 @@ class H(BaseHTTPRequestHandler):
     def do_POST(self):
         try:
             d = self._json()
+            if self.path == "/api/login":
+                if _sha(d.get("password", "")) == read_config()["password_sha256"]:
+                    tok = _secrets.token_urlsafe(24)
+                    SESSIONS.add(tok)
+                    return self._send(200, json.dumps({"ok": True}),
+                                      headers={"Set-Cookie": "aurora_session=%s; Path=/; HttpOnly; SameSite=Strict" % tok})
+                return self._send(403, json.dumps({"error": "incorrect password"}))
+            if not self._authed():
+                return self._send(401, json.dumps({"error": "auth required"}))
+            if self.path == "/api/logout":
+                for part in self.headers.get("Cookie", "").split(";"):
+                    p = part.strip()
+                    if p.startswith("aurora_session="):
+                        SESSIONS.discard(p.split("=", 1)[1])
+                return self._send(200, json.dumps({"ok": True}),
+                                  headers={"Set-Cookie": "aurora_session=; Path=/; Max-Age=0"})
+            if self.path == "/api/change-password":
+                c = read_config()
+                if _sha(d.get("current", "")) != c["password_sha256"]:
+                    return self._send(403, json.dumps({"error": "current password is wrong"}))
+                if not d.get("new"):
+                    return self._send(400, json.dumps({"error": "new password is empty"}))
+                c["password_sha256"] = _sha(d["new"])
+                write_config(c)
+                return self._send(200, json.dumps({"ok": True}))
+            if self.path == "/api/config":
+                c = read_config()
+                if "ha_url" in d:
+                    c["ha_url"] = (d["ha_url"] or "").strip()
+                if "panel_ip" in d:
+                    c["panel_ip"] = (d["panel_ip"] or "").strip()
+                if d.get("ha_token"):           # only overwrite the token if a new one is provided
+                    c["ha_token"] = d["ha_token"].strip()
+                write_config(c)
+                return self._send(200, json.dumps({"ok": True, "has_token": bool(c["ha_token"])}))
             if self.path == "/api/entities":
-                return self._send(200, json.dumps(ha_entities(d["url"], d["token"])))
+                c = read_config()
+                return self._send(200, json.dumps(ha_entities(d.get("url") or c["ha_url"], d.get("token") or c["ha_token"])))
             if self.path == "/api/ha/areas":
-                return self._send(200, json.dumps(ha_areas(d["url"], d["token"])))
+                c = read_config()
+                return self._send(200, json.dumps(ha_areas(d.get("url") or c["ha_url"], d.get("token") or c["ha_token"])))
             if self.path == "/api/layout":
                 return self._send(200, json.dumps({"saved": write_layout(d)}))
             if self.path == "/api/save":
@@ -1157,8 +1274,11 @@ class H(BaseHTTPRequestHandler):
                 write_rooms(d)                       # validate + persist rooms.json
                 return self._send(200, json.dumps({"saved": True, **write_rooms_to_yaml()}))
             if self.path == "/api/flash":
+                dev = d.get("device") or read_config()["panel_ip"]
+                if not dev:
+                    return self._send(400, json.dumps({"error": "no panel IP set"}))
                 if not FLASH["running"]:
-                    threading.Thread(target=flash_job, args=(d["device"],), daemon=True).start()
+                    threading.Thread(target=flash_job, args=(dev,), daemon=True).start()
                 return self._send(200, json.dumps({"started": True}))
         except Exception as e:  # noqa
             return self._send(500, json.dumps({"error": str(e)}))
@@ -1328,5 +1448,7 @@ boot()
 </script></body></html>"""
 
 if __name__ == "__main__":
+    ensure_config()
     print(f"Aurora Configurator → http://localhost:{PORT}  (firmware: {YAML})")
+    print("Access is password-gated. Default password: Admin — change it from the configurator.")
     ThreadingHTTPServer(("0.0.0.0", PORT), H).serve_forever()

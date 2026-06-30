@@ -152,6 +152,8 @@ h3.sec{font-size:11px;letter-spacing:1.4px;text-transform:uppercase;color:var(--
   <button class="btn ghost" id="tplBtn">Templates</button>
   <button class="btn ghost" id="saveBtn">Save</button>
   <button class="btn amber" id="flashBtn">Build &amp; Flash</button>
+  <button class="btn ghost" id="acctBtn" title="Change access password"><span class="mdi mdi-key-variant"></span></button>
+  <button class="btn ghost" id="lockBtn" title="Lock / sign out"><span class="mdi mdi-lock"></span></button>
 </div>
 
 <div id="app">
@@ -256,7 +258,7 @@ const COLS=6; let ROWS=5;
 let L=null, ENTS=[], AREAS={}, sel=null, placing=null, curPage=null, curSub=0, curPageInit=null;
 function uid(){ return 'c'+Math.random().toString(36).slice(2,8); }
 function toast(m){ const t=document.getElementById('toast'); t.textContent=m; t.style.display='block'; setTimeout(()=>t.style.display='none',2600); }
-async function j(u,o){ const r=await fetch(u,o); if(!r.ok) throw new Error((await r.json().catch(()=>({}))).error||r.statusText); return r.json(); }
+async function j(u,o){ const r=await fetch(u,o); if(r.status===401){ location.reload(); throw new Error('auth'); } if(!r.ok) throw new Error((await r.json().catch(()=>({}))).error||r.statusText); return r.json(); }
 function rowsFor(p){ const hd=L.pages[p||curPage].header; return (hd&&hd.on)?4:5; }
 function nm2(eid){ return (eid&&eid.includes('.'))?eid.split('.')[1].replace(/_/g,' '):(eid||''); }
 
@@ -602,14 +604,24 @@ function openTemplates(){ const mbox=document.getElementById('mbox');
     d.onclick=()=>{ curPageInit=null; L=TEMPLATES[name](); curPage=curPageInit||Object.keys(L.pages)[0]; curSub=0; sel=null; closeModal(); renderAll(); toast('Loaded template'); }; t.appendChild(d); });
   document.getElementById('modal').style.display='flex'; mbox.querySelector('#mCancel').onclick=closeModal; }
 
+async function logout(){ try{ await j('/api/logout',{method:'POST',headers:{'Content-Type':'application/json'},body:'{}'}); }catch(e){} location.reload(); }
+function accountModal(){ const mbox=document.getElementById('mbox');
+  mbox.innerHTML=`<h2>Change access password</h2><p>This password gates the whole configurator. Default is “Admin”.</p>
+    <div class="field"><label>Current password</label><input id="pwCur" type="password"></div>
+    <div class="field"><label>New password</label><input id="pwNew" type="password"></div>
+    <div class="mfoot"><button class="btn ghost" id="mCancel">Cancel</button><button class="btn" id="mOk">Change</button></div>`;
+  document.getElementById('modal').style.display='flex'; mbox.querySelector('#mCancel').onclick=closeModal;
+  mbox.querySelector('#mOk').onclick=async()=>{ try{ await j('/api/change-password',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({current:mbox.querySelector('#pwCur').value,new:mbox.querySelector('#pwNew').value})}); closeModal(); toast('Password changed ✓'); }catch(e){ toast(e.message); } }; }
 async function connect(){ const url=document.getElementById('haurl').value.trim(), tok=document.getElementById('hatok').value.trim(), ip=document.getElementById('panip').value.trim();
-  localStorage.setItem('aurora_ha_url',url); localStorage.setItem('aurora_ha_tok',tok); localStorage.setItem('aurora_pan_ip',ip);
-  if(!url||!tok){ toast('Enter HA URL + token'); return; } document.getElementById('cstat').textContent='connecting…';
-  try{ ENTS=await j('/api/entities',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({url,token:tok})});
-    try{ AREAS=(await j('/api/ha/areas',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({url,token:tok})}))||{}; }catch(e){ AREAS={}; }
+  document.getElementById('cstat').textContent='saving…';
+  try{ const r=await j('/api/config',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({ha_url:url,panel_ip:ip,ha_token:tok})});
+    document.getElementById('hatok').value=''; document.getElementById('hatok').placeholder=r.has_token?'•••• saved (blank = keep)':'Long-lived token'; }catch(e){}
+  document.getElementById('cstat').textContent='connecting…';
+  try{ ENTS=await j('/api/entities',{method:'POST',headers:{'Content-Type':'application/json'},body:'{}'});
+    try{ AREAS=(await j('/api/ha/areas',{method:'POST',headers:{'Content-Type':'application/json'},body:'{}'}))||{}; }catch(e){ AREAS={}; }
     document.getElementById('cdot').className='dot ok'; document.getElementById('cstat').textContent=ENTS.length+' entities · '+Object.keys(AREAS).length+' areas';
     renderPalette(); renderInspector(); toast('Connected to Home Assistant');
-  }catch(e){ document.getElementById('cstat').textContent='failed'; toast('Connect failed: '+e.message); } }
+  }catch(e){ document.getElementById('cdot').className='dot'; document.getElementById('cstat').textContent='not connected'; toast('Connect failed: '+e.message); } }
 async function save(){ try{ await j('/api/layout',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(L)}); toast('Layout saved ✓'); }catch(e){ toast('Save failed: '+e.message); } }
 async function flash(){ await save(); const ip=document.getElementById('panip').value.trim(); if(!ip){ toast('Enter the panel IP (or /dev/ttyACM0 for serial)'); return; }
   document.getElementById('flashbox').style.display='block'; const log=document.getElementById('flashlog'); log.textContent='Starting…';
@@ -622,14 +634,16 @@ async function boot(){ try{ L=await j('/api/layout'); if(!L||!L.pages||!Object.k
     if(!Array.isArray(p.header.right)) p.header.right=['weather_current','secured']; if(!p.header.left) p.header.left='greeting';
     p.subpages.forEach(sp=>sp.forEach(c=>{ if(C[c.ck]&&C[c.ck].multi&&!c.entities)c.entities=[]; if(c.ck==='shortcuts'&&!c.shortcuts)c.shortcuts=[]; })); });
   curPage=L.nav[0]?L.nav[0].page:Object.keys(L.pages)[0]; curSub=0;
-  document.getElementById('haurl').value=localStorage.getItem('aurora_ha_url')||'';
-  document.getElementById('hatok').value=localStorage.getItem('aurora_ha_tok')||'';
-  document.getElementById('panip').value=localStorage.getItem('aurora_pan_ip')||'';
+  let cfg={}; try{ cfg=await j('/api/config'); }catch(e){ cfg={}; }
+  document.getElementById('haurl').value=cfg.ha_url||'';
+  document.getElementById('panip').value=cfg.panel_ip||'';
+  document.getElementById('hatok').placeholder=cfg.has_token?'•••• saved (blank = keep)':'Long-lived token';
   renderPalette(); renderAll();
   document.getElementById('connect').onclick=connect; document.getElementById('saveBtn').onclick=save;
   document.getElementById('flashBtn').onclick=flash; document.getElementById('tplBtn').onclick=openTemplates;
+  document.getElementById('lockBtn').onclick=logout; document.getElementById('acctBtn').onclick=accountModal;
   document.getElementById('grid').addEventListener('click',(e)=>{ if(e.target.classList.contains('gcell')&&!placing){ sel=null; renderInspector(); markSel(); }});
-  if(localStorage.getItem('aurora_ha_url')&&localStorage.getItem('aurora_ha_tok')) connect();
+  if(cfg.has_token||cfg.ha_url) connect();
 }
 boot();
 </script>
