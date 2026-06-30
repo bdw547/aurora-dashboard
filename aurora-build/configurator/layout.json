@@ -9,7 +9,7 @@
     {"id":"tv","icon":"remote-tv","label":"TV","page":"tv"}
   ],
   "pages": {
-    "home": {"title":"Home","type":"custom","header":true,"subpages":[
+    "home": {"title":"Home","type":"custom","header":{"on":true,"left":"greeting","right":["weather_current","lights_on","wifi","secured"]},"subpages":[
       [
         {"id":"c1","ck":"climate","entity":"climate.main_floor","name":"Main Floor","x":1,"y":1,"w":4,"h":4},
         {"id":"c2","ck":"light","entity":"light.living_room_main","name":"Main Lights","x":5,"y":1,"w":2,"h":2},
