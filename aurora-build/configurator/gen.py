@@ -35,12 +35,15 @@ NAV_X = 8
 NAV_GLYPH = {
     "home-variant": "\\U000F02DC", "home": "\\U000F02DC", "sofa": "\\U000F04B9",
     "lightbulb": "\\U000F0335", "thermostat": "\\U000F0393", "thermometer": "\\U000F050F",
-    "music": "\\U000F075A", "shield-home": "\\U000F068A", "wifi": "\\U000F092A",
-    "cog": "\\U000F0493", "remote-tv": "\\U000F0395", "speaker-multiple": "\\U000F04C3",
-    "spotify": "\\U000F0511", "blinds": "\\U000F00B1", "camera": "\\U000F0100",
-    "weather-partly-cloudy": "\\U000F0595",
+    "music": "\\U000F075A", "shield-home": "\\U000F068A", "wifi": "\\U000F0928",
+    "cog": "\\U000F0493", "remote-tv": "\\U000F0502", "speaker-multiple": "\\U000F075A",
+    "spotify": "\\U000F075A", "blinds": "\\U000F081A", "camera": "\\U000F0502",
+    "weather-partly-cloudy": "\\U000F0595", "playlist-music": "\\U000F075A",
+    "television": "\\U000F0502", "desk": "\\U000F1239", "bed": "\\U000F02E3",
+    "door": "\\U000F081A", "stairs": "\\U000F04CD", "tree": "\\U000F0531",
+    "garage": "\\U000F06D9", "silverware-fork-knife": "\\U000F0A70",
 }
-FALLBACK_GLYPH = "\\U000F02DC"
+FALLBACK_GLYPH = "\\U000F0493"
 
 
 def slug(s):
@@ -105,10 +108,31 @@ def card_obj(x, y, w, h, inner, on_click=None):
 
 
 # ---- per-card emitters: return (widgets[str], sensors[str], text_sensors[str]) ----
+# Card icons — all codepoints confirmed present in the baked f_icon font.
+CARD_ICON = {
+    "light": "\\U000F0335", "light_t": "\\U000F0336", "switch": "\\U000F06A5",
+    "outletgroup": "\\U000F06A5", "fan": "\\U000F0210", "cover": "\\U000F081A",
+    "climate": "\\U000F0393", "sensor": "\\U000F050F", "binary": "\\U000F050F",
+    "lock": "\\U000F033E", "camera": "\\U000F0502", "weather": "\\U000F0599",
+    "scene": "\\U000F04CE", "script": "\\U000F0425", "media": "\\U000F075A",
+    "spotify": "\\U000F075A", "sonos": "\\U000F075A", "speakers": "\\U000F075A",
+    "sonos_sources": "\\U000F075A", "group": "\\U000F1253", "lightgroup": "\\U000F1253",
+    "person": "\\U000F02DC", "tvremote": "\\U000F0502", "vacuum": "\\U000F050F",
+    "alarm": "\\U000F068A",
+}
+
+
+def ic(ck, x=14, y=14, color="0x2ED5B8"):
+    g = CARD_ICON.get(ck, "\\U000F0493")
+    return ("              - label: { text: \"%s\", x: %d, y: %d, text_font: f_icon, text_color: %s }\n"
+            % (g, x, y, color))
+
+
 def c_toggle(card, x, y, w, h, base):
     e = card.get("entity", "")
     sid = base + "_st"
-    inner = lbl(card.get("name", "Switch"), 14, 14, "f_title" if h >= 2 else "f_body")
+    inner = ic(card["ck"], color="0xF2B84B")
+    inner += lbl(card.get("name", "Switch"), 14, 48, "f_title" if h >= 2 else "f_body")
     inner += lbl("--", 14, -14, "f_small", "0x2ED5B8", wid=sid, align="bottom_left")
     on = ha("homeassistant.toggle", e) if e else None
     ts = []
@@ -123,7 +147,8 @@ def c_toggle(card, x, y, w, h, base):
 def c_light(card, x, y, w, h, base):
     e = card.get("entity", "")
     sld, pct = base + "_sld", base + "_pct"
-    inner = lbl(card.get("name", "Light"), 14, 12, "f_title")
+    inner = ic(card["ck"], color="0xF2B84B")
+    inner += lbl(card.get("name", "Light"), 50, 16, "f_title")
     if e:
         inner += (
             "              - slider:\n                  id: %s\n                  x: 14\n                  y: 56\n                  width: %d\n"
@@ -145,8 +170,9 @@ def c_light(card, x, y, w, h, base):
 def c_sensor(card, x, y, w, h, base):
     e = card.get("entity", "")
     vid = base + "_v"
-    inner = lbl(card.get("name", "Sensor"), 14, -12, "f_small", "0x868CA0", align="bottom_left")
-    inner += lbl("--", 14, 12, "f_head", "0xF3F5F8", wid=vid)
+    inner = ic(card["ck"], color="0xF2685A")
+    inner += lbl("--", 14, 48, "f_head", "0xF3F5F8", wid=vid)
+    inner += lbl(card.get("name", "Sensor"), 14, -12, "f_small", "0x868CA0", align="bottom_left")
     ts = []
     if e:
         ts.append(
@@ -158,8 +184,9 @@ def c_sensor(card, x, y, w, h, base):
 def c_climate(card, x, y, w, h, base):
     e = card.get("entity", "")
     tid = base + "_t"
-    inner = lbl(card.get("name", "Climate"), 14, 12, "f_small", "0x868CA0")
-    inner += lbl("72\\u00B0", 0, 0, "f_display", "0xF3F5F8", wid=tid, align="center")
+    inner = ic(card["ck"], color="0xF2B84B")
+    inner += lbl(card.get("name", "Climate"), 50, 16, "f_small", "0x868CA0")
+    inner += lbl("72\\u00B0", 0, -10, "f_display", "0xF3F5F8", wid=tid, align="center")
     if e:
         inner += btn(14, h - 60, 56, 46, "\\U000F0374", ha("climate.set_temperature", e,
                      "temperature: !lambda 'return id(%s_cur)-1;'" % base) if False else
@@ -190,8 +217,9 @@ def c_action(card, x, y, w, h, base):
 def c_media(card, x, y, w, h, base):
     e = card.get("entity", "")
     tid = base + "_t"
-    inner = lbl("NOW PLAYING", 14, 12, "f_small", "0x2ED5B8")
-    inner += lbl("--", 14, 40, "f_title", "0xF3F5F8", wid=tid, width=w - 28)
+    inner = ic(card["ck"], color="0xB06CFF")
+    inner += lbl("NOW PLAYING", 50, 16, "f_small", "0x2ED5B8")
+    inner += lbl("--", 14, 52, "f_title", "0xF3F5F8", wid=tid, width=w - 28)
     if e and h >= 2:
         bw, by = 52, h - 64
         inner += btn(w // 2 - 90, by, bw, bw, "\\U000F04AE", ha("media_player.media_previous_track", e), radius=26, font="f_icon")
@@ -204,6 +232,103 @@ def c_media(card, x, y, w, h, base):
             "      - lvgl.label.update: { id: %s, text: !lambda 'return x.empty() ? std::string(\"Nothing playing\") : x;' }\n"
             % (tid, e, tid))
     return [card_obj(x, y, w, h, inner)], [], ts
+
+
+def c_fan(card, x, y, w, h, base):
+    e = card.get("entity", ""); sid = base + "_st"
+    inner = ic(card["ck"])
+    inner += lbl(card.get("name", "Fan"), 14, 48, "f_title" if h >= 2 else "f_body")
+    inner += lbl("--", 14, -12, "f_small", "0x2ED5B8", wid=sid, align="bottom_left")
+    on = ha("fan.toggle", e) if e else None
+    ts = []
+    if e:
+        ts.append("  - platform: homeassistant\n    id: ha_%s\n    entity_id: %s\n    on_value:\n"
+                  "      - lvgl.label.update: { id: %s, text: !lambda 'return x == \"on\" ? std::string(\"On\") : std::string(\"Off\");' }\n" % (sid, e, sid))
+    return [card_obj(x, y, w, h, inner, on)], [], ts
+
+
+def c_cover(card, x, y, w, h, base):
+    e = card.get("entity", "")
+    inner = ic(card["ck"], color="0x4FA8F5")
+    inner += lbl(card.get("name", "Cover"), 50, 16, "f_title")
+    if e and (w >= 2 or h >= 2):
+        half = (w - 36) // 2
+        inner += btn(14, h - 60, half, 46, "\\U000F0143", ha("cover.open_cover", e), font="f_icon")
+        inner += btn(22 + half, h - 60, half, 46, "\\U000F0140", ha("cover.close_cover", e), font="f_icon")
+    return [card_obj(x, y, w, h, inner)], [], []
+
+
+def c_lock(card, x, y, w, h, base):
+    e = card.get("entity", ""); sid = base + "_st"
+    inner = ic(card["ck"])
+    inner += lbl(card.get("name", "Lock"), 14, 48, "f_title" if h >= 2 else "f_body")
+    inner += lbl("--", 14, -12, "f_small", "0x2ED5B8", wid=sid, align="bottom_left")
+    on = ha("lock.unlock", e) if e else None
+    ts = []
+    if e:
+        ts.append("  - platform: homeassistant\n    id: ha_%s\n    entity_id: %s\n    on_value:\n"
+                  "      - lvgl.label.update: { id: %s, text: !lambda 'return x == \"locked\" ? std::string(\"Locked\") : std::string(\"Unlocked\");' }\n" % (sid, e, sid))
+    return [card_obj(x, y, w, h, inner, on)], [], ts
+
+
+def c_weather(card, x, y, w, h, base):
+    inner = "              - label: { text: \"\\U000F0599\", x: 14, y: 14, text_font: f_wxicon, text_color: 0xF2B84B }\n"
+    inner += lbl("72\\u00B0", -16, 20, "f_display", "0xF3F5F8", align="top_right")
+    inner += lbl("Sunny", 14, -12, "f_body", "0x2ED5B8", align="bottom_left")
+    return [card_obj(x, y, w, h, inner)], [], []
+
+
+def c_camera(card, x, y, w, h, base):
+    inner = ("              - obj: { x: 8, y: 8, width: %d, height: %d, bg_color: 0x10141C, "
+             "border_width: 0, radius: 12, scrollable: false }\n" % (w - 16, h - 16))
+    inner += ic(card["ck"], x=20, y=20, color="0x2A3346")
+    inner += lbl("LIVE", 20, -18, "f_small", "0xF2685A", align="bottom_left")
+    inner += lbl(card.get("name", "Camera"), 72, -18, "f_small", "0x868CA0", align="bottom_left")
+    return [card_obj(x, y, w, h, inner)], [], []
+
+
+def c_group(card, x, y, w, h, base):
+    ents = card.get("entities", [])
+    inner = ic(card["ck"])
+    inner += lbl(card.get("name", "Group"), 50, 16, "f_title")
+    yy = 56
+    for e in ents[: max(1, h * 2)]:
+        nm = (e.split(".")[-1] if "." in e else e).replace("_", " ")
+        inner += lbl(nm, 16, yy, "f_body", "0xC2C7D2", width=w - 32)
+        yy += 28
+    return [card_obj(x, y, w, h, inner)], [], []
+
+
+def c_outlet(card, x, y, w, h, base):
+    ents = card.get("entities", [])
+    inner = ic(card["ck"])
+    inner += lbl(card.get("name", "Outlets"), 50, 16, "f_title")
+    yy = 56
+    for e in (ents or [""])[: max(1, h)]:
+        nm = (e.split(".")[-1] if "." in e else e).replace("_", " ") or "Outlet"
+        on = ha("homeassistant.toggle", e) if e else "lvgl.page.show: page_home"
+        inner += btn(14, yy, w - 28, 44, nm, on, bg="0x13201d")
+        yy += 52
+    return [card_obj(x, y, w, h, inner)], [], []
+
+
+def c_btngrid(card, x, y, w, h, base):
+    ents = card.get("entities", [])
+    inner = ic(card["ck"])
+    inner += lbl(card.get("name", "Select"), 50, 16, "f_small", "0x868CA0")
+    n = max(1, len(ents))
+    cols = 2 if w >= 2 else 1
+    rows = max(1, (n + cols - 1) // cols)
+    pad = 12
+    bw = (w - pad * 2 - (cols - 1) * 8) // cols
+    bh = max(34, min(44, (h - 56 - pad - (rows - 1) * 8) // rows))
+    for i, e in enumerate(ents[:n]):
+        nm = (e.split(".")[-1] if "." in e else e).replace("_", " ")
+        cx = pad + (i % cols) * (bw + 8)
+        cy = 52 + (i // cols) * (bh + 8)
+        on = ha("media_player.media_play_pause", e) if e else "lvgl.page.show: page_home"
+        inner += btn(cx, cy, bw, bh, nm, on, bg="0x13201d")
+    return [card_obj(x, y, w, h, inner)], [], []
 
 
 def c_shortcuts(card, x, y, w, h, pagemap, base):
@@ -231,7 +356,8 @@ def c_shortcuts(card, x, y, w, h, pagemap, base):
 
 
 def c_generic(card, x, y, w, h, base):
-    inner = lbl(card.get("name", card.get("ck", "Card")), 0, 0, "f_body", "0x868CA0", align="center")
+    inner = ic(card.get("ck", ""), color="0x868CA0")
+    inner += lbl(card.get("name", card.get("ck", "Card")), 0, 8, "f_body", "0x868CA0", align="center")
     return [card_obj(x, y, w, h, inner)], [], []
 
 
@@ -239,7 +365,10 @@ CTRL = {
     "switch": c_toggle, "light_t": c_toggle, "light": c_light, "sensor": c_sensor,
     "binary": c_sensor, "person": c_sensor, "vacuum": c_sensor, "alarm": c_sensor,
     "climate": c_climate, "scene": c_action, "script": c_action, "media": c_media,
-    "spotify": c_media, "sonos": c_media,
+    "spotify": c_media, "sonos": c_media, "fan": c_fan, "cover": c_cover,
+    "lock": c_lock, "weather": c_weather, "camera": c_camera, "group": c_group,
+    "lightgroup": c_group, "outletgroup": c_outlet, "speakers": c_btngrid,
+    "sonos_sources": c_btngrid, "tv_sources": c_btngrid,
 }
 
 
@@ -273,6 +402,50 @@ def gen_nav(layout, pagemap):
     return out
 
 
+# top-bar status chips (glyph present in f_icon, demo value, color)
+HCHIP = {
+    "user": ("\\U000F02DC", "Ben", "0x868CA0"),
+    "time": ("", "10:42 PM", "0x868CA0"), "date": ("", "Sun Jun 29", "0x868CA0"),
+    "weather_current": ("\\U000F0599", "72\\u00B0", "0xF2B84B"),
+    "weather_today": ("\\U000F0599", "H78 L61", "0xF2B84B"),
+    "weather_tomorrow": ("\\U000F0595", "Tmrw 74\\u00B0", "0xF2B84B"),
+    "secured": ("\\U000F068A", "Secured", "0x2ED5B8"),
+    "networking": ("\\U000F0928", "Online", "0x2ED5B8"),
+    "wifi": ("\\U000F0928", "Strong", "0x2ED5B8"),
+    "ethernet": ("\\U000F0928", "Wired", "0x2ED5B8"),
+    "sensor": ("\\U000F050F", "72\\u00B0", "0xF2685A"),
+    "lights_on": ("\\U000F0335", "3 on", "0xF2B84B"),
+    "fans_on": ("\\U000F0210", "2 on", "0x2ED5B8"),
+}
+
+
+def gen_header(key, page, layout):
+    hdr = page.get("header") or {}
+    left = hdr.get("left", "greeting")
+    first = layout.get("nav", [{}])[0].get("page")
+    greet = "Good evening, Ben" if key == first else page.get("title", "Aurora")
+    out = ""
+    if left == "time":
+        out += "        - label: { text: \"10:42 PM\", x: 96, y: 12, text_font: f_display, text_color: 0xF3F5F8 }\n"
+    elif left == "date":
+        out += "        - label: { text: \"Sunday\", x: 96, y: 10, text_font: f_head, text_color: 0xF3F5F8 }\n"
+        out += "        - label: { text: \"June 29\", x: 96, y: 50, text_font: f_body, text_color: 0x868CA0 }\n"
+    elif left == "time_date":
+        out += "        - label: { text: \"10:42 PM\", x: 96, y: 10, text_font: f_head, text_color: 0xF3F5F8 }\n"
+        out += "        - label: { text: \"Sunday, June 29\", x: 96, y: 50, text_font: f_body, text_color: 0x868CA0 }\n"
+    else:
+        sub = "Living Room \\u00B7 10:42 PM" + (" \\u00B7 Sun Jun 29" if left == "greeting" else "")
+        out += "        - label: { text: %s, x: 96, y: 12, text_font: f_head, text_color: 0xF3F5F8 }\n" % esc(greet)
+        out += "        - label: { text: \"%s\", x: 96, y: 52, text_font: f_body, text_color: 0x868CA0 }\n" % sub
+    for i, item in enumerate((hdr.get("right") or [])[:4]):
+        g, t, col = HCHIP.get(item, ("", item, "0x868CA0"))
+        base_x = -(24 + i * 122)
+        if g:
+            out += "        - label: { text: \"%s\", align: top_right, x: %d, y: 22, text_font: f_icon, text_color: %s }\n" % (g, base_x - 64, col)
+        out += "        - label: { text: %s, align: top_right, x: %d, y: 26, text_font: f_body, text_color: %s }\n" % (esc(t), base_x, col)
+    return out
+
+
 def gen_pages(layout, pagemap):
     pages_yaml, sens, txt = "", [], []
     for key, page in layout.get("pages", {}).items():
@@ -283,11 +456,7 @@ def gen_pages(layout, pagemap):
             pid = pagemap[key] if si == 0 else "%s_%d" % (pagemap[key], si)
             widgets = "        - image: { src: img_aurora_bg, x: 0, y: 0 }\n"
             if header_on:
-                first = layout.get("nav", [{}])[0].get("page")
-                htext = "Good evening, Ben" if key == first else page.get("title", "Aurora")
-                widgets += ("        - label: { text: %s, x: 96, y: 16, text_font: f_head, text_color: 0xF3F5F8 }\n"
-                            "        - label: { text: \"72\\u00B0\", align: top_right, x: -16, y: 22, text_font: f_title, text_color: 0xF2B84B }\n"
-                            % esc(htext))
+                widgets += gen_header(key, page, layout)
             for card in cards:
                 ws, ss, ts = emit_card(card, header_on, pagemap)
                 widgets += "".join(ws)
@@ -297,8 +466,13 @@ def gen_pages(layout, pagemap):
             if si < len(subs) - 1:
                 nxt = "%s_%d" % (pagemap[key], si + 1)
                 widgets += btn(884, 540, 110, 44, "Next \\U000F0142", "lvgl.page.show: %s" % nxt, font="f_body")
+            navids = [slug(n.get("id", "")) for n in layout.get("nav", [])]
+            active = next((slug(n.get("id", "")) for n in layout.get("nav", []) if n.get("page") == key), None)
+            onload = "      on_load:\n" + "".join(
+                "        - lvgl.widget.update: { id: nav_%s, bg_color: %s }\n"
+                % (nid, "0x2ED5B8" if nid == active else "0x10121A") for nid in navids)
             pages_yaml += (
-                "    - id: %s\n      bg_color: 0x0A0B0F\n      widgets:\n%s" % (pid, widgets))
+                "    - id: %s\n      bg_color: 0x0A0B0F\n%s      widgets:\n%s" % (pid, onload, widgets))
     return pages_yaml, sens, txt
 
 
