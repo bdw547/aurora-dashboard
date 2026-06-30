@@ -51,25 +51,21 @@ h3.sec{font-size:11px;letter-spacing:1.4px;text-transform:uppercase;color:var(--
 #rail{position:absolute;left:0;top:0;width:74px;height:600px;background:var(--nav);border-right:1px solid #15171e;display:flex;flex-direction:column;align-items:center;padding-top:14px;gap:12px}
 #rail .ni{width:46px;height:46px;border-radius:13px;display:flex;align-items:center;justify-content:center;font-size:22px;color:var(--t3)}
 #rail .ni.on{background:var(--teal);color:var(--ink)}
-/* page header band */
 #phead{position:absolute;left:94px;top:16px;width:910px;height:66px;display:none;align-items:center;justify-content:space-between}
 #phead.on{display:flex}
 #phead .greet{font-size:27px;font-weight:700;letter-spacing:-.4px}
 #phead .subln{font-size:13px;color:var(--t2);margin-top:3px;display:flex;align-items:center;gap:6px}
 #phead .subln .teal{color:var(--teal);font-weight:600}
 .chip{display:flex;align-items:center;gap:7px;background:#101218;border:1px solid var(--bd);border-radius:12px;padding:8px 13px;font-size:14px;font-weight:600}
-/* grid */
 #grid{position:absolute;left:94px;top:22px;width:910px;height:556px;display:grid;
   grid-template-columns:repeat(6,140px);grid-template-rows:repeat(5,100px);gap:14px}
 .gcell{border:1px dashed #1b1e27;border-radius:12px}
 .gcell.hot{border-color:var(--teal);background:rgba(46,213,184,.08)}
 .gcell.bad{border-color:var(--red);background:rgba(242,104,90,.08)}
-/* placed card */
 .pc{position:relative;border-radius:18px;background:var(--card);border:1px solid var(--bd);overflow:hidden;cursor:grab;display:flex;flex-direction:column;padding:14px;min-width:0}
 .pc.on{background:linear-gradient(180deg,#14161C,#13201d);border-color:var(--onbd)}
-.pc.rgb{background:linear-gradient(180deg,#14161C,#1a1320);border-color:#4a2a5a}
 .pc.sel{outline:2px solid var(--teal);outline-offset:-1px}
-.pc .toprow{display:flex;align-items:center;justify-content:space-between}
+.pc .toprow{display:flex;align-items:center;justify-content:space-between;gap:8px}
 .pc .ci{font-size:24px;flex:0 0 auto}
 .pc .tg{width:50px;height:28px;border-radius:14px;background:var(--teal);position:relative;flex:0 0 auto}
 .pc .tg i{position:absolute;top:3px;right:3px;width:22px;height:22px;border-radius:50%;background:var(--ink)}
@@ -91,10 +87,24 @@ h3.sec{font-size:11px;letter-spacing:1.4px;text-transform:uppercase;color:var(--
 .pc .art{border-radius:10px;background:linear-gradient(135deg,#5468FF,#2ED5B8);flex:0 0 auto}
 .pc .tbtn{width:38px;height:38px;border-radius:50%;background:#0f1117;display:flex;align-items:center;justify-content:center;color:var(--tx);font-size:18px}
 .pc .tbtn.main{background:var(--teal);color:var(--ink)}
-.pc .swatch{width:26px;height:26px;border-radius:7px}
 .pc .cambg{position:absolute;inset:0;background:linear-gradient(160deg,#1a2030,#0e1118);display:flex;align-items:center;justify-content:center;color:#2a3346;font-size:30px}
+/* group / multi */
+.pc .ggrid{flex:1;display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:10px}
+.pc .gslot{background:#0f1117;border:1px solid var(--bd);border-radius:10px;padding:7px 9px;display:flex;align-items:center;gap:8px;min-width:0}
+.pc .gslot.empty{border-style:dashed;color:var(--t3);align-items:center;justify-content:center;font-size:18px}
+.pc .gslot .mdi{font-size:18px;flex:0 0 auto}
+.pc .gv{font-size:14px;font-weight:700;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.pc .gl{font-size:10px;color:var(--t2);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.pc .ddrop{margin-top:auto;background:#0f1117;border:1px solid var(--bd);border-radius:10px;padding:10px 12px;display:flex;align-items:center;justify-content:space-between;font-size:13px}
+.pc .spkgrid{flex:1;display:grid;gap:7px;margin-top:10px}
+.pc .spk{background:#0f1117;border:1px solid var(--bd);border-radius:10px;display:flex;align-items:center;gap:6px;padding:0 10px;font-size:12px;color:var(--t2);white-space:nowrap;overflow:hidden}
+.pc .spk.on{background:var(--teal);color:var(--ink);font-weight:700;border-color:var(--teal)}
+.pc .spk .mdi{font-size:15px}
+.pc .orow{display:flex;align-items:center;gap:8px;background:#0f1117;border:1px solid var(--bd);border-radius:10px;padding:7px 10px;margin-top:8px}
+.pc .orow .mdi{font-size:18px}
+.pc .trklist{flex:1;display:flex;flex-direction:column;gap:5px;margin-top:8px;overflow:hidden}
+.pc .trk{background:#0f1117;border-radius:8px;padding:6px 10px;display:flex;justify-content:space-between;gap:8px;font-size:12px}
 #nextaff{position:absolute;right:30px;bottom:22px;background:#12141b;border:1px solid var(--bd);border-radius:11px;padding:8px 14px;font-size:13px;color:var(--tx);display:none;align-items:center;gap:6px;z-index:5}
-/* inspector */
 .field{margin-bottom:14px}.field label{display:block;font-size:11px;color:var(--t2);margin-bottom:5px}
 .field input,.field select{width:100%;background:#0F1117;border:1px solid var(--bd);border-radius:9px;color:var(--tx);padding:9px 10px;font:inherit;font-size:13px}
 .szrow{display:flex;flex-wrap:wrap;gap:6px}
@@ -105,8 +115,10 @@ h3.sec{font-size:11px;letter-spacing:1.4px;text-transform:uppercase;color:var(--
 .tgl .sw{width:46px;height:26px;border-radius:13px;background:#2a2e38;position:relative}
 .tgl .sw i{position:absolute;top:3px;left:3px;width:20px;height:20px;border-radius:50%;background:var(--t3)}
 .tgl.on .sw{background:var(--teal)}.tgl.on .sw i{left:auto;right:3px;background:var(--ink)}
+.elrow{display:flex;align-items:center;justify-content:space-between;gap:8px;background:#0E0F14;border:1px solid var(--bd);border-radius:9px;padding:7px 10px;margin-bottom:6px;font-size:12px}
+.elrow .x{color:var(--red);cursor:pointer;font-size:15px}
 #modal{position:fixed;inset:0;background:rgba(0,0,0,.6);display:none;align-items:center;justify-content:center;z-index:50}
-.mbox{width:520px;max-height:80vh;background:#101116;border:1px solid var(--bd);border-radius:16px;padding:20px;overflow:auto}
+.mbox{width:520px;max-height:82vh;background:#101116;border:1px solid var(--bd);border-radius:16px;padding:20px;overflow:auto}
 .mbox h2{font-size:18px;margin-bottom:4px}.mbox p{color:var(--t2);font-size:12px;margin-bottom:14px}
 .elist{max-height:300px;overflow:auto;border:1px solid var(--bd);border-radius:10px}
 .erow{padding:9px 12px;border-bottom:1px solid #15171e;cursor:pointer;font-size:13px;display:flex;justify-content:space-between;gap:10px}
@@ -156,66 +168,84 @@ h3.sec{font-size:11px;letter-spacing:1.4px;text-transform:uppercase;color:var(--
 <div class="toast" id="toast"></div>
 
 <script>
-// ============ catalog (spans match the Direction-A Card Library) ============
+// V = vertical strips added to every 1×1-capable type
+const V=[[1,3],[1,4],[1,5]];
 const C = {
   light:    {label:'Light (dimmable / RGB)', domain:'light', icon:'lightbulb', color:'var(--amber)', spans:[[2,1],[1,3],[1,5],[2,2],[3,2],[4,4]], def:[2,2], ctrl:'light'},
-  light_t:  {label:'Light toggle', domain:'light', icon:'lightbulb-outline', color:'var(--amber)', spans:[[1,1],[2,1]], def:[2,1], ctrl:'toggle'},
-  switch:   {label:'Switch / outlet', domain:'switch', icon:'toggle-switch', color:'var(--teal)', spans:[[1,1],[2,1],[2,2]], def:[2,1], ctrl:'toggle'},
+  light_t:  {label:'Light toggle', domain:'light', icon:'lightbulb-outline', color:'var(--amber)', spans:[[1,1],[2,1],...V], def:[2,1], ctrl:'toggle'},
+  switch:   {label:'Switch / outlet', domain:'switch', icon:'toggle-switch', color:'var(--teal)', spans:[[1,1],[2,1],[2,2],...V], def:[2,1], ctrl:'toggle'},
+  outletgroup:{label:'Outlet pair', domain:'switch', icon:'power-socket-us', color:'var(--teal)', spans:[[1,2],[2,2]], def:[1,2], ctrl:'outletgroup', multi:true},
   fan:      {label:'Fan', domain:'fan', icon:'fan', color:'var(--teal)', spans:[[2,1],[2,2]], def:[2,2], ctrl:'seg'},
   cover:    {label:'Cover / blinds', domain:'cover', icon:'blinds-horizontal', color:'var(--blue)', spans:[[2,1],[2,2],[2,3]], def:[2,2], ctrl:'pos'},
-  lock:     {label:'Lock', domain:'lock', icon:'lock', color:'var(--teal)', spans:[[1,1],[2,1],[2,2]], def:[2,1], ctrl:'lock'},
-  climate:  {label:'Climate / thermostat', domain:'climate', icon:'thermostat', color:'var(--amber)', spans:[[1,1],[2,2],[3,2],[3,3],[4,4],[6,5]], def:[4,4], ctrl:'dial'},
-  sensor:   {label:'Sensor', domain:'sensor', icon:'thermometer', color:'var(--red)', spans:[[1,1],[2,1]], def:[1,1], ctrl:'val'},
-  binary:   {label:'Binary sensor', domain:'binary_sensor', icon:'motion-sensor', color:'var(--blue)', spans:[[1,1],[2,1]], def:[1,1], ctrl:'val'},
-  spotify:  {label:'Spotify', domain:'media_player', icon:'spotify', color:'#1DB954', spans:[[1,1],[2,2],[3,2],[4,3],[6,5]], def:[3,2], ctrl:'media'},
+  climate:  {label:'Climate / thermostat', domain:'climate', icon:'thermostat', color:'var(--amber)', spans:[[1,1],[2,2],[3,2],[3,3],[4,4],[6,5],...V], def:[4,4], ctrl:'dial'},
+  group:    {label:'Status group', domain:'mixed', icon:'view-grid-outline', color:'var(--teal)', spans:[[2,2],[2,3],[2,4],[2,5]], def:[2,3], ctrl:'group', multi:true},
+  speakers: {label:'Speaker select', domain:'media_player', icon:'speaker-multiple', color:'var(--teal)', spans:[[1,2],[1,3],[3,2],[2,3],[3,3],[5,4]], def:[2,3], ctrl:'speakers', multi:true},
+  spotify:  {label:'Spotify now-playing', domain:'media_player', icon:'spotify', color:'#1DB954', spans:[[1,1],[2,2],[3,2],[4,3],[6,5]], def:[3,2], ctrl:'media'},
+  playlist: {label:'Spotify playlist', domain:'media_player', icon:'playlist-play', color:'#1DB954', spans:[[1,1],[2,1],[3,1]], def:[2,1], ctrl:'playlist'},
+  songlist: {label:'Spotify song list', domain:'media_player', icon:'playlist-music', color:'#1DB954', spans:[[4,3],[3,4],[4,4],[3,5],[4,5],[5,5]], def:[4,4], ctrl:'songlist'},
   sonos:    {label:'Sonos (multi-room)', domain:'media_player', icon:'speaker-multiple', color:'var(--teal)', spans:[[3,2],[3,3],[4,4],[6,5]], def:[4,4], ctrl:'media'},
   media:    {label:'Media player', domain:'media_player', icon:'play-circle', color:'var(--violet)', spans:[[2,2],[3,2],[6,5]], def:[3,2], ctrl:'media'},
   tvremote: {label:'TV controls (LG / webOS)', domain:'media_player', icon:'remote-tv', color:'var(--violet)', spans:[[4,4],[4,5],[6,5]], def:[6,5], ctrl:'remote'},
+  lock:     {label:'Lock', domain:'lock', icon:'lock', color:'var(--teal)', spans:[[1,1],[2,1],[2,2],...V], def:[2,1], ctrl:'lock'},
   camera:   {label:'Camera', domain:'camera', icon:'cctv', color:'var(--red)', spans:[[2,2],[3,3],[4,3],[6,5]], def:[3,3], ctrl:'cam'},
-  weather:  {label:'Weather', domain:'weather', icon:'weather-partly-cloudy', color:'var(--amber)', spans:[[2,2],[3,3],[6,2],[6,5]], def:[3,3], ctrl:'wx'},
-  scene:    {label:'Scene', domain:'scene', icon:'palette', color:'var(--violet)', spans:[[1,1],[2,1]], def:[1,1], ctrl:'tile'},
-  script:   {label:'Script / button', domain:'script', icon:'gesture-tap-button', color:'var(--teal)', spans:[[1,1],[2,1]], def:[1,1], ctrl:'tile'},
-  vacuum:   {label:'Vacuum', domain:'vacuum', icon:'robot-vacuum', color:'var(--blue)', spans:[[2,2]], def:[2,2], ctrl:'val'},
   alarm:    {label:'Alarm panel', domain:'alarm_control_panel', icon:'shield-home', color:'var(--red)', spans:[[2,2],[3,2]], def:[3,2], ctrl:'val'},
-  person:   {label:'Presence', domain:'person', icon:'account', color:'var(--blue)', spans:[[1,1],[2,1]], def:[1,1], ctrl:'val'},
+  binary:   {label:'Binary sensor', domain:'binary_sensor', icon:'motion-sensor', color:'var(--blue)', spans:[[1,1],[2,1],...V], def:[1,1], ctrl:'val'},
+  sensor:   {label:'Sensor', domain:'sensor', icon:'thermometer', color:'var(--red)', spans:[[1,1],[2,1],...V], def:[1,1], ctrl:'val'},
+  weather:  {label:'Weather', domain:'weather', icon:'weather-partly-cloudy', color:'var(--amber)', spans:[[2,2],[3,3],[6,2],[6,5]], def:[3,3], ctrl:'wx'},
+  person:   {label:'Presence', domain:'person', icon:'account', color:'var(--blue)', spans:[[1,1],[2,1],...V], def:[1,1], ctrl:'val'},
+  vacuum:   {label:'Vacuum', domain:'vacuum', icon:'robot-vacuum', color:'var(--blue)', spans:[[2,2]], def:[2,2], ctrl:'val'},
+  scene:    {label:'Scene', domain:'scene', icon:'palette', color:'var(--violet)', spans:[[1,1],[2,1],...V], def:[1,1], ctrl:'tile'},
+  script:   {label:'Script / button', domain:'script', icon:'gesture-tap-button', color:'var(--teal)', spans:[[1,1],[2,1],...V], def:[1,1], ctrl:'tile'},
 };
 const CATS = [
-  ['Lighting', ['light','light_t','switch']],
+  ['Lighting', ['light','light_t','switch','outletgroup']],
   ['Comfort', ['climate','fan','cover']],
-  ['Media', ['spotify','sonos','media','tvremote']],
+  ['Groups', ['group','speakers']],
+  ['Spotify', ['spotify','playlist','songlist']],
+  ['Media', ['sonos','media','tvremote']],
   ['Safety', ['lock','camera','alarm','binary']],
   ['Info', ['sensor','weather','person','vacuum']],
   ['Actions', ['scene','script']],
 ];
-const NAV_ICONS = ['home-variant','sofa','lightbulb','thermostat','music','shield-home','wifi','cog','blinds','camera','weather-partly-cloudy','speaker','bed','silverware-fork-knife','desk','tree','door','stairs','garage','television','remote-tv'];
+const GICON={light:['lightbulb','var(--amber)'],switch:['toggle-switch','var(--teal)'],lock:['lock','var(--teal)'],binary_sensor:['motion-sensor','var(--blue)'],sensor:['thermometer','var(--red)'],cover:['blinds-horizontal','var(--blue)'],fan:['fan','var(--teal)'],person:['account','var(--blue)'],climate:['thermostat','var(--amber)'],media_player:['speaker','var(--teal)']};
+const GVAL={light:'On',switch:'On',lock:'Locked',binary_sensor:'Clear',sensor:'72°',cover:'Open',fan:'Med',person:'Home',climate:'72°',media_player:'Idle'};
+const NAV_ICONS = ['home-variant','sofa','lightbulb','thermostat','music','shield-home','wifi','cog','blinds','camera','weather-partly-cloudy','speaker','bed','silverware-fork-knife','desk','tree','door','stairs','garage','television','remote-tv','playlist-music'];
 const COLS=6; let ROWS=5;
 
-let L=null, ENTS=[], AREAS={}, sel=null, placing=null, curPage=null, curSub=0;
+let L=null, ENTS=[], AREAS={}, sel=null, placing=null, curPage=null, curSub=0, curPageInit=null;
 function uid(){ return 'c'+Math.random().toString(36).slice(2,8); }
-function toast(m){ const t=document.getElementById('toast'); t.textContent=m; t.style.display='block'; setTimeout(()=>t.style.display='none',2400); }
+function toast(m){ const t=document.getElementById('toast'); t.textContent=m; t.style.display='block'; setTimeout(()=>t.style.display='none',2600); }
 async function j(u,o){ const r=await fetch(u,o); if(!r.ok) throw new Error((await r.json().catch(()=>({}))).error||r.statusText); return r.json(); }
 function rowsFor(p){ return (L.pages[p||curPage].header)?4:5; }
+function nm2(eid){ return (eid&&eid.includes('.'))?eid.split('.')[1].replace(/_/g,' '):(eid||''); }
+
+// capacity of a multi-entity card at its current span
+function cap(c){ const k=c.ck;
+  if(k==='group') return c.h*2;                       // 2 per grid-row
+  if(k==='outletgroup') return 2;
+  if(k==='speakers'){ if(c.w===1) return 99;          // dropdown
+    if((c.w===2&&c.h===3)||(c.w===3&&c.h===2)) return 4;
+    if(c.w===3&&c.h===3) return 6; if(c.w===5&&c.h===4) return 10;
+    return Math.max(4,Math.floor(c.w*c.h/2)); }
+  return 1; }
 
 function blankPage(title){ return {title:title||'Page', type:'custom', header:false, subpages:[[]]}; }
-function defaultLayout(){
-  const l={ install_room:'', nav:[
-      {id:'home',icon:'home-variant',label:'Home',page:'home'},
-      {id:'rooms',icon:'sofa',label:'Rooms',page:'rooms'},
-      {id:'lights',icon:'lightbulb',label:'Lights',page:'lights'},
-      {id:'climate',icon:'thermostat',label:'Climate',page:'climate'},
+function defaultLayout(){ const l={ install_room:'', nav:[
+      {id:'home',icon:'home-variant',label:'Home',page:'home'},{id:'rooms',icon:'sofa',label:'Rooms',page:'rooms'},
+      {id:'lights',icon:'lightbulb',label:'Lights',page:'lights'},{id:'climate',icon:'thermostat',label:'Climate',page:'climate'},
       {id:'media',icon:'music',label:'Media',page:'media'}],
     pages:{home:blankPage('Home'),rooms:blankPage('Rooms'),lights:blankPage('Lights'),climate:blankPage('Climate'),media:blankPage('Media')} };
-  l.pages.home.header=true; return l;
-}
-function mk(ck,entity,name,x,y,w,h){ return {id:uid(),ck,entity:entity||'',name:name||C[ck].label,x,y,w,h}; }
+  l.pages.home.header=true; return l; }
+function mk(ck,entity,name,x,y,w,h){ const c={id:uid(),ck,entity:entity||'',name:name||C[ck].label,x,y,w,h}; if(C[ck].multi) c.entities=[]; return c; }
 const TEMPLATES = {
   'Living-room home':()=>{ const l=defaultLayout(); l.install_room='Living Room'; l.pages.home.header=true;
-    l.pages.home.subpages=[[ mk('climate',null,'Main Floor',1,1,4,4), mk('light',null,'Main Lights',5,1,2,2), mk('sonos',null,'Living Room',5,3,2,2) ]]; return l; },
+    l.pages.home.subpages=[[ mk('climate',null,'Main Floor',1,1,4,4), mk('light',null,'Main Lights',5,1,2,2), mk('group',null,'House status',5,3,2,2) ]]; return l; },
+  'Spotify page':()=>{ const l=defaultLayout(); l.nav.push({id:'spot',icon:'spotify',label:'Spotify',page:'spot'}); l.pages.spot=blankPage('Spotify');
+    l.pages.spot.subpages=[[ mk('playlist',null,'Playlists',1,1,3,1), mk('songlist',null,'Songs',1,2,3,4), mk('speakers',null,'Speakers',4,1,3,3), mk('spotify',null,'Now Playing',4,4,3,2) ]]; curPageInit='spot'; return l; },
   'TV room':()=>{ const l=defaultLayout(); l.nav.push({id:'tv',icon:'remote-tv',label:'TV',page:'tv'}); l.pages.tv=blankPage('TV');
     l.pages.tv.subpages=[[ mk('tvremote',null,'LG OLED',1,1,6,5) ]]; curPageInit='tv'; return l; },
   'Blank (Home + Settings)':()=>({install_room:'', nav:[{id:'home',icon:'home-variant',label:'Home',page:'home'}], pages:{home:blankPage('Home')}}),
 };
-let curPageInit=null;
 
 function curCards(){ return L.pages[curPage].subpages[curSub]; }
 function occupancy(except){ const g=Array.from({length:ROWS},()=>Array(COLS).fill(false));
@@ -228,7 +258,7 @@ function renderPalette(){ const el=document.getElementById('palContent'); el.inn
   for(const [cat,keys] of CATS){ const h=document.createElement('div'); h.className='pcat'; h.textContent=cat; el.appendChild(h);
     for(const k of keys){ const c=C[k]; const d=document.createElement('div'); d.className='pitem'; d.onclick=()=>openEntityPicker(k);
       d.innerHTML=`<div class="ic" style="background:#0f1117;color:${c.color}"><span class="mdi mdi-${c.icon}"></span></div>
-        <div><div class="nm">${c.label}</div><div class="sz">${c.spans.map(s=>s[0]+'×'+s[1]).join(' · ')}</div></div>`; el.appendChild(d); } } }
+        <div style="min-width:0"><div class="nm">${c.label}</div><div class="sz">${c.spans.map(s=>s[0]+'×'+s[1]).join(' · ')}</div></div>`; el.appendChild(d); } } }
 
 function renderNav(){ const el=document.getElementById('navbuild'); el.innerHTML='';
   L.nav.forEach((n,i)=>{ const d=document.createElement('div'); d.className='navitem';
@@ -249,29 +279,29 @@ function renderRail(){ const r=document.getElementById('rail'); r.innerHTML='';
     d.onclick=()=>{ if(L.pages[n.page]){curPage=n.page;curSub=0;sel=null;renderAll();} }; r.appendChild(d); });
   const sp=document.createElement('div'); sp.style.flex='1'; r.appendChild(sp);
   const s=document.createElement('div'); s.className='ni'; s.innerHTML='<span class="mdi mdi-cog"></span>'; s.style.marginBottom='14px'; r.appendChild(s); }
-function renderHeader(){ const h=document.getElementById('phead'); const on=L.pages[curPage].header;
-  h.className=on?'on':''; if(!on){h.innerHTML='';return;}
-  const big = curPage==='home' ? 'Good evening, Ben' : L.pages[curPage].title;
-  const room = L.install_room || 'Home';
+function renderHeader(){ const h=document.getElementById('phead'); const on=L.pages[curPage].header; h.className=on?'on':''; if(!on){h.innerHTML='';return;}
+  const big = curPage==='home' ? 'Good evening, Ben' : L.pages[curPage].title; const room = L.install_room || 'Home';
   h.innerHTML=`<div><div class="greet">${big}</div><div class="subln"><span class="mdi mdi-sofa" style="color:var(--teal);font-size:15px"></span><span class="teal">${room}</span> · 10:42 PM</div></div>
-    <div class="row" style="display:flex;gap:10px"><div class="chip"><span class="mdi mdi-weather-night" style="color:var(--amber)"></span>72°</div><div class="chip"><span class="mdi mdi-shield-check" style="color:var(--teal)"></span>Secured</div></div>`; }
+    <div style="display:flex;gap:10px"><div class="chip"><span class="mdi mdi-weather-night" style="color:var(--amber)"></span>72°</div><div class="chip"><span class="mdi mdi-shield-check" style="color:var(--teal)"></span>Secured</div></div>`; }
 
-// per-type card preview (approximates the Direction-A Card Library)
 function cardInner(c){ const def=C[c.ck], nm=c.name||def.label, big=c.w>=3, ctrl=def.ctrl;
   const head=`<span class="cbadge mono">${c.w}×${c.h}</span>`;
   const ico=`<span class="ci mdi mdi-${def.icon}" style="color:${def.color}"></span>`;
   const tog=(on)=>`<div class="tg${on?'':' off'}"><i></i></div>`;
   const nme=`<div class="ct">${nm}</div>`;
-  const sub=c.entity?`<div class="csub">${c.entity}</div>`:`<div class="csub" style="color:var(--red)">no entity</div>`;
-  if(ctrl==='toggle') return head+`<div class="toprow">${ico}${tog(true)}</div>${nme}<div class="csub" style="color:var(--teal)">On</div>`;
+  if(ctrl==='toggle'){ if(c.w===1) return head+`<div style="display:flex;flex-direction:column;align-items:center;gap:10px;height:100%">${ico}<div style="font-size:12px;font-weight:600;text-align:center">${nm}</div>${tog(true)}</div>`;
+    return head+`<div class="toprow">${ico}${tog(true)}</div>${nme}<div class="csub" style="color:var(--teal)">On</div>`; }
   if(ctrl==='light'){ if(c.w===1) return head+`<div style="display:flex;flex-direction:column;align-items:center;height:100%">${ico}<div class="vstrip"><i style="height:74%"></i></div><div style="font-size:18px;font-weight:700">74%</div></div>`;
     if(c.h===1) return head+`<div class="toprow">${ico}${tog(true)}</div>${nme}<div class="csub" style="color:var(--teal)">On · 74%</div>`;
     return head+`<div class="toprow">${ico}${tog(true)}</div>${nme}<div class="big">74%</div><div class="hbar" style="margin-top:auto"><i style="width:74%"></i></div>`; }
-  if(ctrl==='dial') return head+`<div class="toprow">${ico}<span class="csub">${nm}</span></div><div class="dial"><div class="ring" style="width:${Math.min(c.h*70,150)}px;height:${Math.min(c.h*70,150)}px"></div><div style="position:absolute;font-size:${big?34:22}px;font-weight:700">72°</div></div>${c.w>=3?'<div class="row" style="justify-content:space-between"><span class="csub" style="color:var(--amber)">HEAT 68°</span><span class="csub" style="color:var(--blue)">COOL 74°</span></div>':''}`;
+  if(ctrl==='dial'){ if(c.w===1) return head+`<div style="display:flex;flex-direction:column;align-items:center;justify-content:center;height:100%;gap:6px">${ico}<div style="font-size:24px;font-weight:700">72°</div><div class="csub">${nm}</div></div>`;
+    return head+`<div class="toprow">${ico}<span class="csub">${nm}</span></div><div class="dial"><div class="ring" style="width:${Math.min(c.h*70,150)}px;height:${Math.min(c.h*70,150)}px"></div><div style="position:absolute;font-size:${big?34:22}px;font-weight:700">72°</div></div>${c.w>=3?'<div class="row" style="justify-content:space-between"><span class="csub" style="color:var(--amber)">HEAT 68°</span><span class="csub" style="color:var(--blue)">COOL 74°</span></div>':''}`; }
   if(ctrl==='seg') return head+`<div class="toprow">${ico}${nme}</div><div class="seg"><div>Off</div><div class="on">Med</div><div>High</div></div>`;
   if(ctrl==='pos') return head+`<div class="toprow">${ico}${nme}</div><div class="big" style="font-size:24px;color:var(--blue)">Open 60%</div><div class="hbar"><i style="width:60%;background:var(--blue)"></i></div>`;
-  if(ctrl==='lock') return head+`<div class="toprow">${ico}<span class="csub" style="color:var(--teal)">Locked</span></div>${nme}`;
-  if(ctrl==='val') return head+ico+`<div style="margin-top:auto"><div style="font-size:24px;font-weight:700">68°</div><div class="csub">${nm}</div></div>`;
+  if(ctrl==='lock'){ if(c.w===1) return head+`<div style="display:flex;flex-direction:column;align-items:center;justify-content:center;height:100%;gap:8px">${ico}<div class="csub" style="color:var(--teal)">Locked</div></div>`;
+    return head+`<div class="toprow">${ico}<span class="csub" style="color:var(--teal)">Locked</span></div>${nme}`; }
+  if(ctrl==='val'){ if(c.h>=3) return head+`<div style="display:flex;flex-direction:column;align-items:center;justify-content:center;height:100%;gap:6px">${ico}<div style="font-size:26px;font-weight:700">68°</div><div class="csub" style="text-align:center">${nm}</div></div>`;
+    return head+ico+`<div style="margin-top:auto"><div style="font-size:24px;font-weight:700">68°</div><div class="csub">${nm}</div></div>`; }
   if(ctrl==='media'){ const art=`<div class="art" style="width:${big?54:40}px;height:${big?54:40}px"></div>`;
     return head+`<div class="row">${art}<div style="min-width:0"><div class="csub" style="color:var(--teal);font-size:10px">${c.ck==='sonos'?'SONOS':'NOW PLAYING'}</div><div class="ct" style="margin-top:2px">Midnight City</div><div class="csub">M83</div></div></div>
       ${c.h>=2?`<div class="row" style="gap:10px;margin-top:auto;justify-content:center"><span class="tbtn mdi mdi-skip-previous"></span><span class="tbtn main mdi mdi-play"></span><span class="tbtn mdi mdi-skip-next"></span>${c.ck==='sonos'?'<span class="tbtn mdi mdi-link-variant"></span>':''}</div>`:''}`; }
@@ -282,26 +312,43 @@ function cardInner(c){ const def=C[c.ck], nm=c.name||def.label, big=c.w>=3, ctrl
         <div class="tbtn mdi mdi-chevron-left"></div><div class="tbtn main">OK</div><div class="tbtn mdi mdi-chevron-right"></div>
         <div></div><div class="tbtn mdi mdi-chevron-down"></div><div></div></div>
       <div style="display:flex;flex-direction:column;gap:6px"><span class="tbtn mdi mdi-volume-plus"></span><span class="tbtn mdi mdi-volume-minus"></span><span class="tbtn mdi mdi-power" style="color:var(--red)"></span></div></div>
-    <div class="row" style="gap:6px;justify-content:center"><span class="csub">Apps</span><span class="csub">·</span><span class="csub">Trackpad</span></div>`;
+    <div class="row" style="gap:6px;justify-content:center"><span class="csub">Apps · Trackpad</span></div>`;
   if(ctrl==='cam') return head+`<div class="cambg"><span class="mdi mdi-cctv"></span></div><div style="position:absolute;left:12px;top:10px;font-size:9px;font-weight:700;color:#fff;background:var(--red);border-radius:5px;padding:2px 6px">LIVE</div><div class="csub" style="position:absolute;left:12px;bottom:10px">${nm}</div>`;
   if(ctrl==='wx') return head+`<div class="row"><span class="mdi mdi-weather-sunny" style="font-size:${big?40:28}px;color:var(--amber)"></span><div><div style="font-size:${big?30:22}px;font-weight:700">72°</div><div class="csub">Sunny</div></div></div>${big?'<div class="row" style="justify-content:space-between;margin-top:auto"><span class="csub">Mon</span><span class="csub">Tue</span><span class="csub">Wed</span><span class="csub">Thu</span></div>':''}`;
-  if(ctrl==='tile') return head+`<div style="display:flex;flex-direction:column;align-items:center;justify-content:center;height:100%;gap:6px">${ico}<div style="font-size:13px;font-weight:600">${nm}</div></div>`;
-  return head+ico+nme+sub;
+  if(ctrl==='tile') return head+`<div style="display:flex;flex-direction:column;align-items:center;justify-content:center;height:100%;gap:6px">${ico}<div style="font-size:13px;font-weight:600;text-align:center">${nm}</div></div>`;
+  if(ctrl==='group'){ const n=cap(c), ents=c.entities||[]; let cells='';
+    for(let i=0;i<n;i++){ const e=ents[i]; if(e){ const dm=e.split('.')[0], gi=GICON[dm]||['help-circle','var(--t2)'];
+        cells+=`<div class="gslot"><span class="mdi mdi-${gi[0]}" style="color:${gi[1]}"></span><div style="min-width:0"><div class="gv">${GVAL[dm]||'On'}</div><div class="gl">${nm2(e)}</div></div></div>`; }
+      else cells+=`<div class="gslot empty">+</div>`; }
+    return head+`<div class="toprow">${ico}<span class="csub">${nm} · ${ents.length}/${n}</span></div><div class="ggrid" style="grid-template-rows:repeat(${c.h},1fr)">${cells}</div>`; }
+  if(ctrl==='speakers'){ const ents=c.entities||[];
+    if(c.w===1) return head+`<div class="toprow">${ico}<span class="csub">${nm}</span></div><div class="ddrop"><span>${ents[0]?nm2(ents[0]):'Choose speaker'}</span><span class="mdi mdi-chevron-down"></span></div>`;
+    const n=cap(c), cols=n===10?5:(n===6?3:2); let btns='';
+    for(let i=0;i<n;i++){ const e=ents[i]; btns+=`<div class="spk${i===0&&e?' on':''}"><span class="mdi mdi-speaker"></span>${e?nm2(e):'Speaker'}</div>`; }
+    return head+`<div class="toprow">${ico}<span class="csub">${nm}</span></div><div class="spkgrid" style="grid-template-columns:repeat(${cols},1fr)">${btns}</div>`; }
+  if(ctrl==='outletgroup'){ const ents=c.entities||[]; let rows='';
+    for(let i=0;i<2;i++){ const e=ents[i]; rows+=`<div class="orow"><span class="mdi mdi-power-socket-us" style="color:var(--teal)"></span><span style="flex:1;font-size:13px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${e?nm2(e):'Outlet '+(i+1)}</span>${tog(i===0)}</div>`; }
+    return head+`<div class="toprow">${ico}<span class="csub">${nm}</span></div>${rows}`; }
+  if(ctrl==='playlist'){ if(c.w===1) return head+`<div style="display:flex;flex-direction:column;align-items:center;justify-content:center;height:100%;gap:8px"><span class="mdi mdi-playlist-play" style="font-size:26px;color:#1DB954"></span><div style="font-size:12px;font-weight:600;text-align:center">${nm}</div></div>`;
+    return head+`<div class="toprow">${ico}<span class="csub">${nm}</span></div><div class="ddrop"><span>Liked Songs</span><span class="mdi mdi-chevron-down"></span></div>`; }
+  if(ctrl==='songlist'){ const rows=[['Midnight City','M83'],['Instant Crush','Daft Punk'],['The Less I Know','Tame Impala'],['Dreams','Fleetwood Mac'],['Redbone','Childish Gambino'],['Holocene','Bon Iver'],['Lovely Day','Bill Withers'],['Electric Feel','MGMT'],['Tadow','Masego'],['Breathe','Télépopmusik']];
+    const n=Math.max(3,c.h*2); let lis=''; for(let i=0;i<n;i++){ const r=rows[i%rows.length]; lis+=`<div class="trk"><span style="color:var(--tx);white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${r[0]}</span><span class="csub">${r[1]}</span></div>`; }
+    return head+`<div class="toprow"><span class="csub" style="letter-spacing:1px">TRACKS · tap to play</span><span class="mdi mdi-playlist-music" style="color:#1DB954"></span></div><div class="trklist">${lis}</div>`; }
+  return head+ico+nme;
 }
 
 function renderGrid(){ ROWS=rowsFor(); const g=document.getElementById('grid');
-  g.style.gridTemplateRows=`repeat(${ROWS},100px)`;
-  g.style.top=(L.pages[curPage].header?96:22)+'px';
-  g.style.height=(ROWS*100+(ROWS-1)*14)+'px';
-  g.innerHTML='';
+  g.style.gridTemplateRows=`repeat(${ROWS},100px)`; g.style.top=(L.pages[curPage].header?96:22)+'px'; g.style.height=(ROWS*100+(ROWS-1)*14)+'px'; g.innerHTML='';
   for(let i=0;i<COLS*ROWS;i++){ const cell=document.createElement('div'); cell.className='gcell'; cell.style.gridColumn=(i%COLS)+1; cell.style.gridRow=Math.floor(i/COLS)+1; g.appendChild(cell); }
   for(const c of curCards()){ const def=C[c.ck];
-    const cls='pc'+(sel===c.id?' sel':'')+(['light','dial','toggle'].includes(def.ctrl)?' on':'')+(c.ck==='light'&&false?' rgb':'');
-    const d=document.createElement('div'); d.className=cls; d.style.gridColumn=`${c.x} / span ${c.w}`; d.style.gridRow=`${c.y} / span ${c.h}`;
+    const d=document.createElement('div'); d.className='pc'+(sel===c.id?' sel':'')+(['light','dial','toggle'].includes(def.ctrl)?' on':'');
+    d.style.gridColumn=`${c.x} / span ${c.w}`; d.style.gridRow=`${c.y} / span ${c.h}`;
     d.innerHTML=cardInner(c); d.dataset.id=c.id; d.onclick=(e)=>{e.stopPropagation(); sel=c.id; renderInspector(); markSel();}; attachDrag(d,c); g.appendChild(d); }
-  document.getElementById('nextaff').style.display=(curSub<L.pages[curPage].subpages.length-1)?'flex':'none';
-}
+  document.getElementById('nextaff').style.display=(curSub<L.pages[curPage].subpages.length-1)?'flex':'none'; }
 function markSel(){ document.querySelectorAll('.pc').forEach(p=>p.classList.toggle('sel', p.dataset.id===sel)); }
+
+function sizeButtons(c, container){ C[c.ck].spans.forEach(([w,h])=>{ const b=document.createElement('div'); b.className='szb'+(w===c.w&&h===c.h?' on':''); b.textContent=`${w}×${h}`;
+  b.onclick=()=>{ if(fits(c.x,c.y,w,h,c.id)){c.w=w;c.h=h;} else if(firstFit(w,h)){const[nx,ny]=firstFit(w,h);c.x=nx;c.y=ny;c.w=w;c.h=h;toast('Moved to fit new size');} else {toast('No room for that size');return;} renderGrid();renderInspector(); }; container.appendChild(b); }); }
 
 function renderInspector(){ const el=document.getElementById('insp'); const c=sel&&curCards().find(x=>x.id===sel);
   if(!c){ const hp=L.pages[curPage].header;
@@ -314,15 +361,29 @@ function renderInspector(){ const el=document.getElementById('insp'); const c=se
     el.querySelector('#pgTitle').oninput=(e)=>{L.pages[curPage].title=e.target.value; renderTabs(); renderHeader();};
     fillRooms(); return; }
   const def=C[c.ck];
+  if(def.multi){ const n=cap(c); c.entities=c.entities||[];
+    el.innerHTML=`<h3 class="sec">${def.label}</h3>
+      <div class="field"><label>Name</label><input id="fName" value="${(c.name||'').replace(/"/g,'&quot;')}"></div>
+      <div class="field"><label>Size (span)</label><div class="szrow" id="szrow"></div></div>
+      <div class="field"><label>Entities (${c.entities.length}/${n>=99?'∞':n})</label><div id="elist2"></div>
+        <button class="btn ghost" id="addEnt" style="width:100%;margin-top:6px">+ Add entity</button></div>
+      <button class="btn ghost" id="delCard" style="width:100%;color:var(--red);border-color:#3a2422">Delete card</button>`;
+    sizeButtons(c, el.querySelector('#szrow'));
+    const list=el.querySelector('#elist2');
+    c.entities.forEach((e,i)=>{ const r=document.createElement('div'); r.className='elrow'; r.innerHTML=`<span style="min-width:0;overflow:hidden;text-overflow:ellipsis">${e}</span><span class="x mdi mdi-close"></span>`;
+      r.querySelector('.x').onclick=()=>{ c.entities.splice(i,1); renderGrid(); renderInspector(); }; list.appendChild(r); });
+    if(!c.entities.length) list.innerHTML='<div class="csub" style="padding:4px 0">No entities yet — add some.</div>';
+    el.querySelector('#fName').oninput=(e)=>{c.name=e.target.value; renderGrid();};
+    el.querySelector('#addEnt').onclick=()=>addEntityPicker(c);
+    el.querySelector('#delCard').onclick=()=>{ const a=curCards(); a.splice(a.indexOf(c),1); sel=null; renderGrid(); renderInspector(); };
+    return; }
   el.innerHTML=`<h3 class="sec">${def.label}</h3>
     <div class="field"><label>Name</label><input id="fName" value="${(c.name||'').replace(/"/g,'&quot;')}"></div>
     <div class="field"><label>Entity (${def.domain})</label><div style="display:flex;gap:6px"><input id="fEnt" value="${c.entity||''}" placeholder="none" style="flex:1"><button class="btn ghost" id="pickEnt" style="padding:8px 10px">Pick</button></div></div>
     <div class="field"><label>Size (span)</label><div class="szrow" id="szrow"></div></div>
     <div class="field"><label>Position</label><div class="mono" style="font-size:12px;color:var(--t2)">col ${c.x}, row ${c.y} — drag on grid to move</div></div>
     <button class="btn ghost" id="delCard" style="width:100%;color:var(--red);border-color:#3a2422">Delete card</button>`;
-  const sz=el.querySelector('#szrow');
-  def.spans.forEach(([w,h])=>{ const b=document.createElement('div'); b.className='szb'+(w===c.w&&h===c.h?' on':''); b.textContent=`${w}×${h}`;
-    b.onclick=()=>{ if(fits(c.x,c.y,w,h,c.id)){c.w=w;c.h=h;renderGrid();renderInspector();} else if(firstFit(w,h)){const[nx,ny]=firstFit(w,h);c.x=nx;c.y=ny;c.w=w;c.h=h;renderGrid();renderInspector();toast('Moved to fit new size');} else toast('No room for that size on this page'); }; sz.appendChild(b); });
+  sizeButtons(c, el.querySelector('#szrow'));
   el.querySelector('#fName').oninput=(e)=>{c.name=e.target.value; renderGrid();};
   el.querySelector('#fEnt').onchange=(e)=>{c.entity=e.target.value; renderGrid();};
   el.querySelector('#pickEnt').onclick=()=>openEntityPicker(c.ck,c);
@@ -347,8 +408,7 @@ function enterPlacing(ck,entity,name,w,h){ placing={ck}; sel=null;
   document.getElementById('hint').textContent='Click a grid cell to drop the '+w+'×'+h+' card · Esc to cancel';
   const grid=document.getElementById('grid');
   const onMove=(ev)=>{ const r=grid.getBoundingClientRect(); const colW=r.width/COLS,rowH=r.height/ROWS;
-    let x=Math.floor((ev.clientX-r.left)/colW)+1, y=Math.floor((ev.clientY-r.top)/rowH)+1;
-    x=Math.max(1,Math.min(COLS-w+1,x)); y=Math.max(1,Math.min(ROWS-h+1,y));
+    let x=Math.floor((ev.clientX-r.left)/colW)+1, y=Math.floor((ev.clientY-r.top)/rowH)+1; x=Math.max(1,Math.min(COLS-w+1,x)); y=Math.max(1,Math.min(ROWS-h+1,y));
     grid.querySelectorAll('.gcell').forEach((cell,i)=>{ const cx=(i%COLS)+1,cy=Math.floor(i/COLS)+1; const inside=cx>=x&&cx<x+w&&cy>=y&&cy<y+h;
       cell.classList.toggle('hot',inside&&fits(x,y,w,h,null)); cell.classList.toggle('bad',inside&&!fits(x,y,w,h,null)); }); grid._drop=[x,y]; };
   const onClick=()=>{ if(!grid._drop) return; const[x,y]=grid._drop; if(fits(x,y,w,h,null)){ const card=mk(ck,entity,name,x,y,w,h); curCards().push(card); sel=card.id; cleanup(); renderAll(); } else toast('Doesn’t fit there'); };
@@ -357,23 +417,49 @@ function enterPlacing(ck,entity,name,w,h){ placing={ck}; sel=null;
     grid.querySelectorAll('.gcell').forEach(c=>c.classList.remove('hot','bad')); document.getElementById('hint').textContent='6×'+ROWS+' grid · 1024×600 · drag a placed card to move it'; };
   grid.addEventListener('pointermove',onMove); grid.addEventListener('click',onClick); document.addEventListener('keydown',onKey); }
 
-function openEntityPicker(ck,existing){ const def=C[ck], dom=def.domain; const list=ENTS.filter(e=>e.domain===dom); const mbox=document.getElementById('mbox');
+function openEntityPicker(ck,existing){ const def=C[ck], mbox=document.getElementById('mbox');
+  if(def.multi && !existing){  // multi: size-only modal, then place (entities added in inspector)
+    let szc=def.def;
+    mbox.innerHTML=`<h2>${def.label}</h2><p>Pick a size, drop it, then add its entities from the inspector on the right.</p>
+      <div class="field"><label>Card size</label><div class="szrow" id="msz"></div></div>
+      <div class="mfoot"><button class="btn ghost" id="mCancel">Cancel</button><button class="btn" id="mPlace">Place on grid</button></div>`;
+    const msz=mbox.querySelector('#msz'); def.spans.forEach(([w,h])=>{ const b=document.createElement('div'); b.className='szb'+(w===szc[0]&&h===szc[1]?' on':''); b.textContent=`${w}×${h}`;
+      b.onclick=()=>{szc=[w,h]; msz.querySelectorAll('.szb').forEach(x=>x.classList.remove('on')); b.classList.add('on');}; msz.appendChild(b); });
+    document.getElementById('modal').style.display='flex'; mbox.querySelector('#mCancel').onclick=closeModal;
+    mbox.querySelector('#mPlace').onclick=()=>{ closeModal(); enterPlacing(ck,null,null,szc[0],szc[1]); }; return; }
+  const dom=def.domain; const list=ENTS.filter(e=>e.domain===dom);
   let chosen=existing?existing.entity:((list[0]&&list[0].entity_id)||''); let szc=existing?[existing.w,existing.h]:def.def;
   mbox.innerHTML=`<h2>${def.label}</h2><p>${list.length} ${dom} entit${list.length===1?'y':'ies'} from Home Assistant${ENTS.length?'':' — connect to load yours'}</p>
-    <div class="field"><label>Entity</label><div class="elist" id="elist"></div></div>
+    <input id="esrch" placeholder="Filter…" style="width:100%;margin-bottom:8px;background:#0F1117;border:1px solid var(--bd);border-radius:9px;color:var(--tx);padding:8px 10px;font:inherit">
+    <div class="field"><div class="elist" id="elist"></div></div>
     <div class="field"><label>Card size</label><div class="szrow" id="msz"></div></div>
     <div class="mfoot"><button class="btn ghost" id="mCancel">Cancel</button><button class="btn" id="mPlace">${existing?'Apply':'Place on grid'}</button></div>`;
-  const elist=mbox.querySelector('#elist');
-  if(!list.length){ elist.innerHTML='<div class="erow" style="color:var(--t3)">No matching entities. You can still place the card and bind it later.</div>'; }
-  list.forEach(e=>{ const r=document.createElement('div'); r.className='erow'+(e.entity_id===chosen?' on':''); r.innerHTML=`<span>${e.name}</span><span class="eid">${e.entity_id}</span>`;
-    r.onclick=()=>{chosen=e.entity_id; elist.querySelectorAll('.erow').forEach(x=>x.classList.remove('on')); r.classList.add('on');}; elist.appendChild(r); });
-  const msz=mbox.querySelector('#msz');
-  def.spans.forEach(([w,h])=>{ const b=document.createElement('div'); b.className='szb'+(w===szc[0]&&h===szc[1]?' on':''); b.textContent=`${w}×${h}`;
+  const elist=mbox.querySelector('#elist'); const draw=(flt)=>{ elist.innerHTML=''; const ll=list.filter(e=>!flt||(e.name+e.entity_id).toLowerCase().includes(flt));
+    if(!ll.length){ elist.innerHTML='<div class="erow" style="color:var(--t3)">No match. You can still place and bind later.</div>'; }
+    ll.forEach(e=>{ const r=document.createElement('div'); r.className='erow'+(e.entity_id===chosen?' on':''); r.innerHTML=`<span>${e.name}</span><span class="eid">${e.entity_id}</span>`;
+      r.onclick=()=>{chosen=e.entity_id; elist.querySelectorAll('.erow').forEach(x=>x.classList.remove('on')); r.classList.add('on');}; elist.appendChild(r); }); };
+  draw(''); mbox.querySelector('#esrch').oninput=(e)=>draw(e.target.value.toLowerCase().trim());
+  const msz=mbox.querySelector('#msz'); def.spans.forEach(([w,h])=>{ const b=document.createElement('div'); b.className='szb'+(w===szc[0]&&h===szc[1]?' on':''); b.textContent=`${w}×${h}`;
     b.onclick=()=>{szc=[w,h]; msz.querySelectorAll('.szb').forEach(x=>x.classList.remove('on')); b.classList.add('on');}; msz.appendChild(b); });
   document.getElementById('modal').style.display='flex'; mbox.querySelector('#mCancel').onclick=closeModal;
   mbox.querySelector('#mPlace').onclick=()=>{ closeModal();
     if(existing){ const c=existing; c.entity=chosen; if(fits(c.x,c.y,szc[0],szc[1],c.id)){c.w=szc[0];c.h=szc[1];} renderGrid(); renderInspector(); }
     else { const nm=(ENTS.find(e=>e.entity_id===chosen)||{}).name; enterPlacing(ck,chosen,nm,szc[0],szc[1]); } }; }
+
+function addEntityPicker(card){ const def=C[card.ck], mbox=document.getElementById('mbox'); const n=cap(card);
+  const doms = def.domain==='mixed' ? null : [def.domain];
+  const list = ENTS.filter(e=>!doms||doms.includes(e.domain));
+  card.entities=card.entities||[];
+  mbox.innerHTML=`<h2>Add entities — ${def.label}</h2><p>${def.domain==='mixed'?'Any entity':def.domain} · up to ${n>=99?'unlimited':n}. Click to toggle.</p>
+    <input id="esrch" placeholder="Filter…" style="width:100%;margin-bottom:8px;background:#0F1117;border:1px solid var(--bd);border-radius:9px;color:var(--tx);padding:8px 10px;font:inherit">
+    <div class="elist" id="elist"></div><div class="mfoot"><button class="btn" id="mDone">Done</button></div>`;
+  const elist=mbox.querySelector('#elist'); const draw=(flt)=>{ elist.innerHTML=''; const ll=list.filter(e=>!flt||(e.name+e.entity_id).toLowerCase().includes(flt));
+    if(!ll.length) elist.innerHTML='<div class="erow" style="color:var(--t3)">No match'+(ENTS.length?'':' — connect to load your entities')+'.</div>';
+    ll.forEach(e=>{ const on=card.entities.includes(e.entity_id); const r=document.createElement('div'); r.className='erow'+(on?' on':'');
+      r.innerHTML=`<span><span class="mdi mdi-${on?'check-circle':'circle-outline'}" style="color:${on?'var(--teal)':'var(--t3)'};margin-right:7px"></span>${e.name}</span><span class="eid">${e.entity_id}</span>`;
+      r.onclick=()=>{ const i=card.entities.indexOf(e.entity_id); if(i>=0) card.entities.splice(i,1); else { if(n<99&&card.entities.length>=n){ toast('Card is full ('+n+')'); return; } card.entities.push(e.entity_id); } draw(flt); renderGrid(); }; elist.appendChild(r); }); };
+  draw(''); mbox.querySelector('#esrch').oninput=(e)=>draw(e.target.value.toLowerCase().trim());
+  document.getElementById('modal').style.display='flex'; mbox.querySelector('#mDone').onclick=()=>{ closeModal(); renderInspector(); }; }
 function closeModal(){ document.getElementById('modal').style.display='none'; }
 
 function addNav(){ navModal({id:uid(),icon:'star',label:'New',page:''},true); }
@@ -396,8 +482,7 @@ function navModal(n,isNew,idx){ const mbox=document.getElementById('mbox');
 
 function openTemplates(){ const mbox=document.getElementById('mbox');
   mbox.innerHTML=`<h2>Start from a template</h2><p>Pick a starting layout. This replaces the current layout.</p><div id="tpls"></div><div class="mfoot"><button class="btn ghost" id="mCancel">Cancel</button></div>`;
-  const t=mbox.querySelector('#tpls');
-  Object.keys(TEMPLATES).forEach(name=>{ const d=document.createElement('div'); d.className='pitem'; d.style.marginBottom='8px';
+  const t=mbox.querySelector('#tpls'); Object.keys(TEMPLATES).forEach(name=>{ const d=document.createElement('div'); d.className='pitem'; d.style.marginBottom='8px';
     d.innerHTML=`<div class="ic" style="background:#0f1117;color:var(--teal)"><span class="mdi mdi-view-dashboard-variant"></span></div><div><div class="nm">${name}</div></div>`;
     d.onclick=()=>{ curPageInit=null; L=TEMPLATES[name](); curPage=curPageInit||Object.keys(L.pages)[0]; curSub=0; sel=null; closeModal(); renderAll(); toast('Loaded template'); }; t.appendChild(d); });
   document.getElementById('modal').style.display='flex'; mbox.querySelector('#mCancel').onclick=closeModal; }
@@ -418,7 +503,7 @@ async function flash(){ await save(); const ip=document.getElementById('panip').
   }catch(e){ log.textContent='Error: '+e.message; } }
 
 async function boot(){ try{ L=await j('/api/layout'); if(!L||!L.pages||!Object.keys(L.pages).length) L=defaultLayout(); }catch(e){ L=defaultLayout(); }
-  Object.values(L.pages).forEach(p=>{ if(p.header===undefined)p.header=false; });
+  Object.values(L.pages).forEach(p=>{ if(p.header===undefined)p.header=false; p.subpages.forEach(sp=>sp.forEach(c=>{ if(C[c.ck]&&C[c.ck].multi&&!c.entities)c.entities=[]; })); });
   curPage=L.nav[0]?L.nav[0].page:Object.keys(L.pages)[0]; curSub=0;
   document.getElementById('haurl').value=localStorage.getItem('aurora_ha_url')||'';
   document.getElementById('hatok').value=localStorage.getItem('aurora_ha_tok')||'';
