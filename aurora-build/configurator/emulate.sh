@@ -1,12 +1,12 @@
 #!/usr/bin/env bash
-# Aurora LVGL emulator — render the generated device UI on the desktop and
-# screenshot it, WITHOUT flashing the panel. Uses ESPHome's host platform +
-# SDL display + a headless Xvfb, so it's the same LVGL/fonts/layout as the device.
+# Aurora LVGL emulator — render the generated device UI on the desktop, the same
+# LVGL/fonts/layout as the panel, via ESPHome's host platform + SDL display.
 #
-#   ./emulate.sh           # render the layout, screenshot the home page -> ~/aurora_emul.png
-#   ./emulate.sh --all     # cycle every page, screenshot each -> ~/emul_shots/frame_NN.png
+#   ./emulate.sh          # screenshot the home page  -> ~/aurora_emul.png   (headless)
+#   ./emulate.sh --all    # screenshot every page     -> ~/emul_shots/frame_NN.png (headless)
+#   ./emulate.sh --live    # open a LIVE, clickable window on your desktop (WSLg)
 #
-# Requires: libsdl2, imagemagick, xvfb (apt).
+# Requires: libsdl2, imagemagick, xvfb (apt). Live mode needs WSLg (Win11 WSL2).
 set -uo pipefail
 ROOT="$HOME/espcontrol"
 PY="$ROOT/.venv-dev/bin/python"
@@ -14,9 +14,9 @@ ESPHOME="$ROOT/.venv-dev/bin/esphome"
 DEV="$ROOT/devices/guition-esp32-p4-jc1060p470"
 EMUL="$DEV/aurora-emul.yaml"
 BIN="$DEV/.esphome/build/aurora-emul/.pioenvs/aurora-emul/program"
-ALL=0; [ "${1:-}" = "--all" ] && ALL=1
+MODE="${1:-}"
 
-GENARGS="--host"; [ $ALL -eq 1 ] && GENARGS="--host --cycle"
+GENARGS="--host"; [ "$MODE" = "--all" ] && GENARGS="--host --cycle"
 echo "=== generate ($GENARGS) ==="
 "$PY" "$ROOT/aurora-build/configurator/gen.py" $GENARGS || exit 1
 echo "=== compile (host) ==="
@@ -24,14 +24,20 @@ echo "=== compile (host) ==="
 [ -x "$BIN" ] || { echo "no binary at $BIN"; exit 1; }
 echo "compiled OK"
 
+if [ "$MODE" = "--live" ]; then
+  echo "Opening live window on your desktop — click the nav rail to move between pages."
+  echo "Close the window (or Ctrl+C here) to stop."
+  exec "$BIN"            # inherits the session DISPLAY (WSLg :0) -> real window
+fi
+
+# --- headless screenshot modes (virtual X) ---
 pkill -f "Xvfb :99" 2>/dev/null; sleep 1
 Xvfb :99 -screen 0 1024x600x24 -nolisten tcp > /tmp/xvfb.log 2>&1 &
 XVFB=$!; sleep 2
 export DISPLAY=:99 SDL_VIDEODRIVER=x11
 "$BIN" > /tmp/emul_prog.log 2>&1 &
 PROG=$!; sleep 2
-
-if [ $ALL -eq 1 ]; then
+if [ "$MODE" = "--all" ]; then
   SHOTS="$HOME/emul_shots"; mkdir -p "$SHOTS"; rm -f "$SHOTS"/*.png
   for i in $(seq 1 10); do
     n=$(printf "%02d" "$i")

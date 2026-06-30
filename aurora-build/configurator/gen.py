@@ -875,6 +875,7 @@ def host_assemble(layout):
         + keep
         + "\ndisplay:\n  - platform: sdl\n    id: emul_display\n"
           "    dimensions:\n      width: 1024\n      height: 600\n    update_interval: 1s\n"
+        + "\ntouchscreen:\n  - platform: sdl\n    display: emul_display\n"
         + "\nlvgl:\n  displays: [emul_display]\n  buffer_size: 100%\n"
         + style_defs(lvgl_text)
         + "  top_layer:\n      widgets:\n"
