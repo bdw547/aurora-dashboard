@@ -85,7 +85,7 @@ h3.sec{font-size:11px;letter-spacing:1.4px;text-transform:uppercase;color:var(--
 .pc .dial{flex:1;display:flex;align-items:center;justify-content:center;position:relative}
 .pc .ring{border-radius:50%;border:6px solid #1c2330;border-top-color:var(--blue);border-right-color:var(--blue);transform:rotate(40deg)}
 .pc .art{border-radius:10px;background:linear-gradient(135deg,#5468FF,#2ED5B8);flex:0 0 auto}
-.pc .tbtn{width:38px;height:38px;border-radius:50%;background:#0f1117;display:flex;align-items:center;justify-content:center;color:var(--tx);font-size:18px}
+.pc .tbtn{width:46px;height:46px;border-radius:50%;background:#0f1117;display:flex;align-items:center;justify-content:center;color:var(--tx);font-size:21px}
 .pc .tbtn.main{background:var(--teal);color:var(--ink)}
 .pc .rpill{background:#0f1117;border:1px solid var(--bd);border-radius:10px;display:flex;align-items:center;justify-content:center;gap:4px;color:var(--tx);font-size:12px;font-weight:600;padding:8px 6px;min-width:0;white-space:nowrap}
 /* TV remote (responsive) */
@@ -98,20 +98,20 @@ h3.sec{font-size:11px;letter-spacing:1.4px;text-transform:uppercase;color:var(--
 .pc .tvhdr{display:flex;align-items:center;gap:10px}
 .pc .pwr{width:46px;height:40px;border-radius:11px;background:#2a1414;display:flex;align-items:center;justify-content:center;color:var(--red);font-size:20px;flex:0 0 auto}
 .pc .tvcenter{flex:1;display:flex;align-items:center;justify-content:center;gap:18px}
-.pc .vcc{width:46px;align-self:center;max-height:240px;border-radius:23px;background:#0f1117;border:1px solid var(--bd);display:flex;flex-direction:column;align-items:center;justify-content:space-between;padding:14px 0;color:var(--t2);font-size:20px;flex:0 0 auto}
+.pc .vcc{width:56px;align-self:center;max-height:250px;border-radius:28px;background:#0f1117;border:1px solid var(--bd);display:flex;flex-direction:column;align-items:center;justify-content:space-between;padding:16px 0;color:var(--t2);font-size:25px;flex:0 0 auto}
 .pc .vcc .vcl{font-size:11px;color:var(--t3);font-weight:600}
 .pc .dpad{border-radius:50%;background:#0f1117;position:relative;flex:0 0 auto;display:flex;align-items:center;justify-content:center}
 .pc .dpad .ok{border-radius:50%;background:var(--teal);color:var(--ink);display:flex;align-items:center;justify-content:center;font-weight:700;font-size:18px}
-.pc .dpad .ar{position:absolute;color:var(--t2);font-size:24px}
+.pc .dpad .ar{position:absolute;color:var(--t2);font-size:30px}
 .pc .dpad .ar.up{top:14px;left:50%;transform:translateX(-50%)}
 .pc .dpad .ar.dn{bottom:14px;left:50%;transform:translateX(-50%)}
 .pc .dpad .ar.lf{left:16px;top:50%;transform:translateY(-50%)}
 .pc .dpad .ar.rt{right:16px;top:50%;transform:translateY(-50%)}
-.pc .tvbar{display:flex;gap:8px;align-items:stretch;height:52px;margin-top:8px}
-.pc .tvbtn{background:#0f1117;border:1px solid var(--bd);border-radius:12px;display:flex;align-items:center;justify-content:center;gap:8px;color:var(--t2);font-size:18px;padding:0 12px;flex:0 0 auto}
+.pc .tvbar{display:flex;gap:8px;align-items:stretch;height:60px;margin-top:8px}
+.pc .tvbtn{background:#0f1117;border:1px solid var(--bd);border-radius:12px;display:flex;align-items:center;justify-content:center;gap:8px;color:var(--t2);font-size:22px;padding:0 16px;flex:0 0 auto}
 .pc .tvbtn.pad{background:#13201d;border-color:var(--onbd);color:var(--teal);font-size:13px;font-weight:700}
 .pc .tvbtn.trans{flex:1;gap:16px}
-.pc .srcchip{background:#0f1117;border:1px solid var(--bd);border-radius:8px;padding:5px 10px;font-size:12px;color:var(--t2);white-space:nowrap}
+.pc .srcchip{background:#0f1117;border:1px solid var(--bd);border-radius:8px;padding:8px 13px;font-size:13px;color:var(--t2);white-space:nowrap}
 .pc .srcchip.on{background:var(--teal);color:var(--ink);font-weight:700;border-color:var(--teal)}
 .pc .vrow{background:#0f1117;border:1px solid var(--bd);border-radius:11px;display:flex;align-items:center;gap:8px;padding:9px 12px;color:var(--t2);font-size:13px;font-weight:600}
 /* outlets */
@@ -225,8 +225,8 @@ const C = {
   climate:  {label:'Climate / thermostat', domain:'climate', icon:'thermostat', color:'var(--amber)', spans:[[1,1],[2,2],[3,2],[3,3],[4,4],[6,5],...V], def:[4,4], ctrl:'dial'},
   group:    {label:'Status group', domain:'mixed', icon:'view-grid-outline', color:'var(--teal)', spans:[[2,2],[2,3],[2,4],[2,5]], def:[2,3], ctrl:'group', multi:true},
   shortcuts:{label:'Shortcuts', domain:'page', icon:'view-grid-plus', color:'var(--teal)', spans:[[2,2],[3,2],[2,3],[4,2],[2,4],[5,2],[2,5],[6,2]], def:[2,2], ctrl:'shortcuts', multi:true},
-  speakers: {label:'Speaker linking', domain:'media_player', icon:'speaker-multiple', color:'var(--teal)', spans:[[1,2],[1,3],[3,2],[2,3],[3,3],[5,4]], def:[2,3], ctrl:'btngrid', btnIcon:'speaker', multi:true},
-  sonos_sources:{label:'Sonos sources', domain:'media_player', icon:'music-box-multiple', color:'var(--teal)', spans:[[1,2],[1,3],[3,2],[2,3],[3,3],[5,4]], def:[2,3], ctrl:'btngrid', btnIcon:'music-box', multi:true},
+  speakers: {label:'Speaker linking', domain:'media_player', icon:'speaker-multiple', color:'var(--teal)', spans:[[1,1],[2,1],[3,1],[1,2],[1,3],[3,2],[2,3],[3,3],[5,4]], def:[2,3], ctrl:'btngrid', btnIcon:'speaker', multi:true},
+  sonos_sources:{label:'Sonos sources', domain:'media_player', icon:'music-box-multiple', color:'var(--teal)', spans:[[1,1],[2,1],[3,1],[1,2],[1,3],[3,2],[2,3],[3,3],[5,4]], def:[2,3], ctrl:'btngrid', btnIcon:'music-box', multi:true},
   sonos_library:{label:'Sonos library', domain:'media_player', icon:'bookshelf', color:'var(--teal)', spans:[[4,3],[3,4],[4,4],[3,5],[4,5],[5,5]], def:[4,4], ctrl:'songlist'},
   sonos_fav:{label:'Sonos favorite', domain:'media_player', icon:'bookmark-music', color:'var(--teal)', spans:[[1,1],[2,1],[3,1]], def:[1,1], ctrl:'playlist', playlistField:true},
   spotify:  {label:'Spotify now-playing', domain:'media_player', icon:'spotify', color:'#1DB954', spans:[[1,1],[2,2],[3,2],[4,3],[6,5]], def:[3,2], ctrl:'media'},
@@ -299,7 +299,8 @@ function cap(c){ const k=c.ck;
   if(k==='lightgroup') return c.w*Math.max(2,c.h-1);  // W cols × (H-1) rows, min 2 rows
   if(k==='shortcuts') return c.w*c.h;                 // one nav button per grid cell
   if(k==='outletgroup') return Math.max(c.w,c.h);   // 1x1=1, 1x2/2x1=2, 1x3/3x1=3
-  if(k==='speakers'||k==='sonos_sources'||k==='tv_sources'){ if(c.w===1) return 99;   // dropdown
+  if(k==='speakers'||k==='sonos_sources'||k==='tv_sources'){ if(c.w===1) return 99;   // dropdown (1x1/1x2/1x3)
+    if(c.h===1) return c.w;                                   // single row: 2x1=2, 3x1=3
     if((c.w===2&&c.h===3)||(c.w===3&&c.h===2)) return 4;
     if(c.w===3&&c.h===3) return 6; if(c.w===5&&c.h===4) return 10;
     return Math.max(4,Math.floor(c.w*c.h/2)); }
@@ -408,7 +409,7 @@ function cardInner(c){ const def=C[c.ck], nm=c.name||def.label, big=c.w>=3, ctrl
       const sb=`<div class="tvapps"><div class="tvapps-h">APPS · pre-baked</div>${A.map((a,i)=>`<div class="tvapp${i===0?' on':''}" style="${i===0?'background:'+a[1]+';border-color:'+a[1]:''}"><span style="width:24px;height:24px;border-radius:6px;background:${i===0?'rgba(255,255,255,.18)':a[1]};display:inline-flex;align-items:center;justify-content:center;font-size:12px;font-weight:800;color:#fff">${a[0][0]}</span>${a[0]}</div>`).join('')}</div>`;
       return head+`<div class="tvr">${sb}${main}</div>`; }
     return head+`<div class="tvr">${main}</div>`; }
-  if(ctrl==='tv_dpad') return head+`<div class="toprow">${ico}<span class="csub">${nm}</span></div><div style="flex:1;display:flex;align-items:center;justify-content:center"><div style="display:grid;grid-template-columns:repeat(3,34px);grid-template-rows:repeat(3,34px);gap:5px"><div></div><div class="tbtn mdi mdi-chevron-up"></div><div></div><div class="tbtn mdi mdi-chevron-left"></div><div class="tbtn main">OK</div><div class="tbtn mdi mdi-chevron-right"></div><div></div><div class="tbtn mdi mdi-chevron-down"></div><div></div></div></div>`;
+  if(ctrl==='tv_dpad') return head+`<div class="toprow">${ico}<span class="csub">${nm}</span></div><div style="flex:1;display:flex;align-items:center;justify-content:center"><div style="display:grid;grid-template-columns:repeat(3,48px);grid-template-rows:repeat(3,48px);gap:7px"><div></div><div class="tbtn mdi mdi-chevron-up"></div><div></div><div class="tbtn mdi mdi-chevron-left"></div><div class="tbtn main">OK</div><div class="tbtn mdi mdi-chevron-right"></div><div></div><div class="tbtn mdi mdi-chevron-down"></div><div></div></div></div>`;
   if(ctrl==='tv_transport') return head+`<div class="toprow">${ico}<span class="csub">${nm}</span></div><div class="row" style="flex:1;justify-content:center;gap:8px;flex-wrap:wrap"><span class="tbtn mdi mdi-arrow-left"></span><span class="tbtn mdi mdi-home"></span><span class="tbtn mdi mdi-rewind"></span><span class="tbtn main mdi mdi-play-pause"></span><span class="tbtn mdi mdi-fast-forward"></span></div>`;
   if(ctrl==='tv_channel'){ const hz=c.w>c.h; return head+`<div class="toprow">${ico}<span class="csub">${nm}</span></div><div style="flex:1;display:flex;${hz?'flex-direction:row':'flex-direction:column'};gap:8px;align-items:center;justify-content:center"><div class="tbtn" style="width:auto;padding:6px 14px;border-radius:11px;gap:4px">CH<span class="mdi mdi-chevron-up"></span></div><div class="tbtn" style="width:auto;padding:6px 14px;border-radius:11px;gap:4px">CH<span class="mdi mdi-chevron-down"></span></div></div>`; }
   if(ctrl==='tv_volume'){ const hz=c.w>c.h; return head+`<div class="toprow">${ico}<span class="csub">${nm}</span></div><div style="flex:1;display:flex;${hz?'flex-direction:row':'flex-direction:column'};gap:8px;align-items:center;justify-content:center"><span class="tbtn mdi mdi-volume-plus"></span><span class="tbtn mdi mdi-volume-mute"></span><span class="tbtn mdi mdi-volume-minus"></span></div>`; }
@@ -426,7 +427,7 @@ function cardInner(c){ const def=C[c.ck], nm=c.name||def.label, big=c.w>=3, ctrl
     return head+`<div class="toprow">${ico}<span class="csub">${nm} · ${onN} on · ${ents.length}/${n}</span></div><div class="lggrid" style="grid-template-columns:repeat(${c.w},1fr);grid-template-rows:repeat(${brows},1fr)">${btns}</div>`; }
   if(ctrl==='btngrid'){ const ents=c.entities||[]; const bi=def.btnIcon||'speaker'; const word=(c.ck==='sonos_sources'||c.ck==='tv_sources')?'source':'speaker'; const Word=word.charAt(0).toUpperCase()+word.slice(1);
     if(c.w===1) return head+`<div class="toprow">${ico}<span class="csub">${nm}</span></div><div class="ddrop"><span>${ents[0]?nm2(ents[0]):'Choose '+word}</span><span class="mdi mdi-chevron-down"></span></div>`;
-    const n=cap(c), cols=n===10?5:(n===6?3:2); let btns='';
+    const n=cap(c), cols=c.h===1?n:(n===10?5:(n===6?3:2)); let btns='';
     for(let i=0;i<n;i++){ const e=ents[i]; btns+=`<div class="spk${i===0&&e?' on':''}"><span class="mdi mdi-${bi}"></span>${e?nm2(e):Word}</div>`; }
     return head+`<div class="toprow">${ico}<span class="csub">${nm}</span></div><div class="spkgrid" style="grid-template-columns:repeat(${cols},1fr)">${btns}</div>`; }
   if(ctrl==='shortcuts'){ const n=cap(c), sc=c.shortcuts||[]; let btns='';
