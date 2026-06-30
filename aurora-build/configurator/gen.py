@@ -520,11 +520,13 @@ def c_tvremote(card, x, y, w, h, base):
     dcx = mx + mw // 2
     s = 50
     okA = _wbtn(e, "ENTER")
-    inner += _tvbtn(dcx - 25, dcy - 88, s, s, "\\U000F0143", e, "UP")
-    inner += _tvbtn(dcx - 88, dcy - 25, s, s, "\\U000F0141", e, "LEFT")
+    inner += ("              - obj: { x: %d, y: %d, width: 220, height: 220, bg_color: 0x10141C, "
+              "border_width: 0, radius: 110, pad_all: 0, scrollable: false }\n" % (dcx - 110, dcy - 110))
+    inner += _tvbtn(dcx - 25, dcy - 88, s, s, "\\U000F0143", e, "UP", bg="0x10141C")
+    inner += _tvbtn(dcx - 88, dcy - 25, s, s, "\\U000F0141", e, "LEFT", bg="0x10141C")
     inner += btn(dcx - 40, dcy - 40, 80, 80, "OK", okA, bg="0x2ED5B8", color="0x06231D", radius=40)
-    inner += _tvbtn(dcx + 38, dcy - 25, s, s, "\\U000F0142", e, "RIGHT")
-    inner += _tvbtn(dcx - 25, dcy + 38, s, s, "\\U000F0140", e, "DOWN")
+    inner += _tvbtn(dcx + 38, dcy - 25, s, s, "\\U000F0142", e, "RIGHT", bg="0x10141C")
+    inner += _tvbtn(dcx - 25, dcy + 38, s, s, "\\U000F0140", e, "DOWN", bg="0x10141C")
     # VOL column (left of d-pad)
     vx = mx + 16
     inner += _tvbtn(vx, dcy - 60, 64, 52, "\\U000F075D", e, "VOLUMEUP")
