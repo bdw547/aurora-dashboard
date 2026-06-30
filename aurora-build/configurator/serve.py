@@ -28,7 +28,21 @@ _VENV_ESPHOME = os.path.join(os.path.dirname(sys.executable), "esphome")
 ESPHOME = _VENV_ESPHOME if os.path.exists(_VENV_ESPHOME) else "esphome"
 YAML = os.path.normpath(os.path.join(
     HERE, "..", "..", "devices", "guition-esp32-p4-jc1060p470", "aurora.yaml"))
+# Phase 2: the firmware generated from the page-builder layout.json
+GEN_YAML = os.path.normpath(os.path.join(
+    HERE, "..", "..", "devices", "guition-esp32-p4-jc1060p470", "aurora-gen.yaml"))
 PORT = 8765
+
+
+def generate_gen_yaml():
+    """Render layout.json -> aurora-gen.yaml via gen.py (reloaded for edits)."""
+    import importlib
+    import gen
+    importlib.reload(gen)
+    out = gen.assemble(read_layout())
+    with open(GEN_YAML, "w", encoding="utf-8") as f:
+        f.write(out)
+    return GEN_YAML
 
 # Slot metadata: which HA domain each binding expects + a friendly label/group.
 SLOTS = [
@@ -1104,10 +1118,11 @@ def _device_compile_time(host):
         return None
 
 
-def flash_job(device):
+def flash_job(device, yml=None):
     # OTA on this panel sometimes rolls back at boot-confirm, so after an OTA
     # upload we read the panel's running compile time and re-flash until it
     # matches the build. Serial uploads (/dev/tty*) stick first try — no retry.
+    target = yml or YAML
     FLASH.update(running=True, log="", done=False, ok=False)
     import re as _re
     import time
@@ -1123,7 +1138,7 @@ def flash_job(device):
 
     try:
         FLASH["log"] += "== Compiling ==\n"
-        if run([ESPHOME, "compile", YAML]) != 0:
+        if run([ESPHOME, "compile", target]) != 0:
             FLASH["log"] += "\n[compile failed]\n"
             FLASH.update(running=False, done=True, ok=False)
             return
@@ -1134,7 +1149,7 @@ def flash_job(device):
         ok = False
         for i in range(1, attempts + 1):
             FLASH["log"] += f"\n== Upload attempt {i}/{attempts} -> {device} ==\n"
-            if run([ESPHOME, "upload", YAML, "--device", device]) != 0:
+            if run([ESPHOME, "upload", target, "--device", device]) != 0:
                 FLASH["log"] += "[upload error]\n"
                 continue
             if is_serial:
@@ -1273,12 +1288,22 @@ class H(BaseHTTPRequestHandler):
             if self.path == "/api/rooms":
                 write_rooms(d)                       # validate + persist rooms.json
                 return self._send(200, json.dumps({"saved": True, **write_rooms_to_yaml()}))
+            if self.path == "/api/build":
+                try:
+                    generate_gen_yaml()
+                    return self._send(200, json.dumps({"ok": True, "yaml": os.path.basename(GEN_YAML)}))
+                except Exception as e:  # noqa: BLE001
+                    return self._send(500, json.dumps({"error": "generate failed: " + str(e)}))
             if self.path == "/api/flash":
                 dev = d.get("device") or read_config()["panel_ip"]
                 if not dev:
                     return self._send(400, json.dumps({"error": "no panel IP set"}))
+                try:
+                    tgt = generate_gen_yaml()          # render layout.json -> aurora-gen.yaml
+                except Exception as e:  # noqa: BLE001
+                    return self._send(500, json.dumps({"error": "generate failed: " + str(e)}))
                 if not FLASH["running"]:
-                    threading.Thread(target=flash_job, args=(dev,), daemon=True).start()
+                    threading.Thread(target=flash_job, args=(dev, tgt), daemon=True).start()
                 return self._send(200, json.dumps({"started": True}))
         except Exception as e:  # noqa
             return self._send(500, json.dumps({"error": str(e)}))

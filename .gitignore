@@ -20,5 +20,6 @@ node_modules/
 secrets.yaml
 secrets.yml
 aurora-build/configurator/config.json
+devices/*/aurora-gen.yaml
 wifi-secrets*.yaml
 wifi_secrets*.yaml
