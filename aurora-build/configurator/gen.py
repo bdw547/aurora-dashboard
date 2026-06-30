@@ -85,7 +85,7 @@ def btn(x, y, w, h, label_glyph, action, bg="0x161B24", color="0xF3F5F8", radius
     return (
         "              - button:\n"
         "                  x: %d\n                  y: %d\n                  width: %d\n                  height: %d\n"
-        "                  bg_color: %s\n                  radius: %d\n                  scrollable: false\n"
+        "                  bg_color: %s\n                  radius: %d\n                  pad_all: 0\n                  scrollable: false\n"
         "                  widgets: [label: { text: %s, align: center, text_font: %s, text_color: %s }]\n"
         "                  on_click: [%s]\n"
         % (x, y, w, h, bg, radius, esc(label_glyph), font, color, action)
@@ -102,7 +102,7 @@ def card_obj(x, y, w, h, inner, on_click=None):
     return (
         "        - obj:\n"
         "            x: %d\n            y: %d\n            width: %d\n            height: %d\n"
-        "            styles: st_glass\n            scrollable: false%s\n"
+        "            styles: st_glass\n            pad_all: 0\n            scrollable: false%s\n"
         "            widgets:\n%s" % (x, y, w, h, oc, inner)
     )
 
@@ -280,7 +280,7 @@ def c_weather(card, x, y, w, h, base):
 
 def c_camera(card, x, y, w, h, base):
     inner = ("              - obj: { x: 8, y: 8, width: %d, height: %d, bg_color: 0x10141C, "
-             "border_width: 0, radius: 12, scrollable: false }\n" % (w - 16, h - 16))
+             "border_width: 0, radius: 12, pad_all: 0, scrollable: false }\n" % (w - 16, h - 16))
     inner += ic(card["ck"], x=20, y=20, color="0x2A3346")
     inner += lbl("LIVE", 20, -18, "f_small", "0xF2685A", align="bottom_left")
     inner += lbl(card.get("name", "Camera"), 72, -18, "f_small", "0x868CA0", align="bottom_left")
@@ -398,7 +398,7 @@ def c_tv_volume(card, x, y, w, h, base):
 def c_tv_trackpad(card, x, y, w, h, base):
     inner = ic(card["ck"], color="0xB06CFF") + lbl(card.get("name", "Trackpad"), 50, 16, "f_small", "0x868CA0")
     inner += ("              - obj: { x: 14, y: 50, width: %d, height: %d, bg_color: 0x0F1117, "
-              "border_color: 0x23262F, border_width: 1, radius: 12, scrollable: false }\n" % (w - 28, h - 64))
+              "border_color: 0x23262F, border_width: 1, radius: 12, pad_all: 0, scrollable: false }\n" % (w - 28, h - 64))
     inner += lbl("Tap \\u00B7 Swipe", 0, 4, "f_body", "0x5D6470", align="center")
     return [card_obj(x, y, w, h, inner)], [], []
 
@@ -434,7 +434,7 @@ def c_songlist(card, x, y, w, h, base):
     yy = 52
     for s in songs[: max(1, (h - 52) // 42)]:
         inner += ("              - obj: { x: 14, y: %d, width: %d, height: 38, bg_color: 0x0F1117, "
-                  "border_width: 0, radius: 8, scrollable: false, widgets: [label: { text: %s, x: 12, "
+                  "border_width: 0, radius: 8, pad_all: 0, scrollable: false, widgets: [label: { text: %s, x: 12, "
                   "y: 10, text_font: f_body, text_color: 0xF3F5F8 }] }\n" % (yy, w - 28, esc(s)))
         yy += 42
     return [card_obj(x, y, w, h, inner)], [], []
