@@ -87,6 +87,7 @@ h3.sec{font-size:11px;letter-spacing:1.4px;text-transform:uppercase;color:var(--
 .pc .art{border-radius:10px;background:linear-gradient(135deg,#5468FF,#2ED5B8);flex:0 0 auto}
 .pc .tbtn{width:38px;height:38px;border-radius:50%;background:#0f1117;display:flex;align-items:center;justify-content:center;color:var(--tx);font-size:18px}
 .pc .tbtn.main{background:var(--teal);color:var(--ink)}
+.pc .rpill{background:#0f1117;border:1px solid var(--bd);border-radius:10px;display:flex;align-items:center;justify-content:center;gap:4px;color:var(--tx);font-size:12px;font-weight:600;padding:8px 6px;min-width:0;white-space:nowrap}
 .pc .cambg{position:absolute;inset:0;background:linear-gradient(160deg,#1a2030,#0e1118);display:flex;align-items:center;justify-content:center;color:#2a3346;font-size:30px}
 /* group / multi */
 .pc .ggrid{flex:1;display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:10px}
@@ -359,14 +360,19 @@ function cardInner(c){ const def=C[c.ck], nm=c.name||def.label, big=c.w>=3, ctrl
     const art=`<div class="art" style="width:${big?54:40}px;height:${big?54:40}px"></div>`;
     return head+`<div class="row">${art}<div style="min-width:0"><div class="csub" style="color:var(--teal);font-size:10px">${c.ck==='sonos'?'SONOS':'NOW PLAYING'}</div><div class="ct" style="margin-top:2px">Midnight City</div><div class="csub">M83</div></div></div>
       ${c.h>=2?`<div class="row" style="gap:10px;margin-top:auto;justify-content:center"><span class="tbtn mdi mdi-skip-previous"></span><span class="tbtn main mdi mdi-play"></span><span class="tbtn mdi mdi-skip-next"></span>${c.ck==='sonos'?'<span class="tbtn mdi mdi-link-variant"></span>':''}</div>`:''}`; }
-  if(ctrl==='remote') return head+`<div class="toprow">${ico}${nme}</div>
-    <div style="flex:1;display:flex;align-items:center;justify-content:center;gap:24px">
-      <div style="display:grid;grid-template-columns:repeat(3,34px);grid-template-rows:repeat(3,34px);gap:5px">
-        <div></div><div class="tbtn mdi mdi-chevron-up"></div><div></div>
-        <div class="tbtn mdi mdi-chevron-left"></div><div class="tbtn main">OK</div><div class="tbtn mdi mdi-chevron-right"></div>
-        <div></div><div class="tbtn mdi mdi-chevron-down"></div><div></div></div>
-      <div style="display:flex;flex-direction:column;gap:6px"><span class="tbtn mdi mdi-volume-plus"></span><span class="tbtn mdi mdi-volume-minus"></span><span class="tbtn mdi mdi-power" style="color:var(--red)"></span></div></div>
-    <div class="row" style="gap:6px;justify-content:center"><span class="csub">Apps · Trackpad</span></div>`;
+  if(ctrl==='remote'){ const pill=(t)=>`<div class="rpill">${t}</div>`;
+    return head+`<div class="toprow">${ico}<span class="csub">${nm}</span><div class="rpill" style="color:var(--red);padding:8px 14px"><span class="mdi mdi-power"></span></div></div>
+    <div style="flex:1;display:flex;gap:14px;align-items:stretch;margin-top:8px">
+      <div style="display:flex;flex-direction:column;gap:7px;justify-content:center;width:88px">${pill('Home')}${pill('Back')}${pill('Exit')}${pill('Menu')}${pill('Info')}</div>
+      <div style="flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:12px">
+        <div style="display:grid;grid-template-columns:repeat(3,40px);grid-template-rows:repeat(3,40px);gap:6px"><div></div><div class="tbtn mdi mdi-chevron-up"></div><div></div><div class="tbtn mdi mdi-chevron-left"></div><div class="tbtn main">OK</div><div class="tbtn mdi mdi-chevron-right"></div><div></div><div class="tbtn mdi mdi-chevron-down"></div><div></div></div>
+        <div class="row" style="gap:6px"><span class="tbtn mdi mdi-rewind"></span><span class="tbtn mdi mdi-play"></span><span class="tbtn mdi mdi-pause"></span><span class="tbtn mdi mdi-stop"></span><span class="tbtn mdi mdi-fast-forward"></span></div></div>
+      <div style="display:flex;flex-direction:column;gap:7px;justify-content:center;width:88px">
+        <div class="rpill"><span class="mdi mdi-volume-plus"></span></div>${pill('Mute')}<div class="rpill"><span class="mdi mdi-volume-minus"></span></div>
+        <div style="height:4px"></div>
+        <div class="rpill">CH<span class="mdi mdi-chevron-up"></span></div><div class="rpill">CH<span class="mdi mdi-chevron-down"></span></div></div>
+    </div>
+    <div class="row" style="gap:8px;margin-top:8px"><div class="rpill" style="flex:1;background:#1a1426;border-color:#4a2a5a;color:var(--violet)"><span class="mdi mdi-apps"></span> Apps</div><div class="rpill" style="flex:1"><span class="mdi mdi-gesture-swipe"></span> Trackpad</div></div>`; }
   if(ctrl==='tv_dpad') return head+`<div class="toprow">${ico}<span class="csub">${nm}</span></div><div style="flex:1;display:flex;align-items:center;justify-content:center"><div style="display:grid;grid-template-columns:repeat(3,34px);grid-template-rows:repeat(3,34px);gap:5px"><div></div><div class="tbtn mdi mdi-chevron-up"></div><div></div><div class="tbtn mdi mdi-chevron-left"></div><div class="tbtn main">OK</div><div class="tbtn mdi mdi-chevron-right"></div><div></div><div class="tbtn mdi mdi-chevron-down"></div><div></div></div></div>`;
   if(ctrl==='tv_transport') return head+`<div class="toprow">${ico}<span class="csub">${nm}</span></div><div class="row" style="flex:1;justify-content:center;gap:8px;flex-wrap:wrap"><span class="tbtn mdi mdi-arrow-left"></span><span class="tbtn mdi mdi-home"></span><span class="tbtn mdi mdi-rewind"></span><span class="tbtn main mdi mdi-play-pause"></span><span class="tbtn mdi mdi-fast-forward"></span></div>`;
   if(ctrl==='tv_channel'){ const hz=c.w>c.h; return head+`<div class="toprow">${ico}<span class="csub">${nm}</span></div><div style="flex:1;display:flex;${hz?'flex-direction:row':'flex-direction:column'};gap:8px;align-items:center;justify-content:center"><div class="tbtn" style="width:auto;padding:6px 14px;border-radius:11px;gap:4px">CH<span class="mdi mdi-chevron-up"></span></div><div class="tbtn" style="width:auto;padding:6px 14px;border-radius:11px;gap:4px">CH<span class="mdi mdi-chevron-down"></span></div></div>`; }
@@ -405,7 +411,7 @@ function cardInner(c){ const def=C[c.ck], nm=c.name||def.label, big=c.w>=3, ctrl
 }
 
 function renderGrid(){ ROWS=rowsFor(); const g=document.getElementById('grid');
-  g.style.gridTemplateRows=`repeat(${ROWS},100px)`; g.style.top=(L.pages[curPage].header?96:22)+'px'; g.style.height=(ROWS*100+(ROWS-1)*14)+'px'; g.innerHTML='';
+  g.style.gridTemplateRows=`repeat(${ROWS},100px)`; g.style.top=((L.pages[curPage].header&&L.pages[curPage].header.on)?96:22)+'px'; g.style.height=(ROWS*100+(ROWS-1)*14)+'px'; g.innerHTML='';
   for(let i=0;i<COLS*ROWS;i++){ const cell=document.createElement('div'); cell.className='gcell'; cell.style.gridColumn=(i%COLS)+1; cell.style.gridRow=Math.floor(i/COLS)+1; g.appendChild(cell); }
   for(const c of curCards()){ const def=C[c.ck];
     const d=document.createElement('div'); d.className='pc'+(sel===c.id?' sel':'')+(['light','dial','toggle'].includes(def.ctrl)?' on':'');

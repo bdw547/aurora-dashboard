@@ -52,15 +52,14 @@
     ]},
     "tv": {"title":"TV","type":"custom","header":{"on":false,"left":"greeting","right":[]},"subpages":[
       [
+        {"id":"full1","ck":"tvremote","entity":"media_player.lg_g3_living_room_2","name":"LG G3 OLED — full remote","x":1,"y":1,"w":6,"h":5}
+      ],
+      [
         {"id":"d1","ck":"tv_dpad","entity":"media_player.lg_g3_living_room_2","name":"Navigate","x":1,"y":1,"w":3,"h":3},
         {"id":"tr1","ck":"tv_transport","entity":"media_player.lg_g3_living_room_2","name":"Transport","x":1,"y":4,"w":3,"h":1},
         {"id":"vol1","ck":"tv_volume","entity":"media_player.lg_g3_living_room_2","name":"Volume","x":4,"y":1,"w":1,"h":3},
         {"id":"ch1","ck":"tv_channel","entity":"media_player.lg_g3_living_room_2","name":"Channel","x":5,"y":1,"w":2,"h":2},
         {"id":"src1","ck":"tv_sources","name":"Sources","x":5,"y":3,"w":2,"h":3,"entities":["media_player.hdmi1","media_player.netflix","media_player.youtube","media_player.appletv"]}
-      ],
-      [
-        {"id":"tp1","ck":"tv_trackpad","entity":"media_player.lg_g3_living_room_2","name":"Trackpad","x":1,"y":1,"w":6,"h":4},
-        {"id":"tr2","ck":"tv_transport","entity":"media_player.lg_g3_living_room_2","name":"Transport","x":1,"y":5,"w":4,"h":1}
       ]
     ]}
   }
