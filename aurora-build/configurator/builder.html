@@ -100,6 +100,12 @@ h3.sec{font-size:11px;letter-spacing:1.4px;text-transform:uppercase;color:var(--
 .pc .lgbtn.on{background:linear-gradient(180deg,#14161C,#13201d);border-color:var(--onbd);color:var(--amber)}
 .pc .lgbtn .mdi{font-size:17px;flex:0 0 auto}
 .pc .lgbtn .lgn{font-size:9px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:100%;color:var(--tx)}
+.pc .scgrid{flex:1;display:grid;gap:8px;margin-top:10px;min-height:0}
+.pc .scbtn{background:#161B24;border:1px solid #2c3340;border-radius:11px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:5px;color:var(--tx);min-width:0;padding:6px;overflow:hidden}
+.pc .scbtn.empty{background:transparent;border-style:dashed;color:var(--t3)}
+.pc .scbtn .mdi{font-size:20px;color:var(--teal)}
+.pc .scbtn.empty .mdi{color:var(--t3)}
+.pc .scn{font-size:11px;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:100%}
 .pc .ddrop{margin-top:auto;background:#0f1117;border:1px solid var(--bd);border-radius:10px;padding:10px 12px;display:flex;align-items:center;justify-content:space-between;font-size:13px}
 .pc .spkgrid{flex:1;display:grid;gap:7px;margin-top:10px}
 .pc .spk{background:#0f1117;border:1px solid var(--bd);border-radius:10px;display:flex;align-items:center;gap:6px;padding:0 10px;font-size:12px;color:var(--t2);white-space:nowrap;overflow:hidden}
@@ -185,7 +191,10 @@ const C = {
   cover:    {label:'Cover / blinds', domain:'cover', icon:'blinds-horizontal', color:'var(--blue)', spans:[[2,1],[2,2],[2,3]], def:[2,2], ctrl:'pos'},
   climate:  {label:'Climate / thermostat', domain:'climate', icon:'thermostat', color:'var(--amber)', spans:[[1,1],[2,2],[3,2],[3,3],[4,4],[6,5],...V], def:[4,4], ctrl:'dial'},
   group:    {label:'Status group', domain:'mixed', icon:'view-grid-outline', color:'var(--teal)', spans:[[2,2],[2,3],[2,4],[2,5]], def:[2,3], ctrl:'group', multi:true},
-  speakers: {label:'Speaker select', domain:'media_player', icon:'speaker-multiple', color:'var(--teal)', spans:[[1,2],[1,3],[3,2],[2,3],[3,3],[5,4]], def:[2,3], ctrl:'speakers', multi:true},
+  shortcuts:{label:'Shortcuts', domain:'page', icon:'view-grid-plus', color:'var(--teal)', spans:[[2,2],[3,2],[2,3],[4,2],[2,4],[5,2],[2,5],[6,2]], def:[2,2], ctrl:'shortcuts', multi:true},
+  speakers: {label:'Speaker linking', domain:'media_player', icon:'speaker-multiple', color:'var(--teal)', spans:[[1,2],[1,3],[3,2],[2,3],[3,3],[5,4]], def:[2,3], ctrl:'btngrid', btnIcon:'speaker', multi:true},
+  sonos_sources:{label:'Sonos sources', domain:'media_player', icon:'music-box-multiple', color:'var(--teal)', spans:[[1,2],[1,3],[3,2],[2,3],[3,3],[5,4]], def:[2,3], ctrl:'btngrid', btnIcon:'music-box', multi:true},
+  sonos_library:{label:'Sonos library', domain:'media_player', icon:'bookshelf', color:'var(--teal)', spans:[[4,3],[3,4],[4,4],[3,5],[4,5],[5,5]], def:[4,4], ctrl:'songlist'},
   spotify:  {label:'Spotify now-playing', domain:'media_player', icon:'spotify', color:'#1DB954', spans:[[1,1],[2,2],[3,2],[4,3],[6,5]], def:[3,2], ctrl:'media'},
   playlist: {label:'Spotify playlist', domain:'media_player', icon:'playlist-play', color:'#1DB954', spans:[[1,1],[2,1],[3,1]], def:[2,1], ctrl:'playlist'},
   songlist: {label:'Spotify song list', domain:'media_player', icon:'playlist-music', color:'#1DB954', spans:[[4,3],[3,4],[4,4],[3,5],[4,5],[5,5]], def:[4,4], ctrl:'songlist'},
@@ -206,9 +215,10 @@ const C = {
 const CATS = [
   ['Lighting', ['light','light_t','switch','lightgroup','outletgroup']],
   ['Comfort', ['climate','fan','cover']],
-  ['Groups', ['group','speakers']],
   ['Spotify', ['spotify','playlist','songlist']],
-  ['Media', ['sonos','media','tvremote']],
+  ['Sonos', ['sonos','speakers','sonos_sources','sonos_library']],
+  ['Media', ['media','tvremote']],
+  ['Groups', ['group','shortcuts']],
   ['Safety', ['lock','camera','alarm','binary']],
   ['Info', ['sensor','weather','person','vacuum']],
   ['Actions', ['scene','script']],
@@ -229,8 +239,9 @@ function nm2(eid){ return (eid&&eid.includes('.'))?eid.split('.')[1].replace(/_/
 function cap(c){ const k=c.ck;
   if(k==='group') return c.h*2;                       // 2 per grid-row
   if(k==='lightgroup') return c.w*Math.max(2,c.h-1);  // W cols × (H-1) rows, min 2 rows
+  if(k==='shortcuts') return c.w*c.h;                 // one nav button per grid cell
   if(k==='outletgroup') return 2;
-  if(k==='speakers'){ if(c.w===1) return 99;          // dropdown
+  if(k==='speakers'||k==='sonos_sources'){ if(c.w===1) return 99;   // dropdown
     if((c.w===2&&c.h===3)||(c.w===3&&c.h===2)) return 4;
     if(c.w===3&&c.h===3) return 6; if(c.w===5&&c.h===4) return 10;
     return Math.max(4,Math.floor(c.w*c.h/2)); }
@@ -243,7 +254,7 @@ function defaultLayout(){ const l={ install_room:'', nav:[
       {id:'media',icon:'music',label:'Media',page:'media'}],
     pages:{home:blankPage('Home'),rooms:blankPage('Rooms'),lights:blankPage('Lights'),climate:blankPage('Climate'),media:blankPage('Media')} };
   l.pages.home.header=true; return l; }
-function mk(ck,entity,name,x,y,w,h){ const c={id:uid(),ck,entity:entity||'',name:name||C[ck].label,x,y,w,h}; if(C[ck].multi) c.entities=[]; return c; }
+function mk(ck,entity,name,x,y,w,h){ const c={id:uid(),ck,entity:entity||'',name:name||C[ck].label,x,y,w,h}; if(C[ck].multi) c.entities=[]; if(ck==='shortcuts') c.shortcuts=[]; return c; }
 const TEMPLATES = {
   'Living-room home':()=>{ const l=defaultLayout(); l.install_room='Living Room'; l.pages.home.header=true;
     l.pages.home.subpages=[[ mk('climate',null,'Main Floor',1,1,4,4), mk('light',null,'Main Lights',5,1,2,2), mk('group',null,'House status',5,3,2,2) ]]; return l; },
@@ -331,11 +342,14 @@ function cardInner(c){ const def=C[c.ck], nm=c.name||def.label, big=c.w>=3, ctrl
   if(ctrl==='lightgroup'){ const n=cap(c), ents=c.entities||[], brows=Math.max(2,c.h-1), onN=ents.filter((e,i)=>i%2===0).length; let btns='';
     for(let i=0;i<n;i++){ const e=ents[i]; const on=e&&i%2===0; btns+=`<div class="lgbtn${on?' on':''}"><span class="mdi mdi-lightbulb${on?'':'-outline'}"></span><span class="lgn">${e?nm2(e):'Light'}</span></div>`; }
     return head+`<div class="toprow">${ico}<span class="csub">${nm} · ${onN} on · ${ents.length}/${n}</span></div><div class="lggrid" style="grid-template-columns:repeat(${c.w},1fr);grid-template-rows:repeat(${brows},1fr)">${btns}</div>`; }
-  if(ctrl==='speakers'){ const ents=c.entities||[];
-    if(c.w===1) return head+`<div class="toprow">${ico}<span class="csub">${nm}</span></div><div class="ddrop"><span>${ents[0]?nm2(ents[0]):'Choose speaker'}</span><span class="mdi mdi-chevron-down"></span></div>`;
+  if(ctrl==='btngrid'){ const ents=c.entities||[]; const bi=def.btnIcon||'speaker'; const word=c.ck==='sonos_sources'?'source':'speaker'; const Word=word.charAt(0).toUpperCase()+word.slice(1);
+    if(c.w===1) return head+`<div class="toprow">${ico}<span class="csub">${nm}</span></div><div class="ddrop"><span>${ents[0]?nm2(ents[0]):'Choose '+word}</span><span class="mdi mdi-chevron-down"></span></div>`;
     const n=cap(c), cols=n===10?5:(n===6?3:2); let btns='';
-    for(let i=0;i<n;i++){ const e=ents[i]; btns+=`<div class="spk${i===0&&e?' on':''}"><span class="mdi mdi-speaker"></span>${e?nm2(e):'Speaker'}</div>`; }
+    for(let i=0;i<n;i++){ const e=ents[i]; btns+=`<div class="spk${i===0&&e?' on':''}"><span class="mdi mdi-${bi}"></span>${e?nm2(e):Word}</div>`; }
     return head+`<div class="toprow">${ico}<span class="csub">${nm}</span></div><div class="spkgrid" style="grid-template-columns:repeat(${cols},1fr)">${btns}</div>`; }
+  if(ctrl==='shortcuts'){ const n=cap(c), sc=c.shortcuts||[]; let btns='';
+    for(let i=0;i<n;i++){ const s=sc[i]; btns+=`<div class="scbtn${s?'':' empty'}">${s?`<span class="mdi mdi-${s.icon}"></span><span class="scn">${s.label}</span>`:`<span class="mdi mdi-plus"></span>`}</div>`; }
+    return head+`<div class="toprow">${ico}<span class="csub">${nm} · ${sc.length}/${n}</span></div><div class="scgrid" style="grid-template-columns:repeat(${c.w},1fr);grid-template-rows:repeat(${c.h},1fr)">${btns}</div>`; }
   if(ctrl==='outletgroup'){ const ents=c.entities||[]; let rows='';
     for(let i=0;i<2;i++){ const e=ents[i]; rows+=`<div class="orow"><span class="mdi mdi-power-socket-us" style="color:var(--teal)"></span><span style="flex:1;font-size:13px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${e?nm2(e):'Outlet '+(i+1)}</span>${tog(i===0)}</div>`; }
     return head+`<div class="toprow">${ico}<span class="csub">${nm}</span></div>${rows}`; }
@@ -343,7 +357,8 @@ function cardInner(c){ const def=C[c.ck], nm=c.name||def.label, big=c.w>=3, ctrl
     return head+`<div class="toprow">${ico}<span class="csub">${nm}</span></div><div class="ddrop"><span>Liked Songs</span><span class="mdi mdi-chevron-down"></span></div>`; }
   if(ctrl==='songlist'){ const rows=[['Midnight City','M83'],['Instant Crush','Daft Punk'],['The Less I Know','Tame Impala'],['Dreams','Fleetwood Mac'],['Redbone','Childish Gambino'],['Holocene','Bon Iver'],['Lovely Day','Bill Withers'],['Electric Feel','MGMT'],['Tadow','Masego'],['Breathe','Télépopmusik']];
     const n=Math.max(3,c.h*2); let lis=''; for(let i=0;i<n;i++){ const r=rows[i%rows.length]; lis+=`<div class="trk"><span style="color:var(--tx);white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${r[0]}</span><span class="csub">${r[1]}</span></div>`; }
-    return head+`<div class="toprow"><span class="csub" style="letter-spacing:1px">TRACKS · tap to play</span><span class="mdi mdi-playlist-music" style="color:#1DB954"></span></div><div class="trklist">${lis}</div>`; }
+    const sono=c.ck==='sonos_library'; const hdr=sono?'SONOS LIBRARY':'TRACKS · tap to play', hi=sono?'bookshelf':'playlist-music', hc=sono?'var(--teal)':'#1DB954';
+    return head+`<div class="toprow"><span class="csub" style="letter-spacing:1px">${hdr}</span><span class="mdi mdi-${hi}" style="color:${hc}"></span></div><div class="trklist">${lis}</div>`; }
   return head+ico+nme;
 }
 
@@ -371,6 +386,23 @@ function renderInspector(){ const el=document.getElementById('insp'); const c=se
     el.querySelector('#pgTitle').oninput=(e)=>{L.pages[curPage].title=e.target.value; renderTabs(); renderHeader();};
     fillRooms(); return; }
   const def=C[c.ck];
+  if(def.ctrl==='shortcuts'){ const n=cap(c); c.shortcuts=c.shortcuts||[];
+    el.innerHTML=`<h3 class="sec">${def.label}</h3>
+      <div class="field"><label>Name</label><input id="fName" value="${(c.name||'').replace(/"/g,'&quot;')}"></div>
+      <div class="field"><label>Size (span)</label><div class="szrow" id="szrow"></div></div>
+      <div class="field"><label>Shortcuts (${c.shortcuts.length}/${n})</label><div id="elist2"></div>
+        <button class="btn ghost" id="addSc" style="width:100%;margin-top:6px">+ Add shortcut</button></div>
+      <button class="btn ghost" id="delCard" style="width:100%;color:var(--red);border-color:#3a2422">Delete card</button>`;
+    sizeButtons(c, el.querySelector('#szrow'));
+    const list=el.querySelector('#elist2');
+    c.shortcuts.forEach((s,i)=>{ const r=document.createElement('div'); r.className='elrow';
+      r.innerHTML=`<span style="min-width:0;overflow:hidden;text-overflow:ellipsis"><span class="mdi mdi-${s.icon}" style="color:var(--teal);margin-right:6px"></span>${s.label}</span><span class="x mdi mdi-close"></span>`;
+      r.querySelector('.x').onclick=()=>{ c.shortcuts.splice(i,1); renderGrid(); renderInspector(); }; list.appendChild(r); });
+    if(!c.shortcuts.length) list.innerHTML='<div class="csub" style="padding:4px 0">No shortcuts yet — add some.</div>';
+    el.querySelector('#fName').oninput=(e)=>{c.name=e.target.value; renderGrid();};
+    el.querySelector('#addSc').onclick=()=>{ if(c.shortcuts.length>=n){toast('Card is full ('+n+')');return;} shortcutModal(c); };
+    el.querySelector('#delCard').onclick=()=>{ const a=curCards(); a.splice(a.indexOf(c),1); sel=null; renderGrid(); renderInspector(); };
+    return; }
   if(def.multi){ const n=cap(c); c.entities=c.entities||[];
     el.innerHTML=`<h3 class="sec">${def.label}</h3>
       <div class="field"><label>Name</label><input id="fName" value="${(c.name||'').replace(/"/g,'&quot;')}"></div>
@@ -470,6 +502,21 @@ function addEntityPicker(card){ const def=C[card.ck], mbox=document.getElementBy
       r.onclick=()=>{ const i=card.entities.indexOf(e.entity_id); if(i>=0) card.entities.splice(i,1); else { if(n<99&&card.entities.length>=n){ toast('Card is full ('+n+')'); return; } card.entities.push(e.entity_id); } draw(flt); renderGrid(); }; elist.appendChild(r); }); };
   draw(''); mbox.querySelector('#esrch').oninput=(e)=>draw(e.target.value.toLowerCase().trim());
   document.getElementById('modal').style.display='flex'; mbox.querySelector('#mDone').onclick=()=>{ closeModal(); renderInspector(); }; }
+function shortcutModal(card){ const mbox=document.getElementById('mbox');
+  const pageOpts=Object.keys(L.pages).map(p=>`<option value="page:${p}">${L.pages[p].title}</option>`).join('');
+  const roomOpts=Object.values(AREAS).map(a=>`<option value="room:${a.name}">Room — ${a.name}</option>`).join('');
+  mbox.innerHTML=`<h2>Add shortcut</h2><p>A quick button that jumps to a page, room, or the camera — like the Home “Quick” tiles.</p>
+    <div class="field"><label>Goes to</label><select id="scTarget"><optgroup label="Pages">${pageOpts}</optgroup>${roomOpts?`<optgroup label="Rooms">${roomOpts}</optgroup>`:''}<option value="special:camera">Camera (fullscreen)</option><option value="special:screensaver">Screensaver</option></select></div>
+    <div class="field"><label>Label</label><input id="scLabel" placeholder="(auto from target)"></div>
+    <div class="field"><label>Icon</label><div class="szrow" id="scIcons"></div></div>
+    <div class="mfoot"><button class="btn ghost" id="mCancel">Cancel</button><button class="btn" id="mOk">Add</button></div>`;
+  const ig=mbox.querySelector('#scIcons'), tsel=mbox.querySelector('#scTarget'), lin=mbox.querySelector('#scLabel'); let icon='arrow-right-bold';
+  function renderIcons(){ ig.innerHTML=''; NAV_ICONS.forEach(ic=>{ const b=document.createElement('div'); b.className='szb'+(ic===icon?' on':''); b.innerHTML=`<span class="mdi mdi-${ic}" style="font-size:18px"></span>`; b.onclick=()=>{icon=ic; renderIcons();}; ig.appendChild(b); }); }
+  const sync=()=>{ const v=tsel.value; if(v.startsWith('page:')){ const p=v.slice(5); lin.placeholder=L.pages[p].title; const nv=L.nav.find(x=>x.page===p); if(nv) icon=nv.icon; }
+    else if(v.startsWith('room:')){ lin.placeholder=v.slice(5); icon='sofa'; } else { lin.placeholder=v.split(':')[1]; icon=v.includes('camera')?'camera':'image'; } renderIcons(); };
+  tsel.onchange=sync; renderIcons(); sync();
+  document.getElementById('modal').style.display='flex'; mbox.querySelector('#mCancel').onclick=closeModal;
+  mbox.querySelector('#mOk').onclick=()=>{ let label=lin.value.trim()||lin.placeholder; card.shortcuts.push({label,icon,target:tsel.value}); closeModal(); renderGrid(); renderInspector(); }; }
 function closeModal(){ document.getElementById('modal').style.display='none'; }
 
 function addNav(){ navModal({id:uid(),icon:'star',label:'New',page:''},true); }
@@ -513,7 +560,7 @@ async function flash(){ await save(); const ip=document.getElementById('panip').
   }catch(e){ log.textContent='Error: '+e.message; } }
 
 async function boot(){ try{ L=await j('/api/layout'); if(!L||!L.pages||!Object.keys(L.pages).length) L=defaultLayout(); }catch(e){ L=defaultLayout(); }
-  Object.values(L.pages).forEach(p=>{ if(p.header===undefined)p.header=false; p.subpages.forEach(sp=>sp.forEach(c=>{ if(C[c.ck]&&C[c.ck].multi&&!c.entities)c.entities=[]; })); });
+  Object.values(L.pages).forEach(p=>{ if(p.header===undefined)p.header=false; p.subpages.forEach(sp=>sp.forEach(c=>{ if(C[c.ck]&&C[c.ck].multi&&!c.entities)c.entities=[]; if(c.ck==='shortcuts'&&!c.shortcuts)c.shortcuts=[]; })); });
   curPage=L.nav[0]?L.nav[0].page:Object.keys(L.pages)[0]; curSub=0;
   document.getElementById('haurl').value=localStorage.getItem('aurora_ha_url')||'';
   document.getElementById('hatok').value=localStorage.getItem('aurora_ha_tok')||'';
