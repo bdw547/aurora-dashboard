@@ -154,7 +154,7 @@ def c_light(card, x, y, w, h, base):
             "              - slider:\n                  id: %s\n                  x: 14\n                  y: 56\n                  width: %d\n"
             "                  min_value: 0\n                  max_value: 100\n                  value: 0\n"
             "                  on_release:\n                    - homeassistant.action:\n                        action: light.turn_on\n"
-            "                        data: { entity_id: %s, brightness_pct: !lambda 'return (int) id(%s).get_value();' }\n"
+            "                        data: { entity_id: %s, brightness_pct: !lambda 'return std::to_string((int) lv_slider_get_value(id(%s)));' }\n"
             % (sld, w - 28, e, sld))
     inner += lbl("--%", 14, -12, "f_head", "0x2ED5B8", wid=pct, align="bottom_left")
     s = []
@@ -598,7 +598,7 @@ def build_lvgl(layout):
 
 # ---- base extraction: keep hardware/font/style sections, drop UI bindings ----
 KEEP = ["substitutions", "esphome", "esp32", "psram", "esp_ldo", "esp32_hosted",
-        "wifi", "api", "ota", "safe_mode", "logger", "output", "light",
+        "wifi", "api", "ota", "safe_mode", "logger", "web_server", "output", "light",
         "external_components", "i2c", "touchscreen", "display", "http_request",
         "image", "font", "globals", "number", "button"]
 

@@ -23,9 +23,14 @@ import urllib.request
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 
 HERE = os.path.dirname(os.path.abspath(__file__))
-# Prefer the esphome from the same venv that launched us; fall back to PATH.
-_VENV_ESPHOME = os.path.join(os.path.dirname(sys.executable), "esphome")
-ESPHOME = _VENV_ESPHOME if os.path.exists(_VENV_ESPHOME) else "esphome"
+# Resolve the esphome executable by candidate path (robust to being launched by
+# system python3 instead of the venv interpreter): the launching venv first,
+# then the project's .venv-dev, then bare PATH as a last resort.
+_ESPHOME_CANDIDATES = [
+    os.path.join(os.path.dirname(sys.executable), "esphome"),
+    os.path.normpath(os.path.join(HERE, "..", "..", ".venv-dev", "bin", "esphome")),
+]
+ESPHOME = next((p for p in _ESPHOME_CANDIDATES if os.path.exists(p)), "esphome")
 YAML = os.path.normpath(os.path.join(
     HERE, "..", "..", "devices", "guition-esp32-p4-jc1060p470", "aurora.yaml"))
 # Phase 2: the firmware generated from the page-builder layout.json
@@ -1143,13 +1148,19 @@ def flash_job(device, yml=None):
             FLASH.update(running=False, done=True, ok=False)
             return
         m = _re.search(r"build_time_str=(\d\S* \S+ \S+)", FLASH["log"])
-        target = m.group(1).strip() if m else None
+        build_ts = m.group(1).strip() if m else None   # keep `target` = the yaml
         is_serial = "/" in device          # /dev/ttyACM0 = serial; else OTA (IP)
-        attempts = 1 if is_serial else 4
+        attempts = 1 if is_serial else 6
+        # Serial uploads touch /dev/tty*, which the server user can't open
+        # directly (not in the `dialout` group). Route serial through
+        # passwordless `sudo -E` so esphome keeps HOME and reuses the user's
+        # build cache instead of rebuilding as root. OTA needs no sudo.
+        up_cmd = (["sudo", "-E", ESPHOME] if is_serial else [ESPHOME]) \
+            + ["upload", target, "--device", device]
         ok = False
         for i in range(1, attempts + 1):
             FLASH["log"] += f"\n== Upload attempt {i}/{attempts} -> {device} ==\n"
-            if run([ESPHOME, "upload", target, "--device", device]) != 0:
+            if run(up_cmd) != 0:
                 FLASH["log"] += "[upload error]\n"
                 continue
             if is_serial:
@@ -1166,8 +1177,8 @@ def flash_job(device, yml=None):
                 FLASH["log"] += "(couldn't reach the panel API to verify; upload reported OK)\n"
                 ok = True
                 break
-            FLASH["log"] += f"panel build: {live}  |  target: {target}\n"
-            if target and live.strip() == target:
+            FLASH["log"] += f"panel build: {live}  |  target: {build_ts}\n"
+            if build_ts and live.strip() == build_ts:
                 FLASH["log"] += "MATCH — the new build is running.\n"
                 ok = True
                 break
@@ -1233,6 +1244,10 @@ class H(BaseHTTPRequestHandler):
             return self._send(200, json.dumps(read_rooms()))
         if self.path == "/api/flash-status":
             return self._send(200, json.dumps(FLASH))
+        if self.path == "/api/flash-devices":
+            import glob as _glob
+            ports = sorted(_glob.glob("/dev/ttyACM*") + _glob.glob("/dev/ttyUSB*"))
+            return self._send(200, json.dumps({"serial": ports}))
         return self._send(404, "{}")
 
     def do_POST(self):

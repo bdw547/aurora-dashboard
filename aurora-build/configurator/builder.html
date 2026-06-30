@@ -184,6 +184,7 @@ h3.sec{font-size:11px;letter-spacing:1.4px;text-transform:uppercase;color:var(--
   <input id="haurl" placeholder="HA URL  http://10.0.0.208:8123" style="width:210px">
   <input id="hatok" placeholder="Long-lived token" type="password" style="width:150px">
   <input id="panip" placeholder="Panel IP  10.0.0.174" style="width:140px">
+  <label id="usbWrap" title="Flash over the USB cable — bypasses the OTA boot-confirm rollback" style="display:none;align-items:center;gap:4px;font-size:12px;color:var(--t2)"><input type="checkbox" id="usbChk" style="width:auto"> <span id="usbLbl">USB</span></label>
   <button class="btn ghost" id="connect">Connect</button>
   <span class="pill"><span class="dot" id="cdot"></span><span id="cstat">not connected</span></span>
   <div class="sp"></div>
@@ -677,9 +678,14 @@ async function connect(){ const url=document.getElementById('haurl').value.trim(
     renderPalette(); renderInspector(); toast('Connected to Home Assistant');
   }catch(e){ document.getElementById('cdot').className='dot'; document.getElementById('cstat').textContent='not connected'; toast('Connect failed: '+e.message); } }
 async function save(){ try{ await j('/api/layout',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(L)}); toast('Layout saved ✓'); }catch(e){ toast('Save failed: '+e.message); } }
-async function flash(){ await save(); const ip=document.getElementById('panip').value.trim(); if(!ip){ toast('Enter the panel IP (or /dev/ttyACM0 for serial)'); return; }
-  document.getElementById('flashbox').style.display='block'; const log=document.getElementById('flashlog'); log.textContent='Starting…';
-  try{ await j('/api/flash',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({device:ip})});
+let SERIAL_DEV='';
+async function flash(){ await save();
+  const useSerial=SERIAL_DEV && document.getElementById('usbChk').checked;
+  const device=useSerial?SERIAL_DEV:document.getElementById('panip').value.trim();
+  if(!device){ toast('Enter the panel IP, or plug in USB for serial'); return; }
+  document.getElementById('flashbox').style.display='block'; const log=document.getElementById('flashlog');
+  log.textContent='Starting '+(useSerial?('serial flash via '+device):('OTA to '+device))+'…';
+  try{ await j('/api/flash',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({device})});
     const t=setInterval(async()=>{ const s=await j('/api/flash-status'); log.textContent=s.log||''; log.scrollTop=log.scrollHeight; if(s.done){clearInterval(t); toast(s.ok?'Flash complete ✓':'Flash did not confirm');} },1200);
   }catch(e){ log.textContent='Error: '+e.message; } }
 
@@ -692,6 +698,9 @@ async function boot(){ try{ L=await j('/api/layout'); if(!L||!L.pages||!Object.k
   document.getElementById('haurl').value=cfg.ha_url||'';
   document.getElementById('panip').value=cfg.panel_ip||'';
   document.getElementById('hatok').placeholder=cfg.has_token?'•••• saved (blank = keep)':'Long-lived token';
+  try{ const fd=await j('/api/flash-devices'); if(fd.serial&&fd.serial.length){ SERIAL_DEV=fd.serial[0];
+    const w=document.getElementById('usbWrap'); w.style.display='inline-flex'; document.getElementById('usbChk').checked=true;
+    document.getElementById('usbLbl').textContent='USB ('+SERIAL_DEV.replace('/dev/','')+')'; } }catch(e){}
   renderPalette(); renderAll();
   document.getElementById('connect').onclick=connect; document.getElementById('saveBtn').onclick=save;
   document.getElementById('flashBtn').onclick=flash; document.getElementById('tplBtn').onclick=openTemplates;
