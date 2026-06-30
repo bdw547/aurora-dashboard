@@ -440,19 +440,49 @@ def c_tv_trackpad(card, x, y, w, h, base):
     return [card_obj(x, y, w, h, inner)], [], []
 
 
+def _chan(e, up):
+    btn_name = "CHANNELUP" if up else "CHANNELDOWN"
+    return ("homeassistant.action: { action: webostv.button, data: { entity_id: %s, button: %s } }"
+            % (e, btn_name)) if e else "lvgl.page.show: page_home"
+
+
 def c_tvremote(card, x, y, w, h, base):
+    """Full LG remote (web `remote` card parity). Large cards get header +
+    volume column + d-pad + channel column + a full transport bar; small cards
+    fall back to d-pad + 3 transport buttons."""
     e = card.get("entity", "")
-    inner = ic(card["ck"], color="0xB06CFF") + lbl("LG OLED", 50, 14, "f_title")
+    inner = ic(card["ck"], color="0xB06CFF") + lbl("LG OLED", 50, 12, "f_title")
     powA = ("homeassistant.action: { action: media_player.toggle, data: { entity_id: %s } }" % e) if e else "lvgl.page.show: page_home"
     inner += btn(w - 66, 14, 52, 46, "\\U000F0425", powA, bg="0x2a1414", color="0xF2685A", font="f_icon")
-    inner = _dpad(inner, e, w, h - 30)
-    items = [("\\U000F04AE", "media_player.media_previous_track"),
-             ("\\U000F040A", "media_player.media_play_pause"),
-             ("\\U000F04AD", "media_player.media_next_track")]
-    by = h - 66; bw = 56
-    for i, (g, svc) in enumerate(items):
-        inner += btn(14 + i * (bw + 8), by, bw, 52, g, ha(svc, e) if e else "lvgl.page.show: page_home",
-                     font="f_icon", bg=("0x2ED5B8" if i == 1 else "0x161B24"), color=("0x06231D" if i == 1 else "0xF3F5F8"))
+    rich = w >= 560 and h >= 320
+    if rich:
+        inner += lbl("Living Room \\u00B7 HDMI 1", 52, 48, "f_small", "0x868CA0")
+        inner = _dpad(inner, e, w, h - 10)
+        midy = h // 2
+        vu = ha("media_player.volume_up", e) if e else "lvgl.page.show: page_home"
+        vd = ha("media_player.volume_down", e) if e else "lvgl.page.show: page_home"
+        inner += btn(28, midy - 64, 86, 54, "VOL +", vu)
+        inner += btn(28, midy + 14, 86, 54, "VOL -", vd)
+        inner += btn(w - 114, midy - 64, 86, 54, "CH +", _chan(e, True))
+        inner += btn(w - 114, midy + 14, 86, 54, "CH -", _chan(e, False))
+        items = [("\\U000F0141", "BACK", None), ("\\U000F02DC", "HOME", None),
+                 ("\\U000F04AE", None, "media_player.media_previous_track"),
+                 ("\\U000F040A", None, "media_player.media_play_pause"),
+                 ("\\U000F04AD", None, "media_player.media_next_track")]
+    else:
+        inner = _dpad(inner, e, w, h - 30)
+        items = [("\\U000F04AE", None, "media_player.media_previous_track"),
+                 ("\\U000F040A", None, "media_player.media_play_pause"),
+                 ("\\U000F04AD", None, "media_player.media_next_track")]
+    n = len(items); bw = 64 if rich else 56
+    tot = n * bw + (n - 1) * 8
+    sx = (w - tot) // 2 if rich else 14
+    by = h - 66
+    for i, (g, bn, svc) in enumerate(items):
+        act = (("homeassistant.action: { action: webostv.button, data: { entity_id: %s, button: %s } }" % (e, bn)) if bn else ha(svc, e)) if e else "lvgl.page.show: page_home"
+        main = (g == "\\U000F040A")
+        inner += btn(sx + i * (bw + 8), by, bw, 52, g, act, font="f_icon",
+                     bg=("0x2ED5B8" if main else "0x161B24"), color=("0x06231D" if main else "0xF3F5F8"))
     return [card_obj(x, y, w, h, inner)], [], []
 
 
