@@ -42,8 +42,9 @@ NAV_GLYPH = {
     "television": "\\U000F0502", "desk": "\\U000F1239", "bed": "\\U000F02E3",
     "door": "\\U000F081A", "stairs": "\\U000F04CD", "tree": "\\U000F0531",
     "garage": "\\U000F06D9", "silverware-fork-knife": "\\U000F0A70",
+    "speaker": "\\U000F075A", "arrow-right-bold": "\\U000F0142", "image": "\\U000F0379",
 }
-FALLBACK_GLYPH = "\\U000F0493"
+FALLBACK_GLYPH = "\\U000F0142"  # chevron-right (shortcuts default to "go to")
 
 
 def slug(s):
@@ -65,7 +66,7 @@ def rect(card, header):
 
 
 # ---- low-level widget emitters (children placed under a card's `widgets:`) ----
-def lbl(text, x, y, font="f_body", color="0xF3F5F8", wid=None, align=None, width=None):
+def lbl(text, x, y, font="f_body", color="0xF3F5F8", wid=None, align=None, width=None, long=None, height=None):
     parts = []
     if wid:
         parts.append("id: " + wid)
@@ -76,9 +77,22 @@ def lbl(text, x, y, font="f_body", color="0xF3F5F8", wid=None, align=None, width
     parts.append("y: %d" % y)
     if width:
         parts.append("width: %d" % width)
+    if height:
+        parts.append("height: %d" % height)
+    if long:                       # "dot" + a one-line height -> ellipsis like the web .ct title
+        parts.append("long_mode: " + long)
     parts.append("text_font: " + font)
     parts.append("text_color: " + color)
     return "              - label: { %s }\n" % ", ".join(parts)
+
+
+def title(name, w, x=50, y=16):
+    """Card title (web .ct parity): the web uses a fixed ~15px title with a
+    one-line ellipsis. Use f_body on narrow (1-wide) cards and f_title on wider
+    ones, set a one-line height, and ellipsize rather than wrap/overflow."""
+    wide = w >= 280
+    f = "f_title" if wide else "f_body"
+    return lbl(name, x, y, f, width=w - x - 14, long="dot", height=36 if wide else 22)
 
 
 def btn(x, y, w, h, label_glyph, action, bg="0x161B24", color="0xF3F5F8", radius=12, font="f_body"):
@@ -139,7 +153,7 @@ def c_toggle(card, x, y, w, h, base):
     e = card.get("entity", "")
     sid = base + "_st"
     inner = ic(card["ck"], color="0xF2B84B")
-    inner += lbl(card.get("name", "Switch"), 14, 48, "f_title" if h >= 2 else "f_body")
+    inner += title(card.get("name", "Switch"), w, x=14, y=48)
     inner += lbl("--", 14, -14, "f_small", "0x2ED5B8", wid=sid, align="bottom_left")
     on = ha("homeassistant.toggle", e) if e else None
     ts = []
@@ -155,7 +169,7 @@ def c_light(card, x, y, w, h, base):
     e = card.get("entity", "")
     sld, pct = base + "_sld", base + "_pct"
     inner = ic(card["ck"], color="0xF2B84B")
-    inner += lbl(card.get("name", "Light"), 50, 16, "f_title")
+    inner += title(card.get("name", "Light"), w)
     if e:
         inner += (
             "              - slider:\n                  id: %s\n                  x: 14\n                  y: 56\n                  width: %d\n"
@@ -244,7 +258,7 @@ def c_media(card, x, y, w, h, base):
 def c_fan(card, x, y, w, h, base):
     e = card.get("entity", ""); sid = base + "_st"
     inner = ic(card["ck"])
-    inner += lbl(card.get("name", "Fan"), 14, 48, "f_title" if h >= 2 else "f_body")
+    inner += title(card.get("name", "Fan"), w, x=14, y=48)
     inner += lbl("--", 14, -12, "f_small", "0x2ED5B8", wid=sid, align="bottom_left")
     on = ha("fan.toggle", e) if e else None
     ts = []
@@ -257,7 +271,7 @@ def c_fan(card, x, y, w, h, base):
 def c_cover(card, x, y, w, h, base):
     e = card.get("entity", "")
     inner = ic(card["ck"], color="0x4FA8F5")
-    inner += lbl(card.get("name", "Cover"), 50, 16, "f_title")
+    inner += title(card.get("name", "Cover"), w)
     if e and (w >= 2 or h >= 2):
         half = (w - 36) // 2
         inner += btn(14, h - 60, half, 46, "\\U000F0143", ha("cover.open_cover", e), font="f_icon")
@@ -268,7 +282,7 @@ def c_cover(card, x, y, w, h, base):
 def c_lock(card, x, y, w, h, base):
     e = card.get("entity", ""); sid = base + "_st"
     inner = ic(card["ck"])
-    inner += lbl(card.get("name", "Lock"), 14, 48, "f_title" if h >= 2 else "f_body")
+    inner += title(card.get("name", "Lock"), w, x=14, y=48)
     inner += lbl("--", 14, -12, "f_small", "0x2ED5B8", wid=sid, align="bottom_left")
     on = ha("lock.unlock", e) if e else None
     ts = []
@@ -316,7 +330,7 @@ def c_group(card, x, y, w, h, base):
         click = (", clickable: true, on_click: [%s]" % ha("homeassistant.toggle", e)) if (is_lights and e) else ""
         inner += ("              - obj: { x: %d, y: %d, width: %d, height: %d, bg_color: %s, "
                   "border_width: 0, radius: 10, pad_all: 0, scrollable: false%s, widgets: ["
-                  "label: { text: %s, x: 10, y: 6, width: %d, text_font: f_small, text_color: 0xEEF0F6 }, "
+                  "label: { text: %s, x: 10, y: 6, width: %d, height: 18, long_mode: dot, text_font: f_small, text_color: 0xEEF0F6 }, "
                   "label: { text: \"%s\", x: 10, y: -6, align: bottom_left, text_font: f_small, text_color: %s }] }\n"
                   % (cx, cy, bw, bh, bg, click, esc(nm), bw - 20, state_txt, accent))
     return [card_obj(x, y, w, h, inner)], [], []
@@ -325,7 +339,7 @@ def c_group(card, x, y, w, h, base):
 def c_outlet(card, x, y, w, h, base):
     ents = card.get("entities", [])
     inner = ic(card["ck"])
-    inner += lbl(card.get("name", "Outlets"), 50, 16, "f_title")
+    inner += title(card.get("name", "Outlets"), w)
     yy = 56
     for e in (ents or [""])[: max(1, h)]:
         nm = (e.split(".")[-1] if "." in e else e).replace("_", " ") or "Outlet"
@@ -464,26 +478,44 @@ def c_songlist(card, x, y, w, h, base):
 
 
 def c_shortcuts(card, x, y, w, h, pagemap, base):
+    """Grid of icon+label tiles (one per grid cell), matching the builder's
+    .scbtn: MDI icon on top, label below. Empty slots show a + outline."""
     inner = ""
     sc = card.get("shortcuts", [])
-    n = max(1, min(len(sc), card["w"] * card["h"]))
-    cols = card["w"]
-    rows = max(1, (n + cols - 1) // cols)
-    pad = 12
-    bw = (w - pad * 2 - (cols - 1) * 8) // cols
-    bh = (h - pad * 2 - (rows - 1) * 8) // rows
+    cols, rows = card["w"], card["h"]
+    n = cols * rows
+    pad, gap = 12, 8
+    bw = (w - pad * 2 - (cols - 1) * gap) // cols
+    bh = (h - pad * 2 - (rows - 1) * gap) // rows
     for i in range(n):
-        s = sc[i] if i < len(sc) else {}
-        tgt = s.get("target", "")
-        label = s.get("label", "Open")
-        cx = pad + (i % cols) * (bw + 8)
-        cy = pad + (i // cols) * (bh + 8)
-        act = "lvgl.page.show: page_home"
-        if tgt.startswith("page:"):
-            pid = pagemap.get(tgt[5:])
-            if pid:
-                act = "lvgl.page.show: %s" % pid
-        inner += btn(cx, cy, bw, bh, label, act)
+        s = sc[i] if i < len(sc) else None
+        cx = pad + (i % cols) * (bw + gap)
+        cy = pad + (i // cols) * (bh + gap)
+        if s:
+            glyph = NAV_GLYPH.get(s.get("icon", ""), FALLBACK_GLYPH)
+            tgt = s.get("target", "")
+            act = "lvgl.page.show: page_home"
+            if tgt.startswith("page:"):
+                pid = pagemap.get(tgt[5:])
+                if pid:
+                    act = "lvgl.page.show: %s" % pid
+            elif tgt.startswith("special:"):
+                act = "lvgl.page.show: page_%s" % tgt.split(":")[1]
+            inner += (
+                "              - button:\n"
+                "                  x: %d\n                  y: %d\n                  width: %d\n                  height: %d\n"
+                "                  bg_color: 0x161B24\n                  radius: 14\n                  pad_all: 0\n                  scrollable: false\n"
+                "                  widgets:\n"
+                "                    - label: { text: \"%s\", align: center, y: -16, text_font: f_icon, text_color: 0x2ED5B8 }\n"
+                "                    - label: { text: %s, align: center, y: 22, width: %d, text_align: center, text_font: f_body, text_color: 0xEEF0F6 }\n"
+                "                  on_click: [%s]\n"
+                % (cx, cy, bw, bh, glyph, esc(s.get("label", "Open")), bw - 10, act))
+        else:
+            inner += (
+                "              - obj: { x: %d, y: %d, width: %d, height: %d, bg_color: 0x0F1117, "
+                "border_color: 0x2A2E38, border_width: 1, radius: 14, pad_all: 0, scrollable: false, "
+                "widgets: [label: { text: \"\\U000F0415\", align: center, text_font: f_icon, text_color: 0x4A5160 }] }\n"
+                % (cx, cy, bw, bh))
     return [card_obj(x, y, w, h, inner)], [], []
 
 
