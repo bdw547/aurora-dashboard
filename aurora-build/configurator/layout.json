@@ -19,7 +19,10 @@
     ]},
     "rooms": {"title":"Rooms","type":"custom","header":false,"subpages":[[]]},
     "lights": {"title":"Lights","type":"custom","header":false,"subpages":[
-      [ {"id":"o1","ck":"outletgroup","name":"Patio outlets","x":1,"y":1,"w":1,"h":2,"entities":["switch.patio_a","switch.patio_b"]} ]
+      [
+        {"id":"lg1","ck":"lightgroup","name":"All Lights","x":1,"y":1,"w":3,"h":3,"entities":["light.living_room_main","light.kitchen_kitchen","light.office_main_lights","light.master_bedroom_ceiling_fan_light","light.dining_room_chandelier","light.reading_lamp"]},
+        {"id":"o1","ck":"outletgroup","name":"Patio outlets","x":4,"y":1,"w":1,"h":2,"entities":["switch.patio_a","switch.patio_b"]}
+      ]
     ]},
     "spot": {"title":"Spotify","type":"custom","header":false,"subpages":[
       [

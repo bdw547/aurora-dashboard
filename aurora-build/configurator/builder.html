@@ -95,6 +95,11 @@ h3.sec{font-size:11px;letter-spacing:1.4px;text-transform:uppercase;color:var(--
 .pc .gslot .mdi{font-size:18px;flex:0 0 auto}
 .pc .gv{font-size:14px;font-weight:700;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .pc .gl{font-size:10px;color:var(--t2);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.pc .lggrid{flex:1;display:grid;gap:6px;margin-top:10px;min-height:0}
+.pc .lgbtn{background:#0f1117;border:1px solid var(--bd);border-radius:9px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:3px;color:var(--t3);min-width:0;padding:4px;overflow:hidden}
+.pc .lgbtn.on{background:linear-gradient(180deg,#14161C,#13201d);border-color:var(--onbd);color:var(--amber)}
+.pc .lgbtn .mdi{font-size:17px;flex:0 0 auto}
+.pc .lgbtn .lgn{font-size:9px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:100%;color:var(--tx)}
 .pc .ddrop{margin-top:auto;background:#0f1117;border:1px solid var(--bd);border-radius:10px;padding:10px 12px;display:flex;align-items:center;justify-content:space-between;font-size:13px}
 .pc .spkgrid{flex:1;display:grid;gap:7px;margin-top:10px}
 .pc .spk{background:#0f1117;border:1px solid var(--bd);border-radius:10px;display:flex;align-items:center;gap:6px;padding:0 10px;font-size:12px;color:var(--t2);white-space:nowrap;overflow:hidden}
@@ -174,6 +179,7 @@ const C = {
   light:    {label:'Light (dimmable / RGB)', domain:'light', icon:'lightbulb', color:'var(--amber)', spans:[[2,1],[1,3],[1,5],[2,2],[3,2],[4,4]], def:[2,2], ctrl:'light'},
   light_t:  {label:'Light toggle', domain:'light', icon:'lightbulb-outline', color:'var(--amber)', spans:[[1,1],[2,1],...V], def:[2,1], ctrl:'toggle'},
   switch:   {label:'Switch / outlet', domain:'switch', icon:'toggle-switch', color:'var(--teal)', spans:[[1,1],[2,1],[2,2],...V], def:[2,1], ctrl:'toggle'},
+  lightgroup:{label:'Light group', domain:'light', icon:'lightbulb-multiple', color:'var(--amber)', spans:[[2,2],[3,2],[2,3],[3,3],[4,3],[2,4],[4,4],[2,5],[5,4],[6,4],[5,5],[6,5]], def:[3,3], ctrl:'lightgroup', multi:true},
   outletgroup:{label:'Outlet pair', domain:'switch', icon:'power-socket-us', color:'var(--teal)', spans:[[1,2],[2,2]], def:[1,2], ctrl:'outletgroup', multi:true},
   fan:      {label:'Fan', domain:'fan', icon:'fan', color:'var(--teal)', spans:[[2,1],[2,2]], def:[2,2], ctrl:'seg'},
   cover:    {label:'Cover / blinds', domain:'cover', icon:'blinds-horizontal', color:'var(--blue)', spans:[[2,1],[2,2],[2,3]], def:[2,2], ctrl:'pos'},
@@ -198,7 +204,7 @@ const C = {
   script:   {label:'Script / button', domain:'script', icon:'gesture-tap-button', color:'var(--teal)', spans:[[1,1],[2,1],...V], def:[1,1], ctrl:'tile'},
 };
 const CATS = [
-  ['Lighting', ['light','light_t','switch','outletgroup']],
+  ['Lighting', ['light','light_t','switch','lightgroup','outletgroup']],
   ['Comfort', ['climate','fan','cover']],
   ['Groups', ['group','speakers']],
   ['Spotify', ['spotify','playlist','songlist']],
@@ -222,6 +228,7 @@ function nm2(eid){ return (eid&&eid.includes('.'))?eid.split('.')[1].replace(/_/
 // capacity of a multi-entity card at its current span
 function cap(c){ const k=c.ck;
   if(k==='group') return c.h*2;                       // 2 per grid-row
+  if(k==='lightgroup') return c.w*Math.max(2,c.h-1);  // W cols × (H-1) rows, min 2 rows
   if(k==='outletgroup') return 2;
   if(k==='speakers'){ if(c.w===1) return 99;          // dropdown
     if((c.w===2&&c.h===3)||(c.w===3&&c.h===2)) return 4;
@@ -321,6 +328,9 @@ function cardInner(c){ const def=C[c.ck], nm=c.name||def.label, big=c.w>=3, ctrl
         cells+=`<div class="gslot"><span class="mdi mdi-${gi[0]}" style="color:${gi[1]}"></span><div style="min-width:0"><div class="gv">${GVAL[dm]||'On'}</div><div class="gl">${nm2(e)}</div></div></div>`; }
       else cells+=`<div class="gslot empty">+</div>`; }
     return head+`<div class="toprow">${ico}<span class="csub">${nm} · ${ents.length}/${n}</span></div><div class="ggrid" style="grid-template-rows:repeat(${c.h},1fr)">${cells}</div>`; }
+  if(ctrl==='lightgroup'){ const n=cap(c), ents=c.entities||[], brows=Math.max(2,c.h-1), onN=ents.filter((e,i)=>i%2===0).length; let btns='';
+    for(let i=0;i<n;i++){ const e=ents[i]; const on=e&&i%2===0; btns+=`<div class="lgbtn${on?' on':''}"><span class="mdi mdi-lightbulb${on?'':'-outline'}"></span><span class="lgn">${e?nm2(e):'Light'}</span></div>`; }
+    return head+`<div class="toprow">${ico}<span class="csub">${nm} · ${onN} on · ${ents.length}/${n}</span></div><div class="lggrid" style="grid-template-columns:repeat(${c.w},1fr);grid-template-rows:repeat(${brows},1fr)">${btns}</div>`; }
   if(ctrl==='speakers'){ const ents=c.entities||[];
     if(c.w===1) return head+`<div class="toprow">${ico}<span class="csub">${nm}</span></div><div class="ddrop"><span>${ents[0]?nm2(ents[0]):'Choose speaker'}</span><span class="mdi mdi-chevron-down"></span></div>`;
     const n=cap(c), cols=n===10?5:(n===6?3:2); let btns='';
