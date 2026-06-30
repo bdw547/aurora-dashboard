@@ -187,20 +187,27 @@ const C = {
   switch:   {label:'Switch / outlet', domain:'switch', icon:'toggle-switch', color:'var(--teal)', spans:[[1,1],[2,1],[2,2],...V], def:[2,1], ctrl:'toggle'},
   lightgroup:{label:'Light group', domain:'light', icon:'lightbulb-multiple', color:'var(--amber)', spans:[[2,2],[3,2],[2,3],[3,3],[4,3],[2,4],[4,4],[2,5],[5,4],[6,4],[5,5],[6,5]], def:[3,3], ctrl:'lightgroup', multi:true},
   outletgroup:{label:'Outlet pair', domain:'switch', icon:'power-socket-us', color:'var(--teal)', spans:[[1,2],[2,2]], def:[1,2], ctrl:'outletgroup', multi:true},
-  fan:      {label:'Fan', domain:'fan', icon:'fan', color:'var(--teal)', spans:[[2,1],[2,2]], def:[2,2], ctrl:'seg'},
-  cover:    {label:'Cover / blinds', domain:'cover', icon:'blinds-horizontal', color:'var(--blue)', spans:[[2,1],[2,2],[2,3]], def:[2,2], ctrl:'pos'},
+  fan:      {label:'Fan', domain:'fan', icon:'fan', color:'var(--teal)', spans:[[1,1],[2,1],[1,2],[2,2]], def:[2,1], ctrl:'seg'},
+  cover:    {label:'Cover / blinds', domain:'cover', icon:'blinds-horizontal', color:'var(--blue)', spans:[[1,1],[2,1],[1,2],[1,3],[2,2],[2,3]], def:[2,2], ctrl:'pos'},
   climate:  {label:'Climate / thermostat', domain:'climate', icon:'thermostat', color:'var(--amber)', spans:[[1,1],[2,2],[3,2],[3,3],[4,4],[6,5],...V], def:[4,4], ctrl:'dial'},
   group:    {label:'Status group', domain:'mixed', icon:'view-grid-outline', color:'var(--teal)', spans:[[2,2],[2,3],[2,4],[2,5]], def:[2,3], ctrl:'group', multi:true},
   shortcuts:{label:'Shortcuts', domain:'page', icon:'view-grid-plus', color:'var(--teal)', spans:[[2,2],[3,2],[2,3],[4,2],[2,4],[5,2],[2,5],[6,2]], def:[2,2], ctrl:'shortcuts', multi:true},
   speakers: {label:'Speaker linking', domain:'media_player', icon:'speaker-multiple', color:'var(--teal)', spans:[[1,2],[1,3],[3,2],[2,3],[3,3],[5,4]], def:[2,3], ctrl:'btngrid', btnIcon:'speaker', multi:true},
   sonos_sources:{label:'Sonos sources', domain:'media_player', icon:'music-box-multiple', color:'var(--teal)', spans:[[1,2],[1,3],[3,2],[2,3],[3,3],[5,4]], def:[2,3], ctrl:'btngrid', btnIcon:'music-box', multi:true},
   sonos_library:{label:'Sonos library', domain:'media_player', icon:'bookshelf', color:'var(--teal)', spans:[[4,3],[3,4],[4,4],[3,5],[4,5],[5,5]], def:[4,4], ctrl:'songlist'},
+  sonos_fav:{label:'Sonos favorite', domain:'media_player', icon:'bookmark-music', color:'var(--teal)', spans:[[1,1],[2,1],[3,1]], def:[1,1], ctrl:'playlist', playlistField:true},
   spotify:  {label:'Spotify now-playing', domain:'media_player', icon:'spotify', color:'#1DB954', spans:[[1,1],[2,2],[3,2],[4,3],[6,5]], def:[3,2], ctrl:'media'},
-  playlist: {label:'Spotify playlist', domain:'media_player', icon:'playlist-play', color:'#1DB954', spans:[[1,1],[2,1],[3,1]], def:[2,1], ctrl:'playlist'},
+  playlist: {label:'Spotify playlist', domain:'media_player', icon:'playlist-play', color:'#1DB954', spans:[[1,1],[2,1],[3,1]], def:[2,1], ctrl:'playlist', playlistField:true},
   songlist: {label:'Spotify song list', domain:'media_player', icon:'playlist-music', color:'#1DB954', spans:[[4,3],[3,4],[4,4],[3,5],[4,5],[5,5]], def:[4,4], ctrl:'songlist'},
   sonos:    {label:'Sonos (multi-room)', domain:'media_player', icon:'speaker-multiple', color:'var(--teal)', spans:[[3,2],[3,3],[4,4],[6,5]], def:[4,4], ctrl:'media'},
-  media:    {label:'Media player', domain:'media_player', icon:'play-circle', color:'var(--violet)', spans:[[2,2],[3,2],[6,5]], def:[3,2], ctrl:'media'},
-  tvremote: {label:'TV controls (LG / webOS)', domain:'media_player', icon:'remote-tv', color:'var(--violet)', spans:[[4,4],[4,5],[6,5]], def:[6,5], ctrl:'remote'},
+  media:    {label:'Media player', domain:'media_player', icon:'play-circle', color:'var(--violet)', spans:[[1,1],[2,1],[2,2],[3,2],[3,3],[4,3],[6,5]], def:[3,2], ctrl:'media'},
+  tvremote: {label:'TV remote — full', domain:'media_player', icon:'remote-tv', color:'var(--violet)', spans:[[4,4],[4,5],[5,5],[6,5]], def:[6,5], ctrl:'remote'},
+  tv_dpad:  {label:'TV D-pad', domain:'media_player', icon:'gamepad-variant', color:'var(--violet)', spans:[[2,2],[3,2],[2,3],[3,3]], def:[3,3], ctrl:'tv_dpad'},
+  tv_transport:{label:'TV transport', domain:'media_player', icon:'play-circle', color:'var(--violet)', spans:[[2,1],[3,1],[4,1],[6,1],[2,2],[4,2]], def:[4,1], ctrl:'tv_transport'},
+  tv_channel:{label:'TV channel +/-', domain:'media_player', icon:'television-guide', color:'var(--violet)', spans:[[1,1],[1,2],[2,1],[2,2]], def:[1,2], ctrl:'tv_channel'},
+  tv_volume:{label:'TV volume', domain:'media_player', icon:'volume-high', color:'var(--violet)', spans:[[1,1],[1,2],[1,3],[2,1],[2,2]], def:[1,3], ctrl:'tv_volume'},
+  tv_sources:{label:'TV sources / inputs', domain:'media_player', icon:'video-input-hdmi', color:'var(--violet)', spans:[[1,2],[1,3],[3,2],[2,3],[3,3],[5,4]], def:[2,3], ctrl:'btngrid', btnIcon:'video-input-hdmi', multi:true},
+  tv_trackpad:{label:'TV trackpad', domain:'media_player', icon:'gesture-swipe', color:'var(--violet)', spans:[[3,3],[4,3],[4,4],[6,4],[6,5]], def:[4,3], ctrl:'tv_trackpad'},
   lock:     {label:'Lock', domain:'lock', icon:'lock', color:'var(--teal)', spans:[[1,1],[2,1],[2,2],...V], def:[2,1], ctrl:'lock'},
   camera:   {label:'Camera', domain:'camera', icon:'cctv', color:'var(--red)', spans:[[2,2],[3,3],[4,3],[6,5]], def:[3,3], ctrl:'cam'},
   alarm:    {label:'Alarm panel', domain:'alarm_control_panel', icon:'shield-home', color:'var(--red)', spans:[[2,2],[3,2]], def:[3,2], ctrl:'val'},
@@ -216,8 +223,9 @@ const CATS = [
   ['Lighting', ['light','light_t','switch','lightgroup','outletgroup']],
   ['Comfort', ['climate','fan','cover']],
   ['Spotify', ['spotify','playlist','songlist']],
-  ['Sonos', ['sonos','speakers','sonos_sources','sonos_library']],
-  ['Media', ['media','tvremote']],
+  ['Sonos', ['sonos','speakers','sonos_sources','sonos_library','sonos_fav']],
+  ['TV', ['tvremote','tv_dpad','tv_transport','tv_channel','tv_volume','tv_sources','tv_trackpad']],
+  ['Media', ['media']],
   ['Groups', ['group','shortcuts']],
   ['Safety', ['lock','camera','alarm','binary']],
   ['Info', ['sensor','weather','person','vacuum']],
@@ -258,7 +266,7 @@ function cap(c){ const k=c.ck;
   if(k==='lightgroup') return c.w*Math.max(2,c.h-1);  // W cols × (H-1) rows, min 2 rows
   if(k==='shortcuts') return c.w*c.h;                 // one nav button per grid cell
   if(k==='outletgroup') return 2;
-  if(k==='speakers'||k==='sonos_sources'){ if(c.w===1) return 99;   // dropdown
+  if(k==='speakers'||k==='sonos_sources'||k==='tv_sources'){ if(c.w===1) return 99;   // dropdown
     if((c.w===2&&c.h===3)||(c.w===3&&c.h===2)) return 4;
     if(c.w===3&&c.h===3) return 6; if(c.w===5&&c.h===4) return 10;
     return Math.max(4,Math.floor(c.w*c.h/2)); }
@@ -335,13 +343,18 @@ function cardInner(c){ const def=C[c.ck], nm=c.name||def.label, big=c.w>=3, ctrl
     return head+`<div class="toprow">${ico}${tog(true)}</div>${nme}<div class="big">74%</div><div class="hbar" style="margin-top:auto"><i style="width:74%"></i></div>`; }
   if(ctrl==='dial'){ if(c.w===1) return head+`<div style="display:flex;flex-direction:column;align-items:center;justify-content:center;height:100%;gap:6px">${ico}<div style="font-size:24px;font-weight:700">72°</div><div class="csub">${nm}</div></div>`;
     return head+`<div class="toprow">${ico}<span class="csub">${nm}</span></div><div class="dial"><div class="ring" style="width:${Math.min(c.h*70,150)}px;height:${Math.min(c.h*70,150)}px"></div><div style="position:absolute;font-size:${big?34:22}px;font-weight:700">72°</div></div>${c.w>=3?'<div class="row" style="justify-content:space-between"><span class="csub" style="color:var(--amber)">HEAT 68°</span><span class="csub" style="color:var(--blue)">COOL 74°</span></div>':''}`; }
-  if(ctrl==='seg') return head+`<div class="toprow">${ico}${nme}</div><div class="seg"><div>Off</div><div class="on">Med</div><div>High</div></div>`;
-  if(ctrl==='pos') return head+`<div class="toprow">${ico}${nme}</div><div class="big" style="font-size:24px;color:var(--blue)">Open 60%</div><div class="hbar"><i style="width:60%;background:var(--blue)"></i></div>`;
+  if(ctrl==='seg'){ if(c.w*c.h<=2){ if(c.w===1&&c.h===1) return head+`<div style="display:flex;flex-direction:column;align-items:center;justify-content:center;gap:8px;height:100%">${ico}${tog(true)}</div>`;
+      return head+`<div class="toprow">${ico}${tog(true)}</div>${nme}`; }
+    return head+`<div class="toprow">${ico}${nme}</div><div class="seg"><div>Off</div><div class="on">Med</div><div>High</div></div>`; }
+  if(ctrl==='pos'){ if(c.w===1&&c.h===1) return head+`<div style="display:flex;flex-direction:column;align-items:center;justify-content:center;height:100%;gap:6px">${ico}<div class="csub" style="color:var(--blue)">60%</div></div>`;
+    return head+`<div class="toprow">${ico}${nme}</div><div class="big" style="font-size:24px;color:var(--blue)">Open 60%</div><div class="hbar"><i style="width:60%;background:var(--blue)"></i></div>`; }
   if(ctrl==='lock'){ if(c.w===1) return head+`<div style="display:flex;flex-direction:column;align-items:center;justify-content:center;height:100%;gap:8px">${ico}<div class="csub" style="color:var(--teal)">Locked</div></div>`;
     return head+`<div class="toprow">${ico}<span class="csub" style="color:var(--teal)">Locked</span></div>${nme}`; }
   if(ctrl==='val'){ if(c.h>=3) return head+`<div style="display:flex;flex-direction:column;align-items:center;justify-content:center;height:100%;gap:6px">${ico}<div style="font-size:26px;font-weight:700">68°</div><div class="csub" style="text-align:center">${nm}</div></div>`;
     return head+ico+`<div style="margin-top:auto"><div style="font-size:24px;font-weight:700">68°</div><div class="csub">${nm}</div></div>`; }
-  if(ctrl==='media'){ const art=`<div class="art" style="width:${big?54:40}px;height:${big?54:40}px"></div>`;
+  if(ctrl==='media'){ if(c.w===1&&c.h===1) return head+`<div style="display:flex;flex-direction:column;align-items:center;justify-content:center;height:100%;gap:6px"><span class="mdi mdi-${def.icon}" style="font-size:24px;color:${def.color}"></span><div class="csub">Playing</div></div>`;
+    if(c.h===1) return head+`<div class="row"><span class="mdi mdi-${def.icon}" style="font-size:22px;color:${def.color}"></span><div style="min-width:0"><div class="ct" style="margin-top:0;font-size:14px">Midnight City</div><div class="csub">M83</div></div></div>`;
+    const art=`<div class="art" style="width:${big?54:40}px;height:${big?54:40}px"></div>`;
     return head+`<div class="row">${art}<div style="min-width:0"><div class="csub" style="color:var(--teal);font-size:10px">${c.ck==='sonos'?'SONOS':'NOW PLAYING'}</div><div class="ct" style="margin-top:2px">Midnight City</div><div class="csub">M83</div></div></div>
       ${c.h>=2?`<div class="row" style="gap:10px;margin-top:auto;justify-content:center"><span class="tbtn mdi mdi-skip-previous"></span><span class="tbtn main mdi mdi-play"></span><span class="tbtn mdi mdi-skip-next"></span>${c.ck==='sonos'?'<span class="tbtn mdi mdi-link-variant"></span>':''}</div>`:''}`; }
   if(ctrl==='remote') return head+`<div class="toprow">${ico}${nme}</div>
@@ -352,6 +365,11 @@ function cardInner(c){ const def=C[c.ck], nm=c.name||def.label, big=c.w>=3, ctrl
         <div></div><div class="tbtn mdi mdi-chevron-down"></div><div></div></div>
       <div style="display:flex;flex-direction:column;gap:6px"><span class="tbtn mdi mdi-volume-plus"></span><span class="tbtn mdi mdi-volume-minus"></span><span class="tbtn mdi mdi-power" style="color:var(--red)"></span></div></div>
     <div class="row" style="gap:6px;justify-content:center"><span class="csub">Apps · Trackpad</span></div>`;
+  if(ctrl==='tv_dpad') return head+`<div class="toprow">${ico}<span class="csub">${nm}</span></div><div style="flex:1;display:flex;align-items:center;justify-content:center"><div style="display:grid;grid-template-columns:repeat(3,34px);grid-template-rows:repeat(3,34px);gap:5px"><div></div><div class="tbtn mdi mdi-chevron-up"></div><div></div><div class="tbtn mdi mdi-chevron-left"></div><div class="tbtn main">OK</div><div class="tbtn mdi mdi-chevron-right"></div><div></div><div class="tbtn mdi mdi-chevron-down"></div><div></div></div></div>`;
+  if(ctrl==='tv_transport') return head+`<div class="toprow">${ico}<span class="csub">${nm}</span></div><div class="row" style="flex:1;justify-content:center;gap:8px;flex-wrap:wrap"><span class="tbtn mdi mdi-arrow-left"></span><span class="tbtn mdi mdi-home"></span><span class="tbtn mdi mdi-rewind"></span><span class="tbtn main mdi mdi-play-pause"></span><span class="tbtn mdi mdi-fast-forward"></span></div>`;
+  if(ctrl==='tv_channel'){ const hz=c.w>c.h; return head+`<div class="toprow">${ico}<span class="csub">${nm}</span></div><div style="flex:1;display:flex;${hz?'flex-direction:row':'flex-direction:column'};gap:8px;align-items:center;justify-content:center"><div class="tbtn" style="width:auto;padding:6px 14px;border-radius:11px;gap:4px">CH<span class="mdi mdi-chevron-up"></span></div><div class="tbtn" style="width:auto;padding:6px 14px;border-radius:11px;gap:4px">CH<span class="mdi mdi-chevron-down"></span></div></div>`; }
+  if(ctrl==='tv_volume'){ const hz=c.w>c.h; return head+`<div class="toprow">${ico}<span class="csub">${nm}</span></div><div style="flex:1;display:flex;${hz?'flex-direction:row':'flex-direction:column'};gap:8px;align-items:center;justify-content:center"><span class="tbtn mdi mdi-volume-plus"></span><span class="tbtn mdi mdi-volume-mute"></span><span class="tbtn mdi mdi-volume-minus"></span></div>`; }
+  if(ctrl==='tv_trackpad') return head+`<div class="toprow">${ico}<span class="csub">${nm}</span></div><div style="flex:1;display:flex;gap:8px;margin-top:8px"><div style="flex:1;border:1px solid var(--bd);border-radius:12px;background:#0f1117;display:flex;align-items:center;justify-content:center;color:var(--t3);font-size:12px">Drag · tap</div><div style="width:46px;border:1px solid var(--bd);border-radius:12px;background:#0f1117;display:flex;flex-direction:column;align-items:center;justify-content:space-between;padding:8px 0;color:var(--t3)"><span class="mdi mdi-chevron-up"></span><span style="font-size:9px">SCROLL</span><span class="mdi mdi-chevron-down"></span></div></div>`;
   if(ctrl==='cam') return head+`<div class="cambg"><span class="mdi mdi-cctv"></span></div><div style="position:absolute;left:12px;top:10px;font-size:9px;font-weight:700;color:#fff;background:var(--red);border-radius:5px;padding:2px 6px">LIVE</div><div class="csub" style="position:absolute;left:12px;bottom:10px">${nm}</div>`;
   if(ctrl==='wx') return head+`<div class="row"><span class="mdi mdi-weather-sunny" style="font-size:${big?40:28}px;color:var(--amber)"></span><div><div style="font-size:${big?30:22}px;font-weight:700">72°</div><div class="csub">Sunny</div></div></div>${big?'<div class="row" style="justify-content:space-between;margin-top:auto"><span class="csub">Mon</span><span class="csub">Tue</span><span class="csub">Wed</span><span class="csub">Thu</span></div>':''}`;
   if(ctrl==='tile') return head+`<div style="display:flex;flex-direction:column;align-items:center;justify-content:center;height:100%;gap:6px">${ico}<div style="font-size:13px;font-weight:600;text-align:center">${nm}</div></div>`;
@@ -363,7 +381,7 @@ function cardInner(c){ const def=C[c.ck], nm=c.name||def.label, big=c.w>=3, ctrl
   if(ctrl==='lightgroup'){ const n=cap(c), ents=c.entities||[], brows=Math.max(2,c.h-1), onN=ents.filter((e,i)=>i%2===0).length; let btns='';
     for(let i=0;i<n;i++){ const e=ents[i]; const on=e&&i%2===0; btns+=`<div class="lgbtn${on?' on':''}"><span class="mdi mdi-lightbulb${on?'':'-outline'}"></span><span class="lgn">${e?nm2(e):'Light'}</span></div>`; }
     return head+`<div class="toprow">${ico}<span class="csub">${nm} · ${onN} on · ${ents.length}/${n}</span></div><div class="lggrid" style="grid-template-columns:repeat(${c.w},1fr);grid-template-rows:repeat(${brows},1fr)">${btns}</div>`; }
-  if(ctrl==='btngrid'){ const ents=c.entities||[]; const bi=def.btnIcon||'speaker'; const word=c.ck==='sonos_sources'?'source':'speaker'; const Word=word.charAt(0).toUpperCase()+word.slice(1);
+  if(ctrl==='btngrid'){ const ents=c.entities||[]; const bi=def.btnIcon||'speaker'; const word=(c.ck==='sonos_sources'||c.ck==='tv_sources')?'source':'speaker'; const Word=word.charAt(0).toUpperCase()+word.slice(1);
     if(c.w===1) return head+`<div class="toprow">${ico}<span class="csub">${nm}</span></div><div class="ddrop"><span>${ents[0]?nm2(ents[0]):'Choose '+word}</span><span class="mdi mdi-chevron-down"></span></div>`;
     const n=cap(c), cols=n===10?5:(n===6?3:2); let btns='';
     for(let i=0;i<n;i++){ const e=ents[i]; btns+=`<div class="spk${i===0&&e?' on':''}"><span class="mdi mdi-${bi}"></span>${e?nm2(e):Word}</div>`; }
@@ -374,8 +392,9 @@ function cardInner(c){ const def=C[c.ck], nm=c.name||def.label, big=c.w>=3, ctrl
   if(ctrl==='outletgroup'){ const ents=c.entities||[]; let rows='';
     for(let i=0;i<2;i++){ const e=ents[i]; rows+=`<div class="orow"><span class="mdi mdi-power-socket-us" style="color:var(--teal)"></span><span style="flex:1;font-size:13px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${e?nm2(e):'Outlet '+(i+1)}</span>${tog(i===0)}</div>`; }
     return head+`<div class="toprow">${ico}<span class="csub">${nm}</span></div>${rows}`; }
-  if(ctrl==='playlist'){ if(c.w===1) return head+`<div style="display:flex;flex-direction:column;align-items:center;justify-content:center;height:100%;gap:8px"><span class="mdi mdi-playlist-play" style="font-size:26px;color:#1DB954"></span><div style="font-size:12px;font-weight:600;text-align:center">${nm}</div></div>`;
-    return head+`<div class="toprow">${ico}<span class="csub">${nm}</span></div><div class="ddrop"><span>Liked Songs</span><span class="mdi mdi-chevron-down"></span></div>`; }
+  if(ctrl==='playlist'){ const isS=c.ck==='sonos_fav'; const accent=isS?'var(--teal)':'#1DB954';
+    if(c.w===1) return head+`<div style="display:flex;flex-direction:column;align-items:center;justify-content:center;height:100%;gap:8px"><span class="mdi mdi-${def.icon}" style="font-size:26px;color:${accent}"></span><div style="font-size:12px;font-weight:600;text-align:center">${c.pl||nm}</div></div>`;
+    return head+`<div class="toprow">${ico}<span class="csub">${nm}</span></div><div class="ddrop"><span>${c.pl||('All '+(isS?'favorites':'playlists'))}</span><span class="mdi mdi-chevron-down"></span></div>`; }
   if(ctrl==='songlist'){ const rows=[['Midnight City','M83'],['Instant Crush','Daft Punk'],['The Less I Know','Tame Impala'],['Dreams','Fleetwood Mac'],['Redbone','Childish Gambino'],['Holocene','Bon Iver'],['Lovely Day','Bill Withers'],['Electric Feel','MGMT'],['Tadow','Masego'],['Breathe','Télépopmusik']];
     const n=Math.max(3,c.h*2); let lis=''; for(let i=0;i<n;i++){ const r=rows[i%rows.length]; lis+=`<div class="trk"><span style="color:var(--tx);white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${r[0]}</span><span class="csub">${r[1]}</span></div>`; }
     const sono=c.ck==='sonos_library'; const hdr=sono?'SONOS LIBRARY':'TRACKS · tap to play', hi=sono?'bookshelf':'playlist-music', hc=sono?'var(--teal)':'#1DB954';
@@ -453,6 +472,7 @@ function renderInspector(){ const el=document.getElementById('insp'); const c=se
   el.innerHTML=`<h3 class="sec">${def.label}</h3>
     <div class="field"><label>Name</label><input id="fName" value="${(c.name||'').replace(/"/g,'&quot;')}"></div>
     <div class="field"><label>Entity (${def.domain})</label><div style="display:flex;gap:6px"><input id="fEnt" value="${c.entity||''}" placeholder="none" style="flex:1"><button class="btn ghost" id="pickEnt" style="padding:8px 10px">Pick</button></div></div>
+    ${def.playlistField?`<div class="field"><label>${c.ck==='sonos_fav'?'Favorite':'Playlist'} name (used as the button label)</label><input id="fPl" value="${(c.pl||'').replace(/"/g,'&quot;')}" placeholder="e.g. Liked Songs"></div>`:''}
     <div class="field"><label>Size (span)</label><div class="szrow" id="szrow"></div></div>
     <div class="field"><label>Position</label><div class="mono" style="font-size:12px;color:var(--t2)">col ${c.x}, row ${c.y} — drag on grid to move</div></div>
     <button class="btn ghost" id="delCard" style="width:100%;color:var(--red);border-color:#3a2422">Delete card</button>`;
@@ -460,6 +480,7 @@ function renderInspector(){ const el=document.getElementById('insp'); const c=se
   el.querySelector('#fName').oninput=(e)=>{c.name=e.target.value; renderGrid();};
   el.querySelector('#fEnt').onchange=(e)=>{c.entity=e.target.value; renderGrid();};
   el.querySelector('#pickEnt').onclick=()=>openEntityPicker(c.ck,c);
+  { const pe=el.querySelector('#fPl'); if(pe) pe.oninput=(e)=>{c.pl=e.target.value; renderGrid();}; }
   el.querySelector('#delCard').onclick=()=>{ const a=curCards(); a.splice(a.indexOf(c),1); sel=null; renderGrid(); renderInspector(); };
 }
 function fillRooms(){ const s=document.getElementById('instRoom'); if(!s) return;
