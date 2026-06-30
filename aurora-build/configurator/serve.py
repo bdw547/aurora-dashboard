@@ -984,6 +984,41 @@ def ha_entities(url, token):
     return sorted(ents, key=lambda e: e["entity_id"])
 
 
+def ha_areas(url, token):
+    """Return {area_id: {name, entities[]}} via the HA template API (areas come
+    from HA's area registry, so the builder's room options match HA)."""
+    tmpl = ('[{% for a in areas() %}{"id": {{ a|tojson }}, "name": '
+            '{{ area_name(a)|tojson }}, "entities": {{ area_entities(a)|tojson }}}'
+            '{{ "," if not loop.last }}{% endfor %}]')
+    req = urllib.request.Request(
+        url.rstrip("/") + "/api/template",
+        data=json.dumps({"template": tmpl}).encode(),
+        headers={"Authorization": "Bearer " + token,
+                 "Content-Type": "application/json"}, method="POST")
+    with urllib.request.urlopen(req, timeout=15) as r:
+        arr = json.loads(r.read().decode() or "[]")
+    return {a["id"]: {"name": a["name"], "entities": a["entities"]} for a in arr}
+
+
+# --- page-builder layout persistence (layout.json next to this file) ---
+LAYOUT_JSON = os.path.join(HERE, "layout.json")
+BUILDER_HTML = os.path.join(HERE, "builder.html")
+
+
+def read_layout():
+    try:
+        with open(LAYOUT_JSON, encoding="utf-8") as f:
+            return json.load(f)
+    except Exception:  # noqa: BLE001
+        return {}
+
+
+def write_layout(data):
+    with open(LAYOUT_JSON, "w", encoding="utf-8") as f:
+        json.dump(data, f, indent=2)
+    return True
+
+
 # --- flash job (async, log captured for polling) ---
 FLASH = {"running": False, "log": "", "done": False, "ok": False}
 
@@ -1087,6 +1122,14 @@ class H(BaseHTTPRequestHandler):
     def do_GET(self):
         if self.path == "/":
             return self._send(200, PAGE, "text/html")
+        if self.path == "/builder":
+            try:
+                with open(BUILDER_HTML, "rb") as f:
+                    return self._send(200, f.read(), "text/html")
+            except Exception as e:  # noqa: BLE001
+                return self._send(500, "builder.html missing: " + str(e), "text/plain")
+        if self.path == "/api/layout":
+            return self._send(200, json.dumps(read_layout()))
         if self.path == "/api/slots":
             return self._send(200, json.dumps(read_slots()))
         if self.path == "/api/home":
@@ -1102,6 +1145,10 @@ class H(BaseHTTPRequestHandler):
             d = self._json()
             if self.path == "/api/entities":
                 return self._send(200, json.dumps(ha_entities(d["url"], d["token"])))
+            if self.path == "/api/ha/areas":
+                return self._send(200, json.dumps(ha_areas(d["url"], d["token"])))
+            if self.path == "/api/layout":
+                return self._send(200, json.dumps({"saved": write_layout(d)}))
             if self.path == "/api/save":
                 return self._send(200, json.dumps({"saved": write_bindings(d["bindings"])}))
             if self.path == "/api/home":
@@ -1162,7 +1209,7 @@ pre{background:#06070a;border:1px solid var(--hair);border-radius:10px;padding:1
 .iconopt{background:#10121a;border:1px solid var(--hair);border-radius:10px;color:var(--text);padding:8px 4px;cursor:pointer;display:flex;flex-direction:column;align-items:center;gap:4px}
 .iconopt:hover{border-color:var(--teal)}.iconopt .mdig{font-size:26px;color:var(--teal)}.iconopt small{font-size:10px;color:var(--t2)}
 </style></head><body>
-<header><h1><span>Aurora</span> Configurator</h1><div class=sub>Point the panel at your Home Assistant — no code.</div></header>
+<header style="display:flex;justify-content:space-between;align-items:center"><div><h1><span>Aurora</span> Configurator</h1><div class=sub>Point the panel at your Home Assistant — no code.</div></div><a href="/builder" style="text-decoration:none"><button>Open Page Builder &rarr;</button></a></header>
 <main>
 <div class=card><h2>1 · Connect to Home Assistant</h2>
 <div class=row><div><label>HA URL <span class=muted>(use the IP, not .local)</span></label><input id=url placeholder="http://10.0.0.50:8123"></div>

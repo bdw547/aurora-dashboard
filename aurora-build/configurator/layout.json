@@ -1,0 +1,26 @@
+{
+  "install_room": "Living Room",
+  "nav": [
+    {"id":"home","icon":"home-variant","label":"Home","page":"home"},
+    {"id":"rooms","icon":"sofa","label":"Rooms","page":"rooms"},
+    {"id":"lights","icon":"lightbulb","label":"Lights","page":"lights"},
+    {"id":"climate","icon":"thermostat","label":"Climate","page":"climate"},
+    {"id":"media","icon":"music","label":"Media","page":"media"}
+  ],
+  "pages": {
+    "home": {"title":"Home","type":"custom","subpages":[
+      [
+        {"id":"c1","ck":"climate","entity":"climate.main_floor","name":"Main Floor","x":1,"y":1,"w":4,"h":4},
+        {"id":"c2","ck":"light","entity":"light.living_room_main","name":"Main Lights","x":5,"y":1,"w":2,"h":2},
+        {"id":"c3","ck":"sonos","entity":"media_player.living_room","name":"Living Room","x":5,"y":3,"w":2,"h":3},
+        {"id":"c4","ck":"sensor","entity":"sensor.living_temp","name":"Temp","x":1,"y":5,"w":2,"h":1},
+        {"id":"c5","ck":"scene","entity":"scene.movie_night","name":"Movie","x":3,"y":5,"w":2,"h":1}
+      ],
+      []
+    ]},
+    "rooms": {"title":"Rooms","type":"custom","subpages":[[]]},
+    "lights": {"title":"Lights","type":"custom","subpages":[[]]},
+    "climate": {"title":"Climate","type":"custom","subpages":[[]]},
+    "media": {"title":"Media","type":"custom","subpages":[[]]}
+  }
+}

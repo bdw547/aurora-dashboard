@@ -1,0 +1,484 @@
+<!doctype html><html><head><meta charset="utf-8">
+<title>Aurora Page Builder</title>
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Sora:wght@400;500;600;700;800&family=IBM+Plex+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@mdi/font@7.4.47/css/materialdesignicons.min.css">
+<style>
+:root{
+  --canvas:#0A0B0F; --nav:#0C0D12; --card:#14161C; --inset:#0F1117; --bd:#23262F;
+  --tx:#F3F5F8; --t2:#868CA0; --t3:#5D6470; --teal:#2ED5B8; --ink:#06231D;
+  --amber:#F2B84B; --blue:#4FA8F5; --red:#F2685A; --violet:#B06CFF; --onbd:#2A5048;
+}
+*{box-sizing:border-box;margin:0;padding:0}
+body{background:#070809;color:var(--tx);font-family:'Sora',system-ui,sans-serif;font-size:14px;height:100vh;overflow:hidden}
+.mono{font-family:'IBM Plex Mono',monospace}
+button{font-family:inherit;cursor:pointer;border:0}
+/* ---- top bar ---- */
+#top{height:56px;display:flex;align-items:center;gap:14px;padding:0 18px;background:#0B0C11;border-bottom:1px solid var(--bd)}
+#top .brand{font-weight:800;font-size:17px;letter-spacing:-.3px}
+#top .brand b{background:linear-gradient(90deg,var(--teal),var(--violet));-webkit-background-clip:text;background-clip:text;color:transparent}
+#top .sp{flex:1}
+#top input{background:#0F1117;border:1px solid var(--bd);border-radius:9px;color:var(--tx);padding:8px 10px;font:inherit;font-size:12px}
+#top .pill{font-size:11px;color:var(--t2);display:flex;align-items:center;gap:6px}
+.dot{width:8px;height:8px;border-radius:50%;background:var(--t3)}.dot.ok{background:var(--teal)}
+.btn{background:var(--teal);color:var(--ink);border-radius:9px;padding:9px 14px;font-weight:700;font-size:13px}
+.btn.ghost{background:#12141b;color:var(--tx);border:1px solid var(--bd)}
+.btn.amber{background:var(--amber);color:#241a05}
+.btn:disabled{opacity:.4;cursor:not-allowed}
+/* ---- layout ---- */
+#app{display:flex;height:calc(100vh - 56px)}
+#palette{width:248px;background:#0A0B0F;border-right:1px solid var(--bd);overflow-y:auto;padding:14px}
+#center{flex:1;display:flex;flex-direction:column;align-items:center;overflow:auto;padding:18px;background:#070809}
+#inspector{width:300px;background:#0A0B0F;border-left:1px solid var(--bd);overflow-y:auto;padding:16px}
+h3.sec{font-size:11px;letter-spacing:1.4px;text-transform:uppercase;color:var(--t3);font-weight:600;margin:6px 0 10px}
+h3.sec:not(:first-child){margin-top:20px}
+/* palette items */
+.pcat{font-size:10px;letter-spacing:1px;text-transform:uppercase;color:var(--t3);margin:14px 0 6px}
+.pitem{display:flex;align-items:center;gap:10px;padding:9px 10px;border:1px solid var(--bd);border-radius:10px;background:#0E0F14;margin-bottom:7px;cursor:pointer;transition:.12s}
+.pitem:hover{border-color:var(--teal);background:#10141a}
+.pitem .ic{width:30px;height:30px;border-radius:8px;display:flex;align-items:center;justify-content:center;font-size:18px;flex:0 0 auto}
+.pitem .nm{font-size:13px;font-weight:600}.pitem .sz{font-size:10px;color:var(--t2)}
+/* nav builder strip */
+#navbuild{display:flex;gap:8px;margin-bottom:12px;flex-wrap:wrap;align-items:center}
+.navitem{display:flex;align-items:center;gap:7px;background:#0E0F14;border:1px solid var(--bd);border-radius:10px;padding:6px 10px;font-size:12px;cursor:grab}
+.navitem .mdi{font-size:18px;color:var(--teal)}
+.navitem.locked{opacity:.7;cursor:default}
+.navitem .x{color:var(--t3);font-size:14px;cursor:pointer}
+.addnav{border:1px dashed var(--bd);color:var(--t2);border-radius:10px;padding:7px 11px;font-size:12px;background:transparent}
+/* page tabs */
+#tabs{display:flex;gap:6px;margin-bottom:10px;align-items:center;flex-wrap:wrap}
+.tab{padding:6px 12px;border-radius:8px;background:#0E0F14;border:1px solid var(--bd);font-size:12px;color:var(--t2);cursor:pointer}
+.tab.on{background:var(--teal);color:var(--ink);font-weight:700;border-color:var(--teal)}
+.tab .x{margin-left:6px;opacity:.7}
+/* device frame */
+.stagewrap{display:flex;justify-content:center}
+#frame{width:1024px;height:600px;background:var(--canvas);position:relative;border-radius:18px;border:1px solid #1b1d26;
+  background-image:radial-gradient(130% 100% at 88% -10%,rgba(46,213,184,.10),rgba(123,108,255,.06) 42%,transparent 70%);
+  flex:0 0 auto;overflow:hidden;box-shadow:0 20px 60px rgba(0,0,0,.5)}
+#rail{position:absolute;left:0;top:0;width:74px;height:600px;background:var(--nav);border-right:1px solid #15171e;display:flex;flex-direction:column;align-items:center;padding-top:14px;gap:12px}
+#rail .ni{width:46px;height:46px;border-radius:13px;display:flex;align-items:center;justify-content:center;font-size:22px;color:var(--t3)}
+#rail .ni.on{background:var(--teal);color:var(--ink)}
+#content{position:absolute;left:74px;top:0;right:0;bottom:0;padding:20px}
+#grid{position:absolute;left:94px;top:22px;width:910px;height:556px;display:grid;
+  grid-template-columns:repeat(6,140px);grid-template-rows:repeat(5,100px);gap:14px}
+.gcell{border:1px dashed #1b1e27;border-radius:10px}
+.gcell.hot{border-color:var(--teal);background:rgba(46,213,184,.08)}
+.gcell.bad{border-color:var(--red);background:rgba(242,104,90,.08)}
+/* placed card */
+.pc{position:relative;border-radius:14px;background:var(--card);border:1px solid var(--bd);overflow:hidden;cursor:grab;display:flex;flex-direction:column;padding:11px 12px;min-width:0}
+.pc.on{background:linear-gradient(180deg,#14161C,#13201d);border-color:var(--onbd)}
+.pc.sel{outline:2px solid var(--teal);outline-offset:-1px}
+.pc .ch{display:flex;align-items:center;gap:8px}
+.pc .ci{font-size:18px;flex:0 0 auto}
+.pc .ct{font-size:13px;font-weight:700;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.pc .csub{font-size:11px;color:var(--t2);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.pc .cbadge{position:absolute;right:7px;top:7px;font-size:9px;color:var(--t3)}
+.pc .cbody{flex:1;display:flex;align-items:flex-end;margin-top:6px;color:var(--t2);font-size:11px}
+.pc .vfill{position:absolute;left:10px;bottom:10px;top:38px;width:14px;border-radius:7px;background:#0f1117;overflow:hidden}
+.pc .vfill i{position:absolute;left:0;right:0;bottom:0;height:62%;background:linear-gradient(180deg,var(--teal),#1a9c86)}
+#nextaff{position:absolute;right:30px;bottom:26px;background:#12141b;border:1px solid var(--bd);border-radius:11px;padding:8px 14px;font-size:13px;color:var(--tx);display:none;align-items:center;gap:6px}
+/* inspector */
+.field{margin-bottom:14px}.field label{display:block;font-size:11px;color:var(--t2);margin-bottom:5px}
+.field input,.field select{width:100%;background:#0F1117;border:1px solid var(--bd);border-radius:9px;color:var(--tx);padding:9px 10px;font:inherit;font-size:13px}
+.szrow{display:flex;flex-wrap:wrap;gap:6px}
+.szb{padding:6px 9px;border-radius:8px;background:#0E0F14;border:1px solid var(--bd);font-size:12px;color:var(--t2);cursor:pointer}
+.szb.on{background:var(--teal);color:var(--ink);font-weight:700;border-color:var(--teal)}
+.empty{color:var(--t3);font-size:13px;line-height:1.6;text-align:center;padding:30px 10px}
+/* modal */
+#modal{position:fixed;inset:0;background:rgba(0,0,0,.6);display:none;align-items:center;justify-content:center;z-index:50}
+.mbox{width:520px;max-height:80vh;background:#101116;border:1px solid var(--bd);border-radius:16px;padding:20px;overflow:auto}
+.mbox h2{font-size:18px;margin-bottom:4px}.mbox p{color:var(--t2);font-size:12px;margin-bottom:14px}
+.elist{max-height:300px;overflow:auto;border:1px solid var(--bd);border-radius:10px}
+.erow{padding:9px 12px;border-bottom:1px solid #15171e;cursor:pointer;font-size:13px;display:flex;justify-content:space-between;gap:10px}
+.erow:hover{background:#15171e}.erow.on{background:rgba(46,213,184,.12)}
+.erow .eid{color:var(--t3);font-size:11px}
+.mfoot{display:flex;justify-content:flex-end;gap:10px;margin-top:16px}
+/* flash log */
+#flashbox{position:fixed;right:18px;bottom:18px;width:440px;max-height:50vh;background:#0B0C11;border:1px solid var(--bd);border-radius:14px;padding:14px;display:none;z-index:40}
+#flashlog{white-space:pre-wrap;font-family:'IBM Plex Mono',monospace;font-size:11px;color:#c2c7d2;max-height:32vh;overflow:auto;background:#08090c;border-radius:8px;padding:10px;margin-top:8px}
+.toast{position:fixed;bottom:18px;left:50%;transform:translateX(-50%);background:#101116;border:1px solid var(--onbd);color:var(--teal);padding:10px 18px;border-radius:10px;font-size:13px;z-index:60;display:none}
+small.note{color:var(--t3);font-size:11px;line-height:1.5;display:block;margin-top:8px}
+</style></head>
+<body>
+<div id="top">
+  <div class="brand">Aurora <b>Page Builder</b></div>
+  <input id="haurl" placeholder="HA URL  http://10.0.0.208:8123" style="width:210px">
+  <input id="hatok" placeholder="Long-lived token" type="password" style="width:150px">
+  <input id="panip" placeholder="Panel IP  10.0.0.174" style="width:140px">
+  <button class="btn ghost" id="connect">Connect</button>
+  <span class="pill"><span class="dot" id="cdot"></span><span id="cstat">not connected</span></span>
+  <div class="sp"></div>
+  <button class="btn ghost" id="tplBtn">Templates</button>
+  <button class="btn ghost" id="saveBtn">Save</button>
+  <button class="btn amber" id="flashBtn">Build &amp; Flash</button>
+</div>
+
+<div id="app">
+  <!-- PALETTE -->
+  <div id="palette">
+    <h3 class="sec">Card palette</h3>
+    <div style="font-size:12px;color:var(--t2);margin-bottom:6px">Click a card → pick entity → pick size → drop on the grid.</div>
+    <div id="palContent"></div>
+  </div>
+
+  <!-- CENTER -->
+  <div id="center">
+    <div id="navbuild"></div>
+    <div id="tabs"></div>
+    <div class="stagewrap">
+      <div id="frame">
+        <div id="rail"></div>
+        <div id="content">
+          <div id="grid"></div>
+          <div id="nextaff"><span class="mdi mdi-chevron-right"></span> Next</div>
+        </div>
+      </div>
+    </div>
+    <div style="color:var(--t3);font-size:11px;margin-top:10px" class="mono" id="hint">6×5 grid · 1024×600 · drag a placed card to move it</div>
+  </div>
+
+  <!-- INSPECTOR -->
+  <div id="inspector">
+    <div id="insp"></div>
+  </div>
+</div>
+
+<div id="modal"><div class="mbox" id="mbox"></div></div>
+<div id="flashbox"><div style="display:flex;justify-content:space-between;align-items:center"><b style="font-size:13px">Build &amp; Flash</b><span class="mdi mdi-close" style="cursor:pointer;color:var(--t2)" onclick="document.getElementById('flashbox').style.display='none'"></span></div><div id="flashlog"></div></div>
+<div class="toast" id="toast"></div>
+
+<script>
+// ============ catalog ============
+const C = {
+  light:    {label:'Light (dimmable)', domain:'light', icon:'lightbulb', color:'var(--amber)', spans:[[2,2],[1,5],[2,3],[3,2]], def:[2,2], ctrl:'vslider'},
+  light_t:  {label:'Light toggle', domain:'light', icon:'lightbulb-outline', color:'var(--amber)', spans:[[1,1],[2,1]], def:[2,1], ctrl:'toggle'},
+  switch:   {label:'Switch / outlet', domain:'switch', icon:'toggle-switch', color:'var(--teal)', spans:[[1,1],[2,1]], def:[1,1], ctrl:'toggle'},
+  fan:      {label:'Fan', domain:'fan', icon:'fan', color:'var(--teal)', spans:[[2,1],[2,2]], def:[2,2], ctrl:'seg'},
+  cover:    {label:'Cover / blinds', domain:'cover', icon:'blinds-horizontal', color:'var(--blue)', spans:[[2,2],[2,3],[3,2]], def:[2,2], ctrl:'pos'},
+  lock:     {label:'Lock', domain:'lock', icon:'lock', color:'var(--teal)', spans:[[1,1],[2,1],[2,2]], def:[2,1], ctrl:'lock'},
+  climate:  {label:'Climate / thermostat', domain:'climate', icon:'thermostat', color:'var(--amber)', spans:[[4,4],[3,3],[2,2],[4,3]], def:[4,4], ctrl:'dial'},
+  sensor:   {label:'Sensor', domain:'sensor', icon:'thermometer', color:'var(--t2)', spans:[[1,1],[2,1]], def:[1,1], ctrl:'val'},
+  binary:   {label:'Binary sensor', domain:'binary_sensor', icon:'motion-sensor', color:'var(--t2)', spans:[[1,1],[2,1]], def:[1,1], ctrl:'val'},
+  spotify:  {label:'Spotify', domain:'media_player', icon:'spotify', color:'#1DB954', spans:[[1,1],[2,2],[3,2],[4,3],[6,5]], def:[3,2], ctrl:'media'},
+  sonos:    {label:'Sonos (multi-room)', domain:'media_player', icon:'speaker-multiple', color:'var(--teal)', spans:[[3,2],[3,3],[4,4],[6,5]], def:[4,4], ctrl:'media'},
+  media:    {label:'Media player', domain:'media_player', icon:'play-circle', color:'var(--violet)', spans:[[2,2],[3,2],[6,5]], def:[3,2], ctrl:'media'},
+  camera:   {label:'Camera', domain:'camera', icon:'cctv', color:'var(--red)', spans:[[3,3],[4,3],[6,5]], def:[3,3], ctrl:'cam'},
+  weather:  {label:'Weather', domain:'weather', icon:'weather-partly-cloudy', color:'var(--amber)', spans:[[6,5],[3,3],[2,2],[6,2]], def:[3,3], ctrl:'wx'},
+  scene:    {label:'Scene', domain:'scene', icon:'palette', color:'var(--violet)', spans:[[1,1],[2,1]], def:[1,1], ctrl:'tile'},
+  script:   {label:'Script / button', domain:'script', icon:'gesture-tap-button', color:'var(--teal)', spans:[[1,1],[2,1]], def:[1,1], ctrl:'tile'},
+  person:   {label:'Presence', domain:'person', icon:'account', color:'var(--blue)', spans:[[1,1],[2,1]], def:[1,1], ctrl:'val'},
+};
+const CATS = [
+  ['Lighting', ['light','light_t','switch']],
+  ['Comfort', ['climate','fan','cover']],
+  ['Media', ['spotify','sonos','media']],
+  ['Safety', ['lock','camera','binary']],
+  ['Info', ['sensor','weather','person']],
+  ['Actions', ['scene','script']],
+];
+const NAV_ICONS = ['home-variant','sofa','lightbulb','thermostat','music','shield-home','wifi','cog','blinds','camera','weather-partly-cloudy','speaker','bed','silverware-fork-knife','desk','tree','door','stairs','garage','television'];
+const COLS=6, ROWS=5;
+
+// ============ state ============
+let L = null;          // layout
+let ENTS = [];         // entities from HA
+let AREAS = {};        // area -> {name, entities:[]}
+let sel = null;        // selected card id
+let placing = null;    // {ck, entity, name, w, h}
+let curPage = null, curSub = 0;
+
+function uid(){ return 'c'+Math.random().toString(36).slice(2,8); }
+function toast(m){ const t=document.getElementById('toast'); t.textContent=m; t.style.display='block'; setTimeout(()=>t.style.display='none',2200); }
+async function j(u,o){ const r=await fetch(u,o); if(!r.ok) throw new Error((await r.json()).error||r.statusText); return r.json(); }
+
+// ============ default layout / templates ============
+function blankPage(title){ return {title:title||'Page', type:'custom', subpages:[[]]}; }
+function defaultLayout(){
+  return {
+    install_room:'',
+    nav:[
+      {id:'home', icon:'home-variant', label:'Home', page:'home'},
+      {id:'rooms', icon:'sofa', label:'Rooms', page:'rooms'},
+      {id:'lights', icon:'lightbulb', label:'Lights', page:'lights'},
+      {id:'climate', icon:'thermostat', label:'Climate', page:'climate'},
+      {id:'media', icon:'music', label:'Media', page:'media'},
+    ],
+    pages:{ home:blankPage('Home'), rooms:blankPage('Rooms'), lights:blankPage('Lights'),
+            climate:blankPage('Climate'), media:blankPage('Media') }
+  };
+}
+const TEMPLATES = {
+  'Living-room home':()=>{ const l=defaultLayout(); l.install_room='Living Room';
+    l.pages.home.subpages=[[ mk('climate',null,'Climate',1,1,4,4), mk('light',null,'Main Lights',5,1,2,2), mk('sonos',null,'Sonos',5,3,2,3) ]]; return l; },
+  'Blank (Home + Settings)':()=>({install_room:'', nav:[{id:'home',icon:'home-variant',label:'Home',page:'home'}], pages:{home:blankPage('Home')}}),
+};
+function mk(ck,entity,name,x,y,w,h){ return {id:uid(),ck,entity:entity||'',name:name||C[ck].label,x,y,w,h}; }
+
+// ============ rendering ============
+function curCards(){ return L.pages[curPage].subpages[curSub]; }
+function occupancy(except){
+  const g=Array.from({length:ROWS},()=>Array(COLS).fill(false));
+  for(const c of curCards()){ if(c.id===except) continue;
+    for(let y=c.y-1;y<c.y-1+c.h;y++) for(let x=c.x-1;x<c.x-1+c.w;x++) if(g[y]&&g[y][x]!==undefined) g[y][x]=true; }
+  return g;
+}
+function fits(x,y,w,h,except){
+  if(x<1||y<1||x+w-1>COLS||y+h-1>ROWS) return false;
+  const g=occupancy(except);
+  for(let yy=y-1;yy<y-1+h;yy++) for(let xx=x-1;xx<x-1+w;xx++) if(g[yy][xx]) return false;
+  return true;
+}
+function firstFit(w,h){ for(let y=1;y<=ROWS-h+1;y++) for(let x=1;x<=COLS-w+1;x++) if(fits(x,y,w,h,null)) return [x,y]; return null; }
+
+function renderPalette(){
+  const el=document.getElementById('palContent'); el.innerHTML='';
+  for(const [cat,keys] of CATS){
+    const h=document.createElement('div'); h.className='pcat'; h.textContent=cat; el.appendChild(h);
+    for(const k of keys){ const c=C[k];
+      const d=document.createElement('div'); d.className='pitem'; d.onclick=()=>openEntityPicker(k);
+      d.innerHTML=`<div class="ic" style="background:#0f1117;color:${c.color}"><span class="mdi mdi-${c.icon}"></span></div>
+        <div><div class="nm">${c.label}</div><div class="sz">${c.def[0]}×${c.def[1]} · ${c.spans.length} sizes</div></div>`;
+      el.appendChild(d);
+    }
+  }
+}
+function renderNav(){
+  const el=document.getElementById('navbuild'); el.innerHTML='';
+  L.nav.forEach((n,i)=>{
+    const d=document.createElement('div'); d.className='navitem';
+    d.innerHTML=`<span class="mdi mdi-${n.icon}"></span>${n.label}<span class="x mdi mdi-close" title="remove"></span>`;
+    d.querySelector('.x').onclick=(e)=>{e.stopPropagation(); L.nav.splice(i,1); if(curPage===n.page){curPage=L.nav[0]?L.nav[0].page:Object.keys(L.pages)[0];} renderAll();};
+    d.onclick=()=>editNav(i);
+    el.appendChild(d);
+  });
+  const set=document.createElement('div'); set.className='navitem locked'; set.innerHTML=`<span class="mdi mdi-cog"></span>Settings`; el.appendChild(set);
+  if(L.nav.length<7){ const a=document.createElement('button'); a.className='addnav'; a.textContent='+ Nav item'; a.onclick=addNav; el.appendChild(a); }
+}
+function renderTabs(){
+  const el=document.getElementById('tabs'); el.innerHTML='';
+  const lab=document.createElement('span'); lab.style.cssText='font-size:12px;color:var(--t2);margin-right:4px'; lab.textContent=L.pages[curPage].title+' · sub-pages:'; el.appendChild(lab);
+  L.pages[curPage].subpages.forEach((sp,i)=>{
+    const t=document.createElement('div'); t.className='tab'+(i===curSub?' on':''); t.textContent=(i+1);
+    t.onclick=()=>{curSub=i; sel=null; renderAll();};
+    if(L.pages[curPage].subpages.length>1){ const x=document.createElement('span'); x.className='x mdi mdi-close'; x.onclick=(e)=>{e.stopPropagation(); L.pages[curPage].subpages.splice(i,1); curSub=0; renderAll();}; t.appendChild(x);}
+    el.appendChild(t);
+  });
+  const add=document.createElement('div'); add.className='tab'; add.textContent='+'; add.title='add sub-page';
+  add.onclick=()=>{L.pages[curPage].subpages.push([]); curSub=L.pages[curPage].subpages.length-1; renderAll();}; el.appendChild(add);
+}
+function renderRail(){
+  const r=document.getElementById('rail'); r.innerHTML='';
+  L.nav.forEach(n=>{ const d=document.createElement('div'); d.className='ni'+(n.page===curPage?' on':'');
+    d.innerHTML=`<span class="mdi mdi-${n.icon}"></span>`; d.onclick=()=>{ if(L.pages[n.page]){curPage=n.page;curSub=0;sel=null;renderAll();} }; r.appendChild(d); });
+  const sp=document.createElement('div'); sp.style.flex='1'; r.appendChild(sp);
+  const s=document.createElement('div'); s.className='ni'; s.innerHTML='<span class="mdi mdi-cog"></span>'; s.style.marginBottom='14px'; r.appendChild(s);
+}
+function cardInner(c){
+  const def=C[c.ck]; const nm=c.name||def.label;
+  let body='';
+  if(def.ctrl==='vslider') body=`<div class="vfill"><i></i></div><div class="cbody" style="margin-left:22px">74%</div>`;
+  else if(def.ctrl==='dial') body=`<div class="cbody" style="align-items:center;justify-content:center;flex:1"><div style="font-size:${c.w>=4?40:26}px;font-weight:700;color:var(--tx)">72°</div></div>`;
+  else if(def.ctrl==='toggle') body=`<div class="cbody" style="justify-content:flex-end"><div style="width:44px;height:24px;border-radius:12px;background:var(--teal);position:relative"><div style="position:absolute;right:3px;top:3px;width:18px;height:18px;border-radius:50%;background:var(--ink)"></div></div></div>`;
+  else if(def.ctrl==='media') body=`<div class="cbody">${c.w>=3?'<div style="width:48px;height:48px;border-radius:8px;background:linear-gradient(135deg,#5468FF,#2ED5B8);margin-right:10px"></div>':''}<div><div style="color:var(--tx);font-size:13px;font-weight:600">Midnight City</div><div style="font-size:11px">M83</div></div></div>`;
+  else if(def.ctrl==='lock') body=`<div class="cbody"><span style="color:var(--teal)">Locked</span></div>`;
+  else if(def.ctrl==='val') body=`<div class="cbody"><span style="color:var(--tx);font-size:18px;font-weight:700">68°</span></div>`;
+  else if(def.ctrl==='cam') body=`<div class="cbody" style="position:absolute;inset:38px 11px 11px;background:linear-gradient(160deg,#1a2030,#0e1118);border-radius:8px;align-items:center;justify-content:center;color:#2a3346"><span class="mdi mdi-cctv" style="font-size:26px"></span></div>`;
+  else if(def.ctrl==='wx') body=`<div class="cbody"><span class="mdi mdi-weather-sunny" style="font-size:30px;color:var(--amber);margin-right:8px"></span><span style="color:var(--tx);font-size:20px;font-weight:700">72°</span></div>`;
+  else if(def.ctrl==='seg') body=`<div class="cbody"><span style="color:var(--teal)">Med</span></div>`;
+  else if(def.ctrl==='pos') body=`<div class="cbody">Open 60%</div>`;
+  else body=`<div class="cbody">Tap</div>`;
+  return `<span class="cbadge mono">${c.w}×${c.h}</span>
+    <div class="ch"><span class="ci mdi mdi-${def.icon}" style="color:${def.color}"></span>
+      <div style="min-width:0"><div class="ct">${nm}</div>${c.entity?`<div class="csub">${c.entity}</div>`:'<div class="csub" style="color:var(--red)">no entity</div>'}</div></div>${body}`;
+}
+function renderGrid(){
+  const g=document.getElementById('grid'); g.innerHTML='';
+  // background cells
+  for(let i=0;i<COLS*ROWS;i++){ const cell=document.createElement('div'); cell.className='gcell';
+    cell.style.gridColumn=(i%COLS)+1; cell.style.gridRow=Math.floor(i/COLS)+1; g.appendChild(cell); }
+  // cards
+  for(const c of curCards()){
+    const d=document.createElement('div'); d.className='pc'+(sel===c.id?' sel':'')+(['vslider','dial','toggle'].includes(C[c.ck].ctrl)?' on':'');
+    d.style.gridColumn=`${c.x} / span ${c.w}`; d.style.gridRow=`${c.y} / span ${c.h}`;
+    d.innerHTML=cardInner(c); d.dataset.id=c.id;
+    d.onclick=(e)=>{e.stopPropagation(); sel=c.id; renderInspector(); markSel();};
+    attachDrag(d,c);
+    g.appendChild(d);
+  }
+  document.getElementById('nextaff').style.display = (curSub < L.pages[curPage].subpages.length-1) ? 'flex' : 'none';
+}
+function markSel(){ document.querySelectorAll('.pc').forEach(p=>p.classList.toggle('sel', p.dataset.id===sel)); }
+
+function renderInspector(){
+  const el=document.getElementById('insp');
+  const c = sel && curCards().find(x=>x.id===sel);
+  if(!c){ el.innerHTML=`<h3 class="sec">Inspector</h3><div class="empty">Select a card to edit it, or pick one from the palette to add.<br><br>Install room sets which room the Home page is scoped to.</div>
+    <div class="field"><label>Install room (room-scoped Home)</label><select id="instRoom"><option value="">— none —</option></select></div>`;
+    fillRooms(); return; }
+  const def=C[c.ck];
+  el.innerHTML=`<h3 class="sec">${def.label}</h3>
+    <div class="field"><label>Name</label><input id="fName" value="${(c.name||'').replace(/"/g,'&quot;')}"></div>
+    <div class="field"><label>Entity (${def.domain})</label><div style="display:flex;gap:6px"><input id="fEnt" value="${c.entity||''}" placeholder="none" style="flex:1"><button class="btn ghost" id="pickEnt" style="padding:8px 10px">Pick</button></div></div>
+    <div class="field"><label>Size (span)</label><div class="szrow" id="szrow"></div></div>
+    <div class="field"><label>Position</label><div class="mono" style="font-size:12px;color:var(--t2)">col ${c.x}, row ${c.y} — drag on grid to move</div></div>
+    <button class="btn ghost" id="delCard" style="width:100%;color:var(--red);border-color:#3a2422">Delete card</button>`;
+  const sz=el.querySelector('#szrow');
+  def.spans.forEach(([w,h])=>{ const b=document.createElement('div'); b.className='szb'+(w===c.w&&h===c.h?' on':''); b.textContent=`${w}×${h}`;
+    b.onclick=()=>{ if(fits(c.x,c.y,w,h,c.id)){c.w=w;c.h=h;renderGrid();renderInspector();} else if(firstFit(w,h)){const[nx,ny]=firstFit(w,h);c.x=nx;c.y=ny;c.w=w;c.h=h;renderGrid();renderInspector();toast('Moved to fit new size');} else toast('No room for that size on this page'); }; sz.appendChild(b); });
+  el.querySelector('#fName').oninput=(e)=>{c.name=e.target.value; renderGrid();};
+  el.querySelector('#fEnt').onchange=(e)=>{c.entity=e.target.value; renderGrid();};
+  el.querySelector('#pickEnt').onclick=()=>openEntityPicker(c.ck, c);
+  el.querySelector('#delCard').onclick=()=>{ const a=curCards(); a.splice(a.indexOf(c),1); sel=null; renderGrid(); renderInspector(); };
+}
+function fillRooms(){ const s=document.getElementById('instRoom'); if(!s) return;
+  Object.values(AREAS).forEach(a=>{ const o=document.createElement('option'); o.value=a.name; o.textContent=a.name; if(L.install_room===a.name)o.selected=true; s.appendChild(o); });
+  s.onchange=(e)=>{ L.install_room=e.target.value; }; }
+
+function renderAll(){ renderNav(); renderTabs(); renderRail(); renderGrid(); renderInspector(); }
+
+// ============ drag to move ============
+function attachDrag(el,c){
+  el.addEventListener('pointerdown',(e)=>{
+    if(e.target.closest('button')) return;
+    sel=c.id; renderInspector(); markSel();
+    const grid=document.getElementById('grid'); const start={x:e.clientX,y:e.clientY,cx:c.x,cy:c.y};
+    el.setPointerCapture(e.pointerId); el.style.cursor='grabbing'; el.style.zIndex=20; el.style.opacity=.85;
+    const move=(ev)=>{ const r=grid.getBoundingClientRect();
+      const colW=r.width/COLS, rowH=r.height/ROWS;
+      let nx=Math.round((ev.clientX-r.left-(colW*c.w/2))/colW)+1; nx=Math.max(1,Math.min(COLS-c.w+1,nx));
+      let ny=Math.round((ev.clientY-r.top-(rowH*c.h/2))/rowH)+1; ny=Math.max(1,Math.min(ROWS-c.h+1,ny));
+      if((nx!==c.x||ny!==c.y)&&fits(nx,ny,c.w,c.h,c.id)){ c.x=nx;c.y=ny; el.style.gridColumn=`${c.x} / span ${c.w}`; el.style.gridRow=`${c.y} / span ${c.h}`; }
+    };
+    const up=(ev)=>{ el.releasePointerCapture(ev.pointerId); el.style.cursor='grab'; el.style.zIndex=''; el.style.opacity=''; el.removeEventListener('pointermove',move); el.removeEventListener('pointerup',up); };
+    el.addEventListener('pointermove',move); el.addEventListener('pointerup',up);
+  });
+}
+
+// ============ placement mode (from palette) ============
+function enterPlacing(ck, entity, name, w, h){
+  placing={ck,entity,name,w,h}; sel=null;
+  document.getElementById('hint').textContent='Click a grid cell to drop the '+w+'×'+h+' card · Esc to cancel';
+  const grid=document.getElementById('grid');
+  const onMove=(ev)=>{ const r=grid.getBoundingClientRect(); const colW=r.width/COLS,rowH=r.height/ROWS;
+    let x=Math.floor((ev.clientX-r.left)/colW)+1, y=Math.floor((ev.clientY-r.top)/rowH)+1;
+    x=Math.max(1,Math.min(COLS-w+1,x)); y=Math.max(1,Math.min(ROWS-h+1,y));
+    grid.querySelectorAll('.gcell').forEach((cell,i)=>{ const cx=(i%COLS)+1, cy=Math.floor(i/COLS)+1;
+      const inside = cx>=x&&cx<x+w&&cy>=y&&cy<y+h; cell.classList.toggle('hot', inside&&fits(x,y,w,h,null)); cell.classList.toggle('bad', inside&&!fits(x,y,w,h,null)); });
+    grid._drop=[x,y];
+  };
+  const onClick=()=>{ if(!grid._drop) return; const [x,y]=grid._drop; if(fits(x,y,w,h,null)){ const card=mk(ck,entity,name,x,y,w,h); curCards().push(card); sel=card.id; cleanup(); renderAll(); } else toast('Doesn’t fit there'); };
+  const onKey=(e)=>{ if(e.key==='Escape') cleanup(); };
+  const cleanup=()=>{ placing=null; grid.removeEventListener('pointermove',onMove); grid.removeEventListener('click',onClick); document.removeEventListener('keydown',onKey);
+    grid.querySelectorAll('.gcell').forEach(c=>c.classList.remove('hot','bad')); document.getElementById('hint').textContent='6×5 grid · 1024×600 · drag a placed card to move it'; };
+  grid.addEventListener('pointermove',onMove); grid.addEventListener('click',onClick); document.addEventListener('keydown',onKey);
+}
+
+// ============ entity picker modal ============
+function openEntityPicker(ck, existing){
+  const def=C[ck]; const dom=def.domain;
+  const list=ENTS.filter(e=>e.domain===dom);
+  const mbox=document.getElementById('mbox');
+  let chosen = existing? existing.entity : (list[0]&&list[0].entity_id)||'';
+  let szc = existing? [existing.w,existing.h] : def.def;
+  mbox.innerHTML=`<h2>${def.label}</h2><p>${list.length} ${dom} entit${list.length===1?'y':'ies'} from Home Assistant${ENTS.length?'':' — connect to load yours'}</p>
+    <div class="field"><label>Entity</label><div class="elist" id="elist"></div></div>
+    <div class="field"><label>Card size</label><div class="szrow" id="msz"></div></div>
+    <div class="mfoot"><button class="btn ghost" id="mCancel">Cancel</button><button class="btn" id="mPlace">${existing?'Apply':'Place on grid'}</button></div>`;
+  const elist=mbox.querySelector('#elist');
+  if(!list.length){ elist.innerHTML='<div class="erow" style="color:var(--t3)">No matching entities. You can still place the card and bind it later.</div>'; }
+  list.forEach(e=>{ const r=document.createElement('div'); r.className='erow'+(e.entity_id===chosen?' on':'');
+    r.innerHTML=`<span>${e.name}</span><span class="eid">${e.entity_id}</span>`;
+    r.onclick=()=>{chosen=e.entity_id; elist.querySelectorAll('.erow').forEach(x=>x.classList.remove('on')); r.classList.add('on');}; elist.appendChild(r); });
+  const msz=mbox.querySelector('#msz');
+  def.spans.forEach(([w,h])=>{ const b=document.createElement('div'); b.className='szb'+(w===szc[0]&&h===szc[1]?' on':''); b.textContent=`${w}×${h}`;
+    b.onclick=()=>{szc=[w,h]; msz.querySelectorAll('.szb').forEach(x=>x.classList.remove('on')); b.classList.add('on');}; msz.appendChild(b); });
+  document.getElementById('modal').style.display='flex';
+  mbox.querySelector('#mCancel').onclick=closeModal;
+  mbox.querySelector('#mPlace').onclick=()=>{
+    closeModal();
+    if(existing){ const c=existing; c.entity=chosen; if(fits(c.x,c.y,szc[0],szc[1],c.id)){c.w=szc[0];c.h=szc[1];} renderGrid(); renderInspector(); }
+    else { const nm=(ENTS.find(e=>e.entity_id===chosen)||{}).name; enterPlacing(ck, chosen, nm, szc[0], szc[1]); }
+  };
+}
+function closeModal(){ document.getElementById('modal').style.display='none'; }
+
+// ============ nav edit ============
+function addNav(){ navModal({id:uid(),icon:'star',label:'New',page:''}, true); }
+function editNav(i){ navModal(L.nav[i], false, i); }
+function navModal(n, isNew, idx){
+  const mbox=document.getElementById('mbox');
+  const pageOpts=Object.keys(L.pages).map(p=>`<option value="${p}" ${n.page===p?'selected':''}>${L.pages[p].title} (${p})</option>`).join('');
+  mbox.innerHTML=`<h2>${isNew?'Add':'Edit'} nav item</h2><p>Up to 7 items. Settings is always present.</p>
+    <div class="field"><label>Label</label><input id="nLabel" value="${n.label}"></div>
+    <div class="field"><label>Icon</label><div class="szrow" id="nIcons"></div></div>
+    <div class="field"><label>Opens page</label><select id="nPage">${pageOpts}<option value="__new">+ new blank page…</option></select></div>
+    <div class="mfoot"><button class="btn ghost" id="mCancel">Cancel</button><button class="btn" id="mOk">${isNew?'Add':'Save'}</button></div>`;
+  let icon=n.icon; const ig=mbox.querySelector('#nIcons');
+  NAV_ICONS.forEach(ic=>{ const b=document.createElement('div'); b.className='szb'+(ic===icon?' on':''); b.innerHTML=`<span class="mdi mdi-${ic}" style="font-size:18px"></span>`;
+    b.onclick=()=>{icon=ic; ig.querySelectorAll('.szb').forEach(x=>x.classList.remove('on')); b.classList.add('on');}; ig.appendChild(b); });
+  document.getElementById('modal').style.display='flex';
+  mbox.querySelector('#mCancel').onclick=closeModal;
+  mbox.querySelector('#mOk').onclick=()=>{
+    const label=mbox.querySelector('#nLabel').value||'Page'; let page=mbox.querySelector('#nPage').value;
+    if(page==='__new'){ page=label.toLowerCase().replace(/[^a-z0-9]+/g,'_').replace(/^_|_$/g,'')||uid(); L.pages[page]=blankPage(label); }
+    const item={id:n.id,icon,label,page};
+    if(isNew){ if(L.nav.length>=7){toast('Max 7 nav items');return;} L.nav.push(item); } else { L.nav[idx]=item; }
+    closeModal(); curPage=page; curSub=0; renderAll();
+  };
+}
+
+// ============ templates ============
+function openTemplates(){
+  const mbox=document.getElementById('mbox');
+  mbox.innerHTML=`<h2>Start from a template</h2><p>Pick a starting layout. This replaces the current layout.</p>
+    <div id="tpls"></div><div class="mfoot"><button class="btn ghost" id="mCancel">Cancel</button></div>`;
+  const t=mbox.querySelector('#tpls');
+  Object.keys(TEMPLATES).forEach(name=>{ const d=document.createElement('div'); d.className='pitem'; d.style.marginBottom='8px';
+    d.innerHTML=`<div class="ic" style="background:#0f1117;color:var(--teal)"><span class="mdi mdi-view-dashboard-variant"></span></div><div><div class="nm">${name}</div></div>`;
+    d.onclick=()=>{ L=TEMPLATES[name](); curPage=Object.keys(L.pages)[0]; curSub=0; sel=null; closeModal(); renderAll(); toast('Loaded template'); }; t.appendChild(d); });
+  document.getElementById('modal').style.display='flex';
+  mbox.querySelector('#mCancel').onclick=closeModal;
+}
+
+// ============ connect / save / flash ============
+async function connect(){
+  const url=document.getElementById('haurl').value.trim(), tok=document.getElementById('hatok').value.trim();
+  const ip=document.getElementById('panip').value.trim();
+  localStorage.setItem('aurora_ha_url',url); localStorage.setItem('aurora_ha_tok',tok); localStorage.setItem('aurora_pan_ip',ip);
+  if(!url||!tok){ toast('Enter HA URL + token'); return; }
+  document.getElementById('cstat').textContent='connecting…';
+  try{ ENTS=await j('/api/entities',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({url,token:tok})});
+    try{ const a=await j('/api/ha/areas',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({url,token:tok})}); AREAS=a||{}; }catch(e){ AREAS={}; }
+    document.getElementById('cdot').className='dot ok'; document.getElementById('cstat').textContent=ENTS.length+' entities · '+Object.keys(AREAS).length+' areas';
+    renderPalette(); renderInspector(); toast('Connected to Home Assistant');
+  }catch(e){ document.getElementById('cstat').textContent='failed'; toast('Connect failed: '+e.message); }
+}
+async function save(){ try{ await j('/api/layout',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(L)}); toast('Layout saved ✓'); }catch(e){ toast('Save failed: '+e.message); } }
+async function flash(){
+  await save();
+  const ip=document.getElementById('panip').value.trim(); if(!ip){ toast('Enter the panel IP (or /dev/ttyACM0 for serial)'); return; }
+  document.getElementById('flashbox').style.display='block'; const log=document.getElementById('flashlog'); log.textContent='Starting…';
+  try{ await j('/api/flash',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({device:ip})});
+    const t=setInterval(async()=>{ const s=await j('/api/flash-status'); log.textContent=s.log||''; log.scrollTop=log.scrollHeight; if(s.done){clearInterval(t); toast(s.ok?'Flash complete ✓':'Flash did not confirm');} },1200);
+  }catch(e){ log.textContent='Error: '+e.message; }
+}
+
+// ============ boot ============
+async function boot(){
+  try{ L=await j('/api/layout'); if(!L||!L.pages||!Object.keys(L.pages).length) L=defaultLayout(); }catch(e){ L=defaultLayout(); }
+  curPage=L.nav[0]?L.nav[0].page:Object.keys(L.pages)[0]; curSub=0;
+  document.getElementById('haurl').value=localStorage.getItem('aurora_ha_url')||'';
+  document.getElementById('hatok').value=localStorage.getItem('aurora_ha_tok')||'';
+  document.getElementById('panip').value=localStorage.getItem('aurora_pan_ip')||'';
+  renderPalette(); renderAll();
+  document.getElementById('connect').onclick=connect;
+  document.getElementById('saveBtn').onclick=save;
+  document.getElementById('flashBtn').onclick=flash;
+  document.getElementById('tplBtn').onclick=openTemplates;
+  document.getElementById('grid').addEventListener('click',(e)=>{ if(e.target.classList.contains('gcell')&&!placing){ sel=null; renderInspector(); markSel(); }});
+  if(localStorage.getItem('aurora_ha_url')&&localStorage.getItem('aurora_ha_tok')) connect();
+}
+boot();
+</script>
+</body></html>
