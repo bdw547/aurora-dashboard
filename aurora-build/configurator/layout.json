@@ -5,22 +5,24 @@
     {"id":"rooms","icon":"sofa","label":"Rooms","page":"rooms"},
     {"id":"lights","icon":"lightbulb","label":"Lights","page":"lights"},
     {"id":"climate","icon":"thermostat","label":"Climate","page":"climate"},
-    {"id":"media","icon":"music","label":"Media","page":"media"}
+    {"id":"media","icon":"music","label":"Media","page":"media"},
+    {"id":"tv","icon":"remote-tv","label":"TV","page":"tv"}
   ],
   "pages": {
-    "home": {"title":"Home","type":"custom","subpages":[
+    "home": {"title":"Home","type":"custom","header":true,"subpages":[
       [
         {"id":"c1","ck":"climate","entity":"climate.main_floor","name":"Main Floor","x":1,"y":1,"w":4,"h":4},
         {"id":"c2","ck":"light","entity":"light.living_room_main","name":"Main Lights","x":5,"y":1,"w":2,"h":2},
-        {"id":"c3","ck":"sonos","entity":"media_player.living_room","name":"Living Room","x":5,"y":3,"w":2,"h":3},
-        {"id":"c4","ck":"sensor","entity":"sensor.living_temp","name":"Temp","x":1,"y":5,"w":2,"h":1},
-        {"id":"c5","ck":"scene","entity":"scene.movie_night","name":"Movie","x":3,"y":5,"w":2,"h":1}
+        {"id":"c3","ck":"sonos","entity":"media_player.living_room","name":"Living Room","x":5,"y":3,"w":2,"h":2}
       ],
       []
     ]},
-    "rooms": {"title":"Rooms","type":"custom","subpages":[[]]},
-    "lights": {"title":"Lights","type":"custom","subpages":[[]]},
-    "climate": {"title":"Climate","type":"custom","subpages":[[]]},
-    "media": {"title":"Media","type":"custom","subpages":[[]]}
+    "rooms": {"title":"Rooms","type":"custom","header":false,"subpages":[[]]},
+    "lights": {"title":"Lights","type":"custom","header":false,"subpages":[[]]},
+    "climate": {"title":"Climate","type":"custom","header":false,"subpages":[[]]},
+    "media": {"title":"Media","type":"custom","header":false,"subpages":[[]]},
+    "tv": {"title":"TV","type":"custom","header":false,"subpages":[
+      [ {"id":"t1","ck":"tvremote","entity":"media_player.lg_g3_living_room_2","name":"LG G3 OLED","x":1,"y":1,"w":6,"h":5} ]
+    ]}
   }
 }
