@@ -331,6 +331,115 @@ def c_btngrid(card, x, y, w, h, base):
     return [card_obj(x, y, w, h, inner)], [], []
 
 
+def _tvbtn(bx, by, w_, h_, glyph, e, button, **kw):
+    act = ("homeassistant.action: { action: webostv.button, data: { entity_id: %s, button: %s } }"
+           % (e, button)) if e else "lvgl.page.show: page_home"
+    return btn(bx, by, w_, h_, glyph, act, font="f_icon", **kw)
+
+
+def _dpad(inner, e, w, h):
+    cx, cy, s = w // 2, h // 2 + 10, 50
+    okA = ("homeassistant.action: { action: webostv.button, data: { entity_id: %s, button: ENTER } }" % e) if e else "lvgl.page.show: page_home"
+    inner += _tvbtn(cx - 25, cy - 78, s, s, "\\U000F0143", e, "UP")
+    inner += _tvbtn(cx - 78, cy - 25, s, s, "\\U000F0141", e, "LEFT")
+    inner += btn(cx - 32, cy - 32, 64, 64, "OK", okA, bg="0x2ED5B8", color="0x06231D", radius=32)
+    inner += _tvbtn(cx + 28, cy - 25, s, s, "\\U000F0142", e, "RIGHT")
+    inner += _tvbtn(cx - 25, cy + 28, s, s, "\\U000F0140", e, "DOWN")
+    return inner
+
+
+def c_tv_dpad(card, x, y, w, h, base):
+    e = card.get("entity", "")
+    inner = ic(card["ck"], color="0xB06CFF") + lbl(card.get("name", "Navigate"), 50, 16, "f_small", "0x868CA0")
+    inner = _dpad(inner, e, w, h)
+    return [card_obj(x, y, w, h, inner)], [], []
+
+
+def c_tv_transport(card, x, y, w, h, base):
+    e = card.get("entity", "")
+    inner = ic(card["ck"], color="0xB06CFF") + lbl(card.get("name", "Transport"), 50, 16, "f_small", "0x868CA0")
+    items = [("\\U000F0141", "BACK", None), ("\\U000F02DC", "HOME", None),
+             ("\\U000F04AE", None, "media_player.media_previous_track"),
+             ("\\U000F040A", None, "media_player.media_play_pause"),
+             ("\\U000F04AD", None, "media_player.media_next_track")]
+    n = len(items); pad = 14; bw = (w - pad * 2 - (n - 1) * 8) // n; by = h - pad - 52
+    for i, (g, bn, svc) in enumerate(items):
+        act = (("homeassistant.action: { action: webostv.button, data: { entity_id: %s, button: %s } }" % (e, bn)) if bn else (ha(svc, e))) if e else "lvgl.page.show: page_home"
+        main = (i == 3)
+        inner += btn(pad + i * (bw + 8), by, bw, 52, g, act, font="f_icon",
+                     bg=("0x2ED5B8" if main else "0x161B24"), color=("0x06231D" if main else "0xF3F5F8"))
+    return [card_obj(x, y, w, h, inner)], [], []
+
+
+def c_tv_channel(card, x, y, w, h, base):
+    e = card.get("entity", "")
+    inner = ic(card["ck"], color="0xB06CFF") + lbl(card.get("name", "Channel"), 50, 16, "f_small", "0x868CA0")
+    up = ("homeassistant.action: { action: webostv.button, data: { entity_id: %s, button: CHANNELUP } }" % e) if e else "lvgl.page.show: page_home"
+    dn = ("homeassistant.action: { action: webostv.button, data: { entity_id: %s, button: CHANNELDOWN } }" % e) if e else "lvgl.page.show: page_home"
+    bh = (h - 66) // 2 - 4
+    inner += btn(14, 52, w - 28, bh, "CH +", up)
+    inner += btn(14, 52 + bh + 8, w - 28, bh, "CH -", dn)
+    return [card_obj(x, y, w, h, inner)], [], []
+
+
+def c_tv_volume(card, x, y, w, h, base):
+    e = card.get("entity", "")
+    inner = ic(card["ck"], color="0xB06CFF") + lbl(card.get("name", "Volume"), 50, 16, "f_small", "0x868CA0")
+    rows = [("VOL +", "media_player.volume_up", ""), ("Mute", "media_player.volume_mute", 'is_volume_muted: "true"'),
+            ("VOL -", "media_player.volume_down", "")]
+    bh = (h - 66) // 3 - 4; yy = 52
+    for t, svc, extra in rows:
+        act = ha(svc, e, extra) if e else "lvgl.page.show: page_home"
+        inner += btn(14, yy, w - 28, bh, t, act)
+        yy += bh + 6
+    return [card_obj(x, y, w, h, inner)], [], []
+
+
+def c_tv_trackpad(card, x, y, w, h, base):
+    inner = ic(card["ck"], color="0xB06CFF") + lbl(card.get("name", "Trackpad"), 50, 16, "f_small", "0x868CA0")
+    inner += ("              - obj: { x: 14, y: 50, width: %d, height: %d, bg_color: 0x0F1117, "
+              "border_color: 0x23262F, border_width: 1, radius: 12, scrollable: false }\n" % (w - 28, h - 64))
+    inner += lbl("Tap \\u00B7 Swipe", 0, 4, "f_body", "0x5D6470", align="center")
+    return [card_obj(x, y, w, h, inner)], [], []
+
+
+def c_tvremote(card, x, y, w, h, base):
+    e = card.get("entity", "")
+    inner = ic(card["ck"], color="0xB06CFF") + lbl("LG OLED", 50, 14, "f_title")
+    powA = ("homeassistant.action: { action: media_player.toggle, data: { entity_id: %s } }" % e) if e else "lvgl.page.show: page_home"
+    inner += btn(w - 66, 14, 52, 46, "\\U000F0425", powA, bg="0x2a1414", color="0xF2685A", font="f_icon")
+    inner = _dpad(inner, e, w, h - 30)
+    items = [("\\U000F04AE", "media_player.media_previous_track"),
+             ("\\U000F040A", "media_player.media_play_pause"),
+             ("\\U000F04AD", "media_player.media_next_track")]
+    by = h - 66; bw = 56
+    for i, (g, svc) in enumerate(items):
+        inner += btn(14 + i * (bw + 8), by, bw, 52, g, ha(svc, e) if e else "lvgl.page.show: page_home",
+                     font="f_icon", bg=("0x2ED5B8" if i == 1 else "0x161B24"), color=("0x06231D" if i == 1 else "0xF3F5F8"))
+    return [card_obj(x, y, w, h, inner)], [], []
+
+
+def c_playlist(card, x, y, w, h, base):
+    e = card.get("entity", "")
+    pl = card.get("pl") or card.get("name", "Playlist")
+    inner = ic(card["ck"], color="0x1DB954") + lbl(pl, 50, 16, "f_title", width=w - 64)
+    inner += lbl("Tap to play", 14, -12, "f_small", "0x868CA0", align="bottom_left")
+    on = ("homeassistant.action: { action: media_player.media_play, data: { entity_id: %s } }" % e) if e else None
+    return [card_obj(x, y, w, h, inner, on)], [], []
+
+
+def c_songlist(card, x, y, w, h, base):
+    inner = ic(card["ck"], color="0x1DB954") + lbl(card.get("name", "Tracks"), 50, 16, "f_small", "0x868CA0")
+    songs = ["Midnight City", "Instant Crush", "Dreams", "Redbone", "Holocene", "Lovely Day", "Electric Feel"]
+    yy = 52
+    for s in songs[: max(1, (h - 52) // 42)]:
+        inner += ("              - obj: { x: 14, y: %d, width: %d, height: 38, bg_color: 0x0F1117, "
+                  "border_width: 0, radius: 8, scrollable: false, widgets: [label: { text: %s, x: 12, "
+                  "y: 10, text_font: f_body, text_color: 0xF3F5F8 }] }\n" % (yy, w - 28, esc(s)))
+        yy += 42
+    return [card_obj(x, y, w, h, inner)], [], []
+
+
 def c_shortcuts(card, x, y, w, h, pagemap, base):
     inner = ""
     sc = card.get("shortcuts", [])
@@ -369,6 +478,10 @@ CTRL = {
     "lock": c_lock, "weather": c_weather, "camera": c_camera, "group": c_group,
     "lightgroup": c_group, "outletgroup": c_outlet, "speakers": c_btngrid,
     "sonos_sources": c_btngrid, "tv_sources": c_btngrid,
+    "tv_dpad": c_tv_dpad, "tv_transport": c_tv_transport, "tv_channel": c_tv_channel,
+    "tv_volume": c_tv_volume, "tv_trackpad": c_tv_trackpad, "tvremote": c_tvremote,
+    "playlist": c_playlist, "sonos_fav": c_playlist, "songlist": c_songlist,
+    "sonos_library": c_songlist,
 }
 
 
