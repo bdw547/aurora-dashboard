@@ -28,9 +28,9 @@
     "lights": {"title":"Lights","type":"custom","header":{"on":false,"left":"greeting","right":[]},"subpages":[
       [
         {"id":"lg1","ck":"lightgroup","name":"All Lights","x":1,"y":1,"w":3,"h":3,"entities":["light.living_room_main","light.kitchen_kitchen","light.office_main_lights","light.master_bedroom_ceiling_fan_light","light.dining_room_chandelier","light.reading_lamp"]},
-        {"id":"o1","ck":"outletgroup","name":"Patio strip","x":4,"y":1,"w":1,"h":3,"entities":["switch.patio_a","switch.patio_b","switch.patio_c"]},
+        {"id":"o1","ck":"outletgroup","name":"Front Stairs","x":4,"y":1,"w":1,"h":3,"entities":["switch.s1","switch.s2"]},
         {"id":"f1","ck":"fan","entity":"fan.office_ceiling_fan","name":"Office Fan","x":5,"y":1,"w":1,"h":1},
-        {"id":"o2","ck":"outletgroup","name":"Front Stairs","x":5,"y":2,"w":1,"h":1,"entities":["switch.front_stairs"]},
+        {"id":"o2","ck":"outletgroup","name":"Garage","x":5,"y":2,"w":1,"h":1,"entities":["switch.garage_outlet"]},
         {"id":"cv1","ck":"cover","entity":"cover.living_blinds","name":"Blinds","x":6,"y":1,"w":1,"h":3}
       ]
     ]},

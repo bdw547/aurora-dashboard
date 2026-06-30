@@ -118,6 +118,13 @@ h3.sec{font-size:11px;letter-spacing:1.4px;text-transform:uppercase;color:var(--
 .pc .opwr{width:60px;height:60px;border-radius:50%;background:linear-gradient(180deg,#14201c,#0f1714);border:1px solid var(--onbd);display:flex;align-items:center;justify-content:center;color:var(--teal);font-size:26px}
 .pc .ogrid{flex:1;display:grid;gap:8px;margin-top:8px}
 .pc .ocell{background:#0f1117;border:1px solid var(--bd);border-radius:10px;display:flex;align-items:center;gap:8px;padding:8px 10px;min-width:0}
+.pc .osq{width:38px;height:38px;border-radius:10px;background:var(--teal);color:var(--ink);display:flex;align-items:center;justify-content:center;font-size:21px;flex:0 0 auto}
+.pc .ohead{display:flex;flex-direction:column;align-items:center;gap:6px;min-width:0}
+.pc .ogrid2{flex:1;display:grid;gap:10px;margin-top:10px;min-height:0}
+.pc .ocell2{background:linear-gradient(180deg,#13201d,#0f1714);border:1px solid var(--onbd);border-radius:14px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:8px;min-height:0;min-width:0}
+.pc .ocl{font-size:12px;color:var(--t2);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:100%}
+.pc .opb{width:48px;height:48px;border-radius:50%;background:#0f1714;border:1px solid var(--onbd);display:flex;align-items:center;justify-content:center;color:var(--teal);font-size:24px;flex:0 0 auto}
+.pc .opb.on{background:rgba(46,213,184,.14)}
 .pc .cambg{position:absolute;inset:0;background:linear-gradient(160deg,#1a2030,#0e1118);display:flex;align-items:center;justify-content:center;color:#2a3346;font-size:30px}
 /* group / multi */
 .pc .ggrid{flex:1;display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:10px}
@@ -434,10 +441,13 @@ function cardInner(c){ const def=C[c.ck], nm=c.name||def.label, big=c.w>=3, ctrl
     for(let i=0;i<n;i++){ const s=sc[i]; btns+=`<div class="scbtn${s?'':' empty'}">${s?`<span class="mdi mdi-${s.icon}"></span><span class="scn">${s.label}</span>`:`<span class="mdi mdi-plus"></span>`}</div>`; }
     return head+`<div class="toprow">${ico}<span class="csub">${nm} · ${sc.length}/${n}</span></div><div class="scgrid" style="grid-template-columns:repeat(${c.w},1fr);grid-template-rows:repeat(${c.h},1fr)">${btns}</div>`; }
   if(ctrl==='outletgroup'){ const n=cap(c), ents=c.entities||[], horiz=c.w>c.h;
-    if(n===1){ if(c.w===1&&c.h===1) return head+`<div class="toprow">${ico}${tog(true)}</div><div class="csub" style="margin-top:auto">${ents[0]?nm2(ents[0]):nm}</div>`;
-      return head+`<div style="display:flex;flex-direction:column;align-items:center;justify-content:center;height:100%;gap:10px"><span class="mdi mdi-power-socket-us" style="color:var(--teal);font-size:24px"></span><div class="opwr"><span class="mdi mdi-power"></span></div><div style="text-align:center"><div style="color:var(--teal);font-weight:700">On</div><div class="csub">${ents[0]?nm2(ents[0]):nm}</div></div></div>`; }
-    let cells=''; for(let i=0;i<n;i++){ const e=ents[i]; cells+=`<div class="ocell"><span class="mdi mdi-power-socket-us" style="color:${e?'var(--teal)':'var(--t3)'};font-size:18px"></span><span style="flex:1;font-size:12px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${e?nm2(e):'Outlet '+(i+1)}</span>${tog(!!e&&i%2===0)}</div>`; }
-    return head+`<div class="toprow">${ico}<span class="csub">${nm} · ${ents.length}/${n}</span></div><div class="ogrid" style="${horiz?'grid-template-columns:repeat('+n+',1fr)':'grid-template-rows:repeat('+n+',1fr)'}">${cells}</div>`; }
+    const badge=`<span class="osq"><span class="mdi mdi-power-socket-us"></span></span>`;
+    if(c.w===1&&c.h===1) return head+`<div style="display:flex;flex-direction:column;align-items:center;justify-content:center;height:100%;gap:7px">${badge}<div class="opb on" style="width:40px;height:40px;font-size:21px"><span class="mdi mdi-power"></span></div><div class="csub">${ents[0]?nm2(ents[0]):nm}</div></div>`;
+    if(n===1) return head+`<div style="display:flex;flex-direction:column;align-items:center;justify-content:center;height:100%;gap:10px">${badge}<div class="opb on" style="width:62px;height:62px;font-size:30px"><span class="mdi mdi-power"></span></div><div style="text-align:center"><div style="color:var(--teal);font-weight:700">On</div><div class="csub">${ents[0]?nm2(ents[0]):nm}</div></div></div>`;
+    const ne=ents.length?Math.min(ents.length,n):1; let cells='';
+    for(let i=0;i<ne;i++){ const e=ents[i]; const on=!!e&&i%2===0;
+      cells+=`<div class="ocell2"><span class="ocl">${e?nm2(e):'S'+(i+1)}</span><div class="opb${on?' on':''}"><span class="mdi mdi-power"></span></div></div>`; }
+    return head+`<div class="ohead">${badge}<div style="font-size:14px;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:100%">${nm}</div></div><div class="ogrid2" style="${horiz?'grid-template-columns:repeat('+ne+',1fr)':'grid-template-rows:repeat('+ne+',1fr)'}">${cells}</div>`; }
   if(ctrl==='playlist'){ const isS=c.ck==='sonos_fav'; const accent=isS?'var(--teal)':'#1DB954';
     if(c.w===1) return head+`<div style="display:flex;flex-direction:column;align-items:center;justify-content:center;height:100%;gap:8px"><span class="mdi mdi-${def.icon}" style="font-size:26px;color:${accent}"></span><div style="font-size:12px;font-weight:600;text-align:center">${c.pl||nm}</div></div>`;
     return head+`<div class="toprow">${ico}<span class="csub">${nm}</span></div><div class="ddrop"><span>${c.pl||('All '+(isS?'favorites':'playlists'))}</span><span class="mdi mdi-chevron-down"></span></div>`; }
