@@ -441,47 +441,118 @@ def c_tv_trackpad(card, x, y, w, h, base):
 
 
 def _chan(e, up):
-    btn_name = "CHANNELUP" if up else "CHANNELDOWN"
+    bn = "CHANNELUP" if up else "CHANNELDOWN"
     return ("homeassistant.action: { action: webostv.button, data: { entity_id: %s, button: %s } }"
-            % (e, btn_name)) if e else "lvgl.page.show: page_home"
+            % (e, bn)) if e else "lvgl.page.show: page_home"
+
+
+def _wbtn(e, button):
+    return ("homeassistant.action: { action: webostv.button, data: { entity_id: %s, button: %s } }"
+            % (e, button)) if e else "lvgl.page.show: page_home"
+
+
+def _src(e, src):
+    return ("homeassistant.action: { action: media_player.select_source, data: { entity_id: %s, source: %s } }"
+            % (e, esc(src))) if e else "lvgl.page.show: page_home"
+
+
+TV_APPS = [("Netflix", "0xE50914", "N"), ("YouTube", "0xFF0000", "Y"),
+           ("Disney+", "0x113CCF", "D"), ("Spotify", "0x1DB954", "S"), ("Plex", "0xE5A00D", "P")]
+TV_SOURCES = ["HDMI 1", "Apple TV", "Roku", "Cable"]
 
 
 def c_tvremote(card, x, y, w, h, base):
-    """Full LG remote (web `remote` card parity). Large cards get header +
-    volume column + d-pad + channel column + a full transport bar; small cards
-    fall back to d-pad + 3 transport buttons."""
+    """Full LG remote, matching the web `remote` card. Wide cards (>=6 cells)
+    get the apps sidebar; large cards get source chips + VOL/d-pad/CH + the full
+    transport bar; small cards fall back to d-pad + 3 transport buttons."""
     e = card.get("entity", "")
-    inner = ic(card["ck"], color="0xB06CFF") + lbl("LG OLED", 50, 12, "f_title")
+    inner = ""
     powA = ("homeassistant.action: { action: media_player.toggle, data: { entity_id: %s } }" % e) if e else "lvgl.page.show: page_home"
-    inner += btn(w - 66, 14, 52, 46, "\\U000F0425", powA, bg="0x2a1414", color="0xF2685A", font="f_icon")
     rich = w >= 560 and h >= 320
-    if rich:
-        inner += lbl("Living Room \\u00B7 HDMI 1", 52, 48, "f_small", "0x868CA0")
-        inner = _dpad(inner, e, w, h - 10)
-        midy = h // 2
-        vu = ha("media_player.volume_up", e) if e else "lvgl.page.show: page_home"
-        vd = ha("media_player.volume_down", e) if e else "lvgl.page.show: page_home"
-        inner += btn(28, midy - 64, 86, 54, "VOL +", vu)
-        inner += btn(28, midy + 14, 86, 54, "VOL -", vd)
-        inner += btn(w - 114, midy - 64, 86, 54, "CH +", _chan(e, True))
-        inner += btn(w - 114, midy + 14, 86, 54, "CH -", _chan(e, False))
-        items = [("\\U000F0141", "BACK", None), ("\\U000F02DC", "HOME", None),
-                 ("\\U000F04AE", None, "media_player.media_previous_track"),
-                 ("\\U000F040A", None, "media_player.media_play_pause"),
-                 ("\\U000F04AD", None, "media_player.media_next_track")]
-    else:
+    if not rich:                       # compact: icon + title + d-pad + 3 transport
+        inner = ic(card["ck"], color="0xB06CFF") + lbl("LG OLED", 50, 12, "f_title")
+        inner += btn(w - 66, 14, 52, 46, "\\U000F0425", powA, bg="0x2a1414", color="0xF2685A", font="f_icon")
         inner = _dpad(inner, e, w, h - 30)
-        items = [("\\U000F04AE", None, "media_player.media_previous_track"),
-                 ("\\U000F040A", None, "media_player.media_play_pause"),
-                 ("\\U000F04AD", None, "media_player.media_next_track")]
-    n = len(items); bw = 64 if rich else 56
-    tot = n * bw + (n - 1) * 8
-    sx = (w - tot) // 2 if rich else 14
-    by = h - 66
-    for i, (g, bn, svc) in enumerate(items):
-        act = (("homeassistant.action: { action: webostv.button, data: { entity_id: %s, button: %s } }" % (e, bn)) if bn else ha(svc, e)) if e else "lvgl.page.show: page_home"
-        main = (g == "\\U000F040A")
-        inner += btn(sx + i * (bw + 8), by, bw, 52, g, act, font="f_icon",
+        items = [("\\U000F04AE", "media_player.media_previous_track"),
+                 ("\\U000F040A", "media_player.media_play_pause"),
+                 ("\\U000F04AD", "media_player.media_next_track")]
+        bw = 56
+        for i, (g, svc) in enumerate(items):
+            inner += btn(14 + i * (bw + 8), h - 66, bw, 52, g, ha(svc, e) if e else "lvgl.page.show: page_home",
+                         font="f_icon", bg=("0x2ED5B8" if i == 1 else "0x161B24"), color=("0x06231D" if i == 1 else "0xF3F5F8"))
+        return [card_obj(x, y, w, h, inner)], [], []
+
+    sidebar = w >= 820
+    mx = 180 if sidebar else 14            # main-area left edge
+    mw = w - mx - 14
+    # --- apps sidebar (pre-baked launch tiles) ---
+    if sidebar:
+        inner += lbl("APPS \\u00B7 PRE-BAKED", 16, 12, "f_small", "0x5D6470")
+        ay = 40
+        ah = (h - ay - 14 - 4 * 8) // 5
+        for i, (nm, col, ltr) in enumerate(TV_APPS):
+            ty = ay + i * (ah + 8)
+            sel = (i == 0)
+            inner += (
+                "              - button:\n"
+                "                  x: 14\n                  y: %d\n                  width: 152\n                  height: %d\n"
+                "                  bg_color: %s\n                  radius: 14\n                  pad_all: 0\n                  scrollable: false\n"
+                "                  widgets:\n"
+                "                    - obj: { x: 14, align: left_mid, width: 32, height: 32, bg_color: %s, radius: 8, pad_all: 0, scrollable: false, widgets: [label: { text: \"%s\", align: center, text_font: f_body, text_color: 0xFFFFFF }] }\n"
+                "                    - label: { text: \"%s\", x: 56, align: left_mid, width: 88, long_mode: dot, text_font: f_body, text_color: 0xFFFFFF }\n"
+                "                  on_click: [%s]\n"
+                % (ty, ah, (col if sel else "0x10141C"), col, ltr, nm, _src(e, nm)))
+    # --- header ---
+    inner += lbl("\\U000F0502", mx, 14, "f_icon", "0xB06CFF")
+    inner += lbl("LG OLED", mx + 42, 12, "f_title")
+    inner += lbl("Living Room \\u00B7 HDMI 1", mx + 42, 48, "f_small", "0x868CA0")
+    inner += btn(w - 66, 14, 52, 46, "\\U000F0425", powA, bg="0x2a1414", color="0xF2685A", font="f_icon")
+    # --- source chips ---
+    cx = mx
+    for i, s in enumerate(TV_SOURCES):
+        sel = (i == 0)
+        inner += btn(cx, 76, 104, 36, s, _src(e, s), radius=10, font="f_small",
+                     bg=("0x143028" if sel else "0x10141C"), color=("0x2ED5B8" if sel else "0xC2C7D2"))
+        cx += 112
+    # --- center band: VOL | d-pad | CH ---
+    band_top, band_bot = 124, h - 86
+    dcy = (band_top + band_bot) // 2
+    dcx = mx + mw // 2
+    s = 50
+    okA = _wbtn(e, "ENTER")
+    inner += _tvbtn(dcx - 25, dcy - 88, s, s, "\\U000F0143", e, "UP")
+    inner += _tvbtn(dcx - 88, dcy - 25, s, s, "\\U000F0141", e, "LEFT")
+    inner += btn(dcx - 40, dcy - 40, 80, 80, "OK", okA, bg="0x2ED5B8", color="0x06231D", radius=40)
+    inner += _tvbtn(dcx + 38, dcy - 25, s, s, "\\U000F0142", e, "RIGHT")
+    inner += _tvbtn(dcx - 25, dcy + 38, s, s, "\\U000F0140", e, "DOWN")
+    # VOL column (left of d-pad)
+    vx = mx + 16
+    inner += _tvbtn(vx, dcy - 60, 64, 52, "\\U000F075D", e, "VOLUMEUP")
+    inner += lbl("VOL", vx, dcy - 2, "f_small", "0x868CA0", width=64, align=None)
+    inner += _tvbtn(vx, dcy + 16, 64, 52, "\\U000F075E", e, "VOLUMEDOWN")
+    # CH column (right of d-pad)
+    hx = mx + mw - 80
+    inner += btn(hx, dcy - 60, 64, 52, "\\U000F0143", _chan(e, True), font="f_icon")
+    inner += lbl("CH", hx, dcy - 2, "f_small", "0x868CA0", width=64, align=None)
+    inner += btn(hx, dcy + 16, 64, 52, "\\U000F0140", _chan(e, False), font="f_icon")
+    # --- bottom transport bar ---
+    bar = [("\\U000F004D", "BACK"), ("\\U000F02DC", "HOME"), ("\\U000F0297", "pad"),
+           ("\\U000F04AE", "prev"), ("\\U000F040A", "play"), ("\\U000F04AD", "next"),
+           ("\\U000F0211", "FASTFORWARD"), ("\\U000F035C", "MENU"), ("\\U000F075F", "MUTE")]
+    media_acts = {"prev": "media_player.media_previous_track", "play": "media_player.media_play_pause",
+                  "next": "media_player.media_next_track"}
+    n = len(bar); bw = (mw - (n - 1) * 8) // n; by = h - 70
+    for i, (g, key) in enumerate(bar):
+        if key in media_acts:
+            act = ha(media_acts[key], e) if e else "lvgl.page.show: page_home"
+        elif key == "pad":
+            act = "lvgl.page.show: page_home"
+        elif key == "MUTE":
+            act = ha("media_player.volume_mute", e, 'is_volume_muted: "true"') if e else "lvgl.page.show: page_home"
+        else:
+            act = _wbtn(e, key)
+        main = (key == "play")
+        inner += btn(mx + i * (bw + 8), by, bw, 52, g, act, font="f_icon",
                      bg=("0x2ED5B8" if main else "0x161B24"), color=("0x06231D" if main else "0xF3F5F8"))
     return [card_obj(x, y, w, h, inner)], [], []
 

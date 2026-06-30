@@ -605,6 +605,12 @@ font:
       - "\U000F1253"  # lightbulb-group
       - "\U000F0374"  # minus (climate/setpoint -)
       - "\U000F0415"  # plus (climate/setpoint +)
+      - "\U000F075D"  # volume-plus
+      - "\U000F075E"  # volume-minus
+      - "\U000F075F"  # volume-mute
+      - "\U000F0211"  # fast-forward
+      - "\U000F035C"  # menu
+      - "\U000F004D"  # arrow-left (TV back)
 
 # --- Live HA state (selected light = Living Room for v1) ---
 sensor:
