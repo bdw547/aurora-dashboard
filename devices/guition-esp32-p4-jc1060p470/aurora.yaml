@@ -229,6 +229,15 @@ light:
     restore_mode: ALWAYS_ON
     default_transition_length: 0s
 
+# --- Remote restart -----------------------------------------------------------
+# Exposed on the on-device web page (http://<panel-ip>/) and as a button entity
+# in Home Assistant, so the panel can be rebooted without physical access.
+button:
+  - platform: restart
+    name: "Restart Panel"
+    id: btn_restart_panel
+    icon: "mdi:restart"
+
 # --- I2C + GT911 touch ---
 # --- On-board camera (OV02C10 MIPI-CSI) -------------------------------------
 # The JC1060P470 carries an on-board OV02C10 sensor on the MIPI-CSI port whose

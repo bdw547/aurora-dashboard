@@ -600,7 +600,7 @@ def build_lvgl(layout):
 KEEP = ["substitutions", "esphome", "esp32", "psram", "esp_ldo", "esp32_hosted",
         "wifi", "api", "ota", "safe_mode", "logger", "output", "light",
         "external_components", "i2c", "touchscreen", "display", "http_request",
-        "image", "font", "globals", "number"]
+        "image", "font", "globals", "number", "button"]
 
 
 def scrub_lvgl_actions(text):
