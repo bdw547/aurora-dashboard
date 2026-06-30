@@ -88,6 +88,36 @@ h3.sec{font-size:11px;letter-spacing:1.4px;text-transform:uppercase;color:var(--
 .pc .tbtn{width:38px;height:38px;border-radius:50%;background:#0f1117;display:flex;align-items:center;justify-content:center;color:var(--tx);font-size:18px}
 .pc .tbtn.main{background:var(--teal);color:var(--ink)}
 .pc .rpill{background:#0f1117;border:1px solid var(--bd);border-radius:10px;display:flex;align-items:center;justify-content:center;gap:4px;color:var(--tx);font-size:12px;font-weight:600;padding:8px 6px;min-width:0;white-space:nowrap}
+/* TV remote (responsive) */
+.pc .tvr{flex:1;display:flex;gap:14px;min-height:0;margin-top:6px}
+.pc .tvapps{width:150px;display:flex;flex-direction:column;gap:8px;flex:0 0 auto}
+.pc .tvapps-h{font-family:'IBM Plex Mono',monospace;font-size:10px;letter-spacing:1px;color:var(--t3);text-transform:uppercase}
+.pc .tvapp{flex:1;border-radius:12px;background:#0f1117;border:1px solid var(--bd);display:flex;align-items:center;gap:10px;padding:0 14px;font-size:15px;font-weight:700;color:var(--tx);min-width:0}
+.pc .tvapp.on{color:#fff;border:0}
+.pc .tvmain{flex:1;display:flex;flex-direction:column;min-width:0}
+.pc .tvhdr{display:flex;align-items:center;gap:10px}
+.pc .pwr{width:46px;height:40px;border-radius:11px;background:#2a1414;display:flex;align-items:center;justify-content:center;color:var(--red);font-size:20px;flex:0 0 auto}
+.pc .tvcenter{flex:1;display:flex;align-items:center;justify-content:center;gap:18px}
+.pc .vcc{width:46px;align-self:center;max-height:240px;border-radius:23px;background:#0f1117;border:1px solid var(--bd);display:flex;flex-direction:column;align-items:center;justify-content:space-between;padding:14px 0;color:var(--t2);font-size:20px;flex:0 0 auto}
+.pc .vcc .vcl{font-size:11px;color:var(--t3);font-weight:600}
+.pc .dpad{border-radius:50%;background:#0f1117;position:relative;flex:0 0 auto;display:flex;align-items:center;justify-content:center}
+.pc .dpad .ok{border-radius:50%;background:var(--teal);color:var(--ink);display:flex;align-items:center;justify-content:center;font-weight:700;font-size:18px}
+.pc .dpad .ar{position:absolute;color:var(--t2);font-size:24px}
+.pc .dpad .ar.up{top:14px;left:50%;transform:translateX(-50%)}
+.pc .dpad .ar.dn{bottom:14px;left:50%;transform:translateX(-50%)}
+.pc .dpad .ar.lf{left:16px;top:50%;transform:translateY(-50%)}
+.pc .dpad .ar.rt{right:16px;top:50%;transform:translateY(-50%)}
+.pc .tvbar{display:flex;gap:8px;align-items:stretch;height:52px;margin-top:8px}
+.pc .tvbtn{background:#0f1117;border:1px solid var(--bd);border-radius:12px;display:flex;align-items:center;justify-content:center;gap:8px;color:var(--t2);font-size:18px;padding:0 12px;flex:0 0 auto}
+.pc .tvbtn.pad{background:#13201d;border-color:var(--onbd);color:var(--teal);font-size:13px;font-weight:700}
+.pc .tvbtn.trans{flex:1;gap:16px}
+.pc .srcchip{background:#0f1117;border:1px solid var(--bd);border-radius:8px;padding:5px 10px;font-size:12px;color:var(--t2);white-space:nowrap}
+.pc .srcchip.on{background:var(--teal);color:var(--ink);font-weight:700;border-color:var(--teal)}
+.pc .vrow{background:#0f1117;border:1px solid var(--bd);border-radius:11px;display:flex;align-items:center;gap:8px;padding:9px 12px;color:var(--t2);font-size:13px;font-weight:600}
+/* outlets */
+.pc .opwr{width:60px;height:60px;border-radius:50%;background:linear-gradient(180deg,#14201c,#0f1714);border:1px solid var(--onbd);display:flex;align-items:center;justify-content:center;color:var(--teal);font-size:26px}
+.pc .ogrid{flex:1;display:grid;gap:8px;margin-top:8px}
+.pc .ocell{background:#0f1117;border:1px solid var(--bd);border-radius:10px;display:flex;align-items:center;gap:8px;padding:8px 10px;min-width:0}
 .pc .cambg{position:absolute;inset:0;background:linear-gradient(160deg,#1a2030,#0e1118);display:flex;align-items:center;justify-content:center;color:#2a3346;font-size:30px}
 /* group / multi */
 .pc .ggrid{flex:1;display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:10px}
@@ -189,7 +219,7 @@ const C = {
   light_t:  {label:'Light toggle', domain:'light', icon:'lightbulb-outline', color:'var(--amber)', spans:[[1,1],[2,1],...V], def:[2,1], ctrl:'toggle'},
   switch:   {label:'Switch / outlet', domain:'switch', icon:'toggle-switch', color:'var(--teal)', spans:[[1,1],[2,1],[2,2],...V], def:[2,1], ctrl:'toggle'},
   lightgroup:{label:'Light group', domain:'light', icon:'lightbulb-multiple', color:'var(--amber)', spans:[[2,2],[3,2],[2,3],[3,3],[4,3],[2,4],[4,4],[2,5],[5,4],[6,4],[5,5],[6,5]], def:[3,3], ctrl:'lightgroup', multi:true},
-  outletgroup:{label:'Outlet pair', domain:'switch', icon:'power-socket-us', color:'var(--teal)', spans:[[1,2],[2,2]], def:[1,2], ctrl:'outletgroup', multi:true},
+  outletgroup:{label:'Outlets', domain:'switch', icon:'power-socket-us', color:'var(--teal)', spans:[[1,1],[1,2],[2,1],[1,3],[3,1]], def:[1,2], ctrl:'outletgroup', multi:true},
   fan:      {label:'Fan', domain:'fan', icon:'fan', color:'var(--teal)', spans:[[1,1],[2,1],[1,2],[2,2]], def:[2,1], ctrl:'seg'},
   cover:    {label:'Cover / blinds', domain:'cover', icon:'blinds-horizontal', color:'var(--blue)', spans:[[1,1],[2,1],[1,2],[1,3],[2,2],[2,3]], def:[2,2], ctrl:'pos'},
   climate:  {label:'Climate / thermostat', domain:'climate', icon:'thermostat', color:'var(--amber)', spans:[[1,1],[2,2],[3,2],[3,3],[4,4],[6,5],...V], def:[4,4], ctrl:'dial'},
@@ -204,7 +234,7 @@ const C = {
   songlist: {label:'Spotify song list', domain:'media_player', icon:'playlist-music', color:'#1DB954', spans:[[4,3],[3,4],[4,4],[3,5],[4,5],[5,5]], def:[4,4], ctrl:'songlist'},
   sonos:    {label:'Sonos (multi-room)', domain:'media_player', icon:'speaker-multiple', color:'var(--teal)', spans:[[3,2],[3,3],[4,4],[6,5]], def:[4,4], ctrl:'media'},
   media:    {label:'Media player', domain:'media_player', icon:'play-circle', color:'var(--violet)', spans:[[1,1],[2,1],[2,2],[3,2],[3,3],[4,3],[6,5]], def:[3,2], ctrl:'media'},
-  tvremote: {label:'TV remote — full', domain:'media_player', icon:'remote-tv', color:'var(--violet)', spans:[[4,4],[4,5],[5,5],[6,5]], def:[6,5], ctrl:'remote'},
+  tvremote: {label:'TV remote — full', domain:'media_player', icon:'remote-tv', color:'var(--violet)', spans:[[1,1],[2,2],[3,2],[4,4],[4,5],[5,5],[6,5]], def:[4,4], ctrl:'remote'},
   tv_dpad:  {label:'TV D-pad', domain:'media_player', icon:'gamepad-variant', color:'var(--violet)', spans:[[2,2],[3,2],[2,3],[3,3]], def:[3,3], ctrl:'tv_dpad'},
   tv_transport:{label:'TV transport', domain:'media_player', icon:'play-circle', color:'var(--violet)', spans:[[2,1],[3,1],[4,1],[6,1],[2,2],[4,2]], def:[4,1], ctrl:'tv_transport'},
   tv_channel:{label:'TV channel +/-', domain:'media_player', icon:'television-guide', color:'var(--violet)', spans:[[1,1],[1,2],[2,1],[2,2]], def:[1,2], ctrl:'tv_channel'},
@@ -268,7 +298,7 @@ function cap(c){ const k=c.ck;
   if(k==='group') return c.h*2;                       // 2 per grid-row
   if(k==='lightgroup') return c.w*Math.max(2,c.h-1);  // W cols × (H-1) rows, min 2 rows
   if(k==='shortcuts') return c.w*c.h;                 // one nav button per grid cell
-  if(k==='outletgroup') return 2;
+  if(k==='outletgroup') return Math.max(c.w,c.h);   // 1x1=1, 1x2/2x1=2, 1x3/3x1=3
   if(k==='speakers'||k==='sonos_sources'||k==='tv_sources'){ if(c.w===1) return 99;   // dropdown
     if((c.w===2&&c.h===3)||(c.w===3&&c.h===2)) return 4;
     if(c.w===3&&c.h===3) return 6; if(c.w===5&&c.h===4) return 10;
@@ -360,19 +390,24 @@ function cardInner(c){ const def=C[c.ck], nm=c.name||def.label, big=c.w>=3, ctrl
     const art=`<div class="art" style="width:${big?54:40}px;height:${big?54:40}px"></div>`;
     return head+`<div class="row">${art}<div style="min-width:0"><div class="csub" style="color:var(--teal);font-size:10px">${c.ck==='sonos'?'SONOS':'NOW PLAYING'}</div><div class="ct" style="margin-top:2px">Midnight City</div><div class="csub">M83</div></div></div>
       ${c.h>=2?`<div class="row" style="gap:10px;margin-top:auto;justify-content:center"><span class="tbtn mdi mdi-skip-previous"></span><span class="tbtn main mdi mdi-play"></span><span class="tbtn mdi mdi-skip-next"></span>${c.ck==='sonos'?'<span class="tbtn mdi mdi-link-variant"></span>':''}</div>`:''}`; }
-  if(ctrl==='remote'){ const pill=(t)=>`<div class="rpill">${t}</div>`;
-    return head+`<div class="toprow">${ico}<span class="csub">${nm}</span><div class="rpill" style="color:var(--red);padding:8px 14px"><span class="mdi mdi-power"></span></div></div>
-    <div style="flex:1;display:flex;gap:14px;align-items:stretch;margin-top:8px">
-      <div style="display:flex;flex-direction:column;gap:7px;justify-content:center;width:88px">${pill('Home')}${pill('Back')}${pill('Exit')}${pill('Menu')}${pill('Info')}</div>
-      <div style="flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:12px">
-        <div style="display:grid;grid-template-columns:repeat(3,40px);grid-template-rows:repeat(3,40px);gap:6px"><div></div><div class="tbtn mdi mdi-chevron-up"></div><div></div><div class="tbtn mdi mdi-chevron-left"></div><div class="tbtn main">OK</div><div class="tbtn mdi mdi-chevron-right"></div><div></div><div class="tbtn mdi mdi-chevron-down"></div><div></div></div>
-        <div class="row" style="gap:6px"><span class="tbtn mdi mdi-rewind"></span><span class="tbtn mdi mdi-play"></span><span class="tbtn mdi mdi-pause"></span><span class="tbtn mdi mdi-stop"></span><span class="tbtn mdi mdi-fast-forward"></span></div></div>
-      <div style="display:flex;flex-direction:column;gap:7px;justify-content:center;width:88px">
-        <div class="rpill"><span class="mdi mdi-volume-plus"></span></div>${pill('Mute')}<div class="rpill"><span class="mdi mdi-volume-minus"></span></div>
-        <div style="height:4px"></div>
-        <div class="rpill">CH<span class="mdi mdi-chevron-up"></span></div><div class="rpill">CH<span class="mdi mdi-chevron-down"></span></div></div>
-    </div>
-    <div class="row" style="gap:8px;margin-top:8px"><div class="rpill" style="flex:1;background:#1a1426;border-color:#4a2a5a;color:var(--violet)"><span class="mdi mdi-apps"></span> Apps</div><div class="rpill" style="flex:1"><span class="mdi mdi-gesture-swipe"></span> Trackpad</div></div>`; }
+  if(ctrl==='remote'){ const tvi=`<span class="mdi mdi-television" style="color:var(--teal);font-size:22px"></span>`;
+    if(c.w===1&&c.h===1) return head+`<div class="toprow">${tvi}<span class="csub" style="font-weight:700;color:var(--tx)">LG OLED</span></div><div class="row" style="justify-content:space-between;margin-top:auto"><span class="mdi mdi-volume-minus" style="color:var(--t2)"></span><span class="mdi mdi-power" style="color:var(--red)"></span><span class="mdi mdi-volume-plus" style="color:var(--t2)"></span></div>`;
+    const pw=`<div class="pwr"><span class="mdi mdi-power"></span></div>`;
+    const chips=(n)=>`<div class="row" style="gap:6px;flex-wrap:wrap">${['HDMI 1','Apple TV','Roku','Cable'].slice(0,n).map((s,i)=>`<span class="srcchip${i===0?' on':''}">${s}</span>`).join('')}</div>`;
+    const volSld=`<div class="vrow" style="flex:1"><span class="mdi mdi-volume-low"></span><span style="flex:1">VOL</span><span class="mdi mdi-volume-high"></span></div>`;
+    if(c.w<=2&&c.h<=2) return head+`<div class="tvhdr">${tvi}<div style="flex:1;min-width:0"><div style="font-size:15px;font-weight:700">LG OLED · Living Rm</div></div>${pw}</div><div style="margin-top:10px">${chips(2)}</div><div class="row" style="margin-top:8px;gap:8px">${volSld}<span class="tvbtn mdi mdi-volume-mute"></span></div><div class="row" style="margin-top:8px;gap:8px"><div class="vrow" style="flex:1"><span class="mdi mdi-chevron-down"></span><span style="flex:1;text-align:center">CH</span><span class="mdi mdi-chevron-up"></span></div><span class="tvbtn mdi mdi-play" style="color:var(--teal)"></span></div>`;
+    const dsz=Math.min(c.h*48,230), ok=Math.round(dsz*0.42);
+    const dpad=`<div class="dpad" style="width:${dsz}px;height:${dsz}px"><div class="ar up mdi mdi-chevron-up"></div><div class="ar lf mdi mdi-chevron-left"></div><div class="ok" style="width:${ok}px;height:${ok}px">OK</div><div class="ar rt mdi mdi-chevron-right"></div><div class="ar dn mdi mdi-chevron-down"></div></div>`;
+    if(c.h<=2) return head+`<div class="row" style="flex:1;gap:14px;align-items:center">${dpad}<div style="flex:1;display:flex;flex-direction:column;gap:8px;justify-content:center">${chips(3)}${volSld}<div class="row" style="gap:8px"><span class="tvbtn mdi mdi-arrow-left"></span><span class="tvbtn mdi mdi-home"></span><div class="tvbtn trans" style="flex:1"><span class="mdi mdi-skip-previous"></span><span class="mdi mdi-play" style="color:var(--teal)"></span><span class="mdi mdi-skip-next"></span></div><span class="tvbtn pad mdi mdi-gesture-tap"></span></div></div></div>`;
+    const volcol=`<div class="vcc"><span class="mdi mdi-volume-plus"></span><span class="vcl">VOL</span><span class="mdi mdi-volume-minus"></span></div>`;
+    const chcol=`<div class="vcc"><span class="mdi mdi-chevron-up"></span><span class="vcl">CH</span><span class="mdi mdi-chevron-down"></span></div>`;
+    const header=`<div class="tvhdr">${tvi}<div style="flex:1;min-width:0"><div style="font-size:18px;font-weight:700">LG OLED</div><div class="csub">Living Room · HDMI 1</div></div>${pw}</div>`;
+    const bar=`<div class="tvbar"><div class="tvbtn mdi mdi-arrow-left"></div><div class="tvbtn mdi mdi-home"></div><div class="tvbtn pad"><span class="mdi mdi-gesture-tap"></span> Pad</div><div class="tvbtn trans"><span class="mdi mdi-rewind"></span><span class="mdi mdi-skip-previous"></span><span class="mdi mdi-play" style="color:var(--teal)"></span><span class="mdi mdi-skip-next"></span><span class="mdi mdi-fast-forward"></span></div><div class="tvbtn mdi mdi-menu"></div><div class="tvbtn mdi mdi-volume-mute"></div></div>`;
+    const main=`<div class="tvmain">${header}${c.h>=5?'<div style="margin-top:8px">'+chips(c.w>=5?4:3)+'</div>':''}<div class="tvcenter">${volcol}${dpad}${chcol}</div>${bar}</div>`;
+    if(c.w>=6){ const A=[['Netflix','#E50914'],['YouTube','#FF0000'],['Disney+','#113CCF'],['Spotify','#1DB954'],['Plex','#E5A00D']];
+      const sb=`<div class="tvapps"><div class="tvapps-h">APPS · pre-baked</div>${A.map((a,i)=>`<div class="tvapp${i===0?' on':''}" style="${i===0?'background:'+a[1]+';border-color:'+a[1]:''}"><span style="width:24px;height:24px;border-radius:6px;background:${i===0?'rgba(255,255,255,.18)':a[1]};display:inline-flex;align-items:center;justify-content:center;font-size:12px;font-weight:800;color:#fff">${a[0][0]}</span>${a[0]}</div>`).join('')}</div>`;
+      return head+`<div class="tvr">${sb}${main}</div>`; }
+    return head+`<div class="tvr">${main}</div>`; }
   if(ctrl==='tv_dpad') return head+`<div class="toprow">${ico}<span class="csub">${nm}</span></div><div style="flex:1;display:flex;align-items:center;justify-content:center"><div style="display:grid;grid-template-columns:repeat(3,34px);grid-template-rows:repeat(3,34px);gap:5px"><div></div><div class="tbtn mdi mdi-chevron-up"></div><div></div><div class="tbtn mdi mdi-chevron-left"></div><div class="tbtn main">OK</div><div class="tbtn mdi mdi-chevron-right"></div><div></div><div class="tbtn mdi mdi-chevron-down"></div><div></div></div></div>`;
   if(ctrl==='tv_transport') return head+`<div class="toprow">${ico}<span class="csub">${nm}</span></div><div class="row" style="flex:1;justify-content:center;gap:8px;flex-wrap:wrap"><span class="tbtn mdi mdi-arrow-left"></span><span class="tbtn mdi mdi-home"></span><span class="tbtn mdi mdi-rewind"></span><span class="tbtn main mdi mdi-play-pause"></span><span class="tbtn mdi mdi-fast-forward"></span></div>`;
   if(ctrl==='tv_channel'){ const hz=c.w>c.h; return head+`<div class="toprow">${ico}<span class="csub">${nm}</span></div><div style="flex:1;display:flex;${hz?'flex-direction:row':'flex-direction:column'};gap:8px;align-items:center;justify-content:center"><div class="tbtn" style="width:auto;padding:6px 14px;border-radius:11px;gap:4px">CH<span class="mdi mdi-chevron-up"></span></div><div class="tbtn" style="width:auto;padding:6px 14px;border-radius:11px;gap:4px">CH<span class="mdi mdi-chevron-down"></span></div></div>`; }
@@ -397,9 +432,11 @@ function cardInner(c){ const def=C[c.ck], nm=c.name||def.label, big=c.w>=3, ctrl
   if(ctrl==='shortcuts'){ const n=cap(c), sc=c.shortcuts||[]; let btns='';
     for(let i=0;i<n;i++){ const s=sc[i]; btns+=`<div class="scbtn${s?'':' empty'}">${s?`<span class="mdi mdi-${s.icon}"></span><span class="scn">${s.label}</span>`:`<span class="mdi mdi-plus"></span>`}</div>`; }
     return head+`<div class="toprow">${ico}<span class="csub">${nm} · ${sc.length}/${n}</span></div><div class="scgrid" style="grid-template-columns:repeat(${c.w},1fr);grid-template-rows:repeat(${c.h},1fr)">${btns}</div>`; }
-  if(ctrl==='outletgroup'){ const ents=c.entities||[]; let rows='';
-    for(let i=0;i<2;i++){ const e=ents[i]; rows+=`<div class="orow"><span class="mdi mdi-power-socket-us" style="color:var(--teal)"></span><span style="flex:1;font-size:13px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${e?nm2(e):'Outlet '+(i+1)}</span>${tog(i===0)}</div>`; }
-    return head+`<div class="toprow">${ico}<span class="csub">${nm}</span></div>${rows}`; }
+  if(ctrl==='outletgroup'){ const n=cap(c), ents=c.entities||[], horiz=c.w>c.h;
+    if(n===1){ if(c.w===1&&c.h===1) return head+`<div class="toprow">${ico}${tog(true)}</div><div class="csub" style="margin-top:auto">${ents[0]?nm2(ents[0]):nm}</div>`;
+      return head+`<div style="display:flex;flex-direction:column;align-items:center;justify-content:center;height:100%;gap:10px"><span class="mdi mdi-power-socket-us" style="color:var(--teal);font-size:24px"></span><div class="opwr"><span class="mdi mdi-power"></span></div><div style="text-align:center"><div style="color:var(--teal);font-weight:700">On</div><div class="csub">${ents[0]?nm2(ents[0]):nm}</div></div></div>`; }
+    let cells=''; for(let i=0;i<n;i++){ const e=ents[i]; cells+=`<div class="ocell"><span class="mdi mdi-power-socket-us" style="color:${e?'var(--teal)':'var(--t3)'};font-size:18px"></span><span style="flex:1;font-size:12px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${e?nm2(e):'Outlet '+(i+1)}</span>${tog(!!e&&i%2===0)}</div>`; }
+    return head+`<div class="toprow">${ico}<span class="csub">${nm} · ${ents.length}/${n}</span></div><div class="ogrid" style="${horiz?'grid-template-columns:repeat('+n+',1fr)':'grid-template-rows:repeat('+n+',1fr)'}">${cells}</div>`; }
   if(ctrl==='playlist'){ const isS=c.ck==='sonos_fav'; const accent=isS?'var(--teal)':'#1DB954';
     if(c.w===1) return head+`<div style="display:flex;flex-direction:column;align-items:center;justify-content:center;height:100%;gap:8px"><span class="mdi mdi-${def.icon}" style="font-size:26px;color:${accent}"></span><div style="font-size:12px;font-weight:600;text-align:center">${c.pl||nm}</div></div>`;
     return head+`<div class="toprow">${ico}<span class="csub">${nm}</span></div><div class="ddrop"><span>${c.pl||('All '+(isS?'favorites':'playlists'))}</span><span class="mdi mdi-chevron-down"></span></div>`; }
