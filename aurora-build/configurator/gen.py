@@ -256,26 +256,42 @@ def c_media(card, x, y, w, h, base):
 
 
 def c_fan(card, x, y, w, h, base):
-    e = card.get("entity", ""); sid = base + "_st"
-    inner = ic(card["ck"])
-    inner += title(card.get("name", "Fan"), w, x=14, y=48)
-    inner += lbl("--", 14, -12, "f_small", "0x2ED5B8", wid=sid, align="bottom_left")
-    on = ha("fan.toggle", e) if e else None
-    ts = []
-    if e:
-        ts.append("  - platform: homeassistant\n    id: ha_%s\n    entity_id: %s\n    on_value:\n"
-                  "      - lvgl.label.update: { id: %s, text: !lambda 'return x == \"on\" ? std::string(\"On\") : std::string(\"Off\");' }\n" % (sid, e, sid))
-    return [card_obj(x, y, w, h, inner, on)], [], ts
+    e = card.get("entity", "")
+    gw, gh = card["w"], card["h"]
+    inner = ic(card["ck"], color="0x2ED5B8")
+    if gw * gh <= 2:                                  # small: icon + toggle switch (web seg)
+        sw = "              - switch: { align: center, y: 10, state: { checked: true }"
+        if e:
+            sw += ", on_change: [%s]" % ha("fan.toggle", e)
+        sw += " }\n"
+        inner += sw
+        if gw >= 2:
+            inner += lbl(card.get("name", "Fan"), 14, 48, "f_body", width=w - 28, long="dot", height=22)
+        return [card_obj(x, y, w, h, inner)], [], []
+    inner += title(card.get("name", "Fan"), w, x=14, y=48)   # larger: Off / Med / High segments
+    n = 3; pad = 14; sw2 = (w - pad * 2 - (n - 1) * 8) // n; sy = h - 58
+    for i, s in enumerate(["Off", "Med", "High"]):
+        sel = (i == 1)
+        act = ha("fan.toggle", e) if e else "lvgl.page.show: page_home"
+        inner += btn(pad + i * (sw2 + 8), sy, sw2, 46, s, act,
+                     bg=("0x123F30" if sel else "0x161B24"), color=("0x2ED5B8" if sel else "0xC2C7D2"))
+    return [card_obj(x, y, w, h, inner)], [], []
 
 
 def c_cover(card, x, y, w, h, base):
-    e = card.get("entity", "")
-    inner = ic(card["ck"], color="0x4FA8F5")
+    """Cover position (web `pos`): "Open 60%" + a progress bar."""
+    inner = ic(card["ck"], color="0x4F91FF")
+    if card["w"] == 1 and card["h"] == 1:
+        inner += lbl("60%", 0, 0, "f_head", "0x4F91FF", align="center")
+        return [card_obj(x, y, w, h, inner)], [], []
     inner += title(card.get("name", "Cover"), w)
-    if e and (w >= 2 or h >= 2):
-        half = (w - 36) // 2
-        inner += btn(14, h - 60, half, 46, "\\U000F0143", ha("cover.open_cover", e), font="f_icon")
-        inner += btn(22 + half, h - 60, half, 46, "\\U000F0140", ha("cover.close_cover", e), font="f_icon")
+    inner += lbl("Open", 14, 58, "f_head", "0x4F91FF")
+    inner += lbl("60%", 14, 94, "f_head", "0x4F91FF")
+    track = w - 28
+    inner += ("              - obj: { x: 14, y: -22, align: bottom_left, width: %d, height: 8, "
+              "bg_color: 0x1E2430, border_width: 0, radius: 4, pad_all: 0, scrollable: false }\n" % track)
+    inner += ("              - obj: { x: 14, y: -22, align: bottom_left, width: %d, height: 8, "
+              "bg_color: 0x4F91FF, border_width: 0, radius: 4, pad_all: 0, scrollable: false }\n" % int(track * 0.6))
     return [card_obj(x, y, w, h, inner)], [], []
 
 
@@ -308,44 +324,96 @@ def c_camera(card, x, y, w, h, base):
     return [card_obj(x, y, w, h, inner)], [], []
 
 
+def _ename(e, fallback):
+    return ((e.split(".")[-1] if "." in e else e).replace("_", " ")) if e else fallback
+
+
 def c_group(card, x, y, w, h, base):
-    """Grid of entity tiles (not a text list). `lightgroup` tiles are tappable
-    toggles (amber); `group` tiles are status readouts (teal)."""
+    """lightgroup: big lightbulb tiles in a w x max(2,h-1) grid (web .lggrid).
+    group: smaller status cells with icon + value + name (web .ggrid)."""
     ents = card.get("entities", [])
-    is_lights = card["ck"] == "lightgroup"
-    accent = "0xF2B84B" if is_lights else "0x2ED5B8"
-    inner = ic(card["ck"], color=accent)
-    inner += lbl(card.get("name", "Lights" if is_lights else "Group"), 50, 16, "f_title", width=w - 64)
+    gw, gh = card["w"], card["h"]
+    if card["ck"] == "lightgroup":
+        cols = max(1, gw)
+        rows = max(2, gh - 1)
+        cap = cols * rows
+        on_n = sum(1 for i in range(min(len(ents), cap)) if i % 2 == 0)
+        inner = ic(card["ck"], color="0xF2B84B")
+        inner += lbl("%s \\u00B7 %d on \\u00B7 %d/%d" % (card.get("name", "Lights"), on_n, len(ents), cap),
+                     50, 22, "f_body", "0x868CA0", width=w - 64, long="dot", height=24)
+        pad, gap, top = 14, 12, 58
+        bw = (w - pad * 2 - (cols - 1) * gap) // cols
+        bh = (h - top - pad - (rows - 1) * gap) // rows
+        for i in range(cap):
+            e = ents[i] if i < len(ents) else None
+            on = (e is not None) and (i % 2 == 0)
+            cx = pad + (i % cols) * (bw + gap)
+            cy = top + (i // cols) * (bh + gap)
+            glyph = "\\U000F0335" if on else "\\U000F0336"
+            gcol = "0xF2B84B" if on else "0x6B7280"
+            bg = "0x211B0A" if on else "0x0F1117"
+            click = (", clickable: true, on_click: [%s]" % ha("homeassistant.toggle", e)) if e else ""
+            inner += ("              - obj: { x: %d, y: %d, width: %d, height: %d, bg_color: %s, "
+                      "border_width: 0, radius: 14, pad_all: 0, scrollable: false%s, widgets: ["
+                      "label: { text: \"%s\", align: center, y: -14, text_font: f_icon, text_color: %s }, "
+                      "label: { text: %s, align: bottom_mid, y: -10, width: %d, long_mode: dot, text_align: center, text_font: f_small, text_color: 0xC2C7D2 }] }\n"
+                      % (cx, cy, bw, bh, bg, click, glyph, gcol, esc(_ename(e, "Light")), bw - 12))
+        return [card_obj(x, y, w, h, inner)], [], []
+    # group (status): icon + value + name cells
     cols = 2 if w >= 280 else 1
     pad, gap, top, bh = 14, 8, 56, 46
     rows_fit = max(1, (h - top - pad + gap) // (bh + gap))
     cap = cols * rows_fit
     bw = (w - pad * 2 - (cols - 1) * gap) // cols
+    inner = ic(card["ck"], color="0x2ED5B8")
+    inner += lbl("%s \\u00B7 %d/%d" % (card.get("name", "Group"), len(ents), cap),
+                 50, 22, "f_body", "0x868CA0", width=w - 64, long="dot", height=24)
     for i, e in enumerate(ents[:cap]):
-        nm = (e.split(".")[-1] if "." in e else e).replace("_", " ")
         cx = pad + (i % cols) * (bw + gap)
         cy = top + (i // cols) * (bh + gap)
-        bg = "0x1A1606" if is_lights else "0x0F1117"
-        state_txt = "Off" if is_lights else "On"
-        click = (", clickable: true, on_click: [%s]" % ha("homeassistant.toggle", e)) if (is_lights and e) else ""
-        inner += ("              - obj: { x: %d, y: %d, width: %d, height: %d, bg_color: %s, "
-                  "border_width: 0, radius: 10, pad_all: 0, scrollable: false%s, widgets: ["
+        inner += ("              - obj: { x: %d, y: %d, width: %d, height: %d, bg_color: 0x0F1117, "
+                  "border_width: 0, radius: 10, pad_all: 0, scrollable: false, widgets: ["
                   "label: { text: %s, x: 10, y: 6, width: %d, height: 18, long_mode: dot, text_font: f_small, text_color: 0xEEF0F6 }, "
-                  "label: { text: \"%s\", x: 10, y: -6, align: bottom_left, text_font: f_small, text_color: %s }] }\n"
-                  % (cx, cy, bw, bh, bg, click, esc(nm), bw - 20, state_txt, accent))
+                  "label: { text: \"On\", x: 10, y: -6, align: bottom_left, text_font: f_small, text_color: 0x2ED5B8 }] }\n"
+                  % (cx, cy, bw, bh, esc(_ename(e, "Entity")), bw - 20))
     return [card_obj(x, y, w, h, inner)], [], []
 
 
 def c_outlet(card, x, y, w, h, base):
+    """Outlet cells (web .ocell2): a label + a circular power button per outlet,
+    laid out in columns (wide card) or rows (tall card)."""
     ents = card.get("entities", [])
-    inner = ic(card["ck"])
+    gw, gh = card["w"], card["h"]
+    inner = ic(card["ck"], color="0x2ED5B8")
+    if gw == 1 and gh == 1:                      # single outlet: badge + power button + name
+        e = ents[0] if ents else ""
+        act = ha("homeassistant.toggle", e) if e else "lvgl.page.show: page_home"
+        inner += btn((w - 46) // 2, 32, 46, 46, "\\U000F0425", act, bg="0x123F30", color="0x2ED5B8", radius=23, font="f_icon")
+        inner += lbl(_ename(e, "Outlet"), 8, -10, "f_small", "0xC2C7D2", align="bottom_mid", width=w - 16, long="dot", height=18)
+        return [card_obj(x, y, w, h, inner)], [], []
     inner += title(card.get("name", "Outlets"), w)
-    yy = 56
-    for e in (ents or [""])[: max(1, h)]:
-        nm = (e.split(".")[-1] if "." in e else e).replace("_", " ") or "Outlet"
-        on = ha("homeassistant.toggle", e) if e else "lvgl.page.show: page_home"
-        inner += btn(14, yy, w - 28, 44, nm, on, bg="0x13201d")
-        yy += 52
+    horiz = gw > gh
+    cells = (ents if ents else [""])[:max(1, (gw if horiz else gh))]
+    n = len(cells)
+    top, pad, gap = 58, 14, 10
+    if horiz:
+        cw = (w - pad * 2 - (n - 1) * gap) // n
+        ch = h - top - pad
+    else:
+        cw = w - pad * 2
+        ch = (h - top - pad - (n - 1) * gap) // n
+    for i, e in enumerate(cells):
+        cx = pad + (i * (cw + gap) if horiz else 0)
+        cy = top + (0 if horiz else i * (ch + gap))
+        on = (i % 2 == 0)
+        act = ha("homeassistant.toggle", e) if e else "lvgl.page.show: page_home"
+        ps = max(40, min(64, cw - 24, ch - 44))
+        inner += ("              - obj: { x: %d, y: %d, width: %d, height: %d, bg_color: 0x0F1117, "
+                  "border_width: 0, radius: 12, pad_all: 0, scrollable: false }\n" % (cx, cy, cw, ch))
+        inner += lbl(_ename(e, "S%d" % (i + 1)), cx + 12, cy + 10, "f_small", "0xC2C7D2", width=cw - 24, long="dot", height=18)
+        inner += btn(cx + (cw - ps) // 2, cy + (ch - ps) // 2 + 10, ps, ps, "\\U000F0425", act,
+                     bg=("0x123F30" if on else "0x1A1F29"), color=("0x2ED5B8" if on else "0x6B7280"),
+                     radius=ps // 2, font="f_icon")
     return [card_obj(x, y, w, h, inner)], [], []
 
 
