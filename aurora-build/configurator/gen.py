@@ -379,7 +379,7 @@ def c_media(card, x, y, w, h, base):
                   "      - lvgl.label.update: { id: %s, text: !lambda 'return x.empty() ? std::string(\"Nothing playing\") : x;' }\n" % (tid, e, tid))
         if has_vol:
             ts.append("  - platform: homeassistant\n    id: ha_%s\n    entity_id: %s\n    attribute: volume_level\n    on_value:\n"
-                      "      - lvgl.slider.update: { id: %s, value: !lambda 'return (int)(x * 100);' }\n" % (sld, e, sld))
+                      "      - lvgl.slider.update: { id: %s, value: !lambda 'return (int)(atof(x.c_str()) * 100);' }\n" % (sld, e, sld))
 
     inner = ""
     # ---- 1x1: art + title + play ----
@@ -1140,7 +1140,7 @@ def c_speakers(card, x, y, w, h, base):
     def sensor(i, sld):
         if ents[i]:
             ts.append("  - platform: homeassistant\n    id: ha_%s\n    entity_id: %s\n    attribute: volume_level\n    on_value:\n"
-                      "      - lvgl.slider.update: { id: %s, value: !lambda 'return (int)(x * 100);' }\n" % (sld, ents[i], sld))
+                      "      - lvgl.slider.update: { id: %s, value: !lambda 'return (int)(atof(x.c_str()) * 100);' }\n" % (sld, ents[i], sld))
 
     # ---- 1x1 compact status tile ----
     if card["w"] == 1 and card["h"] == 1:
