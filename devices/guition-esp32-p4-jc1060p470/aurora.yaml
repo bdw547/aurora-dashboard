@@ -10,16 +10,16 @@
 substitutions:
   name: "aurora-panel"
   friendly_name: "Aurora Panel"
-  # Aurora palette
-  c_bg: "0x08090D"
-  c_card: "0x141720"
-  c_hair: "0x2A2E38"
-  c_text: "0xEEF0F6"
-  c_text2: "0x8A8F9E"
-  c_text3: "0x6E727E"
+  # Aurora palette — exact Claude Design tokens (Direction A design spec)
+  c_bg: "0x0A0B0F"
+  c_card: "0x14161C"
+  c_hair: "0x23262F"
+  c_text: "0xF3F5F8"
+  c_text2: "0x868CA0"
+  c_text3: "0x5D6470"
   c_teal: "0x2ED5B8"
-  c_purple: "0x7B6CFF"
-  c_warn: "0xFF9F6B"
+  c_purple: "0xB06CFF"
+  c_warn: "0xF2685A"
   # --- Entity bindings (edit these to point Aurora at your Home Assistant) ---
   ent_light_living: "light.living_room_main"
   ent_light_kitchen: "light.kitchen_kitchen"
@@ -486,14 +486,14 @@ image:
     transparency: alpha_channel
 
 font:
-  - file: "gfonts://Sora@600"
+  - file: "gfonts://Sora@700"
     id: f_display
-    size: 52
-    glyphs: "0123456789%°:"
-  - file: "gfonts://Sora@600"
+    size: 46
+    glyphs: "0123456789%°:.-"
+  - file: "gfonts://Sora@700"
     id: f_title
-    size: 24
-  - file: "gfonts://Sora@600"
+    size: 22
+  - file: "gfonts://Sora@700"
     id: f_head
     size: 34
   # Large weather glyphs for the weather page hero icon
@@ -523,6 +523,22 @@ font:
   - file: "gfonts://Sora@500"
     id: f_small
     size: 12
+  # Page H1 / greeting (spec 27/700)
+  - file: "gfonts://Sora@700"
+    id: f_h1
+    size: 27
+  # UPPERCASE micro-labels (spec 11/600)
+  - file: "gfonts://Sora@600"
+    id: f_micro
+    size: 11
+  # Now-playing track title (spec 28/800)
+  - file: "gfonts://Sora@800"
+    id: f_track
+    size: 28
+  # IBM Plex Mono — data / times / units / IDs (Aurora spec: mono, usually teal)
+  - file: "gfonts://IBM+Plex+Mono@500"
+    id: f_mono
+    size: 13
   # Material Design Icons (v7.4.47) — nav, transport, controls
   - file: 'https://github.com/Templarian/MaterialDesign-Webfont/raw/v7.4.47/fonts/materialdesignicons-webfont.ttf'
     id: f_icon
@@ -630,6 +646,8 @@ font:
       - "\U000F0140"  # chevron-down
       - "\U000F0141"  # chevron-left
       - "\U000F0142"  # chevron-right
+      - "\U000F0297"  # gamepad (trackpad overlay hero)
+      - "\U000F075A"  # music (album-art placeholder hero)
 
 # --- Live HA state (selected light = Living Room for v1) ---
 sensor:
@@ -2868,10 +2886,10 @@ lvgl:
   style_definitions:
     - id: st_glass
       bg_color: $c_card
-      bg_opa: 92%
+      bg_opa: 100%
       border_color: $c_hair
       border_width: 1
-      radius: 22
+      radius: 18
       pad_all: 20
 
   # Persistent left nav rail + clock on every page

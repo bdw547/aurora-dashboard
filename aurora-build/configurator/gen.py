@@ -238,7 +238,7 @@ def _setbox(bx, by, bw, bh, label, temp, accent, bg):
     return s
 
 
-CLIMATE_MODES = [("\\U000F0717", "Cool", "cool", "0x4F91FF"),
+CLIMATE_MODES = [("\\U000F0717", "Cool", "cool", "0x4FA8F5"),
                  ("\\U000F0238", "Heat", "heat", "0xF2B84B"),
                  ("\\U000F04E2", "Auto", "auto", "0x2ED5B8"),
                  ("\\U000F0425", "Off", "off", "0x868CA0")]
@@ -273,7 +273,7 @@ def c_climate(card, x, y, w, h, base):
     # current temp centered between the left edge and the setpoint boxes
     inner += lbl("71\\u00B0", 0, -6, "f_display", "0xF3F5F8", wid=tid, align="left_mid", width=box_x, text_align="center")
     inner += _setbox(box_x, top, box_w, box_h, "HEAT TO", "68\\u00B0", "0xF2B84B", "0x241C08")
-    inner += _setbox(box_x, top + box_h + gap, box_w, box_h, "COOL TO", "74\\u00B0", "0x4F91FF", "0x0F1A2B")
+    inner += _setbox(box_x, top + box_h + gap, box_w, box_h, "COOL TO", "74\\u00B0", "0x4FA8F5", "0x0F1A2B")
     mbw = (w - 28 - 3 * 8) // 4
     for i, (g, lab, mode, acc) in enumerate(CLIMATE_MODES):
         mx = 14 + i * (mbw + 8)
@@ -328,9 +328,9 @@ def c_media(card, x, y, w, h, base):
     nxt = ha("media_player.media_next_track", e) if e else "lvgl.page.show: page_home"
 
     def art(ax, ay, aw, ah):
-        s = ("              - obj: { x: %d, y: %d, width: %d, height: %d, bg_color: 0x2A2F45, "
+        s = ("              - obj: { x: %d, y: %d, width: %d, height: %d, bg_color: 0x1B1E27, "
              "radius: 12, border_width: 0, pad_all: 0, scrollable: false }\n" % (ax, ay, aw, ah))
-        s += lbl("\\U000F075A", ax + (aw - 30) // 2, ay + (ah - 34) // 2, "f_icon", "0x6B76A8")  # note glyph -> reads as art placeholder
+        s += lbl("\\U000F075A", ax + (aw - 30) // 2, ay + (ah - 34) // 2, "f_icon", "0x5D6470")  # desaturated art placeholder
         return s
 
     def transport_center(ty):
@@ -461,15 +461,15 @@ def c_fan(card, x, y, w, h, base):
 def c_cover(card, x, y, w, h, base):
     """Cover: Open / Stop / Close buttons (icon + label), like the web."""
     e = card.get("entity", "")
-    inner = ic(card["ck"], color="0x4F91FF")
+    inner = ic(card["ck"], color="0x4FA8F5")
     if card["w"] == 1 and card["h"] == 1:
-        inner += lbl(card.get("name", "Cover"), 0, 0, "f_body", "0x4F91FF",
+        inner += lbl(card.get("name", "Cover"), 0, 0, "f_body", "0x4FA8F5",
                      align="center", width=w - 20, text_align="center", long="dot")
         return [card_obj(x, y, w, h, inner)], [], []
     inner += title(card.get("name", "Cover"), w)
-    rows = [("\\U000F0143", "Open", "cover.open_cover", "0x4F91FF"),
+    rows = [("\\U000F0143", "Open", "cover.open_cover", "0x4FA8F5"),
             ("\\U000F04DB", "Stop", "cover.stop_cover", "0xC2C7D2"),
-            ("\\U000F0140", "Close", "cover.close_cover", "0x4F91FF")]
+            ("\\U000F0140", "Close", "cover.close_cover", "0x4FA8F5")]
     top, gap = 58, 8
     bh = (h - top - 14 - 2 * gap) // 3
     for i, (g, txt, svc, col) in enumerate(rows):
@@ -529,11 +529,11 @@ GROUP_DOMAIN = {
     "light": ("\\U000F0335", "0xF2B84B", "On"),
     "switch": ("\\U000F06A5", "0x2ED5B8", "On"),
     "lock": ("\\U000F033E", "0x2ED5B8", "Locked"),
-    "binary_sensor": ("\\U000F0583", "0x4F91FF", "Clear"),
+    "binary_sensor": ("\\U000F0583", "0x4FA8F5", "Clear"),
     "sensor": ("\\U000F050F", "0xF2685A", "72\\u00B0"),
-    "cover": ("\\U000F081A", "0x4F91FF", "Open"),
+    "cover": ("\\U000F081A", "0x4FA8F5", "Open"),
     "fan": ("\\U000F0210", "0x2ED5B8", "Med"),
-    "person": ("\\U000F0004", "0x4F91FF", "Home"),
+    "person": ("\\U000F0004", "0x4FA8F5", "Home"),
     "climate": ("\\U000F0393", "0xF2B84B", "72\\u00B0"),
     "media_player": ("\\U000F075A", "0x2ED5B8", "Idle"),
 }
@@ -899,7 +899,7 @@ def c_tvremote(card, x, y, w, h, base):
     inner += (
         "              - obj:\n"
         "                  id: %s\n                  x: %d\n                  y: %d\n                  width: %d\n                  height: %d\n"
-        "                  bg_color: 0x0E1524\n                  border_color: 0x4F91FF\n                  border_width: 2\n                  radius: 18\n"
+        "                  bg_color: 0x0E1524\n                  border_color: 0x4FA8F5\n                  border_width: 2\n                  radius: 18\n"
         "                  hidden: true\n                  pad_all: 0\n                  scrollable: false\n"
         "                  widgets:\n"
         "                    - obj: { align: center, width: 104, height: %d, bg_color: 0x10141C, border_color: 0x23262F, border_width: 1, radius: 52, pad_all: 0, scrollable: false }\n"
@@ -907,12 +907,12 @@ def c_tvremote(card, x, y, w, h, base):
         "                    - button:\n"
         "                        align: top_mid\n                        y: 14\n                        width: 84\n                        height: 62\n"
         "                        bg_color: 0x10141C\n                        radius: 14\n                        pad_all: 0\n                        scrollable: false\n"
-        "                        widgets: [label: { text: \"\\U000F0143\", align: center, text_font: f_bigicon, text_color: 0x4F91FF }]\n"
+        "                        widgets: [label: { text: \"\\U000F0143\", align: center, text_font: f_bigicon, text_color: 0x4FA8F5 }]\n"
         "                        on_click: [%s]\n"
         "                    - button:\n"
         "                        align: bottom_mid\n                        y: -14\n                        width: 84\n                        height: 62\n"
         "                        bg_color: 0x10141C\n                        radius: 14\n                        pad_all: 0\n                        scrollable: false\n"
-        "                        widgets: [label: { text: \"\\U000F0140\", align: center, text_font: f_bigicon, text_color: 0x4F91FF }]\n"
+        "                        widgets: [label: { text: \"\\U000F0140\", align: center, text_font: f_bigicon, text_color: 0x4FA8F5 }]\n"
         "                        on_click: [%s]\n"
         % (whlid, ov_x, ov_y, ov_w, ov_h, ov_h - 40, up_act, dn_act)
     )
@@ -1072,6 +1072,7 @@ def vol_slider_yaml(sld, sx, sy, sw, value, e):
     pushes to media_player.volume_set. Teal indicator/knob keeps one accent per surface."""
     return ("              - slider:\n                  id: %s\n                  x: %d\n                  y: %d\n                  width: %d\n"
             "                  min_value: 0\n                  max_value: 100\n                  value: %d\n"
+            "                  main:\n                    bg_color: 0x23262F\n"
             "                  indicator:\n                    bg_color: 0x2ED5B8\n"
             "                  knob:\n                    bg_color: 0x2ED5B8%s\n"
             % (sld, sx, sy, sw, value, _vset(e, sld)))
