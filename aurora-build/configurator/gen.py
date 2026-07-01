@@ -312,12 +312,18 @@ def c_climate(card, x, y, w, h, base):
     return [card_obj(x, y, w, h, inner)], s, []
 
 
+ACTION_ACCENT = {"scene": "0x2ED5B8", "script": "0xB06CFF", "button": "0x4FA8F5", "input_button": "0x4FA8F5"}
+
+
 def c_action(card, x, y, w, h, base):
     e = card.get("entity", "")
-    dom = e.split(".")[0] if "." in e else "scene"
+    ck = card.get("ck", "scene")
+    dom = e.split(".")[0] if "." in e else ck
     act = {"scene": "scene.turn_on", "script": "script.turn_on", "button": "button.press",
            "input_button": "input_button.press"}.get(dom, "homeassistant.toggle")
-    inner = lbl(card.get("name", "Scene"), 0, 0, "f_body", align="center")
+    acc = ACTION_ACCENT.get(ck) or ACTION_ACCENT.get(dom, "0x2ED5B8")
+    inner = ic(ck, color=acc)                                 # icon top-left, per-type accent
+    inner += title(card.get("name", "Scene"), w, x=14, y=48)
     on = ha(act, e) if e else None
     return [card_obj(x, y, w, h, inner, on)], [], []
 
@@ -332,7 +338,7 @@ def c_media(card, x, y, w, h, base):
     cells = gw * gh
     has_vol = cells >= 3
     nowplaying = gh >= 3 and gw >= 2
-    prev_g, play_g, next_g, vol_g = "\\U000F04AE", "\\U000F040A", "\\U000F04AD", "\\U000F057E"
+    prev_g, play_g, next_g, vol_g = "\\U000F04AE", "\\U000F03E4", "\\U000F04AD", "\\U000F057E"  # pause glyph (demo = playing)
     if ck == "sonos":
         subtxt = "Kitchen \\u00B7 Sonos"
     elif nowplaying:
@@ -510,16 +516,30 @@ def c_cover(card, x, y, w, h, base):
 
 def c_lock(card, x, y, w, h, base):
     e = card.get("entity", ""); sid = base + "_st"
-    inner = ic(card["ck"])
-    inner += title(card.get("name", "Lock"), w, x=14, y=48)
-    inner += lbl("--", 14, -12, "f_small", "0x2ED5B8", wid=sid, align="bottom_left")
-    on = ha("lock.unlock", e) if e else None
+    gw, gh = card["w"], card["h"]
+    inner = ic(card["ck"], color="0x2ED5B8")
     ts = []
     if e:
         ts.append("  - platform: homeassistant\n    id: ha_%s\n    entity_id: %s\n    on_value:\n"
                   "      - lvgl.label.update:\n          id: %s\n"
                   "          text: !lambda 'return x == \"locked\" ? std::string(\"Locked\") : std::string(\"Unlocked\");'\n"
                   "          text_color: !lambda 'return x == \"locked\" ? lv_color_hex(0x2ED5B8) : lv_color_hex(0xF2685A);'\n" % (sid, e, sid))
+    if gw >= 2 and gh >= 2:
+        # battery readout (top-right) + title + state + Lock/Unlock action row (Card Library §05)
+        inner += lbl("\\U000F0079", -58, 18, "f_iconsm", "0x868CA0", align="top_right")
+        inner += lbl("87%", -14, 19, "f_mono", "0x868CA0", align="top_right")
+        inner += title(card.get("name", "Lock"), w, x=14, y=52)
+        inner += lbl("--", 14, 84, "f_small", "0x2ED5B8", wid=sid)
+        by = h - 60
+        bw = (w - 28 - 8) // 2
+        lockA = ha("lock.lock", e) if e else "lvgl.page.show: page_home"
+        unlockA = ha("lock.unlock", e) if e else "lvgl.page.show: page_home"
+        inner += btn(14, by, bw, 46, "Lock", lockA, bg="0x2ED5B8", color="0x06231D")          # demo: locked
+        inner += btn(14 + bw + 8, by, bw, 46, "Unlock", unlockA, bg="0x161B24", color="0xC2C7D2")
+        return [card_obj(x, y, w, h, inner)], [], ts
+    inner += title(card.get("name", "Lock"), w, x=14, y=48)
+    inner += lbl("--", 14, -12, "f_small", "0x2ED5B8", wid=sid, align="bottom_left")
+    on = ha("lock.unlock", e) if e else None
     return [card_obj(x, y, w, h, inner, on)], [], ts
 
 
@@ -534,8 +554,12 @@ def c_camera(card, x, y, w, h, base):
     inner = ("              - obj: { x: 8, y: 8, width: %d, height: %d, bg_color: 0x10141C, "
              "border_width: 0, radius: 12, pad_all: 0, scrollable: false }\n" % (w - 16, h - 16))
     inner += ic(card["ck"], x=20, y=20, color="0x2A3346")
-    inner += lbl("LIVE", 20, -18, "f_small", "0xF2685A", align="bottom_left")
-    inner += lbl(card.get("name", "Camera"), 72, -18, "f_small", "0x868CA0", align="bottom_left")
+    # LIVE pill (red chip + white dot) bottom-left
+    inner += ("              - obj: { x: 20, y: %d, width: 58, height: 24, bg_color: 0xF2685A, radius: 8, "
+              "border_width: 0, pad_all: 0, scrollable: false, widgets: ["
+              "obj: { x: 9, align: left_mid, width: 7, height: 7, bg_color: 0xFFFFFF, radius: 4, border_width: 0, pad_all: 0, scrollable: false }, "
+              "label: { text: \"LIVE\", x: 22, align: left_mid, text_font: f_micro, text_color: 0xFFFFFF } ] }\n" % (h - 44))
+    inner += lbl(card.get("name", "Camera"), 20, -14, "f_body", "0xF3F5F8", align="bottom_left")
     return [card_obj(x, y, w, h, inner)], [], []
 
 
@@ -959,14 +983,15 @@ def c_tvremote(card, x, y, w, h, base):
 def c_playlist(card, x, y, w, h, base):
     e = card.get("entity", "")
     pl = card.get("pl") or card.get("name", "Playlist")
-    inner = ic(card["ck"], color="0x1DB954") + lbl(pl, 50, 16, "f_title", width=w - 64)
+    acc = "0x2ED5B8" if card["ck"].startswith("sonos") else "0x1DB954"   # Sonos teal / Spotify green
+    inner = ic(card["ck"], color=acc) + lbl(pl, 50, 16, "f_title", width=w - 64)
     inner += lbl("Tap to play", 14, -12, "f_small", "0x868CA0", align="bottom_left")
     on = ("homeassistant.action: { action: media_player.media_play, data: { entity_id: %s } }" % e) if e else None
     return [card_obj(x, y, w, h, inner, on)], [], []
 
 
 def c_songlist(card, x, y, w, h, base):
-    inner = ic(card["ck"], color="0x1DB954") + lbl(card.get("name", "Tracks"), 50, 16, "f_small", "0x868CA0")
+    inner = ic(card["ck"], color=("0x2ED5B8" if card["ck"].startswith("sonos") else "0x1DB954")) + lbl(card.get("name", "Tracks"), 50, 16, "f_small", "0x868CA0")
     songs = ["Midnight City", "Instant Crush", "Dreams", "Redbone", "Holocene", "Lovely Day", "Electric Feel"]
     yy = 52
     for s in songs[: max(1, (h - 52) // 42)]:
