@@ -612,6 +612,9 @@ font:
       - "\U000F035C"  # menu
       - "\U000F004D"  # arrow-left (TV back)
       - "\U000F04DB"  # stop (cover)
+      - "\U000F0583"  # walk (motion / presence)
+      - "\U000F0004"  # account (person)
+      - "\U000F0AC6"  # spotify (nav brand)
 
 # --- Live HA state (selected light = Living Room for v1) ---
 sensor:

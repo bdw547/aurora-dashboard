@@ -345,9 +345,24 @@ def _ename(e, fallback):
     return ((e.split(".")[-1] if "." in e else e).replace("_", " ")) if e else fallback
 
 
+# domain -> (f_icon glyph, color, demo value) for status-group tiles (web GICON/GVAL)
+GROUP_DOMAIN = {
+    "light": ("\\U000F0335", "0xF2B84B", "On"),
+    "switch": ("\\U000F06A5", "0x2ED5B8", "On"),
+    "lock": ("\\U000F033E", "0x2ED5B8", "Locked"),
+    "binary_sensor": ("\\U000F0583", "0x4F91FF", "Clear"),
+    "sensor": ("\\U000F050F", "0xF2685A", "72\\u00B0"),
+    "cover": ("\\U000F081A", "0x4F91FF", "Open"),
+    "fan": ("\\U000F0210", "0x2ED5B8", "Med"),
+    "person": ("\\U000F0004", "0x4F91FF", "Home"),
+    "climate": ("\\U000F0393", "0xF2B84B", "72\\u00B0"),
+    "media_player": ("\\U000F075A", "0x2ED5B8", "Idle"),
+}
+
+
 def c_group(card, x, y, w, h, base):
     """lightgroup: big lightbulb tiles in a w x max(2,h-1) grid (web .lggrid).
-    group: smaller status cells with icon + value + name (web .ggrid)."""
+    group: status tiles with domain icon + value + name (web .ggrid / image)."""
     ents = card.get("entities", [])
     gw, gh = card["w"], card["h"]
     if card["ck"] == "lightgroup":
@@ -376,23 +391,35 @@ def c_group(card, x, y, w, h, base):
                       "label: { text: %s, align: bottom_mid, y: -10, width: %d, long_mode: dot, text_align: center, text_font: f_small, text_color: 0xC2C7D2 }] }\n"
                       % (cx, cy, bw, bh, bg, click, glyph, gcol, esc(_ename(e, "Light")), bw - 12))
         return [card_obj(x, y, w, h, inner)], [], []
-    # group (status): icon + value + name cells
-    cols = 2 if w >= 280 else 1
-    pad, gap, top, bh = 14, 8, 56, 46
-    rows_fit = max(1, (h - top - pad + gap) // (bh + gap))
-    cap = cols * rows_fit
+    # group (status): domain icon (left) + value + name tiles
+    cols = 2
+    rows = max(1, card["h"])
+    cap = cols * rows
+    pad, gap, top = 14, 10, 56
     bw = (w - pad * 2 - (cols - 1) * gap) // cols
+    bh = (h - top - pad - (rows - 1) * gap) // rows
+    vfont = "f_title" if bw >= 150 else "f_body"        # big value on wide tiles, fit on narrow
+    vh, vy = (30, -12) if vfont == "f_title" else (20, -10)
     inner = ic(card["ck"], color="0x2ED5B8")
     inner += lbl("%s \\u00B7 %d/%d" % (card.get("name", "Group"), len(ents), cap),
                  50, 22, "f_body", "0x868CA0", width=w - 64, long="dot", height=24)
-    for i, e in enumerate(ents[:cap]):
+    for i in range(cap):
+        e = ents[i] if i < len(ents) else None
         cx = pad + (i % cols) * (bw + gap)
         cy = top + (i // cols) * (bh + gap)
-        inner += ("              - obj: { x: %d, y: %d, width: %d, height: %d, bg_color: 0x0F1117, "
-                  "border_width: 0, radius: 10, pad_all: 0, scrollable: false, widgets: ["
-                  "label: { text: %s, x: 10, y: 6, width: %d, height: 18, long_mode: dot, text_font: f_small, text_color: 0xEEF0F6 }, "
-                  "label: { text: \"On\", x: 10, y: -6, align: bottom_left, text_font: f_small, text_color: 0x2ED5B8 }] }\n"
-                  % (cx, cy, bw, bh, esc(_ename(e, "Entity")), bw - 20))
+        if e:
+            glyph, gcol, val = GROUP_DOMAIN.get(e.split(".")[0], ("\\U000F0493", "0x868CA0", "On"))
+            inner += ("              - obj: { x: %d, y: %d, width: %d, height: %d, bg_color: 0x0F1117, "
+                      "border_width: 0, radius: 12, pad_all: 0, scrollable: false, widgets: ["
+                      "label: { text: \"%s\", x: 12, align: left_mid, text_font: f_icon, text_color: %s }, "
+                      "label: { text: \"%s\", x: 50, y: %d, align: left_mid, width: %d, height: %d, long_mode: dot, text_font: %s, text_color: 0xEEF0F6 }, "
+                      "label: { text: %s, x: 50, y: 13, align: left_mid, width: %d, long_mode: dot, text_font: f_small, text_color: 0x868CA0 }] }\n"
+                      % (cx, cy, bw, bh, glyph, gcol, val, vy, bw - 56, vh, vfont, esc(_ename(e, "Entity")), bw - 56))
+        else:
+            inner += ("              - obj: { x: %d, y: %d, width: %d, height: %d, bg_color: 0x0F1117, "
+                      "border_color: 0x2A2E38, border_width: 1, radius: 12, pad_all: 0, scrollable: false, widgets: ["
+                      "label: { text: \"+\", align: center, text_font: f_head, text_color: 0x4A5160 }] }\n"
+                      % (cx, cy, bw, bh))
     return [card_obj(x, y, w, h, inner)], [], []
 
 
@@ -617,12 +644,12 @@ def c_tvremote(card, x, y, w, h, base):
     # VOL column (left of d-pad)
     vx = mx + 16
     inner += _tvbtn(vx, dcy - 60, 64, 52, "\\U000F075D", e, "VOLUMEUP")
-    inner += lbl("VOL", vx, dcy - 2, "f_small", "0x868CA0", width=64, align=None)
+    inner += lbl("VOL", vx, dcy - 2, "f_small", "0x868CA0", width=64, text_align="center")
     inner += _tvbtn(vx, dcy + 16, 64, 52, "\\U000F075E", e, "VOLUMEDOWN")
     # CH column (right of d-pad)
     hx = mx + mw - 80
     inner += btn(hx, dcy - 60, 64, 52, "\\U000F0143", _chan(e, True), font="f_icon")
-    inner += lbl("CH", hx, dcy - 2, "f_small", "0x868CA0", width=64, align=None)
+    inner += lbl("CH", hx, dcy - 2, "f_small", "0x868CA0", width=64, text_align="center")
     inner += btn(hx, dcy + 16, 64, 52, "\\U000F0140", _chan(e, False), font="f_icon")
     # --- bottom transport bar ---
     bar = [("\\U000F004D", "BACK"), ("\\U000F02DC", "HOME"), ("\\U000F0297", "pad"),
