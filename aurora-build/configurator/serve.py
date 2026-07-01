@@ -1142,6 +1142,13 @@ def flash_job(device, yml=None):
         return proc.returncode
 
     try:
+        # Serial uploads run under `sudo -E` (below), which can leave root-owned
+        # files in .esphome/ that the next non-sudo `compile` can't rewrite
+        # (PermissionError on CMakeCache/build logs). Heal ownership up front so a
+        # prior sudo upload never blocks this compile. Best-effort (passwordless sudo).
+        esphome_dir = os.path.join(os.path.dirname(os.path.abspath(target)), ".esphome")
+        if os.path.isdir(esphome_dir):
+            run(["sudo", "chown", "-R", "%d:%d" % (os.getuid(), os.getgid()), esphome_dir])
         FLASH["log"] += "== Compiling ==\n"
         if run([ESPHOME, "compile", target]) != 0:
             FLASH["log"] += "\n[compile failed]\n"
