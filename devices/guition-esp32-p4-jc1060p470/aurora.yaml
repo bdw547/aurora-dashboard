@@ -615,6 +615,9 @@ font:
       - "\U000F0583"  # walk (motion / presence)
       - "\U000F0004"  # account (person)
       - "\U000F0AC6"  # spotify (nav brand)
+      - "\U000F0717"  # snowflake (climate cool)
+      - "\U000F0238"  # fire (climate heat)
+      - "\U000F04E2"  # autorenew (climate auto)
 
 # --- Live HA state (selected light = Living Room for v1) ---
 sensor:

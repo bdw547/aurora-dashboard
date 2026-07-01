@@ -205,26 +205,73 @@ def c_sensor(card, x, y, w, h, base):
     return [card_obj(x, y, w, h, inner)], [], ts
 
 
+def _setbox(bx, by, bw, bh, label, temp, accent, bg):
+    """A HEAT TO / COOL TO setpoint box: label (top), big temp (center),
+    - on the left and + on the right (visual; live ±step is a follow-up)."""
+    s = ("              - obj: { x: %d, y: %d, width: %d, height: %d, bg_color: %s, "
+         "border_color: %s, border_width: 1, radius: 12, pad_all: 0, scrollable: false }\n"
+         % (bx, by, bw, bh, bg, accent))
+    s += lbl(label, bx, by + 12, "f_small", accent, width=bw, text_align="center")
+    s += lbl(temp, bx, by + bh // 2 - 4, "f_head", accent, width=bw, text_align="center", height=34)
+    s += lbl("\\U000F0374", bx + 18, by + bh // 2, "f_icon", accent)
+    s += lbl("\\U000F0415", bx + bw - 44, by + bh // 2, "f_icon", accent)
+    return s
+
+
+CLIMATE_MODES = [("\\U000F0717", "Cool", "cool", "0x4F91FF"),
+                 ("\\U000F0238", "Heat", "heat", "0xF2B84B"),
+                 ("\\U000F04E2", "Auto", "auto", "0x2ED5B8"),
+                 ("\\U000F0425", "Off", "off", "0x868CA0")]
+
+
 def c_climate(card, x, y, w, h, base):
+    """Thermostat card (image): header + mode badge, big current temp, HEAT/COOL
+    setpoint boxes, and a Cool/Heat/Auto/Off mode row."""
     e = card.get("entity", "")
     tid = base + "_t"
+    sel_mode = "heat"                                    # demo (no HA state feed)
     inner = ic(card["ck"], color="0xF2B84B")
-    inner += lbl(card.get("name", "Climate"), 50, 16, "f_small", "0x868CA0")
-    inner += lbl("72\\u00B0", 0, -10, "f_display", "0xF3F5F8", wid=tid, align="center")
-    if e:
-        inner += btn(14, h - 60, 56, 46, "\\U000F0374", ha("climate.set_temperature", e,
-                     "temperature: !lambda 'return id(%s_cur)-1;'" % base) if False else
-                     "homeassistant.action: { action: climate.set_temperature, data: { entity_id: %s } }" % e,
-                     font="f_icon")
-        inner += btn(w - 70, h - 60, 56, 46, "\\U000F0415",
-                     "homeassistant.action: { action: climate.set_temperature, data: { entity_id: %s } }" % e,
-                     font="f_icon")
+    inner += lbl(card.get("name", "Climate"), 50, 12, "f_title", width=w - 200, long="dot", height=30)
+    inner += lbl("Heating \\u00B7 humidity 41%", 50, 46, "f_small", "0x868CA0")
+    inner += ("              - obj: { x: %d, y: 14, width: 76, height: 32, bg_color: 0x2A2410, "
+              "border_color: 0xF2B84B, border_width: 1, radius: 10, pad_all: 0, scrollable: false, "
+              "widgets: [label: { text: \"Heat\", align: center, text_font: f_body, text_color: 0xF2B84B }] }\n"
+              % (w - 90))
     s = []
     if e:
-        s.append(
-            "  - platform: homeassistant\n    id: ha_%s\n    entity_id: %s\n    attribute: temperature\n    on_value:\n"
-            "      - lvgl.label.update: { id: %s, text: !lambda 'return std::to_string((int)x) + \"\\u00B0\";' }\n"
-            % (tid, e, tid))
+        s.append("  - platform: homeassistant\n    id: ha_%s\n    entity_id: %s\n    attribute: current_temperature\n    on_value:\n"
+                 "      - lvgl.label.update: { id: %s, text: !lambda 'return std::to_string((int)x) + \"\\u00B0\";' }\n"
+                 % (tid, e, tid))
+    if w < 380 or h < 240:                               # compact fallback
+        inner += lbl("71\\u00B0", 0, 16, "f_display", "0xF3F5F8", wid=tid, align="center")
+        return [card_obj(x, y, w, h, inner)], s, []
+    mode_y = h - 62
+    inner += lbl("71\\u00B0", 24, -6, "f_display", "0xF3F5F8", wid=tid, align="left_mid")
+    box_x = int(w * 0.40)
+    box_w = w - box_x - 16
+    top = 64
+    box_h = (mode_y - top - 20) // 2
+    inner += _setbox(box_x, top, box_w, box_h, "HEAT TO", "68\\u00B0", "0xF2B84B", "0x241C08")
+    inner += _setbox(box_x, top + box_h + 10, box_w, box_h, "COOL TO", "74\\u00B0", "0x4F91FF", "0x0F1A2B")
+    mbw = (w - 28 - 3 * 8) // 4
+    for i, (g, lab, mode, acc) in enumerate(CLIMATE_MODES):
+        mx = 14 + i * (mbw + 8)
+        selm = (mode == sel_mode)
+        act = ("homeassistant.action: { action: climate.set_hvac_mode, data: { entity_id: %s, hvac_mode: \"%s\" } }" % (e, mode)) if e else "lvgl.page.show: page_home"
+        inner += ("              - button:\n"
+                  "                  x: %d\n                  y: %d\n                  width: %d\n                  height: 50\n"
+                  "                  bg_color: %s\n                  radius: 12\n                  pad_all: 0\n                  scrollable: false\n"
+                  "                  on_click: [%s]\n"
+                  "                  widgets:\n"
+                  "                    - obj:\n"
+                  "                        align: center\n                        width: SIZE_CONTENT\n                        height: SIZE_CONTENT\n"
+                  "                        bg_opa: 0\n                        border_width: 0\n                        pad_all: 0\n                        scrollable: false\n"
+                  "                        layout: { type: flex, flex_flow: ROW, flex_align_cross: center, pad_column: 8 }\n"
+                  "                        widgets:\n"
+                  "                          - label: { text: \"%s\", text_font: f_icon, text_color: %s }\n"
+                  "                          - label: { text: \"%s\", text_font: f_body, text_color: %s }\n"
+                  % (mx, mode_y, mbw, ("0x2A2410" if selm else "0x10141C"), act, g,
+                     (acc if selm else "0x868CA0"), lab, (acc if selm else "0xC2C7D2")))
     return [card_obj(x, y, w, h, inner)], s, []
 
 
