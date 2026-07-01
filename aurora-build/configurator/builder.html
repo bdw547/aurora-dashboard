@@ -150,6 +150,11 @@ h3.sec{font-size:11px;letter-spacing:1.4px;text-transform:uppercase;color:var(--
 .pc .spk{background:#0f1117;border:1px solid var(--bd);border-radius:10px;display:flex;align-items:center;gap:6px;padding:0 10px;font-size:12px;color:var(--t2);white-space:nowrap;overflow:hidden}
 .pc .spk.on{background:var(--teal);color:var(--ink);font-weight:700;border-color:var(--teal)}
 .pc .spk .mdi{font-size:15px}
+.pc .spkrib{display:flex;align-items:center;gap:8px;background:#123021;border-radius:12px;padding:10px 12px;font-size:14px}
+.pc .spkung{background:#10141C;border-radius:8px;padding:5px 10px;font-size:12px;color:var(--t2);display:flex;align-items:center;gap:5px;white-space:nowrap}
+.pc .spkgrid2{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-top:12px;flex:1}
+.pc .spktile{background:#10141C;border-radius:12px;padding:12px;display:flex;flex-direction:column;min-width:0}
+.pc .spkjoin{background:#0F1117;border:1px solid var(--bd);border-radius:9px;padding:6px 12px;font-size:13px;color:var(--teal);font-weight:600;display:inline-flex;align-items:center;gap:5px;justify-content:center;white-space:nowrap}
 .pc .orow{display:flex;align-items:center;gap:8px;background:#0f1117;border:1px solid var(--bd);border-radius:10px;padding:7px 10px;margin-top:8px}
 .pc .orow .mdi{font-size:18px}
 .pc .trklist{flex:1;display:flex;flex-direction:column;gap:5px;margin-top:8px;overflow:hidden}
@@ -234,7 +239,7 @@ const C = {
   climate:  {label:'Climate / thermostat', domain:'climate', icon:'thermostat', color:'var(--amber)', spans:[[1,1],[2,2],[3,2],[3,3],[4,4],[6,5],...V], def:[4,4], ctrl:'dial'},
   group:    {label:'Status group', domain:'mixed', icon:'view-grid-outline', color:'var(--teal)', spans:[[2,2],[2,3],[2,4],[2,5]], def:[2,3], ctrl:'group', multi:true},
   shortcuts:{label:'Shortcuts', domain:'page', icon:'view-grid-plus', color:'var(--teal)', spans:[[2,2],[3,2],[2,3],[4,2],[2,4],[5,2],[2,5],[6,2]], def:[2,2], ctrl:'shortcuts', multi:true},
-  speakers: {label:'Speaker linking', domain:'media_player', icon:'speaker-multiple', color:'var(--teal)', spans:[[1,1],[2,1],[3,1],[1,2],[1,3],[3,2],[2,3],[3,3],[5,4]], def:[2,3], ctrl:'btngrid', btnIcon:'speaker', multi:true},
+  speakers: {label:'Speakers (multi-room + volume)', domain:'media_player', icon:'speaker-multiple', color:'var(--teal)', spans:[[1,1],[2,2],[3,2],[2,3],[3,3],[4,4],[3,4],[5,4],[6,5]], def:[3,3], ctrl:'spk', btnIcon:'speaker', multi:true},
   sonos_sources:{label:'Sonos sources', domain:'media_player', icon:'music-box-multiple', color:'var(--teal)', spans:[[1,1],[2,1],[3,1],[1,2],[1,3],[3,2],[2,3],[3,3],[5,4]], def:[2,3], ctrl:'btngrid', btnIcon:'music-box', multi:true},
   sonos_library:{label:'Sonos library', domain:'media_player', icon:'bookshelf', color:'var(--teal)', spans:[[4,3],[3,4],[4,4],[3,5],[4,5],[5,5]], def:[4,4], ctrl:'songlist'},
   sonos_fav:{label:'Sonos favorite', domain:'media_player', icon:'bookmark-music', color:'var(--teal)', spans:[[1,1],[2,1],[3,1]], def:[1,1], ctrl:'playlist', playlistField:true},
@@ -313,7 +318,8 @@ function cap(c){ const k=c.ck;
   if(k==='shortcuts') return c.w*c.h;                 // one nav button per grid cell
   if(k==='outletgroup') return Math.max(c.w,c.h);   // 1x1=1, 1x2/2x1=2, 1x3/3x1=3
   if(k==='volumes') return Math.max(2,c.h);           // one speaker volume row per grid-row
-  if(k==='speakers'||k==='sonos_sources'||k==='tv_sources'){ if(c.w===1) return 99;   // dropdown (1x1/1x2/1x3)
+  if(k==='speakers') return c.w>=4?8:Math.max(2,c.h+1);   // multi-room speaker list/grid
+  if(k==='sonos_sources'||k==='tv_sources'){ if(c.w===1) return 99;   // dropdown (1x1/1x2/1x3)
     if(c.h===1) return c.w;                                   // single row: 2x1=2, 3x1=3
     if((c.w===2&&c.h===3)||(c.w===3&&c.h===2)) return 4;
     if(c.w===3&&c.h===3) return 6; if(c.w===5&&c.h===4) return 10;
@@ -460,6 +466,21 @@ function cardInner(c){ const def=C[c.ck], nm=c.name||def.label, big=c.w>=3, ctrl
     const n=cap(c), cols=c.h===1?n:(n===10?5:(n===6?3:2)); let btns='';
     for(let i=0;i<n;i++){ const e=ents[i]; btns+=`<div class="spk${i===0&&e?' on':''}"><span class="mdi mdi-${bi}"></span>${e?nm2(e):Word}</div>`; }
     return head+`<div class="toprow">${ico}<span class="csub">${nm}</span></div><div class="spkgrid" style="grid-template-columns:repeat(${cols},1fr)">${btns}</div>`; }
+  if(ctrl==='spk'){ const ents=(c.entities&&c.entities.length)?c.entities:['media_player.living_room','media_player.kitchen','media_player.office','media_player.patio'];
+    const n=ents.length, g=Math.max(1,Math.ceil(n/2)), V=[42,28,55,35,60,22,48,30], nmv=(i)=>nm2(ents[i]);
+    if(c.w===1&&c.h===1) return head+`<div style="position:relative;height:100%"><span class="mdi mdi-speaker" style="font-size:22px;color:var(--teal)"></span><span style="position:absolute;right:0;top:0;color:var(--teal);font-weight:700">${V[0]}</span><div style="position:absolute;left:0;bottom:0"><div style="font-weight:700">${nmv(0)}</div><div class="csub">LINKED</div></div></div>`;
+    if(c.h===1) return head+`<div class="row" style="height:100%;align-items:center;gap:10px"><span class="mdi mdi-speaker" style="color:var(--teal);font-size:22px"></span><div style="min-width:0"><div style="font-weight:700;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${nmv(0)}</div><div class="csub">LINKED</div></div><span class="mdi mdi-volume-high" style="color:var(--t2);margin-left:auto"></span><div class="hbar" style="width:140px;flex:none"><i style="width:${V[0]}%;background:var(--teal)"></i></div><span class="csub">${V[0]}</span></div>`;
+    const ribbon=`<div class="spkrib"><span class="mdi mdi-television" style="color:var(--teal)"></span><span style="flex:1;font-weight:700;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${nmv(0)} · ${g} speakers</span><span class="spkung"><span class="mdi mdi-link-off"></span> Ungroup</span></div>`;
+    if(c.w>=4){ let tiles='';
+      for(let i=0;i<n;i++){ const gr=i<g, badge=i===0?'SOURCE':(gr?'LINKED':'');
+        tiles+=`<div class="spktile"><div class="row" style="gap:8px"><span class="mdi mdi-speaker" style="font-size:20px;color:${gr?'var(--teal)':'var(--t3)'}"></span><span style="flex:1;font-weight:700;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${nmv(i)}</span>${badge?`<span class="csub" style="color:var(--teal);font-weight:700">${badge}</span>`:''}</div>${gr?`<div class="row" style="align-items:center;gap:8px;margin-top:auto"><span class="mdi mdi-volume-high" style="color:var(--t2)"></span><div class="hbar" style="flex:1"><i style="width:${V[i%8]}%;background:var(--teal)"></i></div><span class="csub">${V[i%8]}</span></div>`:`<div class="spkjoin" style="margin-top:auto"><span class="mdi mdi-plus"></span> Join</div>`}</div>`; }
+      return head+`${ribbon}<div class="spkgrid2">${tiles}</div>`; }
+    let rows='';
+    for(let i=0;i<g;i++){ rows+=`<div style="margin-bottom:12px"><div class="row" style="gap:8px"><span class="mdi mdi-speaker" style="color:var(--teal)"></span><span style="flex:1;font-weight:700;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${nmv(i)}</span><span class="csub" style="color:var(--teal);font-weight:700">${i===0?'SOURCE':'LINKED'}</span></div><div class="row" style="align-items:center;gap:8px;margin-top:5px"><span class="mdi mdi-volume-high" style="color:var(--t2);font-size:14px"></span><div class="hbar" style="flex:1"><i style="width:${V[i%8]}%;background:var(--teal)"></i></div></div></div>`; }
+    let avail='';
+    if(n>g){ avail=`<div class="csub" style="letter-spacing:1px;margin:2px 0 6px">AVAILABLE</div>`;
+      for(let i=g;i<n;i++){ avail+=`<div class="row" style="gap:8px;margin-bottom:8px"><span class="mdi mdi-speaker" style="color:var(--t3)"></span><span style="flex:1;color:var(--t2);white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${nmv(i)}</span><span class="spkjoin"><span class="mdi mdi-plus"></span> Join</span></div>`; } }
+    return head+`<div class="toprow"><span class="mdi mdi-speaker-multiple" style="color:var(--teal)"></span><span class="csub">PLAYING ON ${g}/${n}</span></div><div style="margin-top:8px;overflow:hidden">${rows}${avail}</div>`; }
   if(ctrl==='shortcuts'){ const n=cap(c), sc=c.shortcuts||[]; let btns='';
     for(let i=0;i<n;i++){ const s=sc[i]; btns+=`<div class="scbtn${s?'':' empty'}">${s?`<span class="mdi mdi-${s.icon}"></span><span class="scn">${s.label}</span>`:`<span class="mdi mdi-plus"></span>`}</div>`; }
     return head+`<div class="toprow">${ico}<span class="csub">${nm} · ${sc.length}/${n}</span></div><div class="scgrid" style="grid-template-columns:repeat(${c.w},1fr);grid-template-rows:repeat(${c.h},1fr)">${btns}</div>`; }

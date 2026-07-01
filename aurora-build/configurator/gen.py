@@ -1058,6 +1058,134 @@ def c_volumes(card, x, y, w, h, base):
     return [card_obj(x, y, w, h, inner)], s, []
 
 
+def _vset(e, sld):
+    """on_release block that pushes a slider's 0-100 value to media_player.volume_set."""
+    if not e:
+        return ""
+    return ("\n                  on_release:\n                    - homeassistant.action:\n"
+            "                        action: media_player.volume_set\n"
+            "                        data: { entity_id: %s, volume_level: !lambda 'char b[8]; snprintf(b, sizeof(b), \"%%.2f\", lv_slider_get_value(id(%s)) / 100.0); return std::string(b);' }" % (e, sld))
+
+
+def _join(master, member):
+    # ESPHome homeassistant.action data values must be strings (no YAML lists); HA coerces a
+    # single entity_id string into the group_members list. Grouping stays best-effort.
+    return ("homeassistant.action: { action: media_player.join, data: { entity_id: %s, group_members: %s } }"
+            % (master, member)) if (master and member) else "lvgl.page.show: page_home"
+
+
+def _unjoin(e):
+    return ("homeassistant.action: { action: media_player.unjoin, data: { entity_id: %s } }" % e) if e else "lvgl.page.show: page_home"
+
+
+DEFAULT_SPKS = ["media_player.living_room", "media_player.kitchen", "media_player.office", "media_player.patio"]
+SPK_DEMO_VOL = [42, 28, 55, 35, 60, 22, 48, 30]
+
+
+def c_speakers(card, x, y, w, h, base):
+    """Multi-room speakers: per-speaker volume + Join/Leave grouping (images 2 & 3).
+    Demo groups the first half of the entities (first = SOURCE); the rest are joinable."""
+    ents = card.get("entities", []) or DEFAULT_SPKS
+    n = len(ents)
+    gcount = max(1, (n + 1) // 2)
+    master = ents[0]
+    sg = "\\U000F04C3"
+
+    def nm(i):
+        e = ents[i]
+        return (e.split(".")[-1] if "." in e else e).replace("_", " ") if e else ("Speaker %d" % (i + 1))
+
+    ts = []
+
+    def sensor(i, sld):
+        if ents[i]:
+            ts.append("  - platform: homeassistant\n    id: ha_%s\n    entity_id: %s\n    attribute: volume_level\n    on_value:\n"
+                      "      - lvgl.slider.update: { id: %s, value: !lambda 'return (int)(x * 100);' }\n" % (sld, ents[i], sld))
+
+    # ---- 1x1 compact status tile ----
+    if card["w"] == 1 and card["h"] == 1:
+        inner = lbl(sg, 14, 14, "f_icon", "0x2ED5B8")
+        inner += lbl(str(SPK_DEMO_VOL[0]), -14, 16, "f_body", "0x2ED5B8", align="top_right")
+        inner += lbl(nm(0), 14, -32, "f_body", "0xF3F5F8", align="bottom_left", width=w - 28, long="dot", height=20)
+        inner += lbl("LINKED", 14, -12, "f_small", "0x868CA0", align="bottom_left")
+        return [card_obj(x, y, w, h, inner)], [], []
+
+    # ---- h==1 compact row: one speaker + inline volume ----
+    if card["h"] == 1:
+        cy = h // 2
+        sld = base + "_v0"
+        v = SPK_DEMO_VOL[0]
+        inner = lbl(sg, 14, cy - 12, "f_icon", "0x2ED5B8")
+        inner += lbl(nm(0), 46, 20, "f_body", "0xF3F5F8", width=150, long="dot", height=20)
+        inner += lbl("LINKED", 46, 48, "f_small", "0x868CA0")
+        vx = min(220, w // 2)
+        inner += lbl("\\U000F057E", vx, cy - 12, "f_icon", "0x868CA0")
+        inner += ("              - slider:\n                  id: %s\n                  x: %d\n                  y: %d\n                  width: %d\n"
+                  "                  min_value: 0\n                  max_value: 100\n                  value: %d%s\n" % (sld, vx + 30, cy - 4, w - (vx + 30) - 52, v, _vset(ents[0], sld)))
+        inner += lbl(str(v), -14, cy - 10, "f_small", "0x868CA0", align="top_right")
+        sensor(0, sld)
+        return [card_obj(x, y, w, h, inner)], [], ts
+
+    # ---- wide: group ribbon + 2-col tile grid (image 2) ----
+    if card["w"] >= 4:
+        inner = ""
+        rh = 46
+        inner += ("              - obj: { x: 14, y: 14, width: %d, height: %d, bg_color: 0x123021, radius: 12, border_width: 0, pad_all: 0, scrollable: false }\n" % (w - 28, rh))
+        inner += lbl("\\U000F0502", 28, 14 + (rh - 24) // 2, "f_icon", "0x2ED5B8")
+        inner += lbl("%s \\u00B7 %d speakers" % (nm(0), gcount), 64, 14 + (rh - 20) // 2, "f_body", "0xF3F5F8", width=w - 64 - 130, long="dot", height=20)
+        inner += btn(w - 14 - 104, 14 + (rh - 32) // 2, 104, 32, "Ungroup", _unjoin(master), font="f_small", bg="0x10141C", color="0xC2C7D2", radius=8)
+        top = 14 + rh + 12
+        cols, gap = 2, 12
+        tw = (w - 28 - (cols - 1) * gap) // cols
+        rows = (n + cols - 1) // cols
+        th = (h - top - 14 - (rows - 1) * gap) // rows
+        for i in range(n):
+            cx = 14 + (i % cols) * (tw + gap)
+            cy = top + (i // cols) * (th + gap)
+            gr = i < gcount
+            inner += ("              - obj: { x: %d, y: %d, width: %d, height: %d, bg_color: 0x10141C, radius: 12, border_width: 0, pad_all: 0, scrollable: false }\n" % (cx, cy, tw, th))
+            inner += lbl(sg, cx + 14, cy + 14, "f_icon", "0x2ED5B8" if gr else "0x5D6470")
+            inner += lbl(nm(i), cx + 46, cy + 16, "f_body", "0xF3F5F8", width=tw - 130, long="dot", height=20)
+            badge = "SOURCE" if i == 0 else ("LINKED" if gr else "")
+            if badge:
+                inner += lbl(badge, cx + tw - 92, cy + 18, "f_small", "0x2ED5B8", width=78, text_align="right")
+            if gr:
+                sld = base + "_v%d" % i
+                v = SPK_DEMO_VOL[i % len(SPK_DEMO_VOL)]
+                inner += lbl("\\U000F057E", cx + 14, cy + th - 40, "f_icon", "0x868CA0")
+                inner += ("              - slider:\n                  id: %s\n                  x: %d\n                  y: %d\n                  width: %d\n"
+                          "                  min_value: 0\n                  max_value: 100\n                  value: %d%s\n" % (sld, cx + 46, cy + th - 34, tw - 100, v, _vset(ents[i], sld)))
+                inner += lbl(str(v), cx + tw - 46, cy + th - 38, "f_small", "0x868CA0", width=32, text_align="right")
+                sensor(i, sld)
+            else:
+                inner += btn(cx + 14, cy + th - 46, tw - 28, 36, "+ Join", _join(master, ents[i]), font="f_body", bg="0x0F1117", color="0x2ED5B8", radius=10)
+        return [card_obj(x, y, w, h, inner)], [], ts
+
+    # ---- vertical list: PLAYING ON + per-speaker volume (image 3) ----
+    inner = lbl("\\U000F04C4", 14, 14, "f_icon", "0x2ED5B8")
+    inner += lbl("PLAYING ON  %d/%d" % (gcount, n), 50, 18, "f_small", "0x868CA0")
+    yy = 48
+    for i in range(gcount):
+        sld = base + "_v%d" % i
+        v = SPK_DEMO_VOL[i % len(SPK_DEMO_VOL)]
+        inner += lbl(sg, 14, yy, "f_icon", "0x2ED5B8")
+        inner += lbl(nm(i), 46, yy + 2, "f_body", "0xF3F5F8", width=w - 150, long="dot", height=20)
+        inner += lbl("SOURCE" if i == 0 else "LINKED", w - 14 - 80, yy + 4, "f_small", "0x2ED5B8", width=80, text_align="right")
+        inner += ("              - slider:\n                  id: %s\n                  x: 46\n                  y: %d\n                  width: %d\n"
+                  "                  min_value: 0\n                  max_value: 100\n                  value: %d%s\n" % (sld, yy + 28, w - 46 - 14, v, _vset(ents[i], sld)))
+        sensor(i, sld)
+        yy += 58
+    if n > gcount:
+        inner += lbl("AVAILABLE", 14, yy, "f_small", "0x5D6470")
+        yy += 22
+        for i in range(gcount, n):
+            inner += lbl(sg, 14, yy + 2, "f_icon", "0x5D6470")
+            inner += lbl(nm(i), 46, yy + 2, "f_body", "0xC2C7D2", width=w - 160, long="dot", height=20)
+            inner += btn(w - 14 - 92, yy - 4, 92, 34, "+ Join", _join(master, ents[i]), font="f_body", bg="0x0F1117", color="0x2ED5B8", radius=9)
+            yy += 44
+    return [card_obj(x, y, w, h, inner)], [], ts
+
+
 def c_generic(card, x, y, w, h, base):
     inner = ic(card.get("ck", ""), color="0x868CA0")
     inner += lbl(card.get("name", card.get("ck", "Card")), 0, 8, "f_body", "0x868CA0", align="center")
@@ -1070,7 +1198,7 @@ CTRL = {
     "climate": c_climate, "scene": c_action, "script": c_action, "media": c_media,
     "spotify": c_media, "sonos": c_media, "fan": c_fan, "cover": c_cover,
     "lock": c_lock, "weather": c_weather, "camera": c_camera, "group": c_group,
-    "lightgroup": c_group, "outletgroup": c_outlet, "speakers": c_btngrid,
+    "lightgroup": c_group, "outletgroup": c_outlet, "speakers": c_speakers,
     "sonos_sources": c_btngrid, "tv_sources": c_btngrid,
     "tv_dpad": c_tv_dpad, "tv_transport": c_tv_transport, "tv_channel": c_tv_channel,
     "tv_volume": c_tv_volume, "tv_trackpad": c_tv_trackpad, "tvremote": c_tvremote,
