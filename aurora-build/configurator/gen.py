@@ -261,11 +261,12 @@ def c_media(card, x, y, w, h, base):
 def c_fan(card, x, y, w, h, base):
     e = card.get("entity", "")
     gw, gh = card["w"], card["h"]
-    if gw * gh <= 2:                                  # small: centered label, card colored when on
+    if gw * gh <= 2:                                  # small: icon + centered label, card colored when on
         on = True                                     # demo (no HA); real per-entity state is TODO
         act = ha("fan.toggle", e) if e else "lvgl.page.show: page_home"
-        inner = lbl(card.get("name", "Fan"), 0, 0, "f_title" if gw >= 2 else "f_body",
-                    "0x2ED5B8" if on else "0xC2C7D2", align="center", width=w - 24, text_align="center", long="dot")
+        col = "0x2ED5B8" if on else "0xC2C7D2"
+        inner = lbl(CARD_ICON.get(card["ck"], "\\U000F0210"), 0, -20, "f_icon", col, align="center")
+        inner += lbl(card.get("name", "Fan"), 0, 24, "f_body", col, align="center", width=w - 24, text_align="center", long="dot")
         return [card_obj(x, y, w, h, inner, act, bg=("0x0F3D34" if on else None))], [], []
     inner = ic(card["ck"], color="0x2ED5B8")
     inner += title(card.get("name", "Fan"), w, x=14, y=48)   # larger: Off / Med / High segments
@@ -298,9 +299,10 @@ def c_cover(card, x, y, w, h, base):
         inner += ("              - button:\n"
                   "                  x: 14\n                  y: %d\n                  width: %d\n                  height: %d\n"
                   "                  bg_color: 0x161B24\n                  radius: 12\n                  pad_all: 0\n                  scrollable: false\n"
+                  "                  layout: { type: flex, flex_flow: ROW, flex_align_main: center, flex_align_cross: center, pad_column: 14 }\n"
                   "                  widgets:\n"
-                  "                    - label: { text: \"%s\", x: 16, align: left_mid, text_font: f_icon, text_color: %s }\n"
-                  "                    - label: { text: \"%s\", align: center, text_font: f_body, text_color: %s }\n"
+                  "                    - label: { text: \"%s\", text_font: f_icon, text_color: %s }\n"
+                  "                    - label: { text: \"%s\", text_font: f_body, text_color: %s }\n"
                   "                  on_click: [%s]\n"
                   % (cy, w - 28, bh, g, col, txt, col, act))
     return [card_obj(x, y, w, h, inner)], [], []
@@ -395,12 +397,13 @@ def c_outlet(card, x, y, w, h, base):
     laid out in columns (wide card) or rows (tall card)."""
     ents = card.get("entities", [])
     gw, gh = card["w"], card["h"]
-    if gw == 1 and gh == 1:                      # single outlet: centered label, card colored when on
+    if gw == 1 and gh == 1:                      # single outlet: icon + centered label, card colored when on
         e = ents[0] if ents else ""
         on = True                                # demo (distinct color from the fan)
         act = ha("homeassistant.toggle", e) if e else "lvgl.page.show: page_home"
-        inner = lbl(_ename(e, "Outlet"), 0, 0, "f_body", "0xF2B84B" if on else "0xC2C7D2",
-                    align="center", width=w - 24, text_align="center", long="dot")
+        col = "0xF2B84B" if on else "0xC2C7D2"
+        inner = lbl(CARD_ICON.get(card["ck"], "\\U000F06A5"), 0, -20, "f_icon", col, align="center")
+        inner += lbl(_ename(e, "Outlet"), 0, 24, "f_body", col, align="center", width=w - 24, text_align="center", long="dot")
         return [card_obj(x, y, w, h, inner, act, bg=("0x3A2E0A" if on else None))], [], []
     inner = ic(card["ck"], color="0x2ED5B8")
     inner += title(card.get("name", "Outlets"), w)
