@@ -36,8 +36,8 @@ NAV_GLYPH = {
     "home-variant": "\\U000F02DC", "home": "\\U000F02DC", "sofa": "\\U000F04B9",
     "lightbulb": "\\U000F0335", "thermostat": "\\U000F0393", "thermometer": "\\U000F050F",
     "music": "\\U000F075A", "shield-home": "\\U000F068A", "wifi": "\\U000F0928",
-    "cog": "\\U000F0493", "remote-tv": "\\U000F0502", "speaker-multiple": "\\U000F075A",
-    "spotify": "\\U000F0AC6", "blinds": "\\U000F081A", "camera": "\\U000F0502",
+    "cog": "\\U000F0493", "remote-tv": "\\U000F0502", "speaker-multiple": "\\U000F04C4",
+    "spotify": "\\U000F075A", "blinds": "\\U000F081A", "camera": "\\U000F0502",
     "weather-partly-cloudy": "\\U000F0595", "playlist-music": "\\U000F075A",
     "television": "\\U000F0502", "desk": "\\U000F1239", "bed": "\\U000F02E3",
     "door": "\\U000F081A", "stairs": "\\U000F04CD", "tree": "\\U000F0531",
@@ -369,7 +369,7 @@ def c_media(card, x, y, w, h, base):
         return s
 
     def vol_slider(vy):
-        st = lbl(vol_g, 14, vy + 4, "f_icon", "0x868CA0")     # glyph centered on the track
+        st = lbl(vol_g, 14, vy - 2, "f_icon", "0x868CA0")     # glyph vertically centered on the track
         st += vol_slider_yaml(sld, 48, vy + 6, w - 62, 55, e)
         return st
 
@@ -454,8 +454,8 @@ def c_media(card, x, y, w, h, base):
     inner += lbl(subtxt, 82, 18, "f_small", "0x2ED5B8", width=w - 96, long="dot", height=16)
     inner += lbl("Midnight City", 82, 36, "f_title", "0xF3F5F8", wid=tid, width=w - 96, long="dot", height=28)
     inner += lbl("M83", 82, 68, "f_small", "0x868CA0")
-    inner += transport_center(h - 96)
-    inner += vol_slider(h - 34)
+    inner += transport_center(h - 108)
+    inner += vol_slider(h - 40)
     return [card_obj(x, y, w, h, inner)], [], ts
 
 
@@ -598,21 +598,27 @@ def c_group(card, x, y, w, h, base):
         pad, gap, top = 14, 12, 58
         bw = (w - pad * 2 - (cols - 1) * gap) // cols
         bh = (h - top - pad - (rows - 1) * gap) // rows
+        ts = []
         for i in range(cap):
             e = ents[i] if i < len(ents) else None
             on = (e is not None) and (i % 2 == 0)
             cx = pad + (i % cols) * (bw + gap)
             cy = top + (i // cols) * (bh + gap)
-            glyph = "\\U000F0335" if on else "\\U000F0336"
             gcol = "0xF2B84B" if on else "0x6B7280"
             bg = "0x211B0A" if on else "0x0F1117"
+            tileid, iconid = "%s_lt%d" % (base, i), "%s_li%d" % (base, i)
             click = (", clickable: true, on_click: [%s]" % ha("homeassistant.toggle", e)) if e else ""
-            inner += ("              - obj: { x: %d, y: %d, width: %d, height: %d, bg_color: %s, "
+            inner += ("              - obj: { id: %s, x: %d, y: %d, width: %d, height: %d, bg_color: %s, "
                       "border_width: 0, radius: 14, pad_all: 0, scrollable: false%s, widgets: ["
-                      "label: { text: \"%s\", align: center, y: -14, text_font: f_icon, text_color: %s }, "
+                      "label: { id: %s, text: \"\\U000F0335\", align: center, y: -14, text_font: f_icon, text_color: %s }, "
                       "label: { text: %s, align: bottom_mid, y: -10, width: %d, long_mode: dot, text_align: center, text_font: f_small, text_color: 0xC2C7D2 }] }\n"
-                      % (cx, cy, bw, bh, bg, click, glyph, gcol, esc(_ename(e, "Light")), bw - 12))
-        return [card_obj(x, y, w, h, inner)], [], []
+                      % (tileid, cx, cy, bw, bh, bg, click, iconid, gcol, esc(_ename(e, "Light")), bw - 12))
+            if e:                                          # live on/off state -> recolor tile + bulb
+                ts.append("  - platform: homeassistant\n    id: ha_%s\n    entity_id: %s\n    on_value:\n"
+                          "      - lvgl.widget.update: { id: %s, bg_color: !lambda 'return x == \"on\" ? lv_color_hex(0x211B0A) : lv_color_hex(0x0F1117);' }\n"
+                          "      - lvgl.label.update: { id: %s, text_color: !lambda 'return x == \"on\" ? lv_color_hex(0xF2B84B) : lv_color_hex(0x6B7280);' }\n"
+                          % (iconid, e, tileid, iconid))
+        return [card_obj(x, y, w, h, inner)], [], ts
     # group (status): domain icon (left) + value + name tiles
     cols = 2
     rows = max(1, card["h"])
@@ -984,9 +990,13 @@ def c_playlist(card, x, y, w, h, base):
     e = card.get("entity", "")
     pl = card.get("pl") or card.get("name", "Playlist")
     acc = "0x2ED5B8" if card["ck"].startswith("sonos") else "0x1DB954"   # Sonos teal / Spotify green
-    inner = ic(card["ck"], color=acc) + lbl(pl, 50, 16, "f_title", width=w - 64)
-    inner += lbl("Tap to play", 14, -12, "f_small", "0x868CA0", align="bottom_left")
     on = ("homeassistant.action: { action: media_player.media_play, data: { entity_id: %s } }" % e) if e else None
+    if card["w"] == 1 and card["h"] == 1:                 # compact tile: centered icon + small label
+        inner = lbl(CARD_ICON.get(card["ck"], "\\U000F075A"), 0, 16, "f_icon", acc, align="top_mid")
+        inner += lbl(pl, 0, -12, "f_small", "0xF3F5F8", align="bottom_mid", width=w - 16, text_align="center", long="dot", height=16)
+        return [card_obj(x, y, w, h, inner, on)], [], []
+    inner = ic(card["ck"], color=acc) + lbl(pl, 50, 16, "f_title", width=w - 64, height=26, long="dot")
+    inner += lbl("Tap to play", 14, -12, "f_small", "0x868CA0", align="bottom_left")
     return [card_obj(x, y, w, h, inner, on)], [], []
 
 
@@ -1031,8 +1041,8 @@ def c_shortcuts(card, x, y, w, h, pagemap, base):
                 "                  x: %d\n                  y: %d\n                  width: %d\n                  height: %d\n"
                 "                  bg_color: 0x161B24\n                  radius: 14\n                  pad_all: 0\n                  scrollable: false\n"
                 "                  widgets:\n"
-                "                    - label: { text: \"%s\", align: center, y: -16, text_font: f_icon, text_color: 0x2ED5B8 }\n"
-                "                    - label: { text: %s, align: center, y: 22, width: %d, text_align: center, text_font: f_body, text_color: 0xEEF0F6 }\n"
+                "                    - label: { text: \"%s\", align: center, y: -13, text_font: f_icon, text_color: 0x2ED5B8 }\n"
+                "                    - label: { text: %s, align: center, y: 17, width: %d, text_align: center, text_font: f_body, text_color: 0xF3F5F8 }\n"
                 "                  on_click: [%s]\n"
                 % (cx, cy, bw, bh, glyph, esc(s.get("label", "Open")), bw - 10, act))
         else:
@@ -1050,14 +1060,16 @@ def c_volume(card, x, y, w, h, base):
     sld = base + "_vol"
     inner = ic(card["ck"], color="0x2ED5B8")
     inner += title(card.get("name", "Volume"), w)
-    if e:
-        inner += ("              - slider:\n                  id: %s\n                  x: 14\n                  y: %d\n                  width: %d\n"
-                  "                  min_value: 0\n                  max_value: 100\n                  value: 40\n"
-                  "                  on_release:\n                    - homeassistant.action:\n                        action: media_player.volume_set\n"
-                  "                        data: { entity_id: %s, volume_level: !lambda 'char b[8]; snprintf(b, sizeof(b), \"%%.2f\", lv_slider_get_value(id(%s)) / 100.0); return std::string(b);' }\n"
-                  % (sld, h // 2 - 4, w - 28, e, sld))
     mute = ha("media_player.volume_mute", e, 'is_volume_muted: "true"') if e else "lvgl.page.show: page_home"
-    inner += btn((w - 120) // 2, h - 58, 120, 44, "\\U000F075F", mute, font="f_icon")
+    if card["h"] == 1:                                    # compact 2x1: slider + mute side by side
+        sy = h - 32
+        if e:
+            inner += vol_slider_yaml(sld, 14, sy, w - 70, 40, e)
+        inner += btn(w - 52, sy - 10, 40, 34, "\\U000F075F", mute, font="f_icon", bg="0x161B24")
+    else:
+        if e:
+            inner += vol_slider_yaml(sld, 14, h // 2 - 4, w - 28, 40, e)
+        inner += btn((w - 120) // 2, h - 58, 120, 44, "\\U000F075F", mute, font="f_icon")
     s = []
     if e:
         s.append("  - platform: homeassistant\n    id: ha_%s_v\n    entity_id: %s\n    attribute: volume_level\n    on_value:\n"
@@ -1267,18 +1279,20 @@ def gen_nav(layout, pagemap):
     for i, n in enumerate(nav):
         g = NAV_GLYPH.get(n.get("icon", ""), FALLBACK_GLYPH)
         pid = pagemap.get(n.get("page", ""), "page_home")
-        active = (i == 0)
+        nid = slug(n.get("id", str(i)))
+        # all default inactive; the per-page on_load highlights the current one
         out += (
             "            - button:\n                id: nav_%s\n                align: top_mid\n                y: %d\n"
-            "                width: 58\n                height: 58\n                radius: 14\n                bg_color: 0x2ED5B8\n                bg_opa: %s\n"
-            "                widgets: [label: { text: \"%s\", align: center, text_font: f_icon, text_color: %s }]\n"
+            "                width: 58\n                height: 58\n                radius: 14\n                bg_color: 0x2ED5B8\n                bg_opa: 0%%\n"
+            "                widgets: [label: { id: nav_%s_i, text: \"%s\", align: center, text_font: f_icon, text_color: 0x5D6470 }]\n"
             "                on_click: [lvgl.page.show: %s]\n"
-            % (slug(n.get("id", str(i))), 14 + i * 68, ("100%" if active else "0%"), g, ("0x06231D" if active else "0x5D6470"), pid))
-    # Settings (always present, inactive)
+            % (nid, 14 + i * 68, nid, g, pid))
+    # Settings (always present) -> settings page
     out += (
         "            - button:\n                id: nav_settings\n                align: bottom_mid\n                y: -14\n"
         "                width: 58\n                height: 58\n                radius: 14\n                bg_color: 0x2ED5B8\n                bg_opa: 0%\n"
-        "                widgets: [label: { text: \"\\U000F0493\", align: center, text_font: f_icon, text_color: 0x5D6470 }]\n")
+        "                widgets: [label: { id: nav_settings_i, text: \"\\U000F0493\", align: center, text_font: f_icon, text_color: 0x5D6470 }]\n"
+        "                on_click: [lvgl.page.show: page_settings]\n")
     return out
 
 
@@ -1324,7 +1338,7 @@ def gen_header(key, page, layout):
     for i, item in enumerate((hdr.get("right") or [])[:4]):
         g, t, col = HCHIP.get(item, ("", item, "0x868CA0"))
         base_x = -(20 + i * 126)
-        icon_w = ("              - label: { text: \"%s\", text_font: f_iconsm, text_color: %s }\n" % (g, col)) if g else ""
+        icon_w = ("              - label: { text: \"%s\", text_font: f_iconsm, text_color: %s, pad_top: 4 }\n" % (g, col)) if g else ""
         out += (
             "        - obj:\n"
             "            align: top_right\n            x: %d\n            y: 18\n            width: 118\n            height: 40\n"
@@ -1335,6 +1349,40 @@ def gen_header(key, page, layout):
             "              - label: { text: %s, text_font: f_body, text_color: 0xF3F5F8 }\n"
             % (base_x, icon_w, esc(t)))
     return out
+
+
+def _nav_onload(layout, active):
+    navids = [slug(n.get("id", "")) for n in layout.get("nav", [])] + ["settings"]
+    return "      on_load:\n" + "".join(
+        ("        - lvgl.widget.update: { id: nav_%s, bg_opa: %s }\n"
+         "        - lvgl.label.update: { id: nav_%s_i, text_color: %s }\n")
+        % (nid, ("100%" if nid == active else "0%"), nid, ("0x06231D" if nid == active else "0x5D6470"))
+        for nid in navids)
+
+
+def gen_settings_page(layout):
+    """A real Settings page: display brightness (display_backlight), restart, info."""
+    onload = _nav_onload(layout, "settings")
+    w = "        - image: { src: img_aurora_bg, x: 0, y: 0 }\n"
+    w += "        - label: { text: \"Settings\", x: 94, y: 18, text_font: f_h1, text_color: 0xF3F5F8 }\n"
+    w += "        - label: { text: \"AURORA PANEL \\u00B7 10.0.0.174\", x: 94, y: 58, text_font: f_micro, text_color: 0x868CA0 }\n"
+    bri = lbl("DISPLAY", 20, 18, "f_micro", "0x868CA0")
+    bri += lbl("Brightness", 20, 38, "f_title", "0xF3F5F8", height=26)
+    bri += ("              - slider:\n                  id: set_bri\n                  x: 20\n                  y: 100\n                  width: 408\n"
+            "                  bg_color: 0x23262F\n                  min_value: 5\n                  max_value: 100\n                  value: 80\n"
+            "                  indicator:\n                    bg_color: 0x2ED5B8\n                  knob:\n                    bg_color: 0x2ED5B8\n"
+            "                  on_release:\n                    - light.turn_on: { id: display_backlight, brightness: !lambda 'return lv_slider_get_value(id(set_bri)) / 100.0f;' }\n")
+    w += card_obj(94, 96, 448, 150, bri)
+    w += ("        - button:\n            x: 94\n            y: 262\n            width: 448\n            height: 64\n"
+          "            bg_color: 0x2a1414\n            radius: 14\n            scrollable: false\n"
+          "            widgets: [label: { text: \"Restart Panel\", align: center, text_font: f_body, text_color: 0xF2685A }]\n"
+          "            on_click: [button.press: btn_restart_panel]\n")
+    info = lbl("SYSTEM", 20, 18, "f_micro", "0x868CA0")
+    info += lbl("ESPHome \\u00B7 ESP32-P4", 20, 40, "f_body", "0xC2C7D2")
+    info += lbl("Guition JC1060P470", 20, 66, "f_small", "0x868CA0")
+    info += lbl("Aurora \\u00B7 web UI on :80", 20, 92, "f_small", "0x868CA0")
+    w += card_obj(560, 96, 370, 230, info)
+    return "    - id: page_settings\n      bg_color: 0x0A0B0F\n      scrollable: false\n%s      widgets:\n%s" % (onload, w)
 
 
 def gen_pages(layout, pagemap):
@@ -1357,13 +1405,11 @@ def gen_pages(layout, pagemap):
             if si < len(subs) - 1:
                 nxt = "%s_%d" % (pagemap[key], si + 1)
                 widgets += btn(884, 540, 110, 44, "Next \\U000F0142", "lvgl.page.show: %s" % nxt, font="f_body")
-            navids = [slug(n.get("id", "")) for n in layout.get("nav", [])]
             active = next((slug(n.get("id", "")) for n in layout.get("nav", []) if n.get("page") == key), None)
-            onload = "      on_load:\n" + "".join(
-                "        - lvgl.widget.update: { id: nav_%s, bg_color: %s }\n"
-                % (nid, "0x2ED5B8" if nid == active else "0x10121A") for nid in navids)
+            onload = _nav_onload(layout, active)
             pages_yaml += (
-                "    - id: %s\n      bg_color: 0x0A0B0F\n%s      widgets:\n%s" % (pid, onload, widgets))
+                "    - id: %s\n      bg_color: 0x0A0B0F\n      scrollable: false\n%s      widgets:\n%s" % (pid, onload, widgets))
+    pages_yaml += gen_settings_page(layout)
     return pages_yaml, sens, txt
 
 
@@ -1486,6 +1532,9 @@ def host_assemble(layout):
     keep = scrub_lvgl_actions(keep)
     nav, pages, _sens, _txt, _ = build_lvgl(layout)
     pages = re.sub(r"(?m)^\s*- image: \{ src: img_aurora_bg.*\n", "", pages)
+    # host build has no display_backlight light / restart button — stub those local actions
+    pages = re.sub(r"light\.turn_on: \{ id: display_backlight[^}]*\}", "logger.log: emul", pages)
+    pages = pages.replace("button.press: btn_restart_panel", "logger.log: emul")
     return (
         "# AUTO-GENERATED host/SDL emulator build of layout.json — DO NOT EDIT.\n"
         "esphome:\n  name: aurora-emul\n\n"
