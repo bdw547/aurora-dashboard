@@ -156,7 +156,7 @@ def ic(ck, x=14, y=14, color="0x2ED5B8"):
 def c_toggle(card, x, y, w, h, base):
     e = card.get("entity", "")
     sid = base + "_st"
-    inner = ic(card["ck"], color="0xF2B84B")
+    inner = ic(card["ck"], color="0x2ED5B8")
     inner += title(card.get("name", "Switch"), w, x=14, y=48)
     inner += lbl("--", 14, -14, "f_small", "0x2ED5B8", wid=sid, align="bottom_left")
     on = ha("homeassistant.toggle", e) if e else None
@@ -164,7 +164,9 @@ def c_toggle(card, x, y, w, h, base):
     if e:
         ts.append(
             "  - platform: homeassistant\n    id: ha_%s\n    entity_id: %s\n    on_value:\n"
-            "      - lvgl.label.update: { id: %s, text: !lambda 'return x == \"on\" ? std::string(\"On\") : std::string(\"Off\");' }\n"
+            "      - lvgl.label.update:\n          id: %s\n"
+            "          text: !lambda 'return x == \"on\" ? std::string(\"On\") : std::string(\"Off\");'\n"
+            "          text_color: !lambda 'return x == \"on\" ? lv_color_hex(0x2ED5B8) : lv_color_hex(0x868CA0);'\n"
             % (sid, e, sid))
     return [card_obj(x, y, w, h, inner, on)], [], ts
 
@@ -211,11 +213,29 @@ def c_light(card, x, y, w, h, base):
     return [card_obj(x, y, w, h, inner, None)], s, []
 
 
+SENSOR_ICON_COLOR = {"temp": "0xF2685A", "humid": "0x4FA8F5", "illum": "0xF2B84B",
+                     "lux": "0xF2B84B", "power": "0xF2B84B", "watt": "0xF2B84B",
+                     "energy": "0xF2B84B", "batt": "0x2ED5B8"}
+
+
+def _sensor_color(card):
+    ck = card.get("ck", "")
+    if ck in ("person", "binary"):
+        return "0x4FA8F5"
+    if ck == "alarm":
+        return "0xF2685A"
+    key = (card.get("device_class") or card.get("entity") or card.get("name") or "").lower()
+    for k, c in SENSOR_ICON_COLOR.items():
+        if k in key:
+            return c
+    return "0xF2685A"
+
+
 def c_sensor(card, x, y, w, h, base):
     e = card.get("entity", "")
     vid = base + "_v"
-    inner = ic(card["ck"], color="0xF2685A")
-    inner += lbl("--", 14, 48, "f_head", "0xF3F5F8", wid=vid)
+    inner = ic(card["ck"], color=_sensor_color(card))          # icon top, per-domain color
+    inner += lbl("--", 14, -32, "f_title", "0xF3F5F8", wid=vid, align="bottom_left")  # value (bottom stack)
     inner += lbl(card.get("name", "Sensor"), 14, -12, "f_small", "0x868CA0", align="bottom_left")
     ts = []
     if e:
@@ -444,13 +464,14 @@ def c_fan(card, x, y, w, h, base):
         inner += lbl(card.get("name", "Fan"), 0, 24, "f_body", col, align="center", width=w - 24, text_align="center", long="dot")
         return [card_obj(x, y, w, h, inner, act, bg=("0x0F3D34" if on else None))], [], []
     inner = ic(card["ck"], color="0x2ED5B8")
-    inner += title(card.get("name", "Fan"), w, x=14, y=48)   # larger: Off / Med / High segments
-    n = 3; pad = 14; sw2 = (w - pad * 2 - (n - 1) * 8) // n; sy = h - 58
-    for i, s in enumerate(["Off", "Med", "High"]):
-        sel = (i == 1)
+    inner += title(card.get("name", "Fan"), w, x=14, y=48)   # larger: Off / Low / Med / High segments
+    speeds = ["Off", "Low", "Med", "High"]
+    n = len(speeds); pad = 14; sw2 = (w - pad * 2 - (n - 1) * 8) // n; sy = h - 58
+    for i, s in enumerate(speeds):
+        sel = (i == 2)                                       # demo: Med selected
         act = ha("fan.toggle", e) if e else "lvgl.page.show: page_home"
-        inner += btn(pad + i * (sw2 + 8), sy, sw2, 46, s, act,
-                     bg=("0x123F30" if sel else "0x161B24"), color=("0x2ED5B8" if sel else "0xC2C7D2"))
+        inner += btn(pad + i * (sw2 + 8), sy, sw2, 46, s, act, font="f_small",
+                     bg=("0x2ED5B8" if sel else "0x0F1117"), color=("0x06231D" if sel else "0xC2C7D2"))
     return [card_obj(x, y, w, h, inner)], [], []
 
 
@@ -496,7 +517,9 @@ def c_lock(card, x, y, w, h, base):
     ts = []
     if e:
         ts.append("  - platform: homeassistant\n    id: ha_%s\n    entity_id: %s\n    on_value:\n"
-                  "      - lvgl.label.update: { id: %s, text: !lambda 'return x == \"locked\" ? std::string(\"Locked\") : std::string(\"Unlocked\");' }\n" % (sid, e, sid))
+                  "      - lvgl.label.update:\n          id: %s\n"
+                  "          text: !lambda 'return x == \"locked\" ? std::string(\"Locked\") : std::string(\"Unlocked\");'\n"
+                  "          text_color: !lambda 'return x == \"locked\" ? lv_color_hex(0x2ED5B8) : lv_color_hex(0xF2685A);'\n" % (sid, e, sid))
     return [card_obj(x, y, w, h, inner, on)], [], ts
 
 
@@ -852,19 +875,14 @@ def c_tvremote(card, x, y, w, h, base):
     dcy = (band_top + band_bot) // 2
     dcx = mx + mw // 2
     okA = _wbtn(e, "ENTER")
-    R = min(118, (band_bot - band_top) // 2 - 4)      # d-pad circle radius (adaptive)
-    ok = int(R * 0.74)
-    s = int(R * 0.52)
-    off = R - s // 2 - 2                                # push chevrons near the rim (was -8: floated inside)
-    afont = "f_bigicon" if R >= 90 else "f_icon"       # big chevrons on large cards
-    inner += ("              - obj: { x: %d, y: %d, width: %d, height: %d, bg_color: 0x10141C, "
-              "border_width: 0, radius: %d, pad_all: 0, scrollable: false }\n"
-              % (dcx - R, dcy - R, 2 * R, 2 * R, R))
-    inner += _tvbtn(dcx - s // 2, dcy - off - s // 2, s, s, "\\U000F0143", e, "UP", bg="0x10141C", font=afont)
-    inner += _tvbtn(dcx - off - s // 2, dcy - s // 2, s, s, "\\U000F0141", e, "LEFT", bg="0x10141C", font=afont)
-    inner += btn(dcx - ok // 2, dcy - ok // 2, ok, ok, "OK", okA, bg="0x2ED5B8", color="0x06231D", radius=ok // 2, font="f_title")
-    inner += _tvbtn(dcx + off - s // 2, dcy - s // 2, s, s, "\\U000F0142", e, "RIGHT", bg="0x10141C", font=afont)
-    inner += _tvbtn(dcx - s // 2, dcy + off - s // 2, s, s, "\\U000F0140", e, "DOWN", bg="0x10141C", font=afont)
+    # No disc — borderless chevrons around a wide teal OK pill (tvremote.png)
+    sw, sh, okw, okh = 84, 68, 176, 66
+    vgap = (band_bot - band_top) // 2 - sh // 2 - 6
+    inner += _tvbtn(dcx - sw // 2, dcy - vgap - sh // 2, sw, sh, "\\U000F0143", e, "UP", bg="0x14161C", font="f_bigicon")
+    inner += _tvbtn(dcx - okw // 2 - 14 - sw, dcy - sh // 2, sw, sh, "\\U000F0141", e, "LEFT", bg="0x14161C", font="f_bigicon")
+    inner += btn(dcx - okw // 2, dcy - okh // 2, okw, okh, "OK", okA, bg="0x2ED5B8", color="0x06231D", radius=okh // 2, font="f_title")
+    inner += _tvbtn(dcx + okw // 2 + 14, dcy - sh // 2, sw, sh, "\\U000F0142", e, "RIGHT", bg="0x14161C", font="f_bigicon")
+    inner += _tvbtn(dcx - sw // 2, dcy + vgap - sh // 2, sw, sh, "\\U000F0140", e, "DOWN", bg="0x14161C", font="f_bigicon")
     # VOL column (left of d-pad)
     vx = mx + 12
     inner += _tvbtn(vx, dcy - 72, 76, 60, "\\U000F075D", e, "VOLUMEUP")
@@ -899,8 +917,8 @@ def c_tvremote(card, x, y, w, h, base):
         "                  bg_color: 0x0E1524\n                  border_color: 0x4FA8F5\n                  border_width: 2\n                  radius: 18\n"
         "                  hidden: true\n                  pad_all: 0\n                  scrollable: false\n"
         "                  widgets:\n"
-        "                    - obj: { align: center, width: 104, height: %d, bg_color: 0x10141C, border_color: 0x23262F, border_width: 1, radius: 52, pad_all: 0, scrollable: false }\n"
-        "                    - label: { text: \"SCROLL\", align: center, text_font: f_small, text_color: 0x868CA0 }\n"
+        "                    - obj: { align: center, width: 96, height: %d, bg_color: 0x0F1117, border_color: 0x23262F, border_width: 1, radius: 48, pad_all: 0, scrollable: false }\n"
+        "                    - label: { text: \"SCROLL\", align: center, text_font: f_micro, text_color: 0x868CA0 }\n"
         "                    - button:\n"
         "                        align: top_mid\n                        y: 14\n                        width: 84\n                        height: 62\n"
         "                        bg_color: 0x10141C\n                        radius: 14\n                        pad_all: 0\n                        scrollable: false\n"
