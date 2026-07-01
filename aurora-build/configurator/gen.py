@@ -295,19 +295,20 @@ def c_climate(card, x, y, w, h, base):
     inner += lbl("now 71\\u00B0 \\u00B7 41% RH", 50, 44, "f_small", "0x868CA0")
     heat_vid, cool_vid = base + "_hi", base + "_lo"
     s = []
-    if e:
+    if e:                                                # current temp label (tid) exists in BOTH branches
         s.append("  - platform: homeassistant\n    id: ha_%s\n    entity_id: %s\n    attribute: current_temperature\n    on_value:\n"
                  "      - lvgl.label.update: { id: %s, text: !lambda 'return std::to_string((int)x) + \"\\u00B0\";' }\n"
                  % (tid, e, tid))
+    if w < 380 or h < 240:                               # compact fallback: single big temp only (no setpoint boxes)
+        inner += lbl("71\\u00B0", 0, 16, "f_display", "0xF3F5F8", wid=tid, align="center")
+        return [card_obj(x, y, w, h, inner)], s, []
+    if e:                                                # setpoint readbacks only where HEAT/COOL boxes (hi/lo) exist
         s.append("  - platform: homeassistant\n    id: ha_%s\n    entity_id: %s\n    attribute: target_temp_low\n    on_value:\n"
                  "      - lvgl.label.update: { id: %s, text: !lambda 'return std::to_string((int)x) + \"\\u00B0\";' }\n"
                  % (heat_vid, e, heat_vid))
         s.append("  - platform: homeassistant\n    id: ha_%s\n    entity_id: %s\n    attribute: target_temp_high\n    on_value:\n"
                  "      - lvgl.label.update: { id: %s, text: !lambda 'return std::to_string((int)x) + \"\\u00B0\";' }\n"
                  % (cool_vid, e, cool_vid))
-    if w < 380 or h < 240:                               # compact fallback
-        inner += lbl("71\\u00B0", 0, 16, "f_display", "0xF3F5F8", wid=tid, align="center")
-        return [card_obj(x, y, w, h, inner)], s, []
     mode_y = h - 62
     box_x = int(w * 0.40)
     box_w = w - box_x - 16
