@@ -639,8 +639,13 @@ def _src(e, src):
             % (e, esc(src))) if e else "lvgl.page.show: page_home"
 
 
-TV_APPS = [("Netflix", "0xE50914", "N"), ("YouTube", "0xFF0000", "Y"),
-           ("Disney+", "0x113CCF", "D"), ("Spotify", "0x1DB954", "S"), ("Plex", "0xE5A00D", "P")]
+APP_CATALOG = {
+    "Netflix": ("0xE50914", "N"), "YouTube": ("0xFF0000", "Y"), "Disney+": ("0x113CCF", "D"),
+    "Spotify": ("0x1DB954", "S"), "Plex": ("0xE5A00D", "P"), "Hulu": ("0x1CE783", "H"),
+    "Prime Video": ("0x00A8E1", "P"), "Max": ("0x7B2BF9", "M"), "Apple TV": ("0x3A3A3C", "A"),
+    "Peacock": ("0x05AC3F", "P"), "Paramount+": ("0x0064FF", "P"),
+}
+TV_APPS_DEFAULT = ["Netflix", "YouTube", "Disney+", "Spotify", "Plex"]
 TV_SOURCES = ["HDMI 1", "Apple TV", "Roku", "Cable"]
 
 
@@ -672,8 +677,11 @@ def c_tvremote(card, x, y, w, h, base):
     if sidebar:
         inner += lbl("APPS \\u00B7 PRE-BAKED", 16, 12, "f_small", "0x5D6470")
         ay = 40
-        ah = (h - ay - 14 - 4 * 8) // 5
-        for i, (nm, col, ltr) in enumerate(TV_APPS):
+        apps = (card.get("apps") or TV_APPS_DEFAULT)[:5]
+        na = max(1, len(apps))
+        ah = (h - ay - 14 - (na - 1) * 8) // na
+        for i, nm in enumerate(apps):
+            col, ltr = APP_CATALOG.get(nm, ("0x555555", (nm[:1] or "?").upper()))
             ty = ay + i * (ah + 8)
             sel = (i == 0)
             inner += (
