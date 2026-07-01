@@ -596,11 +596,77 @@ def c_lock(card, x, y, w, h, base):
     return [card_obj(x, y, w, h, inner, on)], [], ts
 
 
+# Full-forecast demo data (pre-baked; glyphs confirmed in f_wxicon/f_icon)
+WX_HOURLY = [("Now", "\\U000F0594", "72"), ("10P", "\\U000F0594", "71"), ("11P", "\\U000F0590", "70"),
+             ("12A", "\\U000F0590", "70"), ("1A", "\\U000F0594", "69"), ("2A", "\\U000F0594", "69"), ("3A", "\\U000F0594", "68")]
+WX_DAILY = [("Today", "\\U000F0599", "74", "96"), ("Sat", "\\U000F0590", "75", "95"), ("Sun", "\\U000F0599", "76", "97"),
+            ("Mon", "\\U000F0597", "72", "88"), ("Tue", "\\U000F0596", "71", "85"), ("Wed", "\\U000F0599", "73", "93")]
+WX_STATS = [("HUMIDITY", "57%", "0x4FA8F5"), ("WIND", "6 mph", "0xF3F5F8"), ("UV INDEX", "0 Low", "0xF3F5F8"),
+            ("PRESSURE", "30.1", "0xF3F5F8"), ("SUNRISE", "6:32a", "0xF2B84B"), ("SUNSET", "8:37p", "0xF2685A")]
+
+
+def _wx_temp_readback(base, e, tid):
+    return ("  - platform: homeassistant\n    id: ha_%s_wt\n    entity_id: %s\n    attribute: temperature\n    on_value:\n"
+            "      - lvgl.label.update: { id: %s, text: !lambda 'char b[12]; snprintf(b, sizeof(b), \"%%.0f\\u00B0\", x); return std::string(b);' }\n"
+            % (base, e, tid))
+
+
 def c_weather(card, x, y, w, h, base):
-    inner = "              - label: { text: \"\\U000F0599\", x: 14, y: 14, text_font: f_wxicon, text_color: 0xF2B84B }\n"
-    inner += lbl("72\\u00B0", -16, 20, "f_display", "0xF3F5F8", align="top_right")
-    inner += lbl("Sunny", 14, -12, "f_body", "0x2ED5B8", align="bottom_left")
-    return [card_obj(x, y, w, h, inner)], [], []
+    e = card.get("entity", "")
+    tid, cid = base + "_t", base + "_c"
+    if w < 620 or h < 400:                               # compact: icon + temp + condition
+        inner = "              - label: { text: \"\\U000F0599\", x: 14, y: 14, text_font: f_wxicon, text_color: 0xF2B84B }\n"
+        inner += lbl("72\\u00B0", -16, 20, "f_display", "0xF3F5F8", wid=tid, align="top_right")
+        inner += lbl("Sunny", 14, -12, "f_body", "0x2ED5B8", wid=cid, align="bottom_left")
+        return [card_obj(x, y, w, h, inner)], ([_wx_temp_readback(base, e, tid)] if e else []), []
+    # large: full forecast (hero + hourly + daily + stats), values pre-baked
+    pad = 14
+    hh = 128
+    inner = ("              - obj: { x: %d, y: %d, width: %d, height: %d, bg_color: 0x141F38, bg_grad_color: 0x0E1524, bg_grad_dir: VER, border_width: 0, radius: 16, pad_all: 0, scrollable: false }\n" % (pad, pad, w - 2 * pad, hh))
+    inner += "              - label: { text: \"\\U000F0594\", x: %d, y: %d, text_font: f_wxicon, text_color: 0x8FA6FF }\n" % (pad + 26, pad + 26)
+    inner += lbl("72\\u00B0", pad + 150, pad + 10, "f_display", "0xF3F5F8", wid=tid)
+    inner += lbl("Clear \\u00B7 Feels like 73\\u00B0", pad + 152, pad + 72, "f_body", "0xC2C7D2", wid=cid, width=340, long="dot", height=20)
+    inner += lbl("PRE-BAKED SKY", -(pad + 4), pad + 14, "f_micro", "0x5D6470", align="top_right")
+    inner += lbl("Home", -(pad + 4), pad + 34, "f_title", "0xF3F5F8", align="top_right")
+    inner += lbl("Friday \\u00B7 9:41 PM", -(pad + 4), pad + 70, "f_small", "0x868CA0", align="top_right")
+    inner += lbl("High 96\\u00B0 \\u00B7 Low 74\\u00B0", -(pad + 4), pad + 92, "f_small", "0x868CA0", align="top_right")
+    hy, ht, gap = pad + hh + 12, 116, 10
+    n = len(WX_HOURLY)
+    tw = (w - 2 * pad - (n - 1) * gap) // n
+    for i, (hl, g, tp) in enumerate(WX_HOURLY):
+        hx = pad + i * (tw + gap)
+        bg = "0x11201C" if i == 0 else "0x14161C"
+        inner += ("              - obj: { x: %d, y: %d, width: %d, height: %d, bg_color: %s, border_width: 0, radius: 12, pad_all: 0, scrollable: false, widgets: ["
+                  "label: { text: %s, align: top_mid, y: 12, text_font: f_small, text_color: 0x868CA0 }, "
+                  "label: { text: \"%s\", align: center, text_font: f_icon, text_color: 0x8FA6FF }, "
+                  "label: { text: \"%s\\u00B0\", align: bottom_mid, y: -14, text_font: f_body, text_color: 0xF3F5F8 }] }\n"
+                  % (hx, hy, tw, ht, bg, esc(hl), g, tp))
+    dy = hy + ht + 14
+    dh = h - dy - pad
+    dax = int((w - 2 * pad) * 0.60) + pad                # right edge of the daily column
+    rn = len(WX_DAILY)
+    rh = dh // rn
+    for i, (dn, g, lo, hi) in enumerate(WX_DAILY):
+        ry = dy + i * rh
+        ly = ry + (rh - 18) // 2
+        inner += lbl(dn, pad, ly, "f_body", "0xF3F5F8", width=58)
+        inner += "              - label: { text: \"%s\", x: %d, y: %d, text_font: f_icon, text_color: 0xF2B84B }\n" % (g, pad + 64, ry + (rh - 30) // 2)
+        inner += lbl(lo + "\\u00B0", pad + 106, ly, "f_body", "0x868CA0", width=42)
+        barx = pad + 152
+        inner += "              - obj: { x: %d, y: %d, width: %d, height: 8, bg_color: 0x4FA8F5, bg_grad_color: 0xF2B84B, bg_grad_dir: HOR, border_width: 0, radius: 4, pad_all: 0, scrollable: false }\n" % (barx, ry + (rh - 8) // 2, dax - 48 - barx)
+        inner += lbl(hi + "\\u00B0", dax - 44, ly, "f_body", "0xF3F5F8", width=42)
+    inner += "              - obj: { x: %d, y: %d, width: 1, height: %d, bg_color: 0x23262F, border_width: 0, pad_all: 0, scrollable: false }\n" % (dax + 8, dy, dh - 6)
+    sx0, scols, sgap, srows = dax + 24, 2, 10, 3
+    sw = (w - pad - sx0 - (scols - 1) * sgap) // scols
+    srh = (dh - (srows - 1) * sgap) // srows
+    for i, (lt, val, col) in enumerate(WX_STATS):
+        cx = sx0 + (i % scols) * (sw + sgap)
+        cy = dy + (i // scols) * (srh + sgap)
+        inner += ("              - obj: { x: %d, y: %d, width: %d, height: %d, bg_color: 0x14161C, border_width: 0, radius: 12, pad_all: 0, scrollable: false, widgets: ["
+                  "label: { text: %s, x: 14, y: 14, text_font: f_micro, text_color: 0x868CA0 }, "
+                  "label: { text: %s, x: 14, y: 32, text_font: f_title, text_color: %s }] }\n"
+                  % (cx, cy, sw, srh, esc(lt), esc(val), col))
+    return [card_obj(x, y, w, h, inner)], ([_wx_temp_readback(base, e, tid)] if e else []), []
 
 
 def c_camera(card, x, y, w, h, base):
