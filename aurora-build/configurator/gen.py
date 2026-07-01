@@ -552,7 +552,8 @@ def c_btngrid(card, x, y, w, h, base):
 def _tvbtn(bx, by, w_, h_, glyph, e, button, **kw):
     act = ("homeassistant.action: { action: webostv.button, data: { entity_id: %s, button: %s } }"
            % (e, button)) if e else "lvgl.page.show: page_home"
-    return btn(bx, by, w_, h_, glyph, act, font="f_icon", **kw)
+    kw.setdefault("font", "f_icon")
+    return btn(bx, by, w_, h_, glyph, act, **kw)
 
 
 def _dpad(inner, e, w, h):
@@ -699,32 +700,37 @@ def c_tvremote(card, x, y, w, h, base):
     band_top, band_bot = 124, h - 86
     dcy = (band_top + band_bot) // 2
     dcx = mx + mw // 2
-    s = 50
     okA = _wbtn(e, "ENTER")
-    inner += ("              - obj: { x: %d, y: %d, width: 220, height: 220, bg_color: 0x10141C, "
-              "border_width: 0, radius: 110, pad_all: 0, scrollable: false }\n" % (dcx - 110, dcy - 110))
-    inner += _tvbtn(dcx - 25, dcy - 88, s, s, "\\U000F0143", e, "UP", bg="0x10141C")
-    inner += _tvbtn(dcx - 88, dcy - 25, s, s, "\\U000F0141", e, "LEFT", bg="0x10141C")
-    inner += btn(dcx - 40, dcy - 40, 80, 80, "OK", okA, bg="0x2ED5B8", color="0x06231D", radius=40)
-    inner += _tvbtn(dcx + 38, dcy - 25, s, s, "\\U000F0142", e, "RIGHT", bg="0x10141C")
-    inner += _tvbtn(dcx - 25, dcy + 38, s, s, "\\U000F0140", e, "DOWN", bg="0x10141C")
+    R = min(132, (band_bot - band_top) // 2 - 4)      # d-pad circle radius (adaptive)
+    ok = int(R * 0.74)
+    s = int(R * 0.52)
+    off = R - s // 2 - 8
+    afont = "f_bigicon" if R >= 90 else "f_icon"       # big chevrons on large cards
+    inner += ("              - obj: { x: %d, y: %d, width: %d, height: %d, bg_color: 0x10141C, "
+              "border_width: 0, radius: %d, pad_all: 0, scrollable: false }\n"
+              % (dcx - R, dcy - R, 2 * R, 2 * R, R))
+    inner += _tvbtn(dcx - s // 2, dcy - off - s // 2, s, s, "\\U000F0143", e, "UP", bg="0x10141C", font=afont)
+    inner += _tvbtn(dcx - off - s // 2, dcy - s // 2, s, s, "\\U000F0141", e, "LEFT", bg="0x10141C", font=afont)
+    inner += btn(dcx - ok // 2, dcy - ok // 2, ok, ok, "OK", okA, bg="0x2ED5B8", color="0x06231D", radius=ok // 2, font="f_title")
+    inner += _tvbtn(dcx + off - s // 2, dcy - s // 2, s, s, "\\U000F0142", e, "RIGHT", bg="0x10141C", font=afont)
+    inner += _tvbtn(dcx - s // 2, dcy + off - s // 2, s, s, "\\U000F0140", e, "DOWN", bg="0x10141C", font=afont)
     # VOL column (left of d-pad)
-    vx = mx + 16
-    inner += _tvbtn(vx, dcy - 60, 64, 52, "\\U000F075D", e, "VOLUMEUP")
-    inner += lbl("VOL", vx, dcy - 2, "f_small", "0x868CA0", width=64, text_align="center")
-    inner += _tvbtn(vx, dcy + 16, 64, 52, "\\U000F075E", e, "VOLUMEDOWN")
+    vx = mx + 12
+    inner += _tvbtn(vx, dcy - 72, 76, 60, "\\U000F075D", e, "VOLUMEUP")
+    inner += lbl("VOL", vx, dcy - 6, "f_small", "0x868CA0", width=76, text_align="center")
+    inner += _tvbtn(vx, dcy + 14, 76, 60, "\\U000F075E", e, "VOLUMEDOWN")
     # CH column (right of d-pad)
-    hx = mx + mw - 80
-    inner += btn(hx, dcy - 60, 64, 52, "\\U000F0143", _chan(e, True), font="f_icon")
-    inner += lbl("CH", hx, dcy - 2, "f_small", "0x868CA0", width=64, text_align="center")
-    inner += btn(hx, dcy + 16, 64, 52, "\\U000F0140", _chan(e, False), font="f_icon")
+    hx = mx + mw - 88
+    inner += btn(hx, dcy - 72, 76, 60, "\\U000F0143", _chan(e, True), font="f_icon")
+    inner += lbl("CH", hx, dcy - 6, "f_small", "0x868CA0", width=76, text_align="center")
+    inner += btn(hx, dcy + 14, 76, 60, "\\U000F0140", _chan(e, False), font="f_icon")
     # --- bottom transport bar ---
     bar = [("\\U000F004D", "BACK"), ("\\U000F02DC", "HOME"), ("\\U000F0297", "pad"),
            ("\\U000F04AE", "prev"), ("\\U000F040A", "play"), ("\\U000F04AD", "next"),
            ("\\U000F0211", "FASTFORWARD"), ("\\U000F035C", "MENU"), ("\\U000F075F", "MUTE")]
     media_acts = {"prev": "media_player.media_previous_track", "play": "media_player.media_play_pause",
                   "next": "media_player.media_next_track"}
-    n = len(bar); bw = (mw - (n - 1) * 8) // n; by = h - 70
+    n = len(bar); bw = (mw - (n - 1) * 8) // n; by = h - 80
     for i, (g, key) in enumerate(bar):
         if key in media_acts:
             act = ha(media_acts[key], e) if e else "lvgl.page.show: page_home"
@@ -735,7 +741,7 @@ def c_tvremote(card, x, y, w, h, base):
         else:
             act = _wbtn(e, key)
         main = (key == "play")
-        inner += btn(mx + i * (bw + 8), by, bw, 52, g, act, font="f_icon",
+        inner += btn(mx + i * (bw + 8), by, bw, 62, g, act, font="f_icon",
                      bg=("0x2ED5B8" if main else "0x161B24"), color=("0x06231D" if main else "0xF3F5F8"))
     return [card_obj(x, y, w, h, inner)], [], []
 

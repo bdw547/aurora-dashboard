@@ -618,6 +618,16 @@ font:
       - "\U000F0717"  # snowflake (climate cool)
       - "\U000F0238"  # fire (climate heat)
       - "\U000F04E2"  # autorenew (climate auto)
+  # Larger icons for the TV remote d-pad chevrons
+  - file: 'https://github.com/Templarian/MaterialDesign-Webfont/raw/v7.4.47/fonts/materialdesignicons-webfont.ttf'
+    id: f_bigicon
+    size: 46
+    bpp: 4
+    glyphs:
+      - "\U000F0143"  # chevron-up
+      - "\U000F0140"  # chevron-down
+      - "\U000F0141"  # chevron-left
+      - "\U000F0142"  # chevron-right
 
 # --- Live HA state (selected light = Living Room for v1) ---
 sensor:
