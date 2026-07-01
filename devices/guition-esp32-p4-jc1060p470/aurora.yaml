@@ -654,6 +654,8 @@ font:
       - "\U000F0210"  # fan
       - "\U000F02DC"  # home
       - "\U000F0004"  # account
+      - "\U000F0502"  # television (speaker-group ribbon source)
+      - "\U000F04C4"  # speaker-multiple
   # Larger icons for the TV remote d-pad chevrons
   - file: 'https://github.com/Templarian/MaterialDesign-Webfont/raw/v7.4.47/fonts/materialdesignicons-webfont.ttf'
     id: f_bigicon

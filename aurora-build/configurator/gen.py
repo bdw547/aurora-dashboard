@@ -173,23 +173,29 @@ def c_light(card, x, y, w, h, base):
     e = card.get("entity", "")
     gw, gh = card["w"], card["h"]
     if gw >= 2 and gh >= 2:
-        # Whole card is a vertical brightness fill (bottom-up); tap toggles on/off.
+        # Header toggle + name + teal hero % + bottom brightness bar (Card Library dimmable tile).
         pct, fillid = base + "_pct", base + "_fill"
         tog = ha("light.toggle", e) if e else "lvgl.page.show: page_home"
-        bri = 74                                          # demo (no HA state feed)
-        inner = ("              - obj: { id: %s, align: bottom_mid, x: 0, y: 0, width: %d, height: %d, "
-                 "bg_color: 0xF2B84B, bg_opa: 42%%, border_width: 0, radius: 6, pad_all: 0, scrollable: false }\n"
-                 % (fillid, w, int(h * bri / 100)))
-        inner += lbl(CARD_ICON.get(card["ck"], "\\U000F0335"), 0, 18, "f_icon", "0xF2B84B", align="top_mid")
-        inner += lbl(card.get("name", "Light"), 0, 54, "f_body", "0xEEF0F6", align="top_mid", width=w - 24, text_align="center", long="dot")
-        inner += lbl("%d%%" % bri, 0, -18, "f_display", "0xF3F5F8", wid=pct, align="bottom_mid")
+        bri = 82                                          # demo (no HA state feed)
+        icon = CARD_ICON.get(card["ck"], "\\U000F0335")
+        inner = lbl(icon, 18, 18, "f_icon", "0xF2B84B")   # icon top-left (amber = light)
+        # on/off toggle pill top-right (50x28, teal = on, ink knob at right)
+        inner += ("              - obj: { x: %d, y: 20, width: 50, height: 28, bg_color: 0x2ED5B8, radius: 14, "
+                  "border_width: 0, pad_all: 0, scrollable: false, widgets: [obj: { align: right_mid, x: -3, "
+                  "width: 22, height: 22, bg_color: 0x06231D, radius: 11, border_width: 0, pad_all: 0, scrollable: false }] }\n"
+                  % (w - 18 - 50))
+        inner += lbl(card.get("name", "Light"), 18, 56, "f_title", "0xF3F5F8", width=w - 36, long="dot", height=26)
+        inner += lbl("%d%%" % bri, 18, 90, "f_head", "0x2ED5B8", wid=pct)   # hero brightness (teal)
+        by = h - 26
+        inner += ("              - obj: { x: 18, y: %d, width: %d, height: 8, bg_color: 0x0F1117, radius: 4, border_width: 0, pad_all: 0, scrollable: false }\n" % (by, w - 36))
+        inner += ("              - obj: { id: %s, x: 18, y: %d, width: %d, height: 8, bg_color: 0x2ED5B8, radius: 4, border_width: 0, pad_all: 0, scrollable: false }\n" % (fillid, by, int((w - 36) * bri / 100)))
         s = []
         if e:
             s.append("  - platform: homeassistant\n    id: ha_%s_b\n    entity_id: %s\n    attribute: brightness\n    on_value:\n"
-                     "      - lvgl.widget.update: { id: %s, height: !lambda 'return (int)(%d * (x/2.55) / 100.0);' }\n"
+                     "      - lvgl.widget.update: { id: %s, width: !lambda 'return (int)(%d * (x/2.55) / 100.0);' }\n"
                      "      - lvgl.label.update: { id: %s, text: !lambda 'return std::to_string((int)(x/2.55)) + \"%%\";' }\n"
-                     % (base, e, fillid, h, pct))
-        return [card_obj(x, y, w, h, inner, tog)], s, []
+                     % (base, e, fillid, w - 36, pct))
+        return [card_obj(x, y, w, h, inner, tog, bg="0x13201D")], s, []
     sld, pct = base + "_sld", base + "_pct"
     inner = ic(card["ck"], color="0xF2B84B")
     inner += title(card.get("name", "Light"), w)
@@ -238,10 +244,10 @@ def _setbox(bx, by, bw, bh, label, temp, accent, bg):
     return s
 
 
-CLIMATE_MODES = [("\\U000F0717", "Cool", "cool", "0x4FA8F5"),
+CLIMATE_MODES = [("\\U000F0425", "Off", "off", "0x868CA0"),
                  ("\\U000F0238", "Heat", "heat", "0xF2B84B"),
-                 ("\\U000F04E2", "Auto", "auto", "0x2ED5B8"),
-                 ("\\U000F0425", "Off", "off", "0x868CA0")]
+                 ("\\U000F0717", "Cool", "cool", "0x4FA8F5"),
+                 ("\\U000F04E2", "Auto", "auto", "0x2ED5B8")]
 
 
 def c_climate(card, x, y, w, h, base):
@@ -250,13 +256,9 @@ def c_climate(card, x, y, w, h, base):
     e = card.get("entity", "")
     tid = base + "_t"
     sel_mode = "heat"                                    # demo (no HA state feed)
-    inner = ic(card["ck"], color="0xF2B84B")
-    inner += lbl(card.get("name", "Climate"), 50, 12, "f_title", width=w - 200, long="dot", height=30)
-    inner += lbl("Heating \\u00B7 humidity 41%", 50, 46, "f_small", "0x868CA0")
-    inner += ("              - obj: { x: %d, y: 14, width: 76, height: 32, bg_color: 0x2A2410, "
-              "border_color: 0xF2B84B, border_width: 1, radius: 10, pad_all: 0, scrollable: false, "
-              "widgets: [label: { text: \"Heat\", align: center, text_font: f_body, text_color: 0xF2B84B }] }\n"
-              % (w - 90))
+    inner = ic(card["ck"], color="0x2ED5B8")
+    inner += lbl(card.get("name", "Climate"), 50, 12, "f_title", width=w - 120, long="dot", height=26)
+    inner += lbl("now 71\\u00B0 \\u00B7 41% RH", 50, 44, "f_small", "0x868CA0")
     s = []
     if e:
         s.append("  - platform: homeassistant\n    id: ha_%s\n    entity_id: %s\n    attribute: current_temperature\n    on_value:\n"
@@ -291,8 +293,8 @@ def c_climate(card, x, y, w, h, base):
                   "                        widgets:\n"
                   "                          - label: { text: \"%s\", text_font: f_icon, text_color: %s }\n"
                   "                          - label: { text: \"%s\", text_font: f_body, text_color: %s }\n"
-                  % (mx, mode_y, mbw, ("0x2A2410" if selm else "0x10141C"), act, g,
-                     (acc if selm else "0x868CA0"), lab, (acc if selm else "0xC2C7D2")))
+                  % (mx, mode_y, mbw, (acc if selm else "0x10141C"), act, g,
+                     ("0x0A0B0F" if selm else "0x868CA0"), lab, ("0x0A0B0F" if selm else "0xC2C7D2")))
     return [card_obj(x, y, w, h, inner)], s, []
 
 
@@ -409,21 +411,21 @@ def c_media(card, x, y, w, h, base):
         if gw >= 3:                                    # art beside the title block
             inner += art(14, 14, 110, 110)
             inner += lbl(subtxt, 136, 20, "f_small", "0x2ED5B8", width=w - 150, long="dot", height=16)
-            inner += lbl("Midnight City", 136, 42, "f_title", "0xF3F5F8", wid=tid, width=w - 150, long="dot", height=28)
-            inner += lbl("M83 \\u00B7 Hurry Up", 136, 84, "f_small", "0x868CA0", width=w - 150, long="dot", height=16)
+            inner += lbl("Midnight City", 136, 40, "f_track", "0xF3F5F8", wid=tid, width=w - 150, long="dot", height=32)
+            inner += lbl("M83 \\u00B7 Hurry Up", 136, 86, "f_body", "0x868CA0", width=w - 150, long="dot", height=18)
             py = 152
             tport = py + 40
         else:                                          # narrow: art on top, full-width title
             inner += art(14, 14, w - 28, 108)
             inner += lbl(subtxt, 14, 130, "f_small", "0x2ED5B8", width=w - 28, long="dot", height=16)
-            inner += lbl("Midnight City", 14, 148, "f_title", "0xF3F5F8", wid=tid, width=w - 28, long="dot", height=28)
-            inner += lbl("M83", 14, 178, "f_small", "0x868CA0")
+            inner += lbl("Midnight City", 14, 146, "f_track", "0xF3F5F8", wid=tid, width=w - 28, long="dot", height=32)
+            inner += lbl("M83", 14, 180, "f_body", "0x868CA0")
             py = 202
             tport = 226
-        inner += ("              - obj: { x: 14, y: %d, width: %d, height: 6, bg_color: 0x2A3346, radius: 3, border_width: 0, pad_all: 0, scrollable: false }\n" % (py, w - 28))
+        inner += ("              - obj: { x: 14, y: %d, width: %d, height: 6, bg_color: 0x23262F, radius: 3, border_width: 0, pad_all: 0, scrollable: false }\n" % (py, w - 28))
         inner += ("              - obj: { x: 14, y: %d, width: %d, height: 6, bg_color: 0x2ED5B8, radius: 3, border_width: 0, pad_all: 0, scrollable: false }\n" % (py, int((w - 28) * 0.42)))
-        inner += lbl("1:38", 14, py + 10, "f_small", "0x868CA0")
-        inner += lbl("-2:25", -14, py + 10, "f_small", "0x868CA0", align="top_right")
+        inner += lbl("1:38", 14, py + 10, "f_mono", "0x2ED5B8")
+        inner += lbl("-2:25", -14, py + 10, "f_mono", "0x868CA0", align="top_right")
         inner += transport_center(tport)
         inner += vol_slider(h - 34)
         return [card_obj(x, y, w, h, inner)], [], ts
@@ -461,15 +463,15 @@ def c_fan(card, x, y, w, h, base):
 def c_cover(card, x, y, w, h, base):
     """Cover: Open / Stop / Close buttons (icon + label), like the web."""
     e = card.get("entity", "")
-    inner = ic(card["ck"], color="0x4FA8F5")
+    inner = ic(card["ck"], color="0x2ED5B8")
     if card["w"] == 1 and card["h"] == 1:
-        inner += lbl(card.get("name", "Cover"), 0, 0, "f_body", "0x4FA8F5",
+        inner += lbl(card.get("name", "Cover"), 0, 0, "f_body", "0x2ED5B8",
                      align="center", width=w - 20, text_align="center", long="dot")
         return [card_obj(x, y, w, h, inner)], [], []
     inner += title(card.get("name", "Cover"), w)
-    rows = [("\\U000F0143", "Open", "cover.open_cover", "0x4FA8F5"),
+    rows = [("\\U000F0143", "Open", "cover.open_cover", "0xC2C7D2"),
             ("\\U000F04DB", "Stop", "cover.stop_cover", "0xC2C7D2"),
-            ("\\U000F0140", "Close", "cover.close_cover", "0x4FA8F5")]
+            ("\\U000F0140", "Close", "cover.close_cover", "0xC2C7D2")]
     top, gap = 58, 8
     bh = (h - top - 14 - 2 * gap) // 3
     for i, (g, txt, svc, col) in enumerate(rows):
@@ -1071,8 +1073,8 @@ def vol_slider_yaml(sld, sx, sy, sw, value, e):
     """A teal-accented volume slider (matches the web volume bars + seek bar) that
     pushes to media_player.volume_set. Teal indicator/knob keeps one accent per surface."""
     return ("              - slider:\n                  id: %s\n                  x: %d\n                  y: %d\n                  width: %d\n"
+            "                  bg_color: 0x23262F\n                  bg_opa: 100%%\n"
             "                  min_value: 0\n                  max_value: 100\n                  value: %d\n"
-            "                  main:\n                    bg_color: 0x23262F\n"
             "                  indicator:\n                    bg_color: 0x2ED5B8\n"
             "                  knob:\n                    bg_color: 0x2ED5B8%s\n"
             % (sld, sx, sy, sw, value, _vset(e, sld)))
@@ -1105,9 +1107,9 @@ def c_speakers(card, x, y, w, h, base):
     # ---- 1x1 compact status tile ----
     if card["w"] == 1 and card["h"] == 1:
         inner = lbl(sg, 14, 14, "f_icon", "0x2ED5B8")
-        inner += lbl(str(SPK_DEMO_VOL[0]), -14, 16, "f_body", "0x2ED5B8", align="top_right")
+        inner += lbl(str(SPK_DEMO_VOL[0]), -14, 16, "f_mono", "0x2ED5B8", align="top_right")
         inner += lbl(nm(0), 14, -32, "f_body", "0xF3F5F8", align="bottom_left", width=w - 28, long="dot", height=20)
-        inner += lbl("LINKED", 14, -12, "f_small", "0x868CA0", align="bottom_left")
+        inner += lbl("LINKED", 14, -12, "f_micro", "0x868CA0", align="bottom_left")
         return [card_obj(x, y, w, h, inner)], [], []
 
     # ---- h==1 compact row: one speaker + inline volume ----
@@ -1117,11 +1119,11 @@ def c_speakers(card, x, y, w, h, base):
         v = SPK_DEMO_VOL[0]
         inner = lbl(sg, 14, cy - 12, "f_icon", "0x2ED5B8")
         inner += lbl(nm(0), 46, 20, "f_body", "0xF3F5F8", width=150, long="dot", height=20)
-        inner += lbl("LINKED", 46, 48, "f_small", "0x868CA0")
+        inner += lbl("LINKED", 46, 48, "f_micro", "0x868CA0")
         vx = min(220, w // 2)
         inner += lbl("\\U000F057E", vx, cy - 6, "f_icon", "0x868CA0")
         inner += vol_slider_yaml(sld, vx + 30, cy - 4, w - (vx + 30) - 52, v, ents[0])
-        inner += lbl(str(v), -14, cy - 10, "f_small", "0x868CA0", align="top_right")
+        inner += lbl(str(v), -14, cy - 10, "f_mono", "0x2ED5B8", align="top_right")
         sensor(0, sld)
         return [card_obj(x, y, w, h, inner)], [], ts
 
@@ -1129,10 +1131,10 @@ def c_speakers(card, x, y, w, h, base):
     if card["w"] >= 4:
         inner = ""
         rh = 46
-        inner += ("              - obj: { x: 14, y: 14, width: %d, height: %d, bg_color: 0x123021, radius: 12, border_width: 0, pad_all: 0, scrollable: false }\n" % (w - 28, rh))
-        inner += lbl("\\U000F0502", 28, 14 + (rh - 24) // 2, "f_icon", "0x2ED5B8")
-        inner += lbl("%s \\u00B7 %d speakers" % (nm(0), gcount), 64, 14 + (rh - 20) // 2, "f_body", "0xF3F5F8", width=w - 64 - 130, long="dot", height=20)
-        inner += btn(w - 14 - 104, 14 + (rh - 32) // 2, 104, 32, "Ungroup", _unjoin(master), font="f_small", bg="0x10141C", color="0xC2C7D2", radius=8)
+        inner += ("              - obj: { x: 14, y: 14, width: %d, height: %d, bg_color: 0x101D1C, border_color: 0x2A5048, border_width: 1, radius: 12, pad_all: 0, scrollable: false }\n" % (w - 28, rh))
+        inner += lbl("\\U000F0502", 28, 14 + (rh - 18) // 2, "f_iconsm", "0x2ED5B8")
+        inner += lbl("%s \\u00B7 %d speakers" % (nm(0), gcount), 56, 14 + (rh - 20) // 2, "f_body", "0xF3F5F8", width=w - 56 - 130, long="dot", height=20)
+        inner += btn(w - 14 - 104, 14 + (rh - 32) // 2, 104, 32, "Ungroup", _unjoin(master), font="f_small", bg="0x0A0B0F", color="0xC2C7D2", radius=8)
         top = 14 + rh + 12
         cols, gap = 2, 12
         tw = (w - 28 - (cols - 1) * gap) // cols
@@ -1142,44 +1144,49 @@ def c_speakers(card, x, y, w, h, base):
             cx = 14 + (i % cols) * (tw + gap)
             cy = top + (i // cols) * (th + gap)
             gr = i < gcount
-            inner += ("              - obj: { x: %d, y: %d, width: %d, height: %d, bg_color: 0x10141C, radius: 12, border_width: 0, pad_all: 0, scrollable: false }\n" % (cx, cy, tw, th))
+            tbg = "0x101D1C" if gr else "0x14161C"
+            tbd = "0x2A5048" if gr else "0x23262F"
+            inner += ("              - obj: { x: %d, y: %d, width: %d, height: %d, bg_color: %s, border_color: %s, border_width: 1, radius: 12, pad_all: 0, scrollable: false }\n" % (cx, cy, tw, th, tbg, tbd))
             inner += lbl(sg, cx + 14, cy + 14, "f_icon", "0x2ED5B8" if gr else "0x5D6470")
-            inner += lbl(nm(i), cx + 46, cy + 16, "f_body", "0xF3F5F8" if gr else "0x868CA0", width=tw - 130, long="dot", height=20)
+            inner += lbl(nm(i), cx + 46, cy + 16, "f_body", "0xF3F5F8" if gr else "0xAEB4C2", width=tw - 130, long="dot", height=20)
             if i == 0:
-                inner += lbl("SOURCE", cx + tw - 92, cy + 18, "f_small", "0x2ED5B8", width=78, text_align="right")
+                inner += lbl("SOURCE", cx + tw - 92, cy + 18, "f_micro", "0x2ED5B8", width=78, text_align="right")
             elif gr:
-                inner += lbl("LINKED", cx + tw - 92, cy + 18, "f_small", "0x868CA0", width=78, text_align="right")
+                inner += btn(cx + tw - 92, cy + 12, 78, 28, "Leave", _unjoin(ents[i]), font="f_small", bg="0x0A0B0F", color="0xC2C7D2", radius=8)
             if gr:
                 sld = base + "_v%d" % i
                 v = SPK_DEMO_VOL[i % len(SPK_DEMO_VOL)]
                 inner += lbl("\\U000F057E", cx + 14, cy + th - 40, "f_icon", "0x868CA0")
                 inner += vol_slider_yaml(sld, cx + 46, cy + th - 34, tw - 100, v, ents[i])
-                inner += lbl(str(v), cx + tw - 46, cy + th - 38, "f_small", "0x868CA0", width=32, text_align="right")
+                inner += lbl(str(v), cx + tw - 46, cy + th - 38, "f_mono", "0x2ED5B8", width=32, text_align="right")
                 sensor(i, sld)
             else:
-                inner += lbl("Available", cx + 46, cy + 40, "f_small", "0x5D6470")
+                inner += lbl("Available", cx + 46, cy + 40, "f_micro", "0x5D6470")
                 inner += btn(cx + 14, cy + (th - 36) // 2 + 14, tw - 28, 36, "+ Join", _join(master, ents[i]), font="f_body", bg="0x0F1117", color="0x2ED5B8", radius=10)
         return [card_obj(x, y, w, h, inner)], [], ts
 
     # ---- vertical list: PLAYING ON + per-speaker volume (image 3) ----
     inner = lbl("\\U000F04C4", 14, 14, "f_icon", "0x2ED5B8")
-    inner += lbl("PLAYING ON  %d/%d" % (gcount, n), 50, 18, "f_small", "0x868CA0")
+    inner += lbl("PLAYING ON  %d/%d" % (gcount, n), 46, 20, "f_micro", "0x868CA0")
     yy = 48
     for i in range(gcount):
         sld = base + "_v%d" % i
         v = SPK_DEMO_VOL[i % len(SPK_DEMO_VOL)]
         inner += lbl(sg, 14, yy, "f_icon", "0x2ED5B8")
-        inner += lbl(nm(i), 46, yy + 2, "f_body", "0xF3F5F8", width=w - 150, long="dot", height=20)
-        inner += lbl("SOURCE" if i == 0 else "LINKED", w - 14 - 80, yy + 4, "f_small", "0x2ED5B8" if i == 0 else "0x868CA0", width=80, text_align="right")
+        inner += lbl(nm(i), 46, yy + 2, "f_body", "0xF3F5F8", width=w - 200, long="dot", height=20)
+        if i == 0:
+            inner += lbl("SOURCE", w - 14 - 80, yy + 4, "f_micro", "0x2ED5B8", width=80, text_align="right")
+        else:
+            inner += btn(w - 14 - 92, yy - 2, 92, 30, "Leave", _unjoin(ents[i]), font="f_small", bg="0x0A0B0F", color="0xC2C7D2", radius=8)
         inner += vol_slider_yaml(sld, 46, yy + 30, w - 60, v, ents[i])
         sensor(i, sld)
         yy += 62
     if n > gcount:
-        inner += lbl("AVAILABLE", 14, yy, "f_small", "0x5D6470")
+        inner += lbl("AVAILABLE", 14, yy, "f_micro", "0x5D6470")
         yy += 22
         for i in range(gcount, n):
             inner += lbl(sg, 14, yy + 2, "f_icon", "0x5D6470")
-            inner += lbl(nm(i), 46, yy + 2, "f_body", "0x868CA0", width=w - 160, long="dot", height=20)
+            inner += lbl(nm(i), 46, yy + 2, "f_body", "0xAEB4C2", width=w - 160, long="dot", height=20)
             inner += btn(w - 14 - 92, yy - 4, 92, 34, "+ Join", _join(master, ents[i]), font="f_body", bg="0x0F1117", color="0x2ED5B8", radius=9)
             yy += 44
     return [card_obj(x, y, w, h, inner)], [], ts
