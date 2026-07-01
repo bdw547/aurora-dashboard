@@ -1338,15 +1338,19 @@ def gen_header(key, page, layout):
     for i, item in enumerate((hdr.get("right") or [])[:4]):
         g, t, col = HCHIP.get(item, ("", item, "0x868CA0"))
         base_x = -(20 + i * 126)
-        icon_w = ("              - label: { text: \"%s\", text_font: f_iconsm, text_color: %s, pad_top: 4 }\n" % (g, col)) if g else ""
+        icon_w = ("                    - label: { text: \"%s\", text_font: f_iconsm, text_color: %s }\n" % (g, col)) if g else ""
         out += (
             "        - obj:\n"
             "            align: top_right\n            x: %d\n            y: 18\n            width: 118\n            height: 40\n"
             "            bg_color: 0x14161C\n            border_color: 0x23262F\n            border_width: 1\n            radius: 12\n"
             "            pad_all: 0\n            scrollable: false\n"
-            "            layout: { type: flex, flex_flow: ROW, flex_align_main: center, flex_align_cross: center, pad_column: 8 }\n"
-            "            widgets:\n%s"
-            "              - label: { text: %s, text_font: f_body, text_color: 0xF3F5F8 }\n"
+            "            widgets:\n"
+            "              - obj:\n"
+            "                  align: center\n                  width: SIZE_CONTENT\n                  height: SIZE_CONTENT\n"
+            "                  bg_opa: 0\n                  border_width: 0\n                  pad_all: 0\n                  scrollable: false\n"
+            "                  layout: { type: flex, flex_flow: ROW, flex_align_cross: center, pad_column: 8 }\n"
+            "                  widgets:\n%s"
+            "                    - label: { text: %s, text_font: f_body, text_color: 0xF3F5F8 }\n"
             % (base_x, icon_w, esc(t)))
     return out
 
@@ -1361,27 +1365,49 @@ def _nav_onload(layout, active):
 
 
 def gen_settings_page(layout):
-    """A real Settings page: display brightness (display_backlight), restart, info."""
+    """Settings: brightness, screen timeout, motion wake + screensaver, restart."""
     onload = _nav_onload(layout, "settings")
+    onload += ("        - lambda: |-\n"
+               "            if (id(g_wake_presence)) lv_obj_add_state(id(set_motion), LV_STATE_CHECKED);\n"
+               "            if (id(g_screensaver)) lv_obj_add_state(id(set_saver), LV_STATE_CHECKED);\n")
     w = "        - image: { src: img_aurora_bg, x: 0, y: 0 }\n"
     w += "        - label: { text: \"Settings\", x: 94, y: 18, text_font: f_h1, text_color: 0xF3F5F8 }\n"
     w += "        - label: { text: \"AURORA PANEL \\u00B7 10.0.0.174\", x: 94, y: 58, text_font: f_micro, text_color: 0x868CA0 }\n"
-    bri = lbl("DISPLAY", 20, 18, "f_micro", "0x868CA0")
-    bri += lbl("Brightness", 20, 38, "f_title", "0xF3F5F8", height=26)
-    bri += ("              - slider:\n                  id: set_bri\n                  x: 20\n                  y: 100\n                  width: 408\n"
+    # --- Brightness card ---
+    bri = lbl("DISPLAY", 20, 16, "f_micro", "0x868CA0")
+    bri += lbl("Brightness", 20, 34, "f_title", "0xF3F5F8", height=26)
+    bri += ("              - slider:\n                  id: set_bri\n                  x: 20\n                  y: 78\n                  width: 408\n"
             "                  bg_color: 0x23262F\n                  min_value: 5\n                  max_value: 100\n                  value: 80\n"
             "                  indicator:\n                    bg_color: 0x2ED5B8\n                  knob:\n                    bg_color: 0x2ED5B8\n"
             "                  on_release:\n                    - light.turn_on: { id: display_backlight, brightness: !lambda 'return lv_slider_get_value(id(set_bri)) / 100.0f;' }\n")
-    w += card_obj(94, 96, 448, 150, bri)
-    w += ("        - button:\n            x: 94\n            y: 262\n            width: 448\n            height: 64\n"
+    w += card_obj(94, 96, 448, 116, bri)
+    # --- Screen timeout card ---
+    to = lbl("SCREEN TIMEOUT", 20, 16, "f_micro", "0x868CA0")
+    opts = [("Never", 0), ("1 min", 60000), ("5 min", 300000), ("15 min", 900000)]
+    tbw = (448 - 40 - 3 * 8) // 4
+    for i, (lab, ms) in enumerate(opts):
+        sel = (ms == 300000)
+        to += ("              - button:\n                  id: set_to%d\n                  x: %d\n                  y: 54\n                  width: %d\n                  height: 46\n"
+               "                  bg_color: %s\n                  radius: 10\n                  pad_all: 0\n                  scrollable: false\n"
+               "                  widgets: [label: { text: \"%s\", align: center, text_font: f_small, text_color: %s }]\n"
+               "                  on_click:\n                    - lambda: 'id(g_timeout_ms) = %d;'\n"
+               % (i, 20 + i * (tbw + 8), tbw, ("0x2ED5B8" if sel else "0x0F1117"), lab, ("0x06231D" if sel else "0xC2C7D2"), ms))
+    w += card_obj(94, 224, 448, 116, to)
+    # --- Behavior card: motion wake + screensaver ---
+    beh = lbl("BEHAVIOR", 20, 16, "f_micro", "0x868CA0")
+    beh += lbl("Motion wake", 20, 50, "f_body", "0xF3F5F8", height=22)
+    beh += ("              - switch:\n                  id: set_motion\n                  align: top_right\n                  x: -20\n                  y: 46\n"
+            "                  on_value:\n                    - lambda: 'id(g_wake_presence) = x;'\n")
+    beh += lbl("Screensaver", 20, 104, "f_body", "0xF3F5F8", height=22)
+    beh += ("              - switch:\n                  id: set_saver\n                  align: top_right\n                  x: -20\n                  y: 100\n"
+            "                  on_value:\n                    - lambda: 'id(g_screensaver) = x;'\n")
+    w += card_obj(560, 96, 370, 152, beh)
+    # --- Restart ---
+    w += ("        - button:\n            x: 560\n            y: 262\n            width: 370\n            height: 56\n"
           "            bg_color: 0x2a1414\n            radius: 14\n            scrollable: false\n"
           "            widgets: [label: { text: \"Restart Panel\", align: center, text_font: f_body, text_color: 0xF2685A }]\n"
           "            on_click: [button.press: btn_restart_panel]\n")
-    info = lbl("SYSTEM", 20, 18, "f_micro", "0x868CA0")
-    info += lbl("ESPHome \\u00B7 ESP32-P4", 20, 40, "f_body", "0xC2C7D2")
-    info += lbl("Guition JC1060P470", 20, 66, "f_small", "0x868CA0")
-    info += lbl("Aurora \\u00B7 web UI on :80", 20, 92, "f_small", "0x868CA0")
-    w += card_obj(560, 96, 370, 230, info)
+    w += "        - label: { text: \"Guition JC1060P470 \\u00B7 web UI on :80\", x: 94, y: 356, text_font: f_small, text_color: 0x5D6470 }\n"
     return "    - id: page_settings\n      bg_color: 0x0A0B0F\n      scrollable: false\n%s      widgets:\n%s" % (onload, w)
 
 
