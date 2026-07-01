@@ -608,6 +608,19 @@ GROUP_DOMAIN = {
     "media_player": ("\\U000F075A", "0x2ED5B8", "Idle"),
 }
 
+# Status-group live value: domain -> (C++ text expr from `x`, active-bool expr, active color).
+# `x` is the entity's std::string state (homeassistant text_sensor). Domains not listed
+# show the raw state in the default text color.
+GROUP_VAL = {
+    "binary_sensor": ("x == \"on\" ? std::string(\"Active\") : std::string(\"Clear\")", "x == \"on\"", "0x4FA8F5"),
+    "lock":          ("x == \"locked\" ? std::string(\"Locked\") : std::string(\"Unlocked\")", "x == \"locked\"", "0xF2685A"),
+    "cover":         ("x == \"open\" ? std::string(\"Open\") : (x == \"closed\" ? std::string(\"Closed\") : x)", "x == \"open\"", "0x4FA8F5"),
+    "person":        ("x == \"home\" ? std::string(\"Home\") : std::string(\"Away\")", "x == \"home\"", "0x4FA8F5"),
+    "light":         ("x == \"on\" ? std::string(\"On\") : std::string(\"Off\")", "x == \"on\"", "0xF2B84B"),
+    "switch":        ("x == \"on\" ? std::string(\"On\") : std::string(\"Off\")", "x == \"on\"", "0x2ED5B8"),
+    "fan":           ("x == \"on\" ? std::string(\"On\") : std::string(\"Off\")", "x == \"on\"", "0x2ED5B8"),
+}
+
 
 def c_group(card, x, y, w, h, base):
     """lightgroup: big lightbulb tiles in a w x max(2,h-1) grid (web .lggrid).
@@ -658,24 +671,32 @@ def c_group(card, x, y, w, h, base):
     inner = ic(card["ck"], color="0x2ED5B8")
     inner += lbl("%s \\u00B7 %d/%d" % (card.get("name", "Group"), len(ents), cap),
                  50, 22, "f_body", "0x868CA0", width=w - 64, long="dot", height=24)
+    ts = []
     for i in range(cap):
         e = ents[i] if i < len(ents) else None
         cx = pad + (i % cols) * (bw + gap)
         cy = top + (i // cols) * (bh + gap)
         if e:
-            glyph, gcol, val = GROUP_DOMAIN.get(e.split(".")[0], ("\\U000F0493", "0x868CA0", "On"))
+            dom = e.split(".")[0]
+            glyph, gcol, val = GROUP_DOMAIN.get(dom, ("\\U000F0493", "0x868CA0", "On"))
+            valid = "%s_gv%d" % (base, i)
             inner += ("              - obj: { x: %d, y: %d, width: %d, height: %d, bg_color: 0x0F1117, "
                       "border_width: 0, radius: 12, pad_all: 0, scrollable: false, widgets: ["
                       "label: { text: \"%s\", x: 12, align: left_mid, text_font: f_icon, text_color: %s }, "
-                      "label: { text: \"%s\", x: 50, y: %d, align: left_mid, width: %d, height: %d, long_mode: dot, text_font: %s, text_color: 0xEEF0F6 }, "
+                      "label: { id: %s, text: \"%s\", x: 50, y: %d, align: left_mid, width: %d, height: %d, long_mode: dot, text_font: %s, text_color: 0xEEF0F6 }, "
                       "label: { text: %s, x: 50, y: 13, align: left_mid, width: %d, long_mode: dot, text_font: f_small, text_color: 0x868CA0 }] }\n"
-                      % (cx, cy, bw, bh, glyph, gcol, val, vy, bw - 56, vh, vfont, esc(_ename(e, "Entity")), bw - 56))
+                      % (cx, cy, bw, bh, glyph, gcol, valid, val, vy, bw - 56, vh, vfont, esc(_ename(e, "Entity")), bw - 56))
+            texpr, actp, acol = GROUP_VAL.get(dom, ("x", "false", "0xEEF0F6"))   # live state -> value label
+            ts.append("  - platform: homeassistant\n    id: ha_%s_gs%d\n    entity_id: %s\n    on_value:\n"
+                      "      - lvgl.label.update: { id: %s, text: !lambda 'return %s;' }\n"
+                      "      - lvgl.label.update: { id: %s, text_color: !lambda 'return (%s) ? lv_color_hex(%s) : lv_color_hex(0xEEF0F6);' }\n"
+                      % (base, i, e, valid, texpr, valid, actp, acol))
         else:
             inner += ("              - obj: { x: %d, y: %d, width: %d, height: %d, bg_color: 0x0F1117, "
                       "border_color: 0x2A2E38, border_width: 1, radius: 12, pad_all: 0, scrollable: false, widgets: ["
                       "label: { text: \"+\", align: center, text_font: f_head, text_color: 0x4A5160 }] }\n"
                       % (cx, cy, bw, bh))
-    return [card_obj(x, y, w, h, inner)], [], []
+    return [card_obj(x, y, w, h, inner)], [], ts
 
 
 def c_outlet(card, x, y, w, h, base):
