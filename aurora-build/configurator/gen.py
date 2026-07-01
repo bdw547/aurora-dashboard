@@ -694,6 +694,22 @@ def _tvbtn(bx, by, w_, h_, glyph, e, button, **kw):
     return btn(bx, by, w_, h_, glyph, act, **kw)
 
 
+def _toggle_btn(bx, by, bw, bh, glyph, show_id, hide_id):
+    """Bar button that toggles overlay `show_id` (and always hides sibling `hide_id`)."""
+    return (
+        "              - button:\n"
+        "                  x: %d\n                  y: %d\n                  width: %d\n                  height: %d\n"
+        "                  bg_color: 0x161B24\n                  radius: 12\n                  pad_all: 0\n                  scrollable: false\n"
+        "                  widgets: [label: { text: %s, align: center, text_font: f_icon, text_color: 0xF3F5F8 }]\n"
+        "                  on_click:\n"
+        "                    - lambda: |-\n"
+        "                        lv_obj_add_flag(id(%s), LV_OBJ_FLAG_HIDDEN);\n"
+        "                        if (lv_obj_has_flag(id(%s), LV_OBJ_FLAG_HIDDEN)) lv_obj_clear_flag(id(%s), LV_OBJ_FLAG_HIDDEN);\n"
+        "                        else lv_obj_add_flag(id(%s), LV_OBJ_FLAG_HIDDEN);\n"
+        % (bx, by, bw, bh, esc(glyph), hide_id, show_id, show_id, show_id)
+    )
+
+
 def _dpad(inner, e, w, h):
     cx, cy, s = w // 2, h // 2 + 10, 50
     okA = ("homeassistant.action: { action: webostv.button, data: { entity_id: %s, button: ENTER } }" % e) if e else "lvgl.page.show: page_home"
@@ -870,24 +886,64 @@ def c_tvremote(card, x, y, w, h, base):
     inner += btn(hx, dcy - 72, 76, 60, "\\U000F0143", _chan(e, True), font="f_icon")
     inner += lbl("CH", hx, dcy - 6, "f_small", "0x868CA0", width=76, text_align="center")
     inner += btn(hx, dcy + 14, 76, 60, "\\U000F0140", _chan(e, False), font="f_icon")
-    # --- bottom transport bar ---
-    bar = [("\\U000F004D", "BACK"), ("\\U000F02DC", "HOME"), ("\\U000F0297", "pad"),
+    # --- overlays over the VOL / d-pad / CH band (hidden; toggled from the bar) ---
+    padid, whlid = base + "_pad", base + "_whl"
+    ov_x, ov_w = mx + 6, mw - 12
+    ov_y, ov_h = band_top - 6, (band_bot - band_top) + 12
+    inner += (
+        "              - obj:\n"
+        "                  id: %s\n                  x: %d\n                  y: %d\n                  width: %d\n                  height: %d\n"
+        "                  bg_color: 0x0E1524\n                  border_color: 0x2ED5B8\n                  border_width: 2\n                  radius: 18\n"
+        "                  hidden: true\n                  clickable: true\n                  pad_all: 0\n                  scrollable: false\n"
+        "                  on_click: [%s]\n"
+        "                  widgets:\n"
+        "                    - label: { text: \"\\U000F0297\", align: center, y: -34, text_font: f_bigicon, text_color: 0x2ED5B8 }\n"
+        "                    - label: { text: \"TRACKPAD\", align: center, y: 22, text_font: f_title, text_color: 0xF3F5F8 }\n"
+        "                    - label: { text: \"Tap \\u00B7 swipe to move the cursor\", align: center, y: 54, text_font: f_body, text_color: 0x868CA0 }\n"
+        % (padid, ov_x, ov_y, ov_w, ov_h, _wbtn(e, "ENTER"))
+    )
+    up_act, dn_act = _wbtn(e, "UP"), _wbtn(e, "DOWN")
+    inner += (
+        "              - obj:\n"
+        "                  id: %s\n                  x: %d\n                  y: %d\n                  width: %d\n                  height: %d\n"
+        "                  bg_color: 0x0E1524\n                  border_color: 0x4F91FF\n                  border_width: 2\n                  radius: 18\n"
+        "                  hidden: true\n                  pad_all: 0\n                  scrollable: false\n"
+        "                  widgets:\n"
+        "                    - obj: { align: center, width: 104, height: %d, bg_color: 0x10141C, border_color: 0x23262F, border_width: 1, radius: 52, pad_all: 0, scrollable: false }\n"
+        "                    - label: { text: \"SCROLL\", align: center, text_font: f_small, text_color: 0x868CA0 }\n"
+        "                    - button:\n"
+        "                        align: top_mid\n                        y: 14\n                        width: 84\n                        height: 62\n"
+        "                        bg_color: 0x10141C\n                        radius: 14\n                        pad_all: 0\n                        scrollable: false\n"
+        "                        widgets: [label: { text: \"\\U000F0143\", align: center, text_font: f_bigicon, text_color: 0x4F91FF }]\n"
+        "                        on_click: [%s]\n"
+        "                    - button:\n"
+        "                        align: bottom_mid\n                        y: -14\n                        width: 84\n                        height: 62\n"
+        "                        bg_color: 0x10141C\n                        radius: 14\n                        pad_all: 0\n                        scrollable: false\n"
+        "                        widgets: [label: { text: \"\\U000F0140\", align: center, text_font: f_bigicon, text_color: 0x4F91FF }]\n"
+        "                        on_click: [%s]\n"
+        % (whlid, ov_x, ov_y, ov_w, ov_h, ov_h - 40, up_act, dn_act)
+    )
+    # --- bottom transport bar (Pad / Wheel toggle the overlays above) ---
+    bar = [("\\U000F004D", "BACK"), ("\\U000F02DC", "HOME"), ("\\U000F0297", "pad"), ("\\U000F04E2", "wheel"),
            ("\\U000F04AE", "prev"), ("\\U000F040A", "play"), ("\\U000F04AD", "next"),
-           ("\\U000F0211", "FASTFORWARD"), ("\\U000F035C", "MENU"), ("\\U000F075F", "MUTE")]
+           ("\\U000F0211", "FASTFORWARD"), ("\\U000F075F", "MUTE")]
     media_acts = {"prev": "media_player.media_previous_track", "play": "media_player.media_play_pause",
                   "next": "media_player.media_next_track"}
     n = len(bar); bw = (mw - (n - 1) * 8) // n; by = h - 80
     for i, (g, key) in enumerate(bar):
+        bx = mx + i * (bw + 8)
+        if key == "pad":
+            inner += _toggle_btn(bx, by, bw, 62, g, padid, whlid); continue
+        if key == "wheel":
+            inner += _toggle_btn(bx, by, bw, 62, g, whlid, padid); continue
         if key in media_acts:
             act = ha(media_acts[key], e) if e else "lvgl.page.show: page_home"
-        elif key == "pad":
-            act = "lvgl.page.show: page_home"
         elif key == "MUTE":
             act = ha("media_player.volume_mute", e, 'is_volume_muted: "true"') if e else "lvgl.page.show: page_home"
         else:
             act = _wbtn(e, key)
         main = (key == "play")
-        inner += btn(mx + i * (bw + 8), by, bw, 62, g, act, font="f_icon",
+        inner += btn(bx, by, bw, 62, g, act, font="f_icon",
                      bg=("0x2ED5B8" if main else "0x161B24"), color=("0x06231D" if main else "0xF3F5F8"))
     return [card_obj(x, y, w, h, inner)], [], []
 
