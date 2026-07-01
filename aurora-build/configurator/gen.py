@@ -229,7 +229,7 @@ def c_light(card, x, y, w, h, base):
               "                  bg_color: 0x161B24\n                  border_color: 0x23262F\n                  border_width: 1\n                  radius: 12\n                  pad_all: 0\n                  scrollable: false\n"
               "                  widgets: [label: { text: \"\\U000F0425\", align: center, text_font: f_icon, text_color: 0xF2B84B }]\n"
               "                  on_click: [" + tog + "]\n")
-    s = []
+    s, t = [], []
     if e:
         rb = ("  - platform: homeassistant\n    id: ha_" + base + "_b\n    entity_id: " + e + "\n    attribute: brightness\n    on_value:\n"
               "      - lvgl.slider.update: { id: " + sldid + ", value: !lambda 'return (int)(x/2.55);' }\n")
@@ -239,10 +239,11 @@ def c_light(card, x, y, w, h, base):
         else:
             rb += "      - lvgl.widget.update: { id: " + fillid + ", width: !lambda 'return (int)((x/2.55) * " + str(w) + " / 100.0);' }\n"
         rb += "      - lvgl.label.update: { id: " + pct + ", text: !lambda 'return std::to_string((int)(x/2.55)) + \"%\";' }\n"
-        s.append(rb)
-        s.append("  - platform: homeassistant\n    id: ha_" + base + "_s\n    entity_id: " + e + "\n    on_value:\n"
+        s.append(rb)                                      # brightness = numeric sensor
+        # on/off state is a TEXT value -> text_sensor (not the numeric sensor list)
+        t.append("  - platform: homeassistant\n    id: ha_" + base + "_s\n    entity_id: " + e + "\n    on_value:\n"
                  "      - lvgl.widget.update: { id: " + pwrid + ", bg_color: !lambda 'return x == \"on\" ? lv_color_hex(0x241C08) : lv_color_hex(0x161B24);' }\n")
-    return [card_obj(x, y, w, h, inner)], s, []
+    return [card_obj(x, y, w, h, inner)], s, t
 
 
 SENSOR_ICON_COLOR = {"temp": "0xF2685A", "humid": "0x4FA8F5", "illum": "0xF2B84B",
@@ -1788,7 +1789,7 @@ TP_FLUSH_INTERVAL = (
 
 # Live header clock/date. strftime format + whether to strip a leading zero, per kind.
 CLOCK_FMT = {
-    "time": ("%I:%M %p", True), "date": ("%a %b %d", False),
+    "time": ("%I:%M %p", True), "time_hm": ("%I:%M", True), "date": ("%a %b %d", False),
     "date_full": ("%A, %B %d", False), "dow": ("%A", False), "date_long": ("%B %d", False),
 }
 
@@ -1811,6 +1812,93 @@ def clock_items(clocks):
     return "  - interval: 5s\n    then:\n" + ups
 
 
+# --- Screensaver subsystem (regenerated). The hand-built one lives on a page the
+# generator drops; only the g_ss_* globals + ss_base/ss_count/ha_base substitutions
+# survive. Re-inject the photo decoders, the ss_next picker, the HA photo-list sensor,
+# a 1s cycle interval, on_idle (enter), and a generated page_screensaver (tap to wake).
+SS_ONLINE_IMAGE = (
+    "\nonline_image:\n"
+    "  - id: ss_image\n    url: \"http://127.0.0.1/none.jpg\"\n    format: JPEG\n    type: RGB565\n    resize: 1024x600\n    update_interval: never\n"
+    "    on_download_finished:\n      - lvgl.image.update: { id: ss_photo, src: ss_image }\n    on_error:\n      - logger.log: \"SS: photo download error\"\n"
+    "  - id: ss_image_png\n    url: \"http://127.0.0.1/none.png\"\n    format: PNG\n    type: RGB565\n    resize: 1024x600\n    update_interval: never\n"
+    "    on_download_finished:\n      - lvgl.image.update: { id: ss_photo, src: ss_image_png }\n    on_error:\n      - logger.log: \"SS: png download error\"\n"
+)
+SS_SCRIPT = (
+    "\nscript:\n"
+    "  - id: ss_next\n    mode: restart\n    then:\n"
+    "      - lambda: |-\n"
+    "          std::string base = std::string(\"$ha_base\") + \"$ss_base/\";\n"
+    "          std::string fname;\n"
+    "          int n = (int) id(g_ss_files).size();\n"
+    "          if (n > 0) {\n"
+    "            if (id(g_ss_i) >= n) id(g_ss_i) = 0;\n"
+    "            fname = id(g_ss_files)[id(g_ss_i)];\n"
+    "            id(g_ss_i) = (id(g_ss_i) + 1) % n;\n"
+    "          } else {\n"
+    "            id(ss_idx) = (id(ss_idx) % $ss_count) + 1;\n"
+    "            fname = std::to_string(id(ss_idx)) + \".jpg\";\n"
+    "          }\n"
+    "          std::string url = base;\n"
+    "          for (size_t i = 0; i < fname.size(); i++) { if (fname[i] == ' ') url += \"%20\"; else url += fname[i]; }\n"
+    "          id(g_ss_url) = url;\n"
+    "          std::string lo = fname;\n"
+    "          for (size_t i = 0; i < lo.size(); i++) lo[i] = tolower(lo[i]);\n"
+    "          id(g_ss_is_png) = (lo.size() >= 4 && lo.compare(lo.size() - 4, 4, \".png\") == 0);\n"
+    "      - if:\n          condition:\n            lambda: 'return id(g_ss_is_png);'\n          then:\n"
+    "            - online_image.set_url: { id: ss_image_png, url: !lambda 'return id(g_ss_url);' }\n            - component.update: ss_image_png\n"
+    "          else:\n            - online_image.set_url: { id: ss_image, url: !lambda 'return id(g_ss_url);' }\n            - component.update: ss_image\n"
+)
+SS_TEXT_SENSOR = (
+    "  - platform: homeassistant\n    id: ha_ss_list\n    entity_id: sensor.aurora_screensaver\n    attribute: list\n    on_value:\n      then:\n"
+    "        - lambda: |-\n"
+    "            id(g_ss_files).clear();\n"
+    "            std::string s = x, cur;\n"
+    "            for (size_t i = 0; i < s.size(); i++) {\n"
+    "              if (s[i] == '|') { if (!cur.empty()) id(g_ss_files).push_back(cur); cur.clear(); }\n"
+    "              else cur += s[i];\n"
+    "            }\n"
+    "            if (!cur.empty()) id(g_ss_files).push_back(cur);\n"
+    "            id(g_ss_i) = 0;\n"
+)
+SS_INTERVAL_ITEM = (
+    "  - interval: 1s\n    then:\n"
+    "      - if:\n          condition:\n            lambda: 'return id(g_ss_showing);'\n          then:\n"
+    "            - lambda: 'id(g_ss_elapsed) += 1;'\n"
+    "            - if:\n                condition:\n                  lambda: |-\n"
+    "                    int secs = (int) id(ss_seconds).state;\n                    if (secs < 5) secs = 30;\n                    return id(g_ss_elapsed) >= secs;\n"
+    "                then:\n                  - lambda: 'id(g_ss_elapsed) = 0;'\n                  - script.execute: ss_next\n"
+)
+SS_ONIDLE = (
+    "  on_idle:\n    timeout: !lambda 'return id(g_timeout_ms) == 0 ? 86400000 : id(g_timeout_ms);'\n    then:\n"
+    "      - if:\n          condition:\n            lambda: 'return id(g_timeout_ms) > 0;'\n          then:\n"
+    "            - if:\n                condition:\n                  lambda: 'return id(g_screensaver);'\n                then:\n                  - lvgl.page.show: page_screensaver\n"
+    "                else:\n                  - light.turn_off: display_backlight\n"
+)
+
+
+def gen_screensaver_page():
+    """Full-screen photo screensaver: ss_photo (fed by the online_image decoders),
+    a dim scrim, live clock/date + demo temp. Any tap wakes to home."""
+    return (
+        "    - id: page_screensaver\n      bg_color: 0x000000\n      bg_opa: 100%\n"
+        "      on_load:\n"
+        "        - lvgl.widget.update: { id: nav_rail, hidden: true }\n"
+        "        - lambda: 'id(g_ss_showing) = true; id(g_ss_elapsed) = 0; id(g_ss_i) = 0;'\n"
+        "        - script.execute: ss_next\n"
+        "      on_unload:\n"
+        "        - lvgl.widget.update: { id: nav_rail, hidden: false }\n"
+        "        - lambda: 'id(g_ss_showing) = false;'\n"
+        "      widgets:\n"
+        "        - image: { id: ss_photo, src: ss_image, align: center }\n"
+        "        - button: { id: ss_wake, x: 0, y: 0, width: 1024, height: 600, bg_opa: 0%, border_width: 0, radius: 0, on_click: [lvgl.page.show: page_home] }\n"
+        "        - obj: { id: ss_scrim, align: bottom_mid, x: 0, y: 0, width: 1024, height: 184, bg_color: 0x000000, bg_opa: 50%, border_width: 0, radius: 0, pad_all: 0, scrollable: false, clickable: false }\n"
+        "        - label: { id: lbl_ss_time, text: \"9:41\", align: bottom_left, x: 44, y: -86, text_font: f_display, text_color: 0xFFFFFF }\n"
+        "        - label: { id: lbl_ss_date, text: \"\", align: bottom_left, x: 48, y: -36, text_font: f_body, text_color: 0xC8CCD6 }\n"
+        "        - label: { id: lbl_ss_temp, text: \"72\\u00B0\", align: bottom_right, x: -44, y: -62, text_font: f_title, text_color: 0xFFFFFF }\n"
+        "        - label: { id: lbl_ss_wx_icon, text: \"\\U000F0599\", align: bottom_right, x: -46, y: -104, text_font: f_icon, text_color: 0xFFFFFF }\n"
+    )
+
+
 def assemble(layout):
     with open(AURORA, encoding="utf-8") as f:
         secs = split_sections(f.read())
@@ -1820,13 +1908,18 @@ def assemble(layout):
     keep_text = re.sub(r"(?m)^[ \t]*-?[ \t]*script\.(execute|stop):.*\n", "", keep_text)
     keep_text = scrub_lvgl_actions(keep_text)
     nav, pages, sens, txt, _, clocks = build_lvgl(layout)
-    out = keep_text + TP_FLUSH_INTERVAL + clock_items(clocks)   # both share one interval: list
+    clocks += [("lbl_ss_time", "time_hm"), ("lbl_ss_date", "date_full")]   # screensaver clock
+    pages += gen_screensaver_page()
+    txt.append(SS_TEXT_SENSOR)
+    # interval: list = trackpad flush + screensaver photo cycle + clock repaint
+    out = keep_text + TP_FLUSH_INTERVAL + SS_INTERVAL_ITEM + clock_items(clocks)
+    out += SS_ONLINE_IMAGE + SS_SCRIPT
     if sens:
         out += "\nsensor:\n" + "".join(sens)
-    if txt:
-        out += "\ntext_sensor:\n" + "".join(txt)
+    out += "\ntext_sensor:\n" + "".join(txt)
     out += ("\nlvgl:\n"
             "  buffer_size: 25%\n"
+            + SS_ONIDLE                                   # enter screensaver on idle timeout
             + style_defs(lvgl_text)
             + "  top_layer:\n      widgets:\n"
             "      - obj:\n          id: nav_rail\n          x: 0\n          y: 0\n          width: 74\n          height: 600\n"
