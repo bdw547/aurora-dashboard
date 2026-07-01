@@ -174,53 +174,74 @@ def c_toggle(card, x, y, w, h, base):
 def c_light(card, x, y, w, h, base):
     e = card.get("entity", "")
     gw, gh = card["w"], card["h"]
-    if gw >= 2 and gh >= 2:
-        # Horizontal brightness fill (visual) + a transparent full-card drag slider.
-        pct, fillid, sldid = base + "_pct", base + "_fill", base + "_sld"
-        bri = 74                                          # initial (readback corrects live)
-        inner = ("              - obj: { id: " + fillid + ", x: 0, y: 0, width: " + str(int(w * bri / 100)) +
-                 ", height: " + str(h) + ", bg_color: 0x2ED5B8, bg_opa: 55%, border_width: 0, radius: 12, pad_all: 0, scrollable: false }\n")
-        inner += lbl(CARD_ICON.get(card["ck"], "\\U000F0335"), 0, 20, "f_icon", "0xF2B84B", align="top_mid")
-        inner += lbl(card.get("name", "Light"), 0, 56, "f_title", "0xF3F5F8", align="top_mid", width=w - 24, text_align="center", long="dot", height=26)
-        inner += lbl("%d%%" % bri, 0, -20, "f_head", "0xF3F5F8", wid=pct, align="bottom_mid")
-        sld = "              - slider:\n                  id: " + sldid + "\n                  x: 0\n                  y: 0\n"
-        sld += "                  width: " + str(w) + "\n                  height: " + str(h) + "\n"
-        sld += "                  bg_opa: 0%\n                  min_value: 0\n                  max_value: 100\n                  value: " + str(bri) + "\n"
-        sld += "                  indicator: { bg_opa: 0% }\n                  knob: { bg_opa: 0% }\n"
-        sld += "                  on_value:\n"
-        sld += "                    - lvgl.widget.update: { id: " + fillid + ", width: !lambda 'return (int)(lv_slider_get_value(id(" + sldid + ")) * " + str(w) + " / 100.0);' }\n"
-        sld += "                    - lvgl.label.update: { id: " + pct + ", text: !lambda 'return std::to_string((int) lv_slider_get_value(id(" + sldid + "))) + \"%\";' }\n"
+    icon = CARD_ICON.get(card["ck"], "\\U000F0335")
+    name = card.get("name", "Light")
+    sldid, pct, fillid, pwrid = base + "_sld", base + "_pct", base + "_fill", base + "_pwr"
+    bri = 74
+    tog = ("homeassistant.action: { action: light.toggle, data: { entity_id: " + e + " } }") if e else "lvgl.page.show: page_home"
+
+    if gh == 1:                                           # short/wide tile: title + inline slider + %
+        inner = ic(card["ck"], color="0xF2B84B")
+        inner += title(name, w)
         if e:
-            sld += "                  on_release:\n"
-            sld += "                    - homeassistant.action: { action: light.turn_on, data: { entity_id: " + e + ", brightness_pct: !lambda 'return (int) lv_slider_get_value(id(" + sldid + "));' } }\n"
-        inner += sld
+            inner += ("              - slider:\n                  id: " + sldid + "\n                  x: 14\n                  y: 56\n                  width: " + str(w - 28) + "\n"
+                      "                  min_value: 0\n                  max_value: 100\n                  value: 0\n"
+                      "                  on_release:\n                    - homeassistant.action:\n                        action: light.turn_on\n"
+                      "                        data: { entity_id: " + e + ", brightness_pct: !lambda 'return std::to_string((int) lv_slider_get_value(id(" + sldid + ")));' }\n")
+        inner += lbl("--%", 14, -12, "f_head", "0x2ED5B8", wid=pct, align="bottom_left")
         s = []
         if e:
-            s.append("  - platform: homeassistant\n    id: ha_%s_b\n    entity_id: %s\n    attribute: brightness\n    on_value:\n"
-                     "      - lvgl.slider.update: { id: %s, value: !lambda 'return (int)(x/2.55);' }\n"
-                     "      - lvgl.widget.update: { id: %s, width: !lambda 'return (int)((x/2.55) * %d / 100.0);' }\n"
-                     "      - lvgl.label.update: { id: %s, text: !lambda 'return std::to_string((int)(x/2.55)) + \"%%\";' }\n"
-                     % (base, e, sldid, fillid, w, pct))
-        return [card_obj(x, y, w, h, inner)], s, []
-    sld, pct = base + "_sld", base + "_pct"
-    inner = ic(card["ck"], color="0xF2B84B")
-    inner += title(card.get("name", "Light"), w)
+            s.append("  - platform: homeassistant\n    id: ha_" + base + "_b\n    entity_id: " + e + "\n    attribute: brightness\n    on_value:\n"
+                     "      - lvgl.slider.update: { id: " + sldid + ", value: !lambda 'return (int)(x/2.55);' }\n"
+                     "      - lvgl.label.update: { id: " + pct + ", text: !lambda 'return std::to_string((int)(x/2.55)) + \"%\";' }\n")
+        return [card_obj(x, y, w, h, inner, None)], s, []
+
+    # Whole-card dimmer (drag to dim; vertical fill for portrait, horizontal otherwise)
+    # + an on/off button at the bottom. Transparent slider owns the drag region above it.
+    vertical = gh > gw
+    btnh = 46
+    regb = h - btnh - 12                                  # dimmer region bottom (button sits below)
+    if vertical:
+        fh0 = int(regb * bri / 100)
+        inner = ("              - obj: { id: " + fillid + ", x: 0, y: " + str(regb - fh0) + ", width: " + str(w) +
+                 ", height: " + str(fh0) + ", bg_color: 0x2ED5B8, bg_opa: 55%, border_width: 0, radius: 12, pad_all: 0, scrollable: false }\n")
+    else:
+        inner = ("              - obj: { id: " + fillid + ", x: 0, y: 0, width: " + str(int(w * bri / 100)) +
+                 ", height: " + str(regb) + ", bg_color: 0x2ED5B8, bg_opa: 55%, border_width: 0, radius: 12, pad_all: 0, scrollable: false }\n")
+    inner += lbl(icon, 0, 18, "f_icon", "0xF2B84B", align="top_mid")
+    inner += lbl(name, 0, 52, "f_title", "0xF3F5F8", align="top_mid", width=w - 20, text_align="center", long="dot", height=26)
+    inner += lbl(str(bri) + "%", 0, -(btnh + 16), "f_head", "0xF3F5F8", wid=pct, align="bottom_mid")
+    sld = ("              - slider:\n                  id: " + sldid + "\n                  x: 0\n                  y: 0\n                  width: " + str(w) + "\n                  height: " + str(regb) + "\n"
+           "                  bg_opa: 0%\n                  min_value: 0\n                  max_value: 100\n                  value: " + str(bri) + "\n"
+           "                  indicator: { bg_opa: 0% }\n                  knob: { bg_opa: 0% }\n"
+           "                  on_value:\n")
+    if vertical:
+        sld += "                    - lvgl.widget.update: { id: " + fillid + ", height: !lambda 'return (int)(lv_slider_get_value(id(" + sldid + ")) * " + str(regb) + " / 100.0);' }\n"
+        sld += "                    - lvgl.widget.update: { id: " + fillid + ", y: !lambda 'return (int)(" + str(regb) + " - lv_slider_get_value(id(" + sldid + ")) * " + str(regb) + " / 100.0);' }\n"
+    else:
+        sld += "                    - lvgl.widget.update: { id: " + fillid + ", width: !lambda 'return (int)(lv_slider_get_value(id(" + sldid + ")) * " + str(w) + " / 100.0);' }\n"
+    sld += "                    - lvgl.label.update: { id: " + pct + ", text: !lambda 'return std::to_string((int) lv_slider_get_value(id(" + sldid + "))) + \"%\";' }\n"
     if e:
-        inner += (
-            "              - slider:\n                  id: %s\n                  x: 14\n                  y: 56\n                  width: %d\n"
-            "                  min_value: 0\n                  max_value: 100\n                  value: 0\n"
-            "                  on_release:\n                    - homeassistant.action:\n                        action: light.turn_on\n"
-            "                        data: { entity_id: %s, brightness_pct: !lambda 'return std::to_string((int) lv_slider_get_value(id(%s)));' }\n"
-            % (sld, w - 28, e, sld))
-    inner += lbl("--%", 14, -12, "f_head", "0x2ED5B8", wid=pct, align="bottom_left")
+        sld += "                  on_release:\n                    - homeassistant.action: { action: light.turn_on, data: { entity_id: " + e + ", brightness_pct: !lambda 'return (int) lv_slider_get_value(id(" + sldid + "));' } }\n"
+    inner += sld
+    inner += ("              - button:\n                  id: " + pwrid + "\n                  x: 10\n                  y: " + str(h - btnh - 8) + "\n                  width: " + str(w - 20) + "\n                  height: " + str(btnh) + "\n"
+              "                  bg_color: 0x161B24\n                  border_color: 0x23262F\n                  border_width: 1\n                  radius: 12\n                  pad_all: 0\n                  scrollable: false\n"
+              "                  widgets: [label: { text: \"\\U000F0425\", align: center, text_font: f_icon, text_color: 0xF2B84B }]\n"
+              "                  on_click: [" + tog + "]\n")
     s = []
     if e:
-        s.append(
-            "  - platform: homeassistant\n    id: ha_%s_b\n    entity_id: %s\n    attribute: brightness\n    on_value:\n"
-            "      - lvgl.slider.update: { id: %s, value: !lambda 'return (int)(x/2.55);' }\n"
-            "      - lvgl.label.update: { id: %s, text: !lambda 'return std::to_string((int)(x/2.55)) + \"%%\";' }\n"
-            % (base, e, sld, pct))
-    return [card_obj(x, y, w, h, inner, None)], s, []
+        rb = ("  - platform: homeassistant\n    id: ha_" + base + "_b\n    entity_id: " + e + "\n    attribute: brightness\n    on_value:\n"
+              "      - lvgl.slider.update: { id: " + sldid + ", value: !lambda 'return (int)(x/2.55);' }\n")
+        if vertical:
+            rb += "      - lvgl.widget.update: { id: " + fillid + ", height: !lambda 'return (int)((x/2.55) * " + str(regb) + " / 100.0);' }\n"
+            rb += "      - lvgl.widget.update: { id: " + fillid + ", y: !lambda 'return (int)(" + str(regb) + " - (x/2.55) * " + str(regb) + " / 100.0);' }\n"
+        else:
+            rb += "      - lvgl.widget.update: { id: " + fillid + ", width: !lambda 'return (int)((x/2.55) * " + str(w) + " / 100.0);' }\n"
+        rb += "      - lvgl.label.update: { id: " + pct + ", text: !lambda 'return std::to_string((int)(x/2.55)) + \"%\";' }\n"
+        s.append(rb)
+        s.append("  - platform: homeassistant\n    id: ha_" + base + "_s\n    entity_id: " + e + "\n    on_value:\n"
+                 "      - lvgl.widget.update: { id: " + pwrid + ", bg_color: !lambda 'return x == \"on\" ? lv_color_hex(0x241C08) : lv_color_hex(0x161B24);' }\n")
+    return [card_obj(x, y, w, h, inner)], s, []
 
 
 SENSOR_ICON_COLOR = {"temp": "0xF2685A", "humid": "0x4FA8F5", "illum": "0xF2B84B",
@@ -291,17 +312,17 @@ def c_climate(card, x, y, w, h, base):
     tid = base + "_t"
     sel_mode = "heat"                                    # demo (no HA state feed)
     inner = ic(card["ck"], color="0x2ED5B8")
-    inner += lbl(card.get("name", "Climate"), 50, 12, "f_title", width=w - 120, long="dot", height=26)
-    inner += lbl("now 71\\u00B0 \\u00B7 41% RH", 50, 44, "f_small", "0x868CA0")
+    inner += lbl(card.get("name", "Climate"), 50, 14, "f_title", width=w - 60, long="dot", height=26)
     heat_vid, cool_vid = base + "_hi", base + "_lo"
     s = []
     if e:                                                # current temp label (tid) exists in BOTH branches
         s.append("  - platform: homeassistant\n    id: ha_%s\n    entity_id: %s\n    attribute: current_temperature\n    on_value:\n"
                  "      - lvgl.label.update: { id: %s, text: !lambda 'return std::to_string((int)x) + \"\\u00B0\";' }\n"
                  % (tid, e, tid))
-    if w < 380 or h < 240:                               # compact fallback: single big temp only (no setpoint boxes)
-        inner += lbl("71\\u00B0", 0, 16, "f_display", "0xF3F5F8", wid=tid, align="center")
+    if w < 380 or h < 240:                               # compact: name (top) + big live temp (bottom), no overlap
+        inner += lbl("71\\u00B0", 0, -8, "f_display", "0xF3F5F8", wid=tid, align="bottom_mid")
         return [card_obj(x, y, w, h, inner)], s, []
+    inner += lbl("now 71\\u00B0 \\u00B7 41% RH", 50, 44, "f_small", "0x868CA0")   # rich branch only
     if e:                                                # setpoint readbacks only where HEAT/COOL boxes (hi/lo) exist
         s.append("  - platform: homeassistant\n    id: ha_%s\n    entity_id: %s\n    attribute: target_temp_low\n    on_value:\n"
                  "      - lvgl.label.update: { id: %s, text: !lambda 'return std::to_string((int)x) + \"\\u00B0\";' }\n"
@@ -1339,27 +1360,44 @@ HCHIP = {
 }
 
 
-def gen_header(key, page, layout):
+def gen_header(key, page, layout, pid):
     hdr = page.get("header") or {}
     left = hdr.get("left", "greeting")
     first = layout.get("nav", [{}])[0].get("page")
     greet = "Good evening, Ben" if key == first else page.get("title", "Aurora")
-    out = ""
+    room = layout.get("install_room") or "Home"          # matches the builder (blank -> Home)
+    tid, did = "hct_" + pid, "hcd_" + pid                 # live clock/date label ids (per page)
+    out, clocks = "", []
     if left == "time":
-        out += "        - label: { text: \"10:42 PM\", x: 96, y: 12, text_font: f_display, text_color: 0xF3F5F8 }\n"
+        out += "        - label: { id: %s, text: \"10:42 PM\", x: 96, y: 12, text_font: f_display, text_color: 0xF3F5F8 }\n" % tid
+        clocks.append((tid, "time"))
     elif left == "date":
-        out += "        - label: { text: \"Sunday\", x: 96, y: 10, text_font: f_head, text_color: 0xF3F5F8 }\n"
-        out += "        - label: { text: \"June 29\", x: 96, y: 50, text_font: f_body, text_color: 0x868CA0 }\n"
+        out += "        - label: { id: %s, text: \"Sunday\", x: 96, y: 10, text_font: f_head, text_color: 0xF3F5F8 }\n" % did
+        out += "        - label: { id: %s, text: \"June 29\", x: 96, y: 50, text_font: f_body, text_color: 0x868CA0 }\n" % (did + "b")
+        clocks += [(did, "dow"), (did + "b", "date_long")]
     elif left == "time_date":
-        out += "        - label: { text: \"10:42 PM\", x: 96, y: 10, text_font: f_head, text_color: 0xF3F5F8 }\n"
-        out += "        - label: { text: \"Sunday, June 29\", x: 96, y: 50, text_font: f_body, text_color: 0x868CA0 }\n"
-    else:
+        out += "        - label: { id: %s, text: \"10:42 PM\", x: 96, y: 10, text_font: f_head, text_color: 0xF3F5F8 }\n" % tid
+        out += "        - label: { id: %s, text: \"Sunday, June 29\", x: 96, y: 50, text_font: f_body, text_color: 0x868CA0 }\n" % did
+        clocks += [(tid, "time"), (did, "date_full")]
+    else:                                                # greeting (+ time, + date unless greeting_nd)
         out += "        - label: { text: %s, x: 96, y: 14, text_font: f_h1, text_color: 0xF3F5F8 }\n" % esc(greet)
-        # room switcher + clock sub-row (teal room icon + name + chevron + mono time)
-        out += "        - label: { text: \"\\U000F04B9\", x: 96, y: 56, text_font: f_iconsm, text_color: 0x2ED5B8 }\n"
-        out += "        - label: { text: \"Living Room\", x: 122, y: 55, text_font: f_body, text_color: 0xC2C7D2 }\n"
-        out += "        - label: { text: \"\\U000F0140\", x: 224, y: 56, text_font: f_iconsm, text_color: 0x868CA0 }\n"
-        out += "        - label: { text: \"\\u00B7 10:42 PM\", x: 250, y: 56, text_font: f_mono, text_color: 0x868CA0 }\n"
+        # sub-line: teal room icon + configured room + live time (+ date). Flex row so it
+        # lays out regardless of room-name length; no room-switcher chevron.
+        sub = ("        - obj:\n            x: 94\n            y: 50\n            width: SIZE_CONTENT\n            height: SIZE_CONTENT\n"
+               "            bg_opa: 0\n            border_width: 0\n            pad_all: 0\n            scrollable: false\n"
+               "            layout: { type: flex, flex_flow: ROW, flex_align_cross: center, pad_column: 8 }\n"
+               "            widgets:\n"
+               "              - label: { text: \"\\U000F04B9\", text_font: f_iconsm, text_color: 0x2ED5B8 }\n"
+               "              - label: { text: %s, text_font: f_body, text_color: 0xC2C7D2 }\n"
+               "              - label: { text: \"\\u00B7\", text_font: f_body, text_color: 0x868CA0 }\n"
+               "              - label: { id: %s, text: \"10:42 PM\", text_font: f_mono, text_color: 0x868CA0 }\n"
+               % (esc(room), tid))
+        clocks.append((tid, "time"))
+        if left != "greeting_nd":
+            sub += ("              - label: { text: \"\\u00B7\", text_font: f_body, text_color: 0x868CA0 }\n"
+                    "              - label: { id: %s, text: \"Sun Jun 29\", text_font: f_mono, text_color: 0x868CA0 }\n" % did)
+            clocks.append((did, "date"))
+        out += sub
     # status chips as bordered pills (design: #14161C bg, #23262F border, radius 12)
     for i, item in enumerate((hdr.get("right") or [])[:4]):
         g, t, col = HCHIP.get(item, ("", item, "0x868CA0"))
@@ -1378,7 +1416,7 @@ def gen_header(key, page, layout):
             "                  widgets:\n%s"
             "                    - label: { text: %s, text_font: f_body, text_color: 0xF3F5F8 }\n"
             % (base_x, icon_w, esc(t)))
-    return out
+    return out, clocks
 
 
 def _nav_onload(layout, active):
@@ -1483,7 +1521,7 @@ def _tv_trackpad_overlay():
 
 
 def gen_pages(layout, pagemap):
-    pages_yaml, sens, txt = "", [], []
+    pages_yaml, sens, txt, clocks = "", [], [], []
     for key, page in layout.get("pages", {}).items():
         hdr = page.get("header") or {}
         header_on = bool(hdr.get("on"))
@@ -1492,7 +1530,9 @@ def gen_pages(layout, pagemap):
             pid = pagemap[key] if si == 0 else "%s_%d" % (pagemap[key], si)
             widgets = "        - image: { src: img_aurora_bg, x: 0, y: 0 }\n"
             if header_on:
-                widgets += gen_header(key, page, layout)
+                hdr_yaml, clk = gen_header(key, page, layout, pid)
+                widgets += hdr_yaml
+                clocks += clk
             has_tv = any(c.get("ck") == "tvremote" for c in cards)
             for card in cards:
                 ws, ss, ts = emit_card(card, header_on, pagemap)
@@ -1514,21 +1554,21 @@ def gen_pages(layout, pagemap):
             pages_yaml += (
                 "    - id: %s\n      bg_color: 0x0A0B0F\n      scrollable: false\n%s      widgets:\n%s" % (pid, onload, widgets))
     pages_yaml += gen_settings_page(layout)
-    return pages_yaml, sens, txt
+    return pages_yaml, sens, txt, clocks
 
 
 def build_lvgl(layout):
     pagemap = {key: "page_" + slug(key) for key in layout.get("pages", {})}
     nav = gen_nav(layout, pagemap)
-    pages, sens, txt = gen_pages(layout, pagemap)
-    return nav, pages, sens, txt, pagemap
+    pages, sens, txt, clocks = gen_pages(layout, pagemap)
+    return nav, pages, sens, txt, pagemap, clocks
 
 
 # ---- base extraction: keep hardware/font/style sections, drop UI bindings ----
 KEEP = ["substitutions", "esphome", "esp32", "psram", "esp_ldo", "esp32_hosted",
         "wifi", "api", "ota", "safe_mode", "logger", "web_server", "output", "light",
         "external_components", "i2c", "touchscreen", "display", "http_request",
-        "image", "font", "globals", "number", "button"]
+        "image", "font", "globals", "number", "button", "time"]
 
 
 def scrub_lvgl_actions(text):
@@ -1623,6 +1663,30 @@ TP_FLUSH_INTERVAL = (
     "            - lambda: 'id(g_tp_scroll) = id(g_tp_scroll) % 10;'\n"
 )
 
+# Live header clock/date. strftime format + whether to strip a leading zero, per kind.
+CLOCK_FMT = {
+    "time": ("%I:%M %p", True), "date": ("%a %b %d", False),
+    "date_full": ("%A, %B %d", False), "dow": ("%A", False), "date_long": ("%B %d", False),
+}
+
+
+def clock_items(clocks):
+    """A single interval: item that repaints every live header time/date label from
+    ha_time (the HA time source kept in the generated build). Appended to the same
+    interval: list as TP_FLUSH_INTERVAL — device build only (host has no ha_time)."""
+    if not clocks:
+        return ""
+    ups = ""
+    for cid, kind in clocks:
+        fmt, strip0 = CLOCK_FMT.get(kind, CLOCK_FMT["time"])
+        lam = ("auto t = id(ha_time).now(); if (!t.is_valid()) return std::string(\"\"); "
+               "char b[24]; t.strftime(b, sizeof(b), \"" + fmt + "\"); std::string s(b);")
+        if strip0:
+            lam += " if (!s.empty() && s[0] == 48) s.erase(0, 1);"   # 48 = '0'; avoid a single-quote in the YAML scalar
+        lam += " return s;"
+        ups += "      - lvgl.label.update: { id: " + cid + ", text: !lambda '" + lam + "' }\n"
+    return "  - interval: 5s\n    then:\n" + ups
+
 
 def assemble(layout):
     with open(AURORA, encoding="utf-8") as f:
@@ -1632,8 +1696,8 @@ def assemble(layout):
     # scrub references to dropped UI scripts + lvgl widget actions in the base
     keep_text = re.sub(r"(?m)^[ \t]*-?[ \t]*script\.(execute|stop):.*\n", "", keep_text)
     keep_text = scrub_lvgl_actions(keep_text)
-    nav, pages, sens, txt, _ = build_lvgl(layout)
-    out = keep_text + TP_FLUSH_INTERVAL
+    nav, pages, sens, txt, _, clocks = build_lvgl(layout)
+    out = keep_text + TP_FLUSH_INTERVAL + clock_items(clocks)   # both share one interval: list
     if sens:
         out += "\nsensor:\n" + "".join(sens)
     if txt:
@@ -1664,7 +1728,7 @@ def host_assemble(layout):
     keep = "".join(t for n, t in secs if n in ("substitutions", "globals", "font"))
     keep = re.sub(r"(?m)^[ \t]*-?[ \t]*script\.(execute|stop):.*\n", "", keep)
     keep = scrub_lvgl_actions(keep)
-    nav, pages, _sens, _txt, _ = build_lvgl(layout)
+    nav, pages, _sens, _txt, _, _clocks = build_lvgl(layout)   # host has no ha_time -> no clock interval
     pages = re.sub(r"(?m)^\s*- image: \{ src: img_aurora_bg.*\n", "", pages)
     # host build has no display_backlight light / restart button — stub those local actions
     pages = re.sub(r"light\.turn_on: \{ id: display_backlight[^}]*\}", "logger.log: emul", pages)
@@ -1702,7 +1766,7 @@ def _loader():
 
 def fragment(layout):
     """Just the generated lvgl + state sensors (no base) — for validating codegen."""
-    nav, pages, sens, txt, _ = build_lvgl(layout)
+    nav, pages, sens, txt, _, _clocks = build_lvgl(layout)
     frag = ("lvgl:\n  top_layer:\n    widgets:\n      - obj:\n          widgets:\n" + nav
             + "  pages:\n" + pages)
     if sens:
