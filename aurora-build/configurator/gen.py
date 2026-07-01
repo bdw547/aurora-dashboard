@@ -950,46 +950,10 @@ def c_tvremote(card, x, y, w, h, base):
     inner += btn(hx, dcy - 72, 76, 60, "\\U000F0143", _chan(e, True), font="f_icon")
     inner += lbl("CH", hx, dcy - 6, "f_micro", "0x868CA0", width=76, text_align="center")
     inner += btn(hx, dcy + 14, 76, 60, "\\U000F0140", _chan(e, False), font="f_icon")
-    # --- overlays over the VOL / d-pad / CH band (hidden; toggled from the bar) ---
-    padid, whlid = base + "_pad", base + "_whl"
-    ov_x, ov_w = mx + 6, mw - 12
-    ov_y, ov_h = band_top - 6, (band_bot - band_top) + 12
-    inner += (
-        "              - obj:\n"
-        "                  id: %s\n                  x: %d\n                  y: %d\n                  width: %d\n                  height: %d\n"
-        "                  bg_color: 0x0E1524\n                  border_color: 0x2ED5B8\n                  border_width: 2\n                  radius: 18\n"
-        "                  hidden: true\n                  clickable: true\n                  pad_all: 0\n                  scrollable: false\n"
-        "                  on_click: [%s]\n"
-        "                  widgets:\n"
-        "                    - obj: { x: 16, y: 16, width: %d, height: %d, bg_color: 0x0F1117, border_color: 0x23262F, border_width: 1, radius: 14, pad_all: 0, scrollable: false }\n"
-        "                    - label: { text: \"\\U000F0297\", align: center, y: -34, text_font: f_bigicon, text_color: 0x2ED5B8 }\n"
-        "                    - label: { text: \"TRACKPAD\", align: center, y: 22, text_font: f_title, text_color: 0xF3F5F8 }\n"
-        "                    - label: { text: \"Drag to move \\u00B7 tap to click\", align: center, y: 52, text_font: f_body, text_color: 0x868CA0 }\n"
-        % (padid, ov_x, ov_y, ov_w, ov_h, _wbtn(e, "ENTER"), ov_w - 32, ov_h - 32)
-    )
-    up_act, dn_act = _wbtn(e, "UP"), _wbtn(e, "DOWN")
-    inner += (
-        "              - obj:\n"
-        "                  id: %s\n                  x: %d\n                  y: %d\n                  width: %d\n                  height: %d\n"
-        "                  bg_color: 0x0E1524\n                  border_color: 0x4FA8F5\n                  border_width: 2\n                  radius: 18\n"
-        "                  hidden: true\n                  pad_all: 0\n                  scrollable: false\n"
-        "                  widgets:\n"
-        "                    - obj: { align: center, width: 96, height: %d, bg_color: 0x0F1117, border_color: 0x23262F, border_width: 1, radius: 48, pad_all: 0, scrollable: false }\n"
-        "                    - label: { text: \"SCROLL\", align: center, text_font: f_micro, text_color: 0x868CA0 }\n"
-        "                    - button:\n"
-        "                        align: top_mid\n                        y: 14\n                        width: 84\n                        height: 62\n"
-        "                        bg_color: 0x10141C\n                        radius: 14\n                        pad_all: 0\n                        scrollable: false\n"
-        "                        widgets: [label: { text: \"\\U000F0143\", align: center, text_font: f_bigicon, text_color: 0x4FA8F5 }]\n"
-        "                        on_click: [%s]\n"
-        "                    - button:\n"
-        "                        align: bottom_mid\n                        y: -14\n                        width: 84\n                        height: 62\n"
-        "                        bg_color: 0x10141C\n                        radius: 14\n                        pad_all: 0\n                        scrollable: false\n"
-        "                        widgets: [label: { text: \"\\U000F0140\", align: center, text_font: f_bigicon, text_color: 0x4FA8F5 }]\n"
-        "                        on_click: [%s]\n"
-        % (whlid, ov_x, ov_y, ov_w, ov_h, ov_h - 40, up_act, dn_act)
-    )
-    # --- bottom transport bar (Pad / Wheel toggle the overlays above) ---
-    bar = [("\\U000F004D", "BACK"), ("\\U000F02DC", "HOME"), ("\\U000F0297", "pad"), ("\\U000F04E2", "wheel"),
+    # --- bottom transport bar. Pad toggles the page-level LG trackpad overlay
+    #     (_tv_trackpad_overlay) and engages the gesture engine via g_tp_active;
+    #     the overlay itself carries the move pad + scroll strip. ---
+    bar = [("\\U000F004D", "BACK"), ("\\U000F02DC", "HOME"), ("\\U000F0297", "pad"),
            ("\\U000F04AE", "prev"), ("\\U000F040A", "play"), ("\\U000F04AD", "next"),
            ("\\U000F0211", "FASTFORWARD"), ("\\U000F075F", "MUTE")]
     media_acts = {"prev": "media_player.media_previous_track", "play": "media_player.media_play_pause",
@@ -997,10 +961,23 @@ def c_tvremote(card, x, y, w, h, base):
     n = len(bar); bw = (mw - (n - 1) * 8) // n; by = h - 80
     for i, (g, key) in enumerate(bar):
         bx = mx + i * (bw + 8)
-        if key == "pad":
-            inner += _toggle_btn(bx, by, bw, 62, g, padid, whlid); continue
-        if key == "wheel":
-            inner += _toggle_btn(bx, by, bw, 62, g, whlid, padid); continue
+        if key == "pad":                              # show/hide trackpad overlay + engage gesture engine
+            inner += (
+                "              - button:\n"
+                "                  x: %d\n                  y: %d\n                  width: %d\n                  height: 62\n"
+                "                  bg_color: 0x161B24\n                  radius: 12\n                  pad_all: 0\n                  scrollable: false\n"
+                "                  widgets: [label: { text: %s, align: center, text_font: f_icon, text_color: 0x2ED5B8 }]\n"
+                "                  on_click:\n"
+                "                    - lambda: |-\n"
+                "                        if (lv_obj_has_flag(id(tv_tp_overlay), LV_OBJ_FLAG_HIDDEN)) {\n"
+                "                          lv_obj_clear_flag(id(tv_tp_overlay), LV_OBJ_FLAG_HIDDEN);\n"
+                "                          id(g_tp_active) = true;\n"
+                "                        } else {\n"
+                "                          lv_obj_add_flag(id(tv_tp_overlay), LV_OBJ_FLAG_HIDDEN);\n"
+                "                          id(g_tp_active) = false;\n"
+                "                        }\n"
+                % (bx, by, bw, esc(g)))
+            continue
         if key in media_acts:
             act = ha(media_acts[key], e) if e else "lvgl.page.show: page_home"
         elif key == "MUTE":
@@ -1438,6 +1415,51 @@ def gen_settings_page(layout):
     return "    - id: page_settings\n      bg_color: 0x0A0B0F\n      scrollable: false\n%s      widgets:\n%s" % (onload, w)
 
 
+def _tv_trackpad_overlay():
+    """Page-level LG-trackpad overlay for the TV page, positioned in screen-absolute
+    coords so it lines up with aurora.yaml's hardcoded touchscreen gesture zones
+    (move pad x96-856, scroll strip x872-1004, both y120-470). Hidden until the
+    remote's Pad button toggles it (which also flips g_tp_active). The pad/strip
+    are clickable:false so LVGL leaves the raw touches to the gesture engine; the
+    engine's deltas are flushed to HA by TP_FLUSH_INTERVAL. This is the same
+    move-pad + scroll-strip surface as the original page_trackpad, in-place."""
+    return (
+        "        - obj:\n"
+        "            id: tv_tp_overlay\n"
+        "            x: 0\n            y: 0\n            width: 1024\n            height: 600\n"
+        "            bg_color: 0x0A0B0F\n            bg_opa: 100%\n            border_width: 0\n            radius: 0\n"
+        "            pad_all: 0\n            hidden: true\n            clickable: false\n            scrollable: false\n"
+        "            widgets:\n"
+        "              - label: { text: \"Trackpad\", x: 96, y: 42, text_font: f_title, text_color: 0xF3F5F8 }\n"
+        "              - label: { text: \"LG Magic pointer \\u00B7 drag to move, tap to click\", x: 96, y: 80, text_font: f_small, text_color: 0x868CA0 }\n"
+        "              - button:\n"
+        "                  id: tv_tp_close\n"
+        "                  x: 872\n                  y: 40\n                  width: 132\n                  height: 56\n"
+        "                  bg_color: 0x161B24\n                  border_color: 0x2ED5B8\n                  border_width: 2\n                  radius: 12\n"
+        "                  pad_all: 0\n                  scrollable: false\n"
+        "                  widgets: [label: { text: \"Buttons\", align: center, text_font: f_body, text_color: 0x2ED5B8 }]\n"
+        "                  on_click:\n"
+        "                    - lambda: |-\n"
+        "                        lv_obj_add_flag(id(tv_tp_overlay), LV_OBJ_FLAG_HIDDEN);\n"
+        "                        id(g_tp_active) = false;\n"
+        "              - obj:\n"
+        "                  x: 96\n                  y: 120\n                  width: 760\n                  height: 350\n"
+        "                  bg_color: 0x10121A\n                  bg_opa: 100%\n                  border_color: 0x2ED5B8\n                  border_width: 1\n                  radius: 22\n"
+        "                  pad_all: 0\n                  clickable: false\n                  scrollable: false\n"
+        "                  widgets:\n"
+        "                    - label: { text: \"\\U000F0297\", align: center, y: -34, text_font: f_bigicon, text_color: 0x2ED5B8 }\n"
+        "                    - label: { text: \"Drag to move  \\u00B7  tap to click\", align: center, y: 40, text_font: f_body, text_color: 0x868CA0 }\n"
+        "              - obj:\n"
+        "                  x: 872\n                  y: 120\n                  width: 132\n                  height: 350\n"
+        "                  bg_color: 0x10121A\n                  bg_opa: 100%\n                  border_color: 0x4FA8F5\n                  border_width: 1\n                  radius: 22\n"
+        "                  pad_all: 0\n                  clickable: false\n                  scrollable: false\n"
+        "                  widgets:\n"
+        "                    - label: { text: \"\\U000F0143\", align: top_mid, y: 20, text_font: f_bigicon, text_color: 0x4FA8F5 }\n"
+        "                    - label: { text: \"SCROLL\", align: center, text_font: f_micro, text_color: 0x868CA0 }\n"
+        "                    - label: { text: \"\\U000F0140\", align: bottom_mid, y: -20, text_font: f_bigicon, text_color: 0x4FA8F5 }\n"
+    )
+
+
 def gen_pages(layout, pagemap):
     pages_yaml, sens, txt = "", [], []
     for key, page in layout.get("pages", {}).items():
@@ -1449,6 +1471,7 @@ def gen_pages(layout, pagemap):
             widgets = "        - image: { src: img_aurora_bg, x: 0, y: 0 }\n"
             if header_on:
                 widgets += gen_header(key, page, layout)
+            has_tv = any(c.get("ck") == "tvremote" for c in cards)
             for card in cards:
                 ws, ss, ts = emit_card(card, header_on, pagemap)
                 widgets += "".join(ws)
@@ -1460,6 +1483,12 @@ def gen_pages(layout, pagemap):
                 widgets += btn(884, 540, 110, 44, "Next \\U000F0142", "lvgl.page.show: %s" % nxt, font="f_body")
             active = next((slug(n.get("id", "")) for n in layout.get("nav", []) if n.get("page") == key), None)
             onload = _nav_onload(layout, active)
+            if has_tv:                                    # in-place LG trackpad overlay + disengage on leave
+                widgets += _tv_trackpad_overlay()
+                onload += ("      on_unload:\n"
+                           "        - lambda: |-\n"
+                           "            lv_obj_add_flag(id(tv_tp_overlay), LV_OBJ_FLAG_HIDDEN);\n"
+                           "            id(g_tp_active) = false;\n")
             pages_yaml += (
                 "    - id: %s\n      bg_color: 0x0A0B0F\n      scrollable: false\n%s      widgets:\n%s" % (pid, onload, widgets))
     pages_yaml += gen_settings_page(layout)
@@ -1543,6 +1572,36 @@ def style_defs(lvgl_text):
     return block if block.endswith("\n") else block + "\n"
 
 
+# LG Magic-remote pointer bridge. aurora.yaml carries this flush interval, but the
+# generator drops all `interval:` blocks (they reference dropped ids), so re-inject
+# the standalone g_tp_* -> pyscript.lg_pointer_* flush the TV trackpad depends on.
+# References only globals that survive into the generated build (g_tp_*) + HA services.
+TP_FLUSH_INTERVAL = (
+    "\ninterval:\n"
+    "  - interval: 50ms\n"
+    "    then:\n"
+    "      - if:\n"
+    "          condition:\n"
+    "            lambda: 'return id(g_tp_active) && (id(g_tp_dx) != 0 || id(g_tp_dy) != 0);'\n"
+    "          then:\n"
+    "            - homeassistant.action:\n"
+    "                action: pyscript.lg_pointer_move\n"
+    "                data:\n"
+    "                  dx: !lambda 'return std::to_string(id(g_tp_dx) * 2);'\n"
+    "                  dy: !lambda 'return std::to_string(id(g_tp_dy) * 2);'\n"
+    "            - lambda: 'id(g_tp_dx) = 0; id(g_tp_dy) = 0;'\n"
+    "      - if:\n"
+    "          condition:\n"
+    "            lambda: 'return id(g_tp_active) && abs(id(g_tp_scroll)) >= 10;'\n"
+    "          then:\n"
+    "            - homeassistant.action:\n"
+    "                action: pyscript.lg_pointer_scroll\n"
+    "                data:\n"
+    "                  dy: !lambda 'return std::to_string(id(g_tp_scroll) / 10);'\n"
+    "            - lambda: 'id(g_tp_scroll) = id(g_tp_scroll) % 10;'\n"
+)
+
+
 def assemble(layout):
     with open(AURORA, encoding="utf-8") as f:
         secs = split_sections(f.read())
@@ -1552,7 +1611,7 @@ def assemble(layout):
     keep_text = re.sub(r"(?m)^[ \t]*-?[ \t]*script\.(execute|stop):.*\n", "", keep_text)
     keep_text = scrub_lvgl_actions(keep_text)
     nav, pages, sens, txt, _ = build_lvgl(layout)
-    out = keep_text
+    out = keep_text + TP_FLUSH_INTERVAL
     if sens:
         out += "\nsensor:\n" + "".join(sens)
     if txt:
