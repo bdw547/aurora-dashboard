@@ -382,6 +382,7 @@ def c_media(card, x, y, w, h, base):
     e = card.get("entity", "")
     ck = card["ck"]
     tid = base + "_t"
+    aid = base + "_a"
     sld = base + "_vol"
     gw, gh = card["w"], card["h"]
     cells = gw * gh
@@ -426,6 +427,8 @@ def c_media(card, x, y, w, h, base):
     if e:
         ts.append("  - platform: homeassistant\n    id: ha_%s\n    entity_id: %s\n    attribute: media_title\n    on_value:\n"
                   "      - lvgl.label.update: { id: %s, text: !lambda 'return x.empty() ? std::string(\"Nothing playing\") : x;' }\n" % (tid, e, tid))
+        ts.append("  - platform: homeassistant\n    id: ha_%s\n    entity_id: %s\n    attribute: media_artist\n    on_value:\n"
+                  "      - lvgl.label.update: { id: %s, text: !lambda 'return x;' }\n" % (aid, e, aid))
         if has_vol:
             ts.append("  - platform: homeassistant\n    id: ha_%s\n    entity_id: %s\n    attribute: volume_level\n    on_value:\n"
                       "      - lvgl.slider.update: { id: %s, value: !lambda 'return (int)(atof(x.c_str()) * 100);' }\n" % (sld, e, sld))
@@ -435,7 +438,7 @@ def c_media(card, x, y, w, h, base):
     if gw == 1 and gh == 1:
         inner += art(14, 14, 40, 40)
         inner += lbl("Midnight City", 62, 18, "f_body", "0xF3F5F8", wid=tid, width=w - 74, long="dot", height=20)
-        inner += lbl("M83", 62, 44, "f_small", "0x868CA0")
+        inner += lbl("M83", 62, 44, "f_small", "0x868CA0", wid=aid, width=w - 74, long="dot", height=16)
         inner += btn(w - 46, h - 46, 34, 34, play_g, plpz, bg="0x2ED5B8", color="0x06231D", radius=17, font="f_icon")
         return [card_obj(x, y, w, h, inner)], [], ts
     # ---- h==1 row (2x1, 3x1): title + artist only (no subtitle line) ----
@@ -452,7 +455,7 @@ def c_media(card, x, y, w, h, base):
         if has_vol:
             txtw = 108
             inner += lbl("Midnight City", 82, 26, "f_body", "0xF3F5F8", wid=tid, width=txtw, long="dot", height=20)
-            inner += lbl("M83", 82, 50, "f_small", "0x868CA0")
+            inner += lbl("M83", 82, 50, "f_small", "0x868CA0", wid=aid, width=txtw if has_vol else tw, long="dot", height=16)
             vsx = 82 + txtw + 12
             inner += lbl(vol_g, vsx, cy - 6, "f_icon", "0x868CA0")
             svx = vsx + 30
@@ -460,7 +463,7 @@ def c_media(card, x, y, w, h, base):
         else:
             tw = (vx - 12) - 82
             inner += lbl("Midnight City", 82, 26, "f_body", "0xF3F5F8", wid=tid, width=tw, long="dot", height=20)
-            inner += lbl("M83", 82, 50, "f_small", "0x868CA0")
+            inner += lbl("M83", 82, 50, "f_small", "0x868CA0", wid=aid, width=txtw if has_vol else tw, long="dot", height=16)
         return [card_obj(x, y, w, h, inner)], [], ts
     # ---- w==1 tall narrow (1x2, 1x3): art on top ----
     if gw == 1:
@@ -470,7 +473,7 @@ def c_media(card, x, y, w, h, base):
         ty0 = 14 + arth + 8
         inner += lbl(subtxt, 14, ty0, "f_small", "0x2ED5B8", width=w - 28, long="dot")
         inner += lbl("Midnight City", 14, ty0 + 16, "f_body", "0xF3F5F8", wid=tid, width=w - 28, long="dot")
-        inner += lbl("M83", 14, ty0 + 38, "f_small", "0x868CA0")
+        inner += lbl("M83", 14, ty0 + 38, "f_small", "0x868CA0", wid=aid, width=w - 28, long="dot", height=16)
         inner += transport_center(ty0 + 56)
         if has_vol:
             inner += vol_slider(h - 34)
@@ -481,14 +484,14 @@ def c_media(card, x, y, w, h, base):
             inner += art(14, 14, 110, 110)
             inner += lbl(subtxt, 136, 20, "f_small", "0x2ED5B8", width=w - 150, long="dot", height=16)
             inner += lbl("Midnight City", 136, 40, "f_track", "0xF3F5F8", wid=tid, width=w - 150, long="dot", height=32)
-            inner += lbl("M83 \\u00B7 Hurry Up", 136, 86, "f_body", "0x868CA0", width=w - 150, long="dot", height=18)
+            inner += lbl("M83", 136, 86, "f_body", "0x868CA0", wid=aid, width=w - 150, long="dot", height=18)
             py = 152
             tport = py + 40
         else:                                          # narrow: art on top, full-width title
             inner += art(14, 14, w - 28, 108)
             inner += lbl(subtxt, 14, 130, "f_small", "0x2ED5B8", width=w - 28, long="dot", height=16)
             inner += lbl("Midnight City", 14, 146, "f_track", "0xF3F5F8", wid=tid, width=w - 28, long="dot", height=32)
-            inner += lbl("M83", 14, 180, "f_body", "0x868CA0")
+            inner += lbl("M83", 14, 180, "f_body", "0x868CA0", wid=aid, width=w - 28, long="dot", height=18)
             py = 202
             tport = 226
         inner += ("              - obj: { x: 14, y: %d, width: %d, height: 6, bg_color: 0x23262F, radius: 3, border_width: 0, pad_all: 0, scrollable: false }\n" % (py, w - 28))
@@ -502,7 +505,7 @@ def c_media(card, x, y, w, h, base):
     inner += art(14, 14, 58, 58)
     inner += lbl(subtxt, 82, 18, "f_small", "0x2ED5B8", width=w - 96, long="dot", height=16)
     inner += lbl("Midnight City", 82, 36, "f_title", "0xF3F5F8", wid=tid, width=w - 96, long="dot", height=28)
-    inner += lbl("M83", 82, 68, "f_small", "0x868CA0")
+    inner += lbl("M83", 82, 68, "f_small", "0x868CA0", wid=aid, width=w - 96, long="dot", height=16)
     inner += transport_center(h - 108)
     inner += vol_slider(h - 40)
     return [card_obj(x, y, w, h, inner)], [], ts
@@ -1542,7 +1545,7 @@ def gen_pages(layout, pagemap):
             # Next affordance if a following sub-page exists
             if si < len(subs) - 1:
                 nxt = "%s_%d" % (pagemap[key], si + 1)
-                widgets += btn(884, 540, 110, 44, "Next \\U000F0142", "lvgl.page.show: %s" % nxt, font="f_body")
+                widgets += btn(884, 540, 110, 44, "Next", "lvgl.page.show: %s" % nxt, font="f_body")
             active = next((slug(n.get("id", "")) for n in layout.get("nav", []) if n.get("page") == key), None)
             onload = _nav_onload(layout, active)
             if has_tv:                                    # in-place LG trackpad overlay + disengage on leave
