@@ -299,12 +299,16 @@ def c_cover(card, x, y, w, h, base):
         inner += ("              - button:\n"
                   "                  x: 14\n                  y: %d\n                  width: %d\n                  height: %d\n"
                   "                  bg_color: 0x161B24\n                  radius: 12\n                  pad_all: 0\n                  scrollable: false\n"
-                  "                  layout: { type: flex, flex_flow: ROW, flex_align_main: center, flex_align_cross: center, pad_column: 14 }\n"
-                  "                  widgets:\n"
-                  "                    - label: { text: \"%s\", text_font: f_icon, text_color: %s }\n"
-                  "                    - label: { text: \"%s\", text_font: f_body, text_color: %s }\n"
                   "                  on_click: [%s]\n"
-                  % (cy, w - 28, bh, g, col, txt, col, act))
+                  "                  widgets:\n"
+                  "                    - obj:\n"
+                  "                        align: center\n                        width: SIZE_CONTENT\n                        height: SIZE_CONTENT\n"
+                  "                        bg_opa: 0\n                        border_width: 0\n                        pad_all: 0\n                        scrollable: false\n"
+                  "                        layout: { type: flex, flex_flow: ROW, flex_align_cross: center, pad_column: 10 }\n"
+                  "                        widgets:\n"
+                  "                          - label: { text: \"%s\", text_font: f_icon, text_color: %s }\n"
+                  "                          - label: { text: \"%s\", text_font: f_body, text_color: %s }\n"
+                  % (cy, w - 28, bh, act, g, col, txt, col))
     return [card_obj(x, y, w, h, inner)], [], []
 
 

@@ -388,7 +388,7 @@ function cardInner(c){ const def=C[c.ck], nm=c.name||def.label, big=c.w>=3, ctrl
   if(ctrl==='seg'){ if(c.w*c.h<=2) return `<div style="position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:8px;background:#123f30"><span class="mdi mdi-${def.icon}" style="font-size:26px;color:var(--teal)"></span><span style="font-weight:600;color:var(--teal)">${nm}</span></div>`+head;
     return head+`<div class="toprow">${ico}${nme}</div><div class="seg"><div>Off</div><div class="on">Med</div><div>High</div></div>`; }
   if(ctrl==='pos'){ if(c.w===1&&c.h===1) return head+`<div style="display:flex;align-items:center;justify-content:center;height:100%">${ico}</div>`;
-    const cb=(ic2,t,col)=>`<div style="display:flex;align-items:center;justify-content:center;gap:14px;background:#161B24;border-radius:12px;padding:12px;color:${col};font-weight:600"><span class="mdi mdi-${ic2}"></span>${t}</div>`;
+    const cb=(ic2,t,col)=>`<div style="display:flex;align-items:center;justify-content:center;gap:10px;background:#161B24;border-radius:12px;padding:12px;color:${col};font-weight:600"><span class="mdi mdi-${ic2}"></span>${t}</div>`;
     return head+`<div style="display:flex;flex-direction:column;gap:8px;flex:1;justify-content:center;margin-top:6px">${cb('chevron-up','Open','var(--blue)')}${cb('stop','Stop','var(--t2)')}${cb('chevron-down','Close','var(--blue)')}</div>`; }
   if(ctrl==='lock'){ if(c.w===1) return head+`<div style="display:flex;flex-direction:column;align-items:center;justify-content:center;height:100%;gap:8px">${ico}<div class="csub" style="color:var(--teal)">Locked</div></div>`;
     return head+`<div class="toprow">${ico}<span class="csub" style="color:var(--teal)">Locked</span></div>${nme}`; }
