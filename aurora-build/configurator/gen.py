@@ -328,8 +328,10 @@ def c_media(card, x, y, w, h, base):
     nxt = ha("media_player.media_next_track", e) if e else "lvgl.page.show: page_home"
 
     def art(ax, ay, aw, ah):
-        return ("              - obj: { x: %d, y: %d, width: %d, height: %d, bg_color: 0x4F63D8, "
-                "radius: 12, border_width: 0, pad_all: 0, scrollable: false }\n" % (ax, ay, aw, ah))
+        s = ("              - obj: { x: %d, y: %d, width: %d, height: %d, bg_color: 0x2A2F45, "
+             "radius: 12, border_width: 0, pad_all: 0, scrollable: false }\n" % (ax, ay, aw, ah))
+        s += lbl("\\U000F075A", ax + (aw - 30) // 2, ay + (ah - 34) // 2, "f_icon", "0x6B76A8")  # note glyph -> reads as art placeholder
+        return s
 
     def transport_center(ty):
         if w < 200:
@@ -344,17 +346,9 @@ def c_media(card, x, y, w, h, base):
         s += btn(sx + small + gap + big + gap, ty + yo, small, small, next_g, nxt, radius=small // 2, font="f_icon")
         return s
 
-    def _vol_act():
-        if not e:
-            return ""
-        return ("\n                  on_release:\n                    - homeassistant.action:\n"
-                "                        action: media_player.volume_set\n"
-                "                        data: { entity_id: %s, volume_level: !lambda 'char b[8]; snprintf(b, sizeof(b), \"%%.2f\", lv_slider_get_value(id(%s)) / 100.0); return std::string(b);' }" % (e, sld))
-
     def vol_slider(vy):
-        st = lbl(vol_g, 14, vy - 2, "f_icon", "0x868CA0")
-        st += ("              - slider:\n                  id: %s\n                  x: 48\n                  y: %d\n                  width: %d\n"
-               "                  min_value: 0\n                  max_value: 100\n                  value: 55%s\n" % (sld, vy + 4, w - 62, _vol_act()))
+        st = lbl(vol_g, 14, vy + 4, "f_icon", "0x868CA0")     # glyph centered on the track
+        st += vol_slider_yaml(sld, 48, vy + 6, w - 62, 55, e)
         return st
 
     ts = []
@@ -389,10 +383,9 @@ def c_media(card, x, y, w, h, base):
             inner += lbl("Midnight City", 82, 26, "f_body", "0xF3F5F8", wid=tid, width=txtw, long="dot", height=20)
             inner += lbl("M83", 82, 50, "f_small", "0x868CA0")
             vsx = 82 + txtw + 12
-            inner += lbl(vol_g, vsx, cy - 12, "f_icon", "0x868CA0")
+            inner += lbl(vol_g, vsx, cy - 6, "f_icon", "0x868CA0")
             svx = vsx + 30
-            inner += ("              - slider:\n                  id: %s\n                  x: %d\n                  y: %d\n                  width: %d\n"
-                      "                  min_value: 0\n                  max_value: 100\n                  value: 55%s\n" % (sld, svx, cy - 4, (vx - 12) - svx, _vol_act()))
+            inner += vol_slider_yaml(sld, svx, cy - 4, (vx - 12) - svx, 55, e)
         else:
             tw = (vx - 12) - 82
             inner += lbl("Midnight City", 82, 26, "f_body", "0xF3F5F8", wid=tid, width=tw, long="dot", height=20)
@@ -856,17 +849,17 @@ def c_tvremote(card, x, y, w, h, base):
     for i, s in enumerate(TV_SOURCES):
         sel = (i == 0)
         inner += btn(cx, 76, 104, 36, s, _src(e, s), radius=10, font="f_small",
-                     bg=("0x143028" if sel else "0x10141C"), color=("0x2ED5B8" if sel else "0xC2C7D2"))
+                     bg=("0x1C4A3E" if sel else "0x10141C"), color=("0xEAFBF5" if sel else "0x868CA0"))
         cx += 112
     # --- center band: VOL | d-pad | CH ---
     band_top, band_bot = 124, h - 86
     dcy = (band_top + band_bot) // 2
     dcx = mx + mw // 2
     okA = _wbtn(e, "ENTER")
-    R = min(132, (band_bot - band_top) // 2 - 4)      # d-pad circle radius (adaptive)
+    R = min(118, (band_bot - band_top) // 2 - 4)      # d-pad circle radius (adaptive)
     ok = int(R * 0.74)
     s = int(R * 0.52)
-    off = R - s // 2 - 8
+    off = R - s // 2 - 2                                # push chevrons near the rim (was -8: floated inside)
     afont = "f_bigicon" if R >= 90 else "f_icon"       # big chevrons on large cards
     inner += ("              - obj: { x: %d, y: %d, width: %d, height: %d, bg_color: 0x10141C, "
               "border_width: 0, radius: %d, pad_all: 0, scrollable: false }\n"
@@ -1048,11 +1041,7 @@ def c_volumes(card, x, y, w, h, base):
         sld = base + "_v%d" % i
         inner += lbl(nm, 14, ry, "f_body", "0xEEF0F6", width=w - 28, long="dot", height=20)
         if e:
-            inner += ("              - slider:\n                  id: %s\n                  x: 14\n                  y: %d\n                  width: %d\n"
-                      "                  min_value: 0\n                  max_value: 100\n                  value: 40\n"
-                      "                  on_release:\n                    - homeassistant.action:\n                        action: media_player.volume_set\n"
-                      "                        data: { entity_id: %s, volume_level: !lambda 'char b[8]; snprintf(b, sizeof(b), \"%%.2f\", lv_slider_get_value(id(%s)) / 100.0); return std::string(b);' }\n"
-                      % (sld, ry + 28, w - 28, e, sld))
+            inner += vol_slider_yaml(sld, 14, ry + 28, w - 28, 40, e)
             s.append("  - platform: homeassistant\n    id: ha_%s\n    entity_id: %s\n    attribute: volume_level\n    on_value:\n"
                      "      - lvgl.slider.update: { id: %s, value: !lambda 'return (int)(x * 100);' }\n" % (sld, e, sld))
     return [card_obj(x, y, w, h, inner)], s, []
@@ -1076,6 +1065,16 @@ def _join(master, member):
 
 def _unjoin(e):
     return ("homeassistant.action: { action: media_player.unjoin, data: { entity_id: %s } }" % e) if e else "lvgl.page.show: page_home"
+
+
+def vol_slider_yaml(sld, sx, sy, sw, value, e):
+    """A teal-accented volume slider (matches the web volume bars + seek bar) that
+    pushes to media_player.volume_set. Teal indicator/knob keeps one accent per surface."""
+    return ("              - slider:\n                  id: %s\n                  x: %d\n                  y: %d\n                  width: %d\n"
+            "                  min_value: 0\n                  max_value: 100\n                  value: %d\n"
+            "                  indicator:\n                    bg_color: 0x2ED5B8\n"
+            "                  knob:\n                    bg_color: 0x2ED5B8%s\n"
+            % (sld, sx, sy, sw, value, _vset(e, sld)))
 
 
 DEFAULT_SPKS = ["media_player.living_room", "media_player.kitchen", "media_player.office", "media_player.patio"]
@@ -1119,9 +1118,8 @@ def c_speakers(card, x, y, w, h, base):
         inner += lbl(nm(0), 46, 20, "f_body", "0xF3F5F8", width=150, long="dot", height=20)
         inner += lbl("LINKED", 46, 48, "f_small", "0x868CA0")
         vx = min(220, w // 2)
-        inner += lbl("\\U000F057E", vx, cy - 12, "f_icon", "0x868CA0")
-        inner += ("              - slider:\n                  id: %s\n                  x: %d\n                  y: %d\n                  width: %d\n"
-                  "                  min_value: 0\n                  max_value: 100\n                  value: %d%s\n" % (sld, vx + 30, cy - 4, w - (vx + 30) - 52, v, _vset(ents[0], sld)))
+        inner += lbl("\\U000F057E", vx, cy - 6, "f_icon", "0x868CA0")
+        inner += vol_slider_yaml(sld, vx + 30, cy - 4, w - (vx + 30) - 52, v, ents[0])
         inner += lbl(str(v), -14, cy - 10, "f_small", "0x868CA0", align="top_right")
         sensor(0, sld)
         return [card_obj(x, y, w, h, inner)], [], ts
@@ -1145,20 +1143,21 @@ def c_speakers(card, x, y, w, h, base):
             gr = i < gcount
             inner += ("              - obj: { x: %d, y: %d, width: %d, height: %d, bg_color: 0x10141C, radius: 12, border_width: 0, pad_all: 0, scrollable: false }\n" % (cx, cy, tw, th))
             inner += lbl(sg, cx + 14, cy + 14, "f_icon", "0x2ED5B8" if gr else "0x5D6470")
-            inner += lbl(nm(i), cx + 46, cy + 16, "f_body", "0xF3F5F8", width=tw - 130, long="dot", height=20)
-            badge = "SOURCE" if i == 0 else ("LINKED" if gr else "")
-            if badge:
-                inner += lbl(badge, cx + tw - 92, cy + 18, "f_small", "0x2ED5B8", width=78, text_align="right")
+            inner += lbl(nm(i), cx + 46, cy + 16, "f_body", "0xF3F5F8" if gr else "0x868CA0", width=tw - 130, long="dot", height=20)
+            if i == 0:
+                inner += lbl("SOURCE", cx + tw - 92, cy + 18, "f_small", "0x2ED5B8", width=78, text_align="right")
+            elif gr:
+                inner += lbl("LINKED", cx + tw - 92, cy + 18, "f_small", "0x868CA0", width=78, text_align="right")
             if gr:
                 sld = base + "_v%d" % i
                 v = SPK_DEMO_VOL[i % len(SPK_DEMO_VOL)]
                 inner += lbl("\\U000F057E", cx + 14, cy + th - 40, "f_icon", "0x868CA0")
-                inner += ("              - slider:\n                  id: %s\n                  x: %d\n                  y: %d\n                  width: %d\n"
-                          "                  min_value: 0\n                  max_value: 100\n                  value: %d%s\n" % (sld, cx + 46, cy + th - 34, tw - 100, v, _vset(ents[i], sld)))
+                inner += vol_slider_yaml(sld, cx + 46, cy + th - 34, tw - 100, v, ents[i])
                 inner += lbl(str(v), cx + tw - 46, cy + th - 38, "f_small", "0x868CA0", width=32, text_align="right")
                 sensor(i, sld)
             else:
-                inner += btn(cx + 14, cy + th - 46, tw - 28, 36, "+ Join", _join(master, ents[i]), font="f_body", bg="0x0F1117", color="0x2ED5B8", radius=10)
+                inner += lbl("Available", cx + 46, cy + 40, "f_small", "0x5D6470")
+                inner += btn(cx + 14, cy + (th - 36) // 2 + 14, tw - 28, 36, "+ Join", _join(master, ents[i]), font="f_body", bg="0x0F1117", color="0x2ED5B8", radius=10)
         return [card_obj(x, y, w, h, inner)], [], ts
 
     # ---- vertical list: PLAYING ON + per-speaker volume (image 3) ----
@@ -1170,17 +1169,16 @@ def c_speakers(card, x, y, w, h, base):
         v = SPK_DEMO_VOL[i % len(SPK_DEMO_VOL)]
         inner += lbl(sg, 14, yy, "f_icon", "0x2ED5B8")
         inner += lbl(nm(i), 46, yy + 2, "f_body", "0xF3F5F8", width=w - 150, long="dot", height=20)
-        inner += lbl("SOURCE" if i == 0 else "LINKED", w - 14 - 80, yy + 4, "f_small", "0x2ED5B8", width=80, text_align="right")
-        inner += ("              - slider:\n                  id: %s\n                  x: 46\n                  y: %d\n                  width: %d\n"
-                  "                  min_value: 0\n                  max_value: 100\n                  value: %d%s\n" % (sld, yy + 28, w - 46 - 14, v, _vset(ents[i], sld)))
+        inner += lbl("SOURCE" if i == 0 else "LINKED", w - 14 - 80, yy + 4, "f_small", "0x2ED5B8" if i == 0 else "0x868CA0", width=80, text_align="right")
+        inner += vol_slider_yaml(sld, 46, yy + 30, w - 60, v, ents[i])
         sensor(i, sld)
-        yy += 58
+        yy += 62
     if n > gcount:
         inner += lbl("AVAILABLE", 14, yy, "f_small", "0x5D6470")
         yy += 22
         for i in range(gcount, n):
             inner += lbl(sg, 14, yy + 2, "f_icon", "0x5D6470")
-            inner += lbl(nm(i), 46, yy + 2, "f_body", "0xC2C7D2", width=w - 160, long="dot", height=20)
+            inner += lbl(nm(i), 46, yy + 2, "f_body", "0x868CA0", width=w - 160, long="dot", height=20)
             inner += btn(w - 14 - 92, yy - 4, 92, 34, "+ Join", _join(master, ents[i]), font="f_body", bg="0x0F1117", color="0x2ED5B8", radius=9)
             yy += 44
     return [card_obj(x, y, w, h, inner)], [], ts
