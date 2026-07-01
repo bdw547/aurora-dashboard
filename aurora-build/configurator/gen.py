@@ -823,7 +823,7 @@ def c_tvremote(card, x, y, w, h, base):
     mw = w - mx - 14
     # --- apps sidebar (pre-baked launch tiles) ---
     if sidebar:
-        inner += lbl("APPS \\u00B7 PRE-BAKED", 16, 12, "f_small", "0x5D6470")
+        inner += lbl("APPS \\u00B7 PRE-BAKED", 16, 14, "f_micro", "0x5D6470")
         ay = 40
         apps = (card.get("apps") or TV_APPS_DEFAULT)[:5]
         na = max(1, len(apps))
@@ -845,13 +845,13 @@ def c_tvremote(card, x, y, w, h, base):
     inner += lbl("\\U000F0502", mx, 14, "f_icon", "0xB06CFF")
     inner += lbl("LG OLED", mx + 42, 12, "f_title")
     inner += lbl("Living Room \\u00B7 HDMI 1", mx + 42, 48, "f_small", "0x868CA0")
-    inner += btn(w - 66, 14, 52, 46, "\\U000F0425", powA, bg="0x2a1414", color="0xF2685A", font="f_icon")
-    # --- source chips ---
+    inner += btn(w - 66, 14, 52, 46, "\\U000F0425", powA, bg="0x161B24", color="0xF2685A", font="f_icon")
+    # --- source chips (selected = teal fill + ink, mono label) ---
     cx = mx
     for i, s in enumerate(TV_SOURCES):
         sel = (i == 0)
-        inner += btn(cx, 76, 104, 36, s, _src(e, s), radius=10, font="f_small",
-                     bg=("0x1C4A3E" if sel else "0x10141C"), color=("0xEAFBF5" if sel else "0x868CA0"))
+        inner += btn(cx, 76, 104, 36, s, _src(e, s), radius=10, font="f_mono",
+                     bg=("0x2ED5B8" if sel else "0x14161C"), color=("0x06231D" if sel else "0x868CA0"))
         cx += 112
     # --- center band: VOL | d-pad | CH ---
     band_top, band_bot = 124, h - 86
@@ -874,12 +874,12 @@ def c_tvremote(card, x, y, w, h, base):
     # VOL column (left of d-pad)
     vx = mx + 12
     inner += _tvbtn(vx, dcy - 72, 76, 60, "\\U000F075D", e, "VOLUMEUP")
-    inner += lbl("VOL", vx, dcy - 6, "f_small", "0x868CA0", width=76, text_align="center")
+    inner += lbl("VOL", vx, dcy - 6, "f_micro", "0x868CA0", width=76, text_align="center")
     inner += _tvbtn(vx, dcy + 14, 76, 60, "\\U000F075E", e, "VOLUMEDOWN")
     # CH column (right of d-pad)
     hx = mx + mw - 88
     inner += btn(hx, dcy - 72, 76, 60, "\\U000F0143", _chan(e, True), font="f_icon")
-    inner += lbl("CH", hx, dcy - 6, "f_small", "0x868CA0", width=76, text_align="center")
+    inner += lbl("CH", hx, dcy - 6, "f_micro", "0x868CA0", width=76, text_align="center")
     inner += btn(hx, dcy + 14, 76, 60, "\\U000F0140", _chan(e, False), font="f_icon")
     # --- overlays over the VOL / d-pad / CH band (hidden; toggled from the bar) ---
     padid, whlid = base + "_pad", base + "_whl"
@@ -892,10 +892,11 @@ def c_tvremote(card, x, y, w, h, base):
         "                  hidden: true\n                  clickable: true\n                  pad_all: 0\n                  scrollable: false\n"
         "                  on_click: [%s]\n"
         "                  widgets:\n"
+        "                    - obj: { x: 16, y: 16, width: %d, height: %d, bg_color: 0x0F1117, border_color: 0x23262F, border_width: 1, radius: 14, pad_all: 0, scrollable: false }\n"
         "                    - label: { text: \"\\U000F0297\", align: center, y: -34, text_font: f_bigicon, text_color: 0x2ED5B8 }\n"
         "                    - label: { text: \"TRACKPAD\", align: center, y: 22, text_font: f_title, text_color: 0xF3F5F8 }\n"
-        "                    - label: { text: \"Tap \\u00B7 swipe to move the cursor\", align: center, y: 54, text_font: f_body, text_color: 0x868CA0 }\n"
-        % (padid, ov_x, ov_y, ov_w, ov_h, _wbtn(e, "ENTER"))
+        "                    - label: { text: \"Drag to move \\u00B7 tap to click\", align: center, y: 52, text_font: f_body, text_color: 0x868CA0 }\n"
+        % (padid, ov_x, ov_y, ov_w, ov_h, _wbtn(e, "ENTER"), ov_w - 32, ov_h - 32)
     )
     up_act, dn_act = _wbtn(e, "UP"), _wbtn(e, "DOWN")
     inner += (
