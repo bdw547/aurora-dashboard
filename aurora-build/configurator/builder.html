@@ -385,11 +385,11 @@ function cardInner(c){ const def=C[c.ck], nm=c.name||def.label, big=c.w>=3, ctrl
     return head+`<div class="toprow">${ico}${tog(true)}</div>${nme}<div class="big">74%</div><div class="hbar" style="margin-top:auto"><i style="width:74%"></i></div>`; }
   if(ctrl==='dial'){ if(c.w===1) return head+`<div style="display:flex;flex-direction:column;align-items:center;justify-content:center;height:100%;gap:6px">${ico}<div style="font-size:24px;font-weight:700">72°</div><div class="csub">${nm}</div></div>`;
     return head+`<div class="toprow">${ico}<span class="csub">${nm}</span></div><div class="dial"><div class="ring" style="width:${Math.min(c.h*70,150)}px;height:${Math.min(c.h*70,150)}px"></div><div style="position:absolute;font-size:${big?34:22}px;font-weight:700">72°</div></div>${c.w>=3?'<div class="row" style="justify-content:space-between"><span class="csub" style="color:var(--amber)">HEAT 68°</span><span class="csub" style="color:var(--blue)">COOL 74°</span></div>':''}`; }
-  if(ctrl==='seg'){ if(c.w*c.h<=2){ if(c.w===1&&c.h===1) return head+`<div style="display:flex;flex-direction:column;align-items:center;justify-content:center;gap:8px;height:100%">${ico}${tog(true)}</div>`;
-      return head+`<div class="toprow">${ico}${tog(true)}</div>${nme}`; }
+  if(ctrl==='seg'){ if(c.w*c.h<=2) return `<div style="position:absolute;inset:0;display:flex;align-items:center;justify-content:center;background:#123f30"><span style="font-weight:600;color:var(--teal)">${nm}</span></div>`+head;
     return head+`<div class="toprow">${ico}${nme}</div><div class="seg"><div>Off</div><div class="on">Med</div><div>High</div></div>`; }
-  if(ctrl==='pos'){ if(c.w===1&&c.h===1) return head+`<div style="display:flex;flex-direction:column;align-items:center;justify-content:center;height:100%;gap:6px">${ico}<div class="csub" style="color:var(--blue)">60%</div></div>`;
-    return head+`<div class="toprow">${ico}${nme}</div><div class="big" style="font-size:24px;color:var(--blue)">Open 60%</div><div class="hbar"><i style="width:60%;background:var(--blue)"></i></div>`; }
+  if(ctrl==='pos'){ if(c.w===1&&c.h===1) return head+`<div style="display:flex;align-items:center;justify-content:center;height:100%">${ico}</div>`;
+    const cb=(ic2,t,col)=>`<div style="display:flex;align-items:center;justify-content:center;gap:8px;background:#161B24;border-radius:12px;padding:12px;color:${col};font-weight:600"><span class="mdi mdi-${ic2}"></span>${t}</div>`;
+    return head+`<div style="display:flex;flex-direction:column;gap:8px;flex:1;justify-content:center;margin-top:6px">${cb('chevron-up','Open','var(--blue)')}${cb('stop','Stop','var(--t2)')}${cb('chevron-down','Close','var(--blue)')}</div>`; }
   if(ctrl==='lock'){ if(c.w===1) return head+`<div style="display:flex;flex-direction:column;align-items:center;justify-content:center;height:100%;gap:8px">${ico}<div class="csub" style="color:var(--teal)">Locked</div></div>`;
     return head+`<div class="toprow">${ico}<span class="csub" style="color:var(--teal)">Locked</span></div>${nme}`; }
   if(ctrl==='val'){ if(c.h>=3) return head+`<div style="display:flex;flex-direction:column;align-items:center;justify-content:center;height:100%;gap:6px">${ico}<div style="font-size:26px;font-weight:700">68°</div><div class="csub" style="text-align:center">${nm}</div></div>`;
@@ -443,7 +443,7 @@ function cardInner(c){ const def=C[c.ck], nm=c.name||def.label, big=c.w>=3, ctrl
     return head+`<div class="toprow">${ico}<span class="csub">${nm} · ${sc.length}/${n}</span></div><div class="scgrid" style="grid-template-columns:repeat(${c.w},1fr);grid-template-rows:repeat(${c.h},1fr)">${btns}</div>`; }
   if(ctrl==='outletgroup'){ const n=cap(c), ents=c.entities||[], horiz=c.w>c.h;
     const badge=`<span class="osq"><span class="mdi mdi-power-socket-us"></span></span>`;
-    if(c.w===1&&c.h===1) return head+`<div style="display:flex;flex-direction:column;align-items:center;justify-content:center;height:100%;gap:7px">${badge}<div class="opb on" style="width:40px;height:40px;font-size:21px"><span class="mdi mdi-power"></span></div><div class="csub">${ents[0]?nm2(ents[0]):nm}</div></div>`;
+    if(c.w===1&&c.h===1) return `<div style="position:absolute;inset:0;display:flex;align-items:center;justify-content:center;background:#3a2e0a"><span style="font-weight:600;color:var(--amber)">${ents[0]?nm2(ents[0]):nm}</span></div>`+head;
     if(n===1) return head+`<div style="display:flex;flex-direction:column;align-items:center;justify-content:center;height:100%;gap:10px">${badge}<div class="opb on" style="width:62px;height:62px;font-size:30px"><span class="mdi mdi-power"></span></div><div style="text-align:center"><div style="color:var(--teal);font-weight:700">On</div><div class="csub">${ents[0]?nm2(ents[0]):nm}</div></div></div>`;
     const ne=ents.length?Math.min(ents.length,n):1; let cells='';
     for(let i=0;i<ne;i++){ const e=ents[i]; const on=!!e&&i%2===0;

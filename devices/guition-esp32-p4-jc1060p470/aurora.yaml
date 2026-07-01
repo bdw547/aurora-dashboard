@@ -611,6 +611,7 @@ font:
       - "\U000F0211"  # fast-forward
       - "\U000F035C"  # menu
       - "\U000F004D"  # arrow-left (TV back)
+      - "\U000F04DB"  # stop (cover)
 
 # --- Live HA state (selected light = Living Room for v1) ---
 sensor:
