@@ -307,22 +307,140 @@ def c_action(card, x, y, w, h, base):
 
 
 def c_media(card, x, y, w, h, base):
+    """Media / Spotify / Sonos now-playing card. Volume slider on every card >= 3 cells (image 1)."""
     e = card.get("entity", "")
+    ck = card["ck"]
     tid = base + "_t"
-    inner = ic(card["ck"], color="0xB06CFF")
-    inner += lbl("NOW PLAYING", 50, 16, "f_small", "0x2ED5B8")
-    inner += lbl("--", 14, 52, "f_title", "0xF3F5F8", wid=tid, width=w - 28)
-    if e and h >= 2:
-        bw, by = 52, h - 64
-        inner += btn(w // 2 - 90, by, bw, bw, "\\U000F04AE", ha("media_player.media_previous_track", e), radius=26, font="f_icon")
-        inner += btn(w // 2 - 26, by - 6, 56, 56, "\\U000F040A", ha("media_player.media_play_pause", e), bg="0x2ED5B8", color="0x06231D", radius=28, font="f_icon")
-        inner += btn(w // 2 + 38, by, bw, bw, "\\U000F04AD", ha("media_player.media_next_track", e), radius=26, font="f_icon")
+    sld = base + "_vol"
+    gw, gh = card["w"], card["h"]
+    cells = gw * gh
+    has_vol = cells >= 3
+    nowplaying = gh >= 3 and gw >= 2
+    prev_g, play_g, next_g, vol_g = "\\U000F04AE", "\\U000F040A", "\\U000F04AD", "\\U000F057E"
+    if ck == "sonos":
+        subtxt = "Kitchen \\u00B7 Sonos"
+    elif nowplaying:
+        subtxt = "Playlist \\u00B7 Late Night Drive"
+    else:
+        subtxt = "NOW PLAYING"
+    prev = ha("media_player.media_previous_track", e) if e else "lvgl.page.show: page_home"
+    plpz = ha("media_player.media_play_pause", e) if e else "lvgl.page.show: page_home"
+    nxt = ha("media_player.media_next_track", e) if e else "lvgl.page.show: page_home"
+
+    def art(ax, ay, aw, ah):
+        return ("              - obj: { x: %d, y: %d, width: %d, height: %d, bg_color: 0x4F63D8, "
+                "radius: 12, border_width: 0, pad_all: 0, scrollable: false }\n" % (ax, ay, aw, ah))
+
+    def transport_center(ty):
+        if w < 200:
+            small, big, gap = 38, 46, 8
+        else:
+            small, big, gap = 46, 56, 14
+        total = small * 2 + big + gap * 2
+        sx = (w - total) // 2
+        yo = (big - small) // 2
+        s = btn(sx, ty + yo, small, small, prev_g, prev, radius=small // 2, font="f_icon")
+        s += btn(sx + small + gap, ty, big, big, play_g, plpz, bg="0x2ED5B8", color="0x06231D", radius=big // 2, font="f_icon")
+        s += btn(sx + small + gap + big + gap, ty + yo, small, small, next_g, nxt, radius=small // 2, font="f_icon")
+        return s
+
+    def _vol_act():
+        if not e:
+            return ""
+        return ("\n                  on_release:\n                    - homeassistant.action:\n"
+                "                        action: media_player.volume_set\n"
+                "                        data: { entity_id: %s, volume_level: !lambda 'char b[8]; snprintf(b, sizeof(b), \"%%.2f\", lv_slider_get_value(id(%s)) / 100.0); return std::string(b);' }" % (e, sld))
+
+    def vol_slider(vy):
+        st = lbl(vol_g, 14, vy - 2, "f_icon", "0x868CA0")
+        st += ("              - slider:\n                  id: %s\n                  x: 48\n                  y: %d\n                  width: %d\n"
+               "                  min_value: 0\n                  max_value: 100\n                  value: 55%s\n" % (sld, vy + 4, w - 62, _vol_act()))
+        return st
+
     ts = []
     if e:
-        ts.append(
-            "  - platform: homeassistant\n    id: ha_%s\n    entity_id: %s\n    attribute: media_title\n    on_value:\n"
-            "      - lvgl.label.update: { id: %s, text: !lambda 'return x.empty() ? std::string(\"Nothing playing\") : x;' }\n"
-            % (tid, e, tid))
+        ts.append("  - platform: homeassistant\n    id: ha_%s\n    entity_id: %s\n    attribute: media_title\n    on_value:\n"
+                  "      - lvgl.label.update: { id: %s, text: !lambda 'return x.empty() ? std::string(\"Nothing playing\") : x;' }\n" % (tid, e, tid))
+        if has_vol:
+            ts.append("  - platform: homeassistant\n    id: ha_%s\n    entity_id: %s\n    attribute: volume_level\n    on_value:\n"
+                      "      - lvgl.slider.update: { id: %s, value: !lambda 'return (int)(x * 100);' }\n" % (sld, e, sld))
+
+    inner = ""
+    # ---- 1x1: art + title + play ----
+    if gw == 1 and gh == 1:
+        inner += art(14, 14, 40, 40)
+        inner += lbl("Midnight City", 62, 18, "f_body", "0xF3F5F8", wid=tid, width=w - 74, long="dot", height=20)
+        inner += lbl("M83", 62, 44, "f_small", "0x868CA0")
+        inner += btn(w - 46, h - 46, 34, 34, play_g, plpz, bg="0x2ED5B8", color="0x06231D", radius=17, font="f_icon")
+        return [card_obj(x, y, w, h, inner)], [], ts
+    # ---- h==1 row (2x1, 3x1): title + artist only (no subtitle line) ----
+    if gh == 1:
+        cy = h // 2
+        bw, g = 40, 6
+        inner += art(14, (h - 56) // 2, 56, 56)
+        nx = w - 14 - bw
+        px = nx - (bw + g)
+        vx = px - (bw + g)
+        inner += btn(vx, cy - bw // 2, bw, bw, prev_g, prev, radius=bw // 2, font="f_icon")
+        inner += btn(px, cy - bw // 2, bw, bw, play_g, plpz, bg="0x2ED5B8", color="0x06231D", radius=bw // 2, font="f_icon")
+        inner += btn(nx, cy - bw // 2, bw, bw, next_g, nxt, radius=bw // 2, font="f_icon")
+        if has_vol:
+            txtw = 108
+            inner += lbl("Midnight City", 82, 26, "f_body", "0xF3F5F8", wid=tid, width=txtw, long="dot", height=20)
+            inner += lbl("M83", 82, 50, "f_small", "0x868CA0")
+            vsx = 82 + txtw + 12
+            inner += lbl(vol_g, vsx, cy - 12, "f_icon", "0x868CA0")
+            svx = vsx + 30
+            inner += ("              - slider:\n                  id: %s\n                  x: %d\n                  y: %d\n                  width: %d\n"
+                      "                  min_value: 0\n                  max_value: 100\n                  value: 55%s\n" % (sld, svx, cy - 4, (vx - 12) - svx, _vol_act()))
+        else:
+            tw = (vx - 12) - 82
+            inner += lbl("Midnight City", 82, 26, "f_body", "0xF3F5F8", wid=tid, width=tw, long="dot", height=20)
+            inner += lbl("M83", 82, 50, "f_small", "0x868CA0")
+        return [card_obj(x, y, w, h, inner)], [], ts
+    # ---- w==1 tall narrow (1x2, 1x3): art on top ----
+    if gw == 1:
+        asz = w - 28
+        arth = min(asz, h - 118)
+        inner += art(14, 14, asz, arth)
+        ty0 = 14 + arth + 8
+        inner += lbl(subtxt, 14, ty0, "f_small", "0x2ED5B8", width=w - 28, long="dot")
+        inner += lbl("Midnight City", 14, ty0 + 16, "f_body", "0xF3F5F8", wid=tid, width=w - 28, long="dot")
+        inner += lbl("M83", 14, ty0 + 38, "f_small", "0x868CA0")
+        inner += transport_center(ty0 + 56)
+        if has_vol:
+            inner += vol_slider(h - 34)
+        return [card_obj(x, y, w, h, inner)], [], ts
+    # ---- now-playing (>=2 wide, >=3 tall): big art + progress ----
+    if nowplaying:
+        if gw >= 3:                                    # art beside the title block
+            inner += art(14, 14, 110, 110)
+            inner += lbl(subtxt, 136, 20, "f_small", "0x2ED5B8", width=w - 150, long="dot", height=16)
+            inner += lbl("Midnight City", 136, 42, "f_title", "0xF3F5F8", wid=tid, width=w - 150, long="dot", height=28)
+            inner += lbl("M83 \\u00B7 Hurry Up", 136, 84, "f_small", "0x868CA0", width=w - 150, long="dot", height=16)
+            py = 152
+            tport = py + 40
+        else:                                          # narrow: art on top, full-width title
+            inner += art(14, 14, w - 28, 108)
+            inner += lbl(subtxt, 14, 130, "f_small", "0x2ED5B8", width=w - 28, long="dot", height=16)
+            inner += lbl("Midnight City", 14, 148, "f_title", "0xF3F5F8", wid=tid, width=w - 28, long="dot", height=28)
+            inner += lbl("M83", 14, 178, "f_small", "0x868CA0")
+            py = 202
+            tport = 226
+        inner += ("              - obj: { x: 14, y: %d, width: %d, height: 6, bg_color: 0x2A3346, radius: 3, border_width: 0, pad_all: 0, scrollable: false }\n" % (py, w - 28))
+        inner += ("              - obj: { x: 14, y: %d, width: %d, height: 6, bg_color: 0x2ED5B8, radius: 3, border_width: 0, pad_all: 0, scrollable: false }\n" % (py, int((w - 28) * 0.42)))
+        inner += lbl("1:38", 14, py + 10, "f_small", "0x868CA0")
+        inner += lbl("-2:25", -14, py + 10, "f_small", "0x868CA0", align="top_right")
+        inner += transport_center(tport)
+        inner += vol_slider(h - 34)
+        return [card_obj(x, y, w, h, inner)], [], ts
+    # ---- medium (2x2, 3x2) ----
+    inner += art(14, 14, 58, 58)
+    inner += lbl(subtxt, 82, 18, "f_small", "0x2ED5B8", width=w - 96, long="dot", height=16)
+    inner += lbl("Midnight City", 82, 36, "f_title", "0xF3F5F8", wid=tid, width=w - 96, long="dot", height=28)
+    inner += lbl("M83", 82, 68, "f_small", "0x868CA0")
+    inner += transport_center(h - 96)
+    inner += vol_slider(h - 34)
     return [card_obj(x, y, w, h, inner)], [], ts
 
 
