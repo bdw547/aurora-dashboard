@@ -399,6 +399,21 @@
             "entities": [
               "media_player.living_room"
             ]
+          },
+          {
+            "id": "vols_demo1",
+            "ck": "volumes",
+            "entity": "",
+            "name": "Speaker Volumes",
+            "x": 1,
+            "y": 2,
+            "w": 3,
+            "h": 3,
+            "entities": [
+              "media_player.living_room",
+              "media_player.kitchen",
+              "media_player.bedroom"
+            ]
           }
         ]
       ]

@@ -132,8 +132,8 @@ CARD_ICON = {
     "climate": "\\U000F0393", "sensor": "\\U000F050F", "binary": "\\U000F050F",
     "lock": "\\U000F033E", "camera": "\\U000F0502", "weather": "\\U000F0599",
     "scene": "\\U000F04CE", "script": "\\U000F0425", "media": "\\U000F075A",
-    "spotify": "\\U000F0AC6", "sonos": "\\U000F075A", "speakers": "\\U000F075A",
-    "volume": "\\U000F057E",
+    "spotify": "\\U000F0AC6", "sonos": "\\U000F04C4", "speakers": "\\U000F04C4",
+    "volume": "\\U000F057E", "volumes": "\\U000F04C4",
     "sonos_sources": "\\U000F075A", "group": "\\U000F1253", "lightgroup": "\\U000F1253",
     "person": "\\U000F02DC", "tvremote": "\\U000F0502", "vacuum": "\\U000F050F",
     "alarm": "\\U000F068A",
@@ -531,22 +531,41 @@ def c_outlet(card, x, y, w, h, base):
     return [card_obj(x, y, w, h, inner)], [], []
 
 
+BTN_ICON = {"speakers": "\\U000F04C3", "sonos_sources": "\\U000F075A", "tv_sources": "\\U000F0502"}
+
+
 def c_btngrid(card, x, y, w, h, base):
+    """Grid of selectable tiles (icon + name), first highlighted — web .spk grid.
+    Columns follow the count (web: 1-row=n, 10=5, 6=3, else 2)."""
     ents = card.get("entities", [])
-    inner = ic(card["ck"])
+    inner = ic(card["ck"], color="0x2ED5B8")
     inner += lbl(card.get("name", "Select"), 50, 16, "f_small", "0x868CA0")
+    gw, gh = card["w"], card["h"]
     n = max(1, len(ents))
-    cols = 2 if w >= 2 else 1
+    cols = n if gh == 1 else (5 if n == 10 else (3 if n == 6 else 2))
+    cols = max(1, min(cols, n))
     rows = max(1, (n + cols - 1) // cols)
-    pad = 12
-    bw = (w - pad * 2 - (cols - 1) * 8) // cols
-    bh = max(34, min(44, (h - 56 - pad - (rows - 1) * 8) // rows))
+    pad, gap, top = 14, 10, 52
+    bw = (w - pad * 2 - (cols - 1) * gap) // cols
+    bh = (h - top - pad - (rows - 1) * gap) // rows
+    bi = BTN_ICON.get(card["ck"], "\\U000F075A")
+    src = card["ck"] in ("sonos_sources", "tv_sources")
     for i, e in enumerate(ents[:n]):
         nm = (e.split(".")[-1] if "." in e else e).replace("_", " ")
-        cx = pad + (i % cols) * (bw + 8)
-        cy = 52 + (i // cols) * (bh + 8)
-        on = ha("media_player.media_play_pause", e) if e else "lvgl.page.show: page_home"
-        inner += btn(cx, cy, bw, bh, nm, on, bg="0x13201d")
+        cx = pad + (i % cols) * (bw + gap)
+        cy = top + (i // cols) * (bh + gap)
+        sel = (i == 0)
+        bg = "0x2ED5B8" if sel else "0x10141C"
+        fg = "0x06231D" if sel else "0xC2C7D2"
+        act = (_src(e, nm) if src else ha("media_player.toggle", e)) if e else "lvgl.page.show: page_home"
+        inner += ("              - button:\n"
+                  "                  x: %d\n                  y: %d\n                  width: %d\n                  height: %d\n"
+                  "                  bg_color: %s\n                  radius: 12\n                  pad_all: 0\n                  scrollable: false\n"
+                  "                  on_click: [%s]\n"
+                  "                  widgets:\n"
+                  "                    - label: { text: \"%s\", x: 14, align: left_mid, text_font: f_icon, text_color: %s }\n"
+                  "                    - label: { text: %s, x: 48, align: left_mid, width: %d, long_mode: dot, text_font: f_body, text_color: %s }\n"
+                  % (cx, cy, bw, bh, bg, act, bi, fg, esc(nm), bw - 56, fg))
     return [card_obj(x, y, w, h, inner)], [], []
 
 
@@ -840,6 +859,31 @@ def c_volume(card, x, y, w, h, base):
     return [card_obj(x, y, w, h, inner)], s, []
 
 
+def c_volumes(card, x, y, w, h, base):
+    """Per-speaker volumes: a labeled volume slider for each entity, set separately."""
+    ents = card.get("entities", []) or [""]
+    inner = ic(card["ck"], color="0x2ED5B8")
+    inner += lbl(card.get("name", "Speaker Volumes"), 50, 16, "f_small", "0x868CA0")
+    top, gap = 52, 12
+    n = max(1, len(ents))
+    rh = (h - top - 14 - (n - 1) * gap) // n
+    s = []
+    for i, e in enumerate(ents):
+        nm = (e.split(".")[-1] if "." in e else e).replace("_", " ") or ("Speaker %d" % (i + 1))
+        ry = top + i * (rh + gap)
+        sld = base + "_v%d" % i
+        inner += lbl(nm, 14, ry, "f_body", "0xEEF0F6", width=w - 28, long="dot", height=20)
+        if e:
+            inner += ("              - slider:\n                  id: %s\n                  x: 14\n                  y: %d\n                  width: %d\n"
+                      "                  min_value: 0\n                  max_value: 100\n                  value: 40\n"
+                      "                  on_release:\n                    - homeassistant.action:\n                        action: media_player.volume_set\n"
+                      "                        data: { entity_id: %s, volume_level: !lambda 'char b[8]; snprintf(b, sizeof(b), \"%%.2f\", lv_slider_get_value(id(%s)) / 100.0); return std::string(b);' }\n"
+                      % (sld, ry + 28, w - 28, e, sld))
+            s.append("  - platform: homeassistant\n    id: ha_%s\n    entity_id: %s\n    attribute: volume_level\n    on_value:\n"
+                     "      - lvgl.slider.update: { id: %s, value: !lambda 'return (int)(x * 100);' }\n" % (sld, e, sld))
+    return [card_obj(x, y, w, h, inner)], s, []
+
+
 def c_generic(card, x, y, w, h, base):
     inner = ic(card.get("ck", ""), color="0x868CA0")
     inner += lbl(card.get("name", card.get("ck", "Card")), 0, 8, "f_body", "0x868CA0", align="center")
@@ -857,7 +901,7 @@ CTRL = {
     "tv_dpad": c_tv_dpad, "tv_transport": c_tv_transport, "tv_channel": c_tv_channel,
     "tv_volume": c_tv_volume, "tv_trackpad": c_tv_trackpad, "tvremote": c_tvremote,
     "playlist": c_playlist, "sonos_fav": c_playlist, "songlist": c_songlist,
-    "sonos_library": c_songlist, "volume": c_volume,
+    "sonos_library": c_songlist, "volume": c_volume, "volumes": c_volumes,
 }
 
 

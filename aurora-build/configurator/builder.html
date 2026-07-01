@@ -243,6 +243,7 @@ const C = {
   sonos:    {label:'Sonos (multi-room)', domain:'media_player', icon:'speaker-multiple', color:'var(--teal)', spans:[[3,2],[3,3],[4,4],[6,5]], def:[4,4], ctrl:'media'},
   media:    {label:'Media player', domain:'media_player', icon:'play-circle', color:'var(--violet)', spans:[[1,1],[2,1],[2,2],[3,2],[3,3],[4,3],[6,5]], def:[3,2], ctrl:'media'},
   volume:   {label:'Media volume', domain:'media_player', icon:'volume-high', color:'var(--teal)', spans:[[1,1],[2,1],[1,2],[2,2],[3,2]], def:[2,2], ctrl:'vol'},
+  volumes:  {label:'Speaker volumes (per-speaker)', domain:'media_player', icon:'speaker-multiple', color:'var(--teal)', spans:[[2,2],[3,2],[2,3],[3,3],[2,4],[3,4]], def:[3,3], ctrl:'vols', multi:true},
   tvremote: {label:'TV remote — full', domain:'media_player', icon:'remote-tv', color:'var(--violet)', spans:[[1,1],[2,2],[3,2],[4,4],[4,5],[5,5],[6,5]], def:[4,4], ctrl:'remote'},
   tv_dpad:  {label:'TV D-pad', domain:'media_player', icon:'gamepad-variant', color:'var(--violet)', spans:[[2,2],[3,2],[2,3],[3,3]], def:[3,3], ctrl:'tv_dpad'},
   tv_transport:{label:'TV transport', domain:'media_player', icon:'play-circle', color:'var(--violet)', spans:[[2,1],[3,1],[4,1],[6,1],[2,2],[4,2]], def:[4,1], ctrl:'tv_transport'},
@@ -264,10 +265,10 @@ const C = {
 const CATS = [
   ['Lighting', ['light','light_t','switch','lightgroup','outletgroup']],
   ['Comfort', ['climate','fan','cover']],
-  ['Spotify', ['spotify','playlist','songlist','volume']],
-  ['Sonos', ['sonos','speakers','sonos_sources','sonos_library','sonos_fav','volume']],
+  ['Spotify', ['spotify','playlist','songlist','volume','volumes']],
+  ['Sonos', ['sonos','speakers','sonos_sources','sonos_library','sonos_fav','volume','volumes']],
   ['TV', ['tvremote','tv_dpad','tv_transport','tv_channel','tv_volume','tv_sources','tv_trackpad']],
-  ['Media', ['media','volume']],
+  ['Media', ['media','volume','volumes']],
   ['Groups', ['group','shortcuts']],
   ['Safety', ['lock','camera','alarm','binary']],
   ['Info', ['sensor','weather','person','vacuum']],
@@ -310,6 +311,7 @@ function cap(c){ const k=c.ck;
   if(k==='lightgroup') return c.w*Math.max(2,c.h-1);  // W cols × (H-1) rows, min 2 rows
   if(k==='shortcuts') return c.w*c.h;                 // one nav button per grid cell
   if(k==='outletgroup') return Math.max(c.w,c.h);   // 1x1=1, 1x2/2x1=2, 1x3/3x1=3
+  if(k==='volumes') return Math.max(2,c.h);           // one speaker volume row per grid-row
   if(k==='speakers'||k==='sonos_sources'||k==='tv_sources'){ if(c.w===1) return 99;   // dropdown (1x1/1x2/1x3)
     if(c.h===1) return c.w;                                   // single row: 2x1=2, 3x1=3
     if((c.w===2&&c.h===3)||(c.w===3&&c.h===2)) return 4;
@@ -430,6 +432,9 @@ function cardInner(c){ const def=C[c.ck], nm=c.name||def.label, big=c.w>=3, ctrl
   if(ctrl==='tv_channel'){ const hz=c.w>c.h; return head+`<div class="toprow">${ico}<span class="csub">${nm}</span></div><div style="flex:1;display:flex;${hz?'flex-direction:row':'flex-direction:column'};gap:8px;align-items:center;justify-content:center"><div class="tbtn" style="width:auto;padding:6px 14px;border-radius:11px;gap:4px">CH<span class="mdi mdi-chevron-up"></span></div><div class="tbtn" style="width:auto;padding:6px 14px;border-radius:11px;gap:4px">CH<span class="mdi mdi-chevron-down"></span></div></div>`; }
   if(ctrl==='tv_volume'){ const hz=c.w>c.h; return head+`<div class="toprow">${ico}<span class="csub">${nm}</span></div><div style="flex:1;display:flex;${hz?'flex-direction:row':'flex-direction:column'};gap:8px;align-items:center;justify-content:center"><span class="tbtn mdi mdi-volume-plus"></span><span class="tbtn mdi mdi-volume-mute"></span><span class="tbtn mdi mdi-volume-minus"></span></div>`; }
   if(ctrl==='vol') return head+`<div class="toprow">${ico}<span class="csub">${nm}</span></div><div class="hbar" style="margin-top:10px"><i style="width:40%;background:var(--teal)"></i></div><div class="row" style="justify-content:center;gap:12px;margin-top:auto"><span class="tbtn mdi mdi-volume-minus"></span><span class="tbtn mdi mdi-volume-mute"></span><span class="tbtn mdi mdi-volume-plus"></span></div>`;
+  if(ctrl==='vols'){ const ents=(c.entities&&c.entities.length)?c.entities:['media_player.living_room','media_player.kitchen','media_player.bedroom']; const dv=[40,60,25,55,70,35];
+    const rows=ents.map((e,i)=>`<div style="margin-bottom:12px"><div style="font-size:13px;font-weight:600;color:var(--tx);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;margin-bottom:5px">${nm2(e)}</div><div class="hbar"><i style="width:${dv[i%6]}%;background:var(--teal)"></i></div></div>`).join('');
+    return head+`<div class="toprow">${ico}<span class="csub">${nm}</span></div><div style="margin-top:10px;flex:1;overflow:hidden">${rows}</div>`; }
   if(ctrl==='tv_trackpad') return head+`<div class="toprow">${ico}<span class="csub">${nm}</span></div><div style="flex:1;display:flex;gap:8px;margin-top:8px"><div style="flex:1;border:1px solid var(--bd);border-radius:12px;background:#0f1117;display:flex;align-items:center;justify-content:center;color:var(--t3);font-size:12px">Drag · tap</div><div style="width:46px;border:1px solid var(--bd);border-radius:12px;background:#0f1117;display:flex;flex-direction:column;align-items:center;justify-content:space-between;padding:8px 0;color:var(--t3)"><span class="mdi mdi-chevron-up"></span><span style="font-size:9px">SCROLL</span><span class="mdi mdi-chevron-down"></span></div></div>`;
   if(ctrl==='cam') return head+`<div class="cambg"><span class="mdi mdi-cctv"></span></div><div style="position:absolute;left:12px;top:10px;font-size:9px;font-weight:700;color:#fff;background:var(--red);border-radius:5px;padding:2px 6px">LIVE</div><div class="csub" style="position:absolute;left:12px;bottom:10px">${nm}</div>`;
   if(ctrl==='wx') return head+`<div class="row"><span class="mdi mdi-weather-sunny" style="font-size:${big?40:28}px;color:var(--amber)"></span><div><div style="font-size:${big?30:22}px;font-weight:700">72°</div><div class="csub">Sunny</div></div></div>${big?'<div class="row" style="justify-content:space-between;margin-top:auto"><span class="csub">Mon</span><span class="csub">Tue</span><span class="csub">Wed</span><span class="csub">Thu</span></div>':''}`;

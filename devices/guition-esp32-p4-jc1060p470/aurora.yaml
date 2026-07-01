@@ -618,6 +618,8 @@ font:
       - "\U000F0717"  # snowflake (climate cool)
       - "\U000F0238"  # fire (climate heat)
       - "\U000F04E2"  # autorenew (climate auto)
+      - "\U000F04C3"  # speaker
+      - "\U000F04C4"  # speaker-multiple
   # Larger icons for the TV remote d-pad chevrons
   - file: 'https://github.com/Templarian/MaterialDesign-Webfont/raw/v7.4.47/fonts/materialdesignicons-webfont.ttf'
     id: f_bigicon
