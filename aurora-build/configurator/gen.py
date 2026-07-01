@@ -173,29 +173,23 @@ def c_light(card, x, y, w, h, base):
     e = card.get("entity", "")
     gw, gh = card["w"], card["h"]
     if gw >= 2 and gh >= 2:
-        # Header toggle + name + teal hero % + bottom brightness bar (Card Library dimmable tile).
+        # Whole card is a vertical brightness fill (bottom-up, teal); tap toggles on/off (allcards.png).
         pct, fillid = base + "_pct", base + "_fill"
         tog = ha("light.toggle", e) if e else "lvgl.page.show: page_home"
-        bri = 82                                          # demo (no HA state feed)
-        icon = CARD_ICON.get(card["ck"], "\\U000F0335")
-        inner = lbl(icon, 18, 18, "f_icon", "0xF2B84B")   # icon top-left (amber = light)
-        # on/off toggle pill top-right (50x28, teal = on, ink knob at right)
-        inner += ("              - obj: { x: %d, y: 20, width: 50, height: 28, bg_color: 0x2ED5B8, radius: 14, "
-                  "border_width: 0, pad_all: 0, scrollable: false, widgets: [obj: { align: right_mid, x: -3, "
-                  "width: 22, height: 22, bg_color: 0x06231D, radius: 11, border_width: 0, pad_all: 0, scrollable: false }] }\n"
-                  % (w - 18 - 50))
-        inner += lbl(card.get("name", "Light"), 18, 56, "f_title", "0xF3F5F8", width=w - 36, long="dot", height=26)
-        inner += lbl("%d%%" % bri, 18, 90, "f_head", "0x2ED5B8", wid=pct)   # hero brightness (teal)
-        by = h - 26
-        inner += ("              - obj: { x: 18, y: %d, width: %d, height: 8, bg_color: 0x0F1117, radius: 4, border_width: 0, pad_all: 0, scrollable: false }\n" % (by, w - 36))
-        inner += ("              - obj: { id: %s, x: 18, y: %d, width: %d, height: 8, bg_color: 0x2ED5B8, radius: 4, border_width: 0, pad_all: 0, scrollable: false }\n" % (fillid, by, int((w - 36) * bri / 100)))
+        bri = 74                                          # demo (no HA state feed)
+        inner = ("              - obj: { id: %s, align: bottom_mid, x: 0, y: 0, width: %d, height: %d, "
+                 "bg_color: 0x2ED5B8, bg_opa: 55%%, border_width: 0, radius: 10, pad_all: 0, scrollable: false }\n"
+                 % (fillid, w, int(h * bri / 100)))
+        inner += lbl(CARD_ICON.get(card["ck"], "\\U000F0335"), 0, 20, "f_icon", "0xF2B84B", align="top_mid")
+        inner += lbl(card.get("name", "Light"), 0, 56, "f_title", "0xF3F5F8", align="top_mid", width=w - 24, text_align="center", long="dot", height=26)
+        inner += lbl("%d%%" % bri, 0, -20, "f_head", "0xF3F5F8", wid=pct, align="bottom_mid")
         s = []
         if e:
             s.append("  - platform: homeassistant\n    id: ha_%s_b\n    entity_id: %s\n    attribute: brightness\n    on_value:\n"
-                     "      - lvgl.widget.update: { id: %s, width: !lambda 'return (int)(%d * (x/2.55) / 100.0);' }\n"
+                     "      - lvgl.widget.update: { id: %s, height: !lambda 'return (int)(%d * (x/2.55) / 100.0);' }\n"
                      "      - lvgl.label.update: { id: %s, text: !lambda 'return std::to_string((int)(x/2.55)) + \"%%\";' }\n"
-                     % (base, e, fillid, w - 36, pct))
-        return [card_obj(x, y, w, h, inner, tog, bg="0x13201D")], s, []
+                     % (base, e, fillid, h, pct))
+        return [card_obj(x, y, w, h, inner, tog)], s, []
     sld, pct = base + "_sld", base + "_pct"
     inner = ic(card["ck"], color="0xF2B84B")
     inner += title(card.get("name", "Light"), w)
