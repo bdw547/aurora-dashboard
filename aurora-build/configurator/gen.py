@@ -170,6 +170,25 @@ def c_toggle(card, x, y, w, h, base):
 
 def c_light(card, x, y, w, h, base):
     e = card.get("entity", "")
+    gw, gh = card["w"], card["h"]
+    if gw >= 2 and gh >= 2:
+        # Whole card is a vertical brightness fill (bottom-up); tap toggles on/off.
+        pct, fillid = base + "_pct", base + "_fill"
+        tog = ha("light.toggle", e) if e else "lvgl.page.show: page_home"
+        bri = 74                                          # demo (no HA state feed)
+        inner = ("              - obj: { id: %s, align: bottom_mid, x: 0, y: 0, width: %d, height: %d, "
+                 "bg_color: 0xF2B84B, bg_opa: 42%%, border_width: 0, radius: 6, pad_all: 0, scrollable: false }\n"
+                 % (fillid, w, int(h * bri / 100)))
+        inner += lbl(CARD_ICON.get(card["ck"], "\\U000F0335"), 0, 18, "f_icon", "0xF2B84B", align="top_mid")
+        inner += lbl(card.get("name", "Light"), 0, 54, "f_body", "0xEEF0F6", align="top_mid", width=w - 24, text_align="center", long="dot")
+        inner += lbl("%d%%" % bri, 0, -18, "f_display", "0xF3F5F8", wid=pct, align="bottom_mid")
+        s = []
+        if e:
+            s.append("  - platform: homeassistant\n    id: ha_%s_b\n    entity_id: %s\n    attribute: brightness\n    on_value:\n"
+                     "      - lvgl.widget.update: { id: %s, height: !lambda 'return (int)(%d * (x/2.55) / 100.0);' }\n"
+                     "      - lvgl.label.update: { id: %s, text: !lambda 'return std::to_string((int)(x/2.55)) + \"%%\";' }\n"
+                     % (base, e, fillid, h, pct))
+        return [card_obj(x, y, w, h, inner, tog)], s, []
     sld, pct = base + "_sld", base + "_pct"
     inner = ic(card["ck"], color="0xF2B84B")
     inner += title(card.get("name", "Light"), w)
@@ -250,7 +269,7 @@ def c_climate(card, x, y, w, h, base):
     box_x = int(w * 0.40)
     box_w = w - box_x - 16
     top = 64
-    box_h = (mode_y - top - 20) // 2
+    box_h = (mode_y - top - 20) // 2 - 14        # slightly shorter setpoint boxes
     inner += _setbox(box_x, top, box_w, box_h, "HEAT TO", "68\\u00B0", "0xF2B84B", "0x241C08")
     inner += _setbox(box_x, top + box_h + 10, box_w, box_h, "COOL TO", "74\\u00B0", "0x4F91FF", "0x0F1A2B")
     mbw = (w - 28 - 3 * 8) // 4
