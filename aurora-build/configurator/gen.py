@@ -140,6 +140,7 @@ CARD_ICON = {
     # Spotify / Sonos media cards
     "playlist": "\\U000F075A", "sonos_fav": "\\U000F04CE", "songlist": "\\U000F075A",
     "sonos_library": "\\U000F125F",
+    "spotify_playlists": "\\U000F075A", "spotify_tracks": "\\U000F075A",
     # TV control cards (purple family)
     "tv_sources": "\\U000F0502", "tv_dpad": "\\U000F0297", "tv_transport": "\\U000F040A",
     "tv_channel": "\\U000F0502", "tv_volume": "\\U000F057E", "tv_trackpad": "\\U000F0297",
@@ -1062,6 +1063,58 @@ def c_songlist(card, x, y, w, h, base):
     return [card_obj(x, y, w, h, inner)], [], []
 
 
+def c_spot_playlists(card, x, y, w, h, base):
+    """Spotify playlist dropdown, bound to sensor.aurora_spotify_playlists (names +
+    uris). Reuses aurora.yaml's g_pl_uris (uris string) + g_spot_ctx (selected uri).
+    Picking a playlist stores its URI in g_spot_ctx and loads its tracks via the
+    aurora_spotify_load_playlist script. Refresh re-pulls the playlists sensor.
+    NB: LVGL C calls need the widget's ->obj (id(x) is the ESPHome wrapper)."""
+    ddid = base + "_dd"
+    inner = ic("spotify_playlists", color="0x1DB954") + lbl(card.get("name", "Playlists"), 50, 16, "f_small", "0x868CA0")
+    inner += ("              - button:\n                  x: %d\n                  y: 12\n                  width: 40\n                  height: 34\n"
+              "                  bg_color: 0x161B24\n                  radius: 10\n                  pad_all: 0\n                  scrollable: false\n"
+              "                  widgets: [label: { text: \"\\U000F0450\", align: center, text_font: f_iconsm, text_color: 0x1DB954 }]\n"
+              "                  on_click: [homeassistant.action: { action: script.aurora_spotify_refresh_playlists }]\n" % (w - 54))
+    # pick i -> uris[i]: split g_pl_uris on newline (char 10), stash in g_spot_ctx, return it
+    ext = ("std::string all = id(g_pl_uris); int idx = lv_dropdown_get_selected(id(" + ddid + ")->obj); "
+           "size_t s = 0; for (int k = 0; k < idx; k++) { size_t nl = all.find((char)10, s); "
+           "if (nl == std::string::npos) { s = all.size(); break; } s = nl + 1; } "
+           "size_t e2 = all.find((char)10, s); std::string uri = all.substr(s, e2 == std::string::npos ? std::string::npos : e2 - s); "
+           "id(g_spot_ctx) = uri; return uri;")
+    inner += ("              - dropdown:\n                  id: " + ddid + "\n                  x: 14\n                  y: 52\n                  width: " + str(w - 28) + "\n                  height: 46\n"
+              "                  options: [\"Loading playlists\"]\n"
+              "                  bg_color: 0x0F1117\n                  border_color: 0x23262F\n                  border_width: 1\n                  radius: 10\n                  text_color: 0xF3F5F8\n"
+              "                  on_value:\n                    - homeassistant.action:\n                        action: script.aurora_spotify_load_playlist\n                        data:\n"
+              "                          playlist_uri: !lambda '" + ext + "'\n")
+    inner += lbl("Pick a playlist to load its songs", 14, 108, "f_small", "0x5D6470", width=w - 28, long="dot")
+    ts = ["  - platform: homeassistant\n    id: ha_" + base + "_pn\n    entity_id: sensor.aurora_spotify_playlists\n    attribute: names\n    on_value:\n"
+          "      - lambda: 'lv_dropdown_set_options(id(" + ddid + ")->obj, x.c_str());'\n",
+          "  - platform: homeassistant\n    id: ha_" + base + "_pu\n    entity_id: sensor.aurora_spotify_playlists\n    attribute: uris\n    on_value:\n"
+          "      - lambda: 'id(g_pl_uris) = x;'\n"]
+    return [card_obj(x, y, w, h, inner)], [], ts
+
+
+def c_spot_tracks(card, x, y, w, h, base):
+    """Spotify track list (scrolling roller) bound to sensor.aurora_spotify_tracks
+    (names). Play plays the selected row within the loaded playlist (g_spot_ctx) via
+    the aurora_spotify_play_track script (context_uri + zero-based position)."""
+    rlid = base + "_rl"
+    rows = max(3, (h - 116) // 34)
+    inner = ic("spotify_tracks", color="0x1DB954") + lbl(card.get("name", "Songs"), 50, 16, "f_small", "0x868CA0")
+    inner += ("              - roller:\n                  id: " + rlid + "\n                  x: 14\n                  y: 50\n                  width: " + str(w - 28) + "\n                  height: " + str(h - 116) + "\n"
+              "                  visible_row_count: " + str(rows) + "\n                  options: [\"Load a playlist\"]\n"
+              "                  bg_color: 0x0F1117\n                  radius: 10\n                  text_color: 0xC2C7D2\n")
+    inner += ("              - button:\n                  x: 14\n                  y: " + str(h - 54) + "\n                  width: " + str(w - 28) + "\n                  height: 44\n"
+              "                  bg_color: 0x1DB954\n                  radius: 12\n                  pad_all: 0\n                  scrollable: false\n"
+              "                  widgets: [label: { text: \"Play\", align: center, text_font: f_body, text_color: 0x06210F }]\n"
+              "                  on_click:\n                    - homeassistant.action:\n                        action: script.aurora_spotify_play_track\n                        data:\n"
+              "                          context_uri: !lambda 'return id(g_spot_ctx);'\n"
+              "                          position: !lambda 'return std::to_string(lv_roller_get_selected(id(" + rlid + ")->obj));'\n")
+    ts = ["  - platform: homeassistant\n    id: ha_" + base + "_tn\n    entity_id: sensor.aurora_spotify_tracks\n    attribute: names\n    on_value:\n"
+          "      - lambda: 'lv_roller_set_options(id(" + rlid + ")->obj, x.c_str(), LV_ROLLER_MODE_NORMAL);'\n"]
+    return [card_obj(x, y, w, h, inner)], [], ts
+
+
 def c_shortcuts(card, x, y, w, h, pagemap, base):
     """Grid of icon+label tiles (one per grid cell), matching the builder's
     .scbtn: MDI icon on top, label below. Empty slots show a + outline."""
@@ -1310,6 +1363,7 @@ CTRL = {
     "tv_volume": c_tv_volume, "tv_trackpad": c_tv_trackpad, "tvremote": c_tvremote,
     "playlist": c_playlist, "sonos_fav": c_playlist, "songlist": c_songlist,
     "sonos_library": c_songlist, "volume": c_volume, "volumes": c_volumes,
+    "spotify_playlists": c_spot_playlists, "spotify_tracks": c_spot_tracks,
 }
 
 

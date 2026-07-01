@@ -2257,6 +2257,11 @@ globals:
     type: std::string
     restore_value: false
     initial_value: '"$ent_light_living"'
+  # Spotify browser: URI of the playlist currently loaded in the dropdown (context for
+  # play_track). Set when a playlist is picked; read by the track list's Play button.
+  - id: g_spot_ctx
+    type: std::string
+    restore_value: false
   - id: light_bri
     type: std::map<std::string, int>
     restore_value: false
