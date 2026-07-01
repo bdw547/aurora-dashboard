@@ -119,7 +119,7 @@ def card_obj(x, y, w, h, inner, on_click=None, bg=None):
     return (
         "        - obj:\n"
         "            x: %d\n            y: %d\n            width: %d\n            height: %d\n"
-        "            styles: st_glass\n            pad_all: 0%s\n            scrollable: false%s\n"
+        "            styles: st_glass\n            pad_all: 0\n            clip_corner: true%s\n            scrollable: false%s\n"
         "            widgets:\n%s" % (x, y, w, h, bgline, oc, inner)
     )
 
@@ -265,13 +265,14 @@ def c_climate(card, x, y, w, h, base):
         inner += lbl("71\\u00B0", 0, 16, "f_display", "0xF3F5F8", wid=tid, align="center")
         return [card_obj(x, y, w, h, inner)], s, []
     mode_y = h - 62
-    inner += lbl("71\\u00B0", 24, -6, "f_display", "0xF3F5F8", wid=tid, align="left_mid")
     box_x = int(w * 0.40)
     box_w = w - box_x - 16
-    top = 64
-    box_h = (mode_y - top - 20) // 2 - 14        # slightly shorter setpoint boxes
+    top, gap = 64, 16
+    box_h = (mode_y - top - gap) // 2 - 22        # short setpoint boxes with a gap between
+    # current temp centered between the left edge and the setpoint boxes
+    inner += lbl("71\\u00B0", 0, -6, "f_display", "0xF3F5F8", wid=tid, align="left_mid", width=box_x, text_align="center")
     inner += _setbox(box_x, top, box_w, box_h, "HEAT TO", "68\\u00B0", "0xF2B84B", "0x241C08")
-    inner += _setbox(box_x, top + box_h + 10, box_w, box_h, "COOL TO", "74\\u00B0", "0x4F91FF", "0x0F1A2B")
+    inner += _setbox(box_x, top + box_h + gap, box_w, box_h, "COOL TO", "74\\u00B0", "0x4F91FF", "0x0F1A2B")
     mbw = (w - 28 - 3 * 8) // 4
     for i, (g, lab, mode, acc) in enumerate(CLIMATE_MODES):
         mx = 14 + i * (mbw + 8)
