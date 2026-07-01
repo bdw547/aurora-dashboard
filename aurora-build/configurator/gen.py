@@ -1222,17 +1222,18 @@ def gen_nav(layout, pagemap):
     for i, n in enumerate(nav):
         g = NAV_GLYPH.get(n.get("icon", ""), FALLBACK_GLYPH)
         pid = pagemap.get(n.get("page", ""), "page_home")
+        active = (i == 0)
         out += (
             "            - button:\n                id: nav_%s\n                align: top_mid\n                y: %d\n"
-            "                width: 58\n                height: 58\n                radius: 14\n                bg_color: %s\n"
-            "                widgets: [label: { text: \"%s\", align: center, text_font: f_icon, text_color: 0xF3F5F8 }]\n"
+            "                width: 58\n                height: 58\n                radius: 14\n                bg_color: 0x2ED5B8\n                bg_opa: %s\n"
+            "                widgets: [label: { text: \"%s\", align: center, text_font: f_icon, text_color: %s }]\n"
             "                on_click: [lvgl.page.show: %s]\n"
-            % (slug(n.get("id", str(i))), 14 + i * 68, "0x2ED5B8" if i == 0 else "0x10121A", g, pid))
-    # Settings (always present)
+            % (slug(n.get("id", str(i))), 14 + i * 68, ("100%" if active else "0%"), g, ("0x06231D" if active else "0x5D6470"), pid))
+    # Settings (always present, inactive)
     out += (
         "            - button:\n                id: nav_settings\n                align: bottom_mid\n                y: -14\n"
-        "                width: 58\n                height: 58\n                radius: 14\n                bg_color: 0x10121A\n"
-        "                widgets: [label: { text: \"\\U000F0493\", align: center, text_font: f_icon, text_color: 0xF3F5F8 }]\n")
+        "                width: 58\n                height: 58\n                radius: 14\n                bg_color: 0x2ED5B8\n                bg_opa: 0%\n"
+        "                widgets: [label: { text: \"\\U000F0493\", align: center, text_font: f_icon, text_color: 0x5D6470 }]\n")
     return out
 
 
@@ -1268,15 +1269,26 @@ def gen_header(key, page, layout):
         out += "        - label: { text: \"10:42 PM\", x: 96, y: 10, text_font: f_head, text_color: 0xF3F5F8 }\n"
         out += "        - label: { text: \"Sunday, June 29\", x: 96, y: 50, text_font: f_body, text_color: 0x868CA0 }\n"
     else:
-        sub = "Living Room \\u00B7 10:42 PM" + (" \\u00B7 Sun Jun 29" if left == "greeting" else "")
-        out += "        - label: { text: %s, x: 96, y: 12, text_font: f_head, text_color: 0xF3F5F8 }\n" % esc(greet)
-        out += "        - label: { text: \"%s\", x: 96, y: 52, text_font: f_body, text_color: 0x868CA0 }\n" % sub
+        out += "        - label: { text: %s, x: 96, y: 14, text_font: f_h1, text_color: 0xF3F5F8 }\n" % esc(greet)
+        # room switcher + clock sub-row (teal room icon + name + chevron + mono time)
+        out += "        - label: { text: \"\\U000F04B9\", x: 96, y: 56, text_font: f_iconsm, text_color: 0x2ED5B8 }\n"
+        out += "        - label: { text: \"Living Room\", x: 122, y: 55, text_font: f_body, text_color: 0xC2C7D2 }\n"
+        out += "        - label: { text: \"\\U000F0140\", x: 224, y: 56, text_font: f_iconsm, text_color: 0x868CA0 }\n"
+        out += "        - label: { text: \"\\u00B7 10:42 PM\", x: 250, y: 56, text_font: f_mono, text_color: 0x868CA0 }\n"
+    # status chips as bordered pills (design: #14161C bg, #23262F border, radius 12)
     for i, item in enumerate((hdr.get("right") or [])[:4]):
         g, t, col = HCHIP.get(item, ("", item, "0x868CA0"))
-        base_x = -(24 + i * 122)
-        if g:
-            out += "        - label: { text: \"%s\", align: top_right, x: %d, y: 22, text_font: f_icon, text_color: %s }\n" % (g, base_x - 64, col)
-        out += "        - label: { text: %s, align: top_right, x: %d, y: 26, text_font: f_body, text_color: %s }\n" % (esc(t), base_x, col)
+        base_x = -(20 + i * 126)
+        icon_w = ("              - label: { text: \"%s\", text_font: f_iconsm, text_color: %s }\n" % (g, col)) if g else ""
+        out += (
+            "        - obj:\n"
+            "            align: top_right\n            x: %d\n            y: 18\n            width: 118\n            height: 40\n"
+            "            bg_color: 0x14161C\n            border_color: 0x23262F\n            border_width: 1\n            radius: 12\n"
+            "            pad_all: 0\n            scrollable: false\n"
+            "            layout: { type: flex, flex_flow: ROW, flex_align_main: center, flex_align_cross: center, pad_column: 8 }\n"
+            "            widgets:\n%s"
+            "              - label: { text: %s, text_font: f_body, text_color: 0xF3F5F8 }\n"
+            % (base_x, icon_w, esc(t)))
     return out
 
 
