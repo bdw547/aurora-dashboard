@@ -1,72 +1,487 @@
 {
   "install_room": "Living Room",
   "nav": [
-    {"id":"home","icon":"home-variant","label":"Home","page":"home"},
-    {"id":"rooms","icon":"sofa","label":"Rooms","page":"rooms"},
-    {"id":"lights","icon":"lightbulb","label":"Lights","page":"lights"},
-    {"id":"spot","icon":"spotify","label":"Spotify","page":"spot"},
-    {"id":"sonos","icon":"speaker-multiple","label":"Sonos","page":"sonos"},
-    {"id":"tv","icon":"remote-tv","label":"TV","page":"tv"}
+    {
+      "id": "home",
+      "icon": "home-variant",
+      "label": "Home",
+      "page": "home"
+    },
+    {
+      "id": "rooms",
+      "icon": "sofa",
+      "label": "Rooms",
+      "page": "rooms"
+    },
+    {
+      "id": "lights",
+      "icon": "lightbulb",
+      "label": "Lights",
+      "page": "lights"
+    },
+    {
+      "id": "spot",
+      "icon": "spotify",
+      "label": "Spotify",
+      "page": "spot"
+    },
+    {
+      "id": "sonos",
+      "icon": "speaker-multiple",
+      "label": "Sonos",
+      "page": "sonos"
+    },
+    {
+      "id": "tv",
+      "icon": "remote-tv",
+      "label": "TV",
+      "page": "tv"
+    }
   ],
   "pages": {
-    "home": {"title":"Home","type":"custom","header":{"on":true,"left":"greeting","right":["weather_current","lights_on","wifi","secured"]},"subpages":[
-      [
-        {"id":"c1","ck":"climate","entity":"climate.main_floor","name":"Main Floor","x":1,"y":1,"w":4,"h":4},
-        {"id":"c2","ck":"light","entity":"light.living_room_main","name":"Main Lights","x":5,"y":1,"w":2,"h":2},
-        {"id":"q1","ck":"shortcuts","name":"Quick","x":5,"y":3,"w":2,"h":2,"shortcuts":[
-          {"label":"Rooms","icon":"sofa","target":"page:rooms"},
-          {"label":"Spotify","icon":"spotify","target":"page:spot"},
-          {"label":"Sonos","icon":"speaker-multiple","target":"page:sonos"},
-          {"label":"TV","icon":"remote-tv","target":"page:tv"}
-        ]}
-      ],
-      []
-    ]},
-    "rooms": {"title":"Rooms","type":"custom","header":{"on":false,"left":"greeting","right":[]},"subpages":[
-      [ {"id":"g1","ck":"group","name":"House status","x":1,"y":1,"w":2,"h":4,"entities":["light.kitchen_kitchen","lock.front_door","binary_sensor.front_motion","sensor.living_temp","cover.living_blinds","fan.office_ceiling_fan","light.office_main_lights","person.ben"]} ]
-    ]},
-    "lights": {"title":"Lights","type":"custom","header":{"on":false,"left":"greeting","right":[]},"subpages":[
-      [
-        {"id":"lg1","ck":"lightgroup","name":"All Lights","x":1,"y":1,"w":3,"h":3,"entities":["light.living_room_main","light.kitchen_kitchen","light.office_main_lights","light.master_bedroom_ceiling_fan_light","light.dining_room_chandelier","light.reading_lamp"]},
-        {"id":"o1","ck":"outletgroup","name":"Front Stairs","x":4,"y":1,"w":1,"h":3,"entities":["switch.s1","switch.s2"]},
-        {"id":"f1","ck":"fan","entity":"fan.office_ceiling_fan","name":"Office Fan","x":5,"y":1,"w":1,"h":1},
-        {"id":"o2","ck":"outletgroup","name":"Garage","x":5,"y":2,"w":1,"h":1,"entities":["switch.garage_outlet"]},
-        {"id":"cv1","ck":"cover","entity":"cover.living_blinds","name":"Blinds","x":6,"y":1,"w":1,"h":3}
+    "home": {
+      "title": "Home",
+      "type": "custom",
+      "header": {
+        "on": true,
+        "left": "greeting",
+        "right": [
+          "weather_current",
+          "lights_on",
+          "wifi",
+          "secured"
+        ]
+      },
+      "subpages": [
+        [
+          {
+            "id": "c1",
+            "ck": "climate",
+            "entity": "climate.main_floor",
+            "name": "Main Floor",
+            "x": 1,
+            "y": 1,
+            "w": 4,
+            "h": 4
+          },
+          {
+            "id": "c2",
+            "ck": "light",
+            "entity": "light.living_room_main",
+            "name": "Main Lights",
+            "x": 5,
+            "y": 1,
+            "w": 2,
+            "h": 2
+          },
+          {
+            "id": "q1",
+            "ck": "shortcuts",
+            "name": "Quick",
+            "x": 5,
+            "y": 3,
+            "w": 2,
+            "h": 2,
+            "shortcuts": [
+              {
+                "label": "Rooms",
+                "icon": "sofa",
+                "target": "page:rooms"
+              },
+              {
+                "label": "Spotify",
+                "icon": "spotify",
+                "target": "page:spot"
+              },
+              {
+                "label": "Sonos",
+                "icon": "speaker-multiple",
+                "target": "page:sonos"
+              },
+              {
+                "label": "TV",
+                "icon": "remote-tv",
+                "target": "page:tv"
+              }
+            ]
+          },
+          {
+            "id": "vol_demo",
+            "ck": "volume",
+            "entity": "media_player.spotify",
+            "name": "Speaker Volume",
+            "x": 1,
+            "y": 5,
+            "w": 2,
+            "h": 1
+          }
+        ],
+        []
       ]
-    ]},
-    "spot": {"title":"Spotify","type":"custom","header":{"on":false,"left":"greeting","right":[]},"subpages":[
-      [
-        {"id":"p1","ck":"playlist","entity":"media_player.spotify","name":"Playlists","x":1,"y":1,"w":3,"h":1},
-        {"id":"s1","ck":"songlist","entity":"media_player.spotify","name":"Songs","x":1,"y":2,"w":3,"h":3},
-        {"id":"pb1","ck":"playlist","entity":"media_player.spotify","name":"Playlist","pl":"Chill Vibes","x":1,"y":5,"w":1,"h":1},
-        {"id":"pb2","ck":"playlist","entity":"media_player.spotify","name":"Playlist","pl":"Focus","x":2,"y":5,"w":1,"h":1},
-        {"id":"k1","ck":"speakers","name":"Speakers","x":4,"y":1,"w":3,"h":3,"entities":["media_player.living_room","media_player.kitchen","media_player.bedroom","media_player.office","media_player.patio","media_player.office_2"]},
-        {"id":"n1","ck":"spotify","entity":"media_player.spotify","name":"Now Playing","x":4,"y":4,"w":3,"h":2}
+    },
+    "rooms": {
+      "title": "Rooms",
+      "type": "custom",
+      "header": {
+        "on": false,
+        "left": "greeting",
+        "right": []
+      },
+      "subpages": [
+        [
+          {
+            "id": "g1",
+            "ck": "group",
+            "name": "House status",
+            "x": 1,
+            "y": 1,
+            "w": 2,
+            "h": 4,
+            "entities": [
+              "light.kitchen_kitchen",
+              "lock.front_door",
+              "binary_sensor.front_motion",
+              "sensor.living_temp",
+              "cover.living_blinds",
+              "fan.office_ceiling_fan",
+              "light.office_main_lights",
+              "person.ben"
+            ]
+          }
+        ]
       ]
-    ]},
-    "sonos": {"title":"Sonos","type":"custom","header":{"on":false,"left":"greeting","right":[]},"subpages":[
-      [
-        {"id":"ss1","ck":"sonos_sources","name":"Sources","x":1,"y":1,"w":3,"h":3,"entities":["media_player.spotify","media_player.tunein","media_player.line_in","media_player.airplay","media_player.radio","media_player.favorites"]},
-        {"id":"sp1","ck":"speakers","name":"Link speakers","x":1,"y":4,"w":3,"h":2,"entities":["media_player.living_room","media_player.kitchen","media_player.bedroom","media_player.office"]},
-        {"id":"sl1","ck":"sonos_library","name":"Library","x":4,"y":1,"w":3,"h":5}
-      ],
-      [
-        {"id":"sr1","ck":"speakers","name":"Rooms","x":1,"y":1,"w":3,"h":1,"entities":["media_player.living_room","media_player.kitchen","media_player.office"]},
-        {"id":"sr2","ck":"sonos_sources","name":"Source","x":4,"y":1,"w":2,"h":1,"entities":["media_player.spotify","media_player.radio"]},
-        {"id":"sr3","ck":"speakers","name":"Pick","x":6,"y":1,"w":1,"h":1,"entities":["media_player.living_room"]}
+    },
+    "lights": {
+      "title": "Lights",
+      "type": "custom",
+      "header": {
+        "on": false,
+        "left": "greeting",
+        "right": []
+      },
+      "subpages": [
+        [
+          {
+            "id": "lg1",
+            "ck": "lightgroup",
+            "name": "All Lights",
+            "x": 1,
+            "y": 1,
+            "w": 3,
+            "h": 3,
+            "entities": [
+              "light.living_room_main",
+              "light.kitchen_kitchen",
+              "light.office_main_lights",
+              "light.master_bedroom_ceiling_fan_light",
+              "light.dining_room_chandelier",
+              "light.reading_lamp"
+            ]
+          },
+          {
+            "id": "o1",
+            "ck": "outletgroup",
+            "name": "Front Stairs",
+            "x": 4,
+            "y": 1,
+            "w": 1,
+            "h": 3,
+            "entities": [
+              "switch.s1",
+              "switch.s2"
+            ]
+          },
+          {
+            "id": "f1",
+            "ck": "fan",
+            "entity": "fan.office_ceiling_fan",
+            "name": "Office Fan",
+            "x": 5,
+            "y": 1,
+            "w": 1,
+            "h": 1
+          },
+          {
+            "id": "o2",
+            "ck": "outletgroup",
+            "name": "Garage",
+            "x": 5,
+            "y": 2,
+            "w": 1,
+            "h": 1,
+            "entities": [
+              "switch.garage_outlet"
+            ]
+          },
+          {
+            "id": "cv1",
+            "ck": "cover",
+            "entity": "cover.living_blinds",
+            "name": "Blinds",
+            "x": 6,
+            "y": 1,
+            "w": 1,
+            "h": 3
+          }
+        ]
       ]
-    ]},
-    "tv": {"title":"TV","type":"custom","header":{"on":false,"left":"greeting","right":[]},"subpages":[
-      [
-        {"id":"full1","ck":"tvremote","entity":"media_player.lg_g3_living_room_2","name":"LG G3 OLED — full remote","x":1,"y":1,"w":6,"h":5}
-      ],
-      [
-        {"id":"d1","ck":"tv_dpad","entity":"media_player.lg_g3_living_room_2","name":"Navigate","x":1,"y":1,"w":3,"h":3},
-        {"id":"tr1","ck":"tv_transport","entity":"media_player.lg_g3_living_room_2","name":"Transport","x":1,"y":4,"w":3,"h":1},
-        {"id":"vol1","ck":"tv_volume","entity":"media_player.lg_g3_living_room_2","name":"Volume","x":4,"y":1,"w":1,"h":3},
-        {"id":"ch1","ck":"tv_channel","entity":"media_player.lg_g3_living_room_2","name":"Channel","x":5,"y":1,"w":2,"h":2},
-        {"id":"src1","ck":"tv_sources","name":"Sources","x":5,"y":3,"w":2,"h":3,"entities":["media_player.hdmi1","media_player.netflix","media_player.youtube","media_player.appletv"]}
+    },
+    "spot": {
+      "title": "Spotify",
+      "type": "custom",
+      "header": {
+        "on": false,
+        "left": "greeting",
+        "right": []
+      },
+      "subpages": [
+        [
+          {
+            "id": "p1",
+            "ck": "playlist",
+            "entity": "media_player.spotify",
+            "name": "Playlists",
+            "x": 1,
+            "y": 1,
+            "w": 3,
+            "h": 1
+          },
+          {
+            "id": "s1",
+            "ck": "songlist",
+            "entity": "media_player.spotify",
+            "name": "Songs",
+            "x": 1,
+            "y": 2,
+            "w": 3,
+            "h": 3
+          },
+          {
+            "id": "pb1",
+            "ck": "playlist",
+            "entity": "media_player.spotify",
+            "name": "Playlist",
+            "pl": "Chill Vibes",
+            "x": 1,
+            "y": 5,
+            "w": 1,
+            "h": 1
+          },
+          {
+            "id": "pb2",
+            "ck": "playlist",
+            "entity": "media_player.spotify",
+            "name": "Playlist",
+            "pl": "Focus",
+            "x": 2,
+            "y": 5,
+            "w": 1,
+            "h": 1
+          },
+          {
+            "id": "k1",
+            "ck": "speakers",
+            "name": "Speakers",
+            "x": 4,
+            "y": 1,
+            "w": 3,
+            "h": 3,
+            "entities": [
+              "media_player.living_room",
+              "media_player.kitchen",
+              "media_player.bedroom",
+              "media_player.office",
+              "media_player.patio",
+              "media_player.office_2"
+            ]
+          },
+          {
+            "id": "n1",
+            "ck": "spotify",
+            "entity": "media_player.spotify",
+            "name": "Now Playing",
+            "x": 4,
+            "y": 4,
+            "w": 3,
+            "h": 2
+          }
+        ]
       ]
-    ]}
+    },
+    "sonos": {
+      "title": "Sonos",
+      "type": "custom",
+      "header": {
+        "on": false,
+        "left": "greeting",
+        "right": []
+      },
+      "subpages": [
+        [
+          {
+            "id": "ss1",
+            "ck": "sonos_sources",
+            "name": "Sources",
+            "x": 1,
+            "y": 1,
+            "w": 3,
+            "h": 3,
+            "entities": [
+              "media_player.spotify",
+              "media_player.tunein",
+              "media_player.line_in",
+              "media_player.airplay",
+              "media_player.radio",
+              "media_player.favorites"
+            ]
+          },
+          {
+            "id": "sp1",
+            "ck": "speakers",
+            "name": "Link speakers",
+            "x": 1,
+            "y": 4,
+            "w": 3,
+            "h": 2,
+            "entities": [
+              "media_player.living_room",
+              "media_player.kitchen",
+              "media_player.bedroom",
+              "media_player.office"
+            ]
+          },
+          {
+            "id": "sl1",
+            "ck": "sonos_library",
+            "name": "Library",
+            "x": 4,
+            "y": 1,
+            "w": 3,
+            "h": 5
+          }
+        ],
+        [
+          {
+            "id": "sr1",
+            "ck": "speakers",
+            "name": "Rooms",
+            "x": 1,
+            "y": 1,
+            "w": 3,
+            "h": 1,
+            "entities": [
+              "media_player.living_room",
+              "media_player.kitchen",
+              "media_player.office"
+            ]
+          },
+          {
+            "id": "sr2",
+            "ck": "sonos_sources",
+            "name": "Source",
+            "x": 4,
+            "y": 1,
+            "w": 2,
+            "h": 1,
+            "entities": [
+              "media_player.spotify",
+              "media_player.radio"
+            ]
+          },
+          {
+            "id": "sr3",
+            "ck": "speakers",
+            "name": "Pick",
+            "x": 6,
+            "y": 1,
+            "w": 1,
+            "h": 1,
+            "entities": [
+              "media_player.living_room"
+            ]
+          }
+        ]
+      ]
+    },
+    "tv": {
+      "title": "TV",
+      "type": "custom",
+      "header": {
+        "on": false,
+        "left": "greeting",
+        "right": []
+      },
+      "subpages": [
+        [
+          {
+            "id": "full1",
+            "ck": "tvremote",
+            "entity": "media_player.lg_g3_living_room_2",
+            "name": "LG G3 OLED \u2014 full remote",
+            "x": 1,
+            "y": 1,
+            "w": 6,
+            "h": 5
+          }
+        ],
+        [
+          {
+            "id": "d1",
+            "ck": "tv_dpad",
+            "entity": "media_player.lg_g3_living_room_2",
+            "name": "Navigate",
+            "x": 1,
+            "y": 1,
+            "w": 3,
+            "h": 3
+          },
+          {
+            "id": "tr1",
+            "ck": "tv_transport",
+            "entity": "media_player.lg_g3_living_room_2",
+            "name": "Transport",
+            "x": 1,
+            "y": 4,
+            "w": 3,
+            "h": 1
+          },
+          {
+            "id": "vol1",
+            "ck": "tv_volume",
+            "entity": "media_player.lg_g3_living_room_2",
+            "name": "Volume",
+            "x": 4,
+            "y": 1,
+            "w": 1,
+            "h": 3
+          },
+          {
+            "id": "ch1",
+            "ck": "tv_channel",
+            "entity": "media_player.lg_g3_living_room_2",
+            "name": "Channel",
+            "x": 5,
+            "y": 1,
+            "w": 2,
+            "h": 2
+          },
+          {
+            "id": "src1",
+            "ck": "tv_sources",
+            "name": "Sources",
+            "x": 5,
+            "y": 3,
+            "w": 2,
+            "h": 3,
+            "entities": [
+              "media_player.hdmi1",
+              "media_player.netflix",
+              "media_player.youtube",
+              "media_player.appletv"
+            ]
+          }
+        ]
+      ]
+    }
   }
 }
