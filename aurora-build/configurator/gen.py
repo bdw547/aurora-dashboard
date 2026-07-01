@@ -175,23 +175,33 @@ def c_light(card, x, y, w, h, base):
     e = card.get("entity", "")
     gw, gh = card["w"], card["h"]
     if gw >= 2 and gh >= 2:
-        # Whole card is a vertical brightness fill (bottom-up, teal); tap toggles on/off (allcards.png).
-        pct, fillid = base + "_pct", base + "_fill"
-        tog = ha("light.toggle", e) if e else "lvgl.page.show: page_home"
-        bri = 74                                          # demo (no HA state feed)
-        inner = ("              - obj: { id: %s, align: bottom_mid, x: 0, y: 0, width: %d, height: %d, "
-                 "bg_color: 0x2ED5B8, bg_opa: 55%%, border_width: 0, radius: 10, pad_all: 0, scrollable: false }\n"
-                 % (fillid, w, int(h * bri / 100)))
+        # Horizontal brightness fill (visual) + a transparent full-card drag slider.
+        pct, fillid, sldid = base + "_pct", base + "_fill", base + "_sld"
+        bri = 74                                          # initial (readback corrects live)
+        inner = ("              - obj: { id: " + fillid + ", x: 0, y: 0, width: " + str(int(w * bri / 100)) +
+                 ", height: " + str(h) + ", bg_color: 0x2ED5B8, bg_opa: 55%, border_width: 0, radius: 12, pad_all: 0, scrollable: false }\n")
         inner += lbl(CARD_ICON.get(card["ck"], "\\U000F0335"), 0, 20, "f_icon", "0xF2B84B", align="top_mid")
         inner += lbl(card.get("name", "Light"), 0, 56, "f_title", "0xF3F5F8", align="top_mid", width=w - 24, text_align="center", long="dot", height=26)
         inner += lbl("%d%%" % bri, 0, -20, "f_head", "0xF3F5F8", wid=pct, align="bottom_mid")
+        sld = "              - slider:\n                  id: " + sldid + "\n                  x: 0\n                  y: 0\n"
+        sld += "                  width: " + str(w) + "\n                  height: " + str(h) + "\n"
+        sld += "                  bg_opa: 0%\n                  min_value: 0\n                  max_value: 100\n                  value: " + str(bri) + "\n"
+        sld += "                  indicator: { bg_opa: 0% }\n                  knob: { bg_opa: 0% }\n"
+        sld += "                  on_value:\n"
+        sld += "                    - lvgl.widget.update: { id: " + fillid + ", width: !lambda 'return (int)(lv_slider_get_value(id(" + sldid + ")) * " + str(w) + " / 100.0);' }\n"
+        sld += "                    - lvgl.label.update: { id: " + pct + ", text: !lambda 'return std::to_string((int) lv_slider_get_value(id(" + sldid + "))) + \"%\";' }\n"
+        if e:
+            sld += "                  on_release:\n"
+            sld += "                    - homeassistant.action: { action: light.turn_on, data: { entity_id: " + e + ", brightness_pct: !lambda 'return (int) lv_slider_get_value(id(" + sldid + "));' } }\n"
+        inner += sld
         s = []
         if e:
             s.append("  - platform: homeassistant\n    id: ha_%s_b\n    entity_id: %s\n    attribute: brightness\n    on_value:\n"
-                     "      - lvgl.widget.update: { id: %s, height: !lambda 'return (int)(%d * (x/2.55) / 100.0);' }\n"
+                     "      - lvgl.slider.update: { id: %s, value: !lambda 'return (int)(x/2.55);' }\n"
+                     "      - lvgl.widget.update: { id: %s, width: !lambda 'return (int)((x/2.55) * %d / 100.0);' }\n"
                      "      - lvgl.label.update: { id: %s, text: !lambda 'return std::to_string((int)(x/2.55)) + \"%%\";' }\n"
-                     % (base, e, fillid, h, pct))
-        return [card_obj(x, y, w, h, inner, tog)], s, []
+                     % (base, e, sldid, fillid, w, pct))
+        return [card_obj(x, y, w, h, inner)], s, []
     sld, pct = base + "_sld", base + "_pct"
     inner = ic(card["ck"], color="0xF2B84B")
     inner += title(card.get("name", "Light"), w)
@@ -245,16 +255,26 @@ def c_sensor(card, x, y, w, h, base):
     return [card_obj(x, y, w, h, inner)], [], ts
 
 
-def _setbox(bx, by, bw, bh, label, temp, accent, bg):
-    """A HEAT TO / COOL TO setpoint box: label (top), big temp (center),
-    - on the left and + on the right (visual; live ±step is a follow-up)."""
+def _setbox(bx, by, bw, bh, label, temp, accent, bg, vid, e, heat_vid, cool_vid):
+    """A HEAT TO / COOL TO setpoint box with working +/- (climate.set_temperature).
+    vid = this box's value label id; heat_vid/cool_vid = both setpoint label ids
+    (sent together as target_temp_low/high)."""
     s = ("              - obj: { x: %d, y: %d, width: %d, height: %d, bg_color: %s, "
          "border_color: %s, border_width: 1, radius: 12, pad_all: 0, scrollable: false }\n"
          % (bx, by, bw, bh, bg, accent))
     s += lbl(label, bx, by + 12, "f_small", accent, width=bw, text_align="center")
-    s += lbl(temp, bx, by + bh // 2 - 4, "f_head", accent, width=bw, text_align="center", height=34)
-    s += lbl("\\U000F0374", bx + 18, by + bh // 2, "f_icon", accent)
-    s += lbl("\\U000F0415", bx + bw - 44, by + bh // 2, "f_icon", accent)
+    s += lbl(temp, bx, by + bh // 2 - 4, "f_head", accent, wid=vid, width=bw, text_align="center", height=34)
+    setT = ("\n                    - homeassistant.action:\n                        action: climate.set_temperature\n"
+            "                        data: { entity_id: %s, target_temp_low: !lambda 'return atof(lv_label_get_text(id(%s)));', target_temp_high: !lambda 'return atof(lv_label_get_text(id(%s)));' }"
+            % (e, heat_vid, cool_vid)) if e else ""
+    for glyph, delta, gx in (("\\U000F0374", -1, bx + 12), ("\\U000F0415", 1, bx + bw - 52)):
+        s += ("              - button:\n                  x: %d\n                  y: %d\n                  width: 40\n                  height: 40\n"
+              "                  bg_opa: 0%%\n                  radius: 10\n                  pad_all: 0\n                  scrollable: false\n"
+              "                  widgets: [label: { text: \"%s\", align: center, text_font: f_icon, text_color: %s }]\n"
+              "                  on_click:\n                    - lambda: |-\n"
+              "                        int v = atoi(lv_label_get_text(id(%s))) + (%d);\n"
+              "                        char b[8]; snprintf(b, sizeof(b), \"%%d\\u00B0\", v); lv_label_set_text(id(%s), b);%s\n"
+              % (gx, by + bh // 2 - 6, glyph, accent, vid, delta, vid, setT))
     return s
 
 
@@ -273,11 +293,18 @@ def c_climate(card, x, y, w, h, base):
     inner = ic(card["ck"], color="0x2ED5B8")
     inner += lbl(card.get("name", "Climate"), 50, 12, "f_title", width=w - 120, long="dot", height=26)
     inner += lbl("now 71\\u00B0 \\u00B7 41% RH", 50, 44, "f_small", "0x868CA0")
+    heat_vid, cool_vid = base + "_hi", base + "_lo"
     s = []
     if e:
         s.append("  - platform: homeassistant\n    id: ha_%s\n    entity_id: %s\n    attribute: current_temperature\n    on_value:\n"
                  "      - lvgl.label.update: { id: %s, text: !lambda 'return std::to_string((int)x) + \"\\u00B0\";' }\n"
                  % (tid, e, tid))
+        s.append("  - platform: homeassistant\n    id: ha_%s\n    entity_id: %s\n    attribute: target_temp_low\n    on_value:\n"
+                 "      - lvgl.label.update: { id: %s, text: !lambda 'return std::to_string((int)x) + \"\\u00B0\";' }\n"
+                 % (heat_vid, e, heat_vid))
+        s.append("  - platform: homeassistant\n    id: ha_%s\n    entity_id: %s\n    attribute: target_temp_high\n    on_value:\n"
+                 "      - lvgl.label.update: { id: %s, text: !lambda 'return std::to_string((int)x) + \"\\u00B0\";' }\n"
+                 % (cool_vid, e, cool_vid))
     if w < 380 or h < 240:                               # compact fallback
         inner += lbl("71\\u00B0", 0, 16, "f_display", "0xF3F5F8", wid=tid, align="center")
         return [card_obj(x, y, w, h, inner)], s, []
@@ -288,8 +315,8 @@ def c_climate(card, x, y, w, h, base):
     box_h = (mode_y - top - gap) // 2 - 22        # short setpoint boxes with a gap between
     # current temp centered between the left edge and the setpoint boxes
     inner += lbl("71\\u00B0", 0, -6, "f_display", "0xF3F5F8", wid=tid, align="left_mid", width=box_x, text_align="center")
-    inner += _setbox(box_x, top, box_w, box_h, "HEAT TO", "68\\u00B0", "0xF2B84B", "0x241C08")
-    inner += _setbox(box_x, top + box_h + gap, box_w, box_h, "COOL TO", "74\\u00B0", "0x4FA8F5", "0x0F1A2B")
+    inner += _setbox(box_x, top, box_w, box_h, "HEAT TO", "68\\u00B0", "0xF2B84B", "0x241C08", heat_vid, e, heat_vid, cool_vid)
+    inner += _setbox(box_x, top + box_h + gap, box_w, box_h, "COOL TO", "74\\u00B0", "0x4FA8F5", "0x0F1A2B", cool_vid, e, heat_vid, cool_vid)
     mbw = (w - 28 - 3 * 8) // 4
     for i, (g, lab, mode, acc) in enumerate(CLIMATE_MODES):
         mx = 14 + i * (mbw + 8)
