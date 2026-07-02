@@ -204,6 +204,10 @@ class ESPVideoCamera : public camera::Camera {
   int rtsp_client_fd_{-1};
   int rtp_fd_{-1};                   // UDP socket used to send RTP
   volatile bool rtsp_playing_{false};
+  // Once the RTSP stream task owns the V4L2 capture + encoder, the snapshot
+  // path must not start (or tear down) the pipeline — capture_fd_ is shared
+  // state, and a losing start_capture_() would close the stream task's fd.
+  volatile bool rtsp_owns_pipeline_{false};
   uint32_t rtp_client_ip_{0};        // network byte order
   uint16_t rtp_client_port_{0};      // host order (client RTP port from SETUP)
   uint16_t rtp_seq_{0};

@@ -665,6 +665,8 @@ bool ESPVideoCamera::setup_capture_buffers_() {
 }
 
 bool ESPVideoCamera::start_capture_() {
+  if (this->rtsp_owns_pipeline_)
+    return false;  // the RTSP stream task is the sole owner; don't fight (or stomp) its fd
   if (this->streaming_)
     return true;
   if (this->is_failed())
@@ -1177,33 +1179,65 @@ void ESPVideoCamera::rtp_send_access_unit_(const uint8_t *au, size_t au_len, uin
 
 void ESPVideoCamera::rtsp_stream_task_(void *arg) {
   auto *self = (ESPVideoCamera *) arg;
-  // Open the camera ONCE and keep it open for the task's lifetime. This task is
-  // the SOLE owner of the V4L2 capture + H.264 encoder; opening/closing per
-  // client (or from two tasks) causes VIDIOC_REQBUFS "Device or resource busy".
-  while (!self->start_jpeg_pipeline_()) {
-    ESP_LOGW(TAG, "RTSP: camera capture not ready yet, retrying...");
-    vTaskDelay(pdMS_TO_TICKS(1000));
-  }
-  if (self->rtp_fd_ < 0)
-    self->rtp_fd_ = socket(AF_INET, SOCK_DGRAM, 0);
-  ESP_LOGI(TAG, "RTSP: capture pipeline open; stream task ready");
-
+  // The camera is shared with the HA snapshot path, which owns it by default.
+  // This task takes SOLE ownership of the V4L2 capture + H.264 encoder only
+  // while an RTSP client is connected, and releases it on disconnect. The
+  // rtsp_owns_pipeline_ flag is raised BEFORE tearing the snapshot pipeline
+  // down so start_capture_() can't restart it (or stomp our fd) mid-takeover.
+  // A failed acquisition attempt must stop_capture_() before retrying —
+  // start_jpeg_pipeline_() re-opens the device every call, and retrying
+  // without cleanup leaks the fd + mmap'd buffers until open() dies with
+  // "Not enough space".
   while (true) {
-    const uint8_t *nal;
-    size_t len;
-    if (self->capture_h264_(&nal, &len)) {
-      // Cache SPS/PPS from the very first frames so DESCRIBE can build the SDP.
-      if (!self->params_ready_)
-        self->extract_params_(nal, len);
-      // Only emit RTP while a client is playing; otherwise just drain the
-      // encoder (keeps the pipeline warm without churning the V4L2 device).
-      if (self->rtsp_playing_) {
-        uint32_t ts = (uint32_t) ((esp_timer_get_time() * 9) / 100);  // us -> 90 kHz
-        self->rtp_send_access_unit_(nal, len, ts);
+    // Idle until a client connects; the snapshot path owns the camera here.
+    while (self->rtsp_client_fd_ < 0)
+      vTaskDelay(pdMS_TO_TICKS(200));
+
+    self->rtsp_owns_pipeline_ = true;
+    bool acquired = false;
+    for (int attempt = 0; attempt < 15 && self->rtsp_client_fd_ >= 0; attempt++) {
+      self->stop_capture_();  // release the snapshot pipeline / a previous failed attempt
+      if (self->start_jpeg_pipeline_()) {
+        acquired = true;
+        break;
       }
-    } else {
-      vTaskDelay(pdMS_TO_TICKS(5));
+      self->stop_capture_();
+      ESP_LOGW(TAG, "RTSP: camera capture not ready yet, retrying...");
+      vTaskDelay(pdMS_TO_TICKS(1000));
     }
+
+    if (acquired) {
+      if (self->rtp_fd_ < 0)
+        self->rtp_fd_ = socket(AF_INET, SOCK_DGRAM, 0);
+      ESP_LOGI(TAG, "RTSP: capture pipeline open; stream task ready");
+      while (self->rtsp_client_fd_ >= 0) {
+        const uint8_t *nal;
+        size_t len;
+        if (self->capture_h264_(&nal, &len)) {
+          // Cache SPS/PPS from the very first frames so DESCRIBE can build the SDP.
+          if (!self->params_ready_)
+            self->extract_params_(nal, len);
+          // Only emit RTP while a client is playing; otherwise just drain the
+          // encoder (keeps the pipeline warm without churning the V4L2 device).
+          if (self->rtsp_playing_) {
+            uint32_t ts = (uint32_t) ((esp_timer_get_time() * 9) / 100);  // us -> 90 kHz
+            self->rtp_send_access_unit_(nal, len, ts);
+          }
+        } else {
+          vTaskDelay(pdMS_TO_TICKS(5));
+        }
+      }
+    } else if (self->rtsp_client_fd_ >= 0) {
+      ESP_LOGE(TAG, "RTSP: could not acquire the camera; refusing this client");
+      while (self->rtsp_client_fd_ >= 0)
+        vTaskDelay(pdMS_TO_TICKS(200));
+    }
+
+    // Client gone: hand the camera back to the snapshot path. SPS/PPS stay
+    // cached (same sensor/encoder config), so the next DESCRIBE is instant.
+    self->stop_capture_();
+    self->rtsp_owns_pipeline_ = false;
+    ESP_LOGI(TAG, "RTSP: released the camera (client disconnected)");
   }
 }
 
