@@ -1633,7 +1633,8 @@ def gen_settings_page(layout):
     onload = _nav_onload(layout, "settings")
     onload += ("        - lambda: |-\n"
                "            if (id(g_wake_presence)) lv_obj_add_state(id(set_motion), LV_STATE_CHECKED);\n"
-               "            if (id(g_screensaver)) lv_obj_add_state(id(set_saver), LV_STATE_CHECKED);\n")
+               "            if (id(g_screensaver)) lv_obj_add_state(id(set_saver), LV_STATE_CHECKED);\n"
+               "            if (id(g_cam_wake)) lv_obj_add_state(id(set_cwake), LV_STATE_CHECKED);\n")
     w = "        - image: { src: img_aurora_bg, x: 0, y: 0 }\n"
     w += "        - label: { text: \"Settings\", x: 94, y: 18, text_font: f_h1, text_color: 0xF3F5F8 }\n"
     w += "        - label: { text: \"AURORA PANEL \\u00B7 10.0.0.174\", x: 94, y: 58, text_font: f_micro, text_color: 0x868CA0 }\n"
@@ -1665,9 +1666,12 @@ def gen_settings_page(layout):
     beh += lbl("Screensaver", 20, 104, "f_body", "0xF3F5F8", height=22)
     beh += ("              - switch:\n                  id: set_saver\n                  align: top_right\n                  x: -20\n                  y: 100\n"
             "                  on_value:\n                    - lambda: 'id(g_screensaver) = x;'\n")
-    w += card_obj(560, 96, 370, 152, beh)
+    beh += lbl("Approach wake (camera)", 20, 158, "f_body", "0xF3F5F8", height=22)
+    beh += ("              - switch:\n                  id: set_cwake\n                  align: top_right\n                  x: -20\n                  y: 154\n"
+            "                  on_value:\n                    - lambda: 'id(g_cam_wake) = x;'\n")
+    w += card_obj(560, 96, 370, 206, beh)
     # --- Restart ---
-    w += ("        - button:\n            x: 560\n            y: 262\n            width: 370\n            height: 56\n"
+    w += ("        - button:\n            x: 560\n            y: 318\n            width: 370\n            height: 56\n"
           "            bg_color: 0x2a1414\n            radius: 14\n            scrollable: false\n"
           "            widgets: [label: { text: \"Restart Panel\", align: center, text_font: f_body, text_color: 0xF2685A }]\n"
           "            on_click: [button.press: btn_restart_panel]\n")
@@ -1770,7 +1774,8 @@ def build_lvgl(layout):
 KEEP = ["substitutions", "esphome", "esp32", "psram", "esp_ldo", "esp32_hosted",
         "wifi", "api", "ota", "safe_mode", "logger", "web_server", "output", "light",
         "external_components", "i2c", "touchscreen", "display", "http_request",
-        "image", "font", "globals", "number", "button", "time"]
+        "image", "font", "globals", "number", "button", "time",
+        "ov02c10_support", "esp_video_camera"]   # onboard camera (HA entity + RTSP :8554)
 
 
 def scrub_lvgl_actions(text):
@@ -1865,6 +1870,52 @@ TP_FLUSH_INTERVAL = (
     "                  dy: !lambda 'return std::to_string(id(g_tp_scroll) / 10);'\n"
     "            - lambda: 'id(g_tp_scroll) = id(g_tp_scroll) % 10;'\n"
 )
+
+# Night wake-on-approach (9pm-6am), verbatim from the hand-built build: while asleep
+# and g_cam_wake is on, the onboard camera's frame-diff motion wakes the panel; motion
+# keeps it awake; 60s of stillness sleeps it again. All refs survive generation once
+# esp_video_camera is KEPT (aurora_cam, g_* globals, ha_time, motion_threshold,
+# display_backlight, page_home).
+CAM_WAKE_INTERVAL = (
+    "  - interval: 500ms\n"
+    "    then:\n"
+    "      - if:\n"
+    "          condition:\n"
+    "            lambda: |-\n"
+    "              if (!id(g_cam_wake) || !id(g_screen_off)) return false;\n"
+    "              auto t = id(ha_time).now();\n"
+    "              if (!t.is_valid()) return false;\n"
+    "              if (!(t.hour >= 21 || t.hour < 6)) return false;\n"
+    "              return id(aurora_cam).get_motion_level() >= (int) id(motion_threshold).state;\n"
+    "          then:\n"
+    "            - lambda: 'id(g_screen_off) = false; lv_display_trigger_activity(lv_display_get_default());'\n"
+    "            - light.turn_on:\n"
+    "                id: display_backlight\n"
+    "                brightness: !lambda 'return id(g_bri) / 100.0f;'\n"
+    "            - lvgl.page.show: page_home\n"
+    "      - if:\n"
+    "          condition:\n"
+    "            lambda: |-\n"
+    "              if (!id(g_cam_wake) || id(g_screen_off)) return false;\n"
+    "              auto t = id(ha_time).now();\n"
+    "              if (!t.is_valid()) return false;\n"
+    "              if (!(t.hour >= 21 || t.hour < 6)) return false;\n"
+    "              return id(aurora_cam).get_motion_level() >= (int) id(motion_threshold).state;\n"
+    "          then:\n"
+    "            - lambda: 'lv_display_trigger_activity(lv_display_get_default());'\n"
+    "      - if:\n"
+    "          condition:\n"
+    "            lambda: |-\n"
+    "              if (!id(g_cam_wake) || id(g_screen_off)) return false;\n"
+    "              auto t = id(ha_time).now();\n"
+    "              if (!t.is_valid()) return false;\n"
+    "              if (!(t.hour >= 21 || t.hour < 6)) return false;\n"
+    "              return lv_display_get_inactive_time(lv_display_get_default()) > 60000;\n"
+    "          then:\n"
+    "            - lambda: 'id(g_screen_off) = true;'\n"
+    "            - light.turn_off: display_backlight\n"
+)
+
 
 # Live header clock/date. strftime format + whether to strip a leading zero, per kind.
 CLOCK_FMT = {
@@ -2010,8 +2061,8 @@ def assemble(layout):
                        "    on_value:\n      then:\n        - if:\n            condition:\n"
                        "              lambda: 'return x.rfind(\"http\", 0) == 0;'\n            then:\n%s"
                        % (n_i, ent, acts))
-    # interval: list = trackpad flush + screensaver photo cycle + clock repaint
-    out = keep_text + TP_FLUSH_INTERVAL + SS_INTERVAL_ITEM + clock_items(clocks)
+    # interval: list = trackpad flush + camera night-wake + screensaver cycle + clock repaint
+    out = keep_text + TP_FLUSH_INTERVAL + CAM_WAKE_INTERVAL + SS_INTERVAL_ITEM + clock_items(clocks)
     out += SS_ONLINE_IMAGE + art_items + SS_SCRIPT
     if sens:
         out += "\nsensor:\n" + "".join(sens)
