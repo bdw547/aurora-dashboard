@@ -8,6 +8,11 @@
 # HA's built-in `webostv` integration cannot do this (it has no pointer socket),
 # so Aurora's on-screen trackpad calls the services exposed here instead.
 #
+# The TV's host + client key are pulled from the webostv INTEGRATION at call
+# time (the TV already trusts that pairing), so a DHCP address change or
+# re-pair never breaks this bridge. The LG_TV_IP / LG_CLIENT_KEY constants
+# below are only a manual fallback for setups without the webostv integration.
+#
 # INSTALL
 #   1. Install the "Pyscript" integration (HACS or manually) and in
 #      configuration.yaml add:
@@ -15,13 +20,11 @@
 #            allow_all_imports: true
 #            hass_is_global: true
 #   2. Copy this file to:  <config>/pyscript/lg_pointer.py
-#   3. Set LG_TV_IP below to your TV's IP.
-#   4. Leave LG_CLIENT_KEY blank the first time, reload pyscript, then call
-#      service `pyscript.lg_pointer_move` once. The TV shows a pairing prompt —
-#      accept it. The client key is then printed to the HA log:
-#          "LG pointer: paired, client-key = XXXXdeadbeef..."
-#      Paste that value into LG_CLIENT_KEY and reload pyscript so it reconnects
-#      silently from now on.
+#   3. Reload pyscript (Developer tools -> YAML -> Pyscript, or restart HA).
+#      If you have the webostv integration set up, that's it — no pairing.
+#   4. (Fallback only) Without webostv: set LG_TV_IP, leave LG_CLIENT_KEY
+#      blank, call pyscript.lg_pointer_move once, accept the prompt on the TV,
+#      then paste the client-key printed in the HA log and reload again.
 #
 # SERVICES
 #   pyscript.lg_pointer_move   (dx: int, dy: int)      relative cursor move
@@ -40,8 +43,13 @@ import ssl
 
 import aiohttp
 
-LG_TV_IP = "10.0.0.174"      # <-- CHANGE ME to your LG TV's IP
-LG_CLIENT_KEY = ""           # <-- paste the key from the log after first pairing
+LG_TV_IP = ""                 # fallback only — auto-discovered from webostv normally
+LG_CLIENT_KEY = ""            # fallback only — auto-discovered from webostv normally
+LG_TV_NAME_HINT = "living"    # picks the webostv entry whose title matches (multi-TV homes)
+
+# All network ops are bounded so a dead/moved TV fails FAST instead of hanging
+# the HA service call (the panel fires moves every 50ms — never block long).
+_CONNECT_TIMEOUT_S = 4
 
 # webOS registration manifest (standard permission set used by remote apps)
 _REGISTER_PAYLOAD = {
@@ -91,12 +99,35 @@ _lock = asyncio.Lock()
 _state = {"ws": None, "pointer": None, "session": None, "ip": None}
 
 
+def _tv_config():
+    """(host, client_key) from the webostv integration — the TV already trusts
+    that pairing, so no prompt. Prefers the entry whose title matches
+    LG_TV_NAME_HINT (multi-TV homes); falls back to the manual constants."""
+    try:
+        entries = [e for e in hass.config_entries.async_entries("webostv")]
+    except Exception as e:  # noqa: BLE001  (no hass_is_global / no webostv)
+        log.debug(f"LG pointer: webostv lookup unavailable ({e}); using constants")
+        entries = []
+    if entries:
+        hint = (LG_TV_NAME_HINT or "").lower()
+        pick = next((e for e in entries if hint and hint in (e.title or "").lower()), entries[0])
+        host = pick.data.get("host")
+        key = pick.data.get("client_secret") or ""
+        if host:
+            return host, key
+    return LG_TV_IP, LG_CLIENT_KEY
+
+
 async def _connect():
     """(Re)establish control socket + pointer socket. Returns pointer ws."""
-    if _state["pointer"] is not None and not _state["pointer"].closed:
+    host, client_key = _tv_config()
+    if not host:
+        raise ConnectionError("LG pointer: no TV host (no webostv entry and LG_TV_IP unset)")
+    if (_state["pointer"] is not None and not _state["pointer"].closed
+            and _state["ip"] == host):
         return _state["pointer"]
 
-    # Clean up any stale sockets/session.
+    # Clean up any stale sockets/session (also handles a changed TV IP).
     for k in ("pointer", "ws"):
         if _state[k] is not None and not _state[k].closed:
             await _state[k].close()
@@ -104,9 +135,9 @@ async def _connect():
     if _state["session"] is not None and not _state["session"].closed:
         await _state["session"].close()
 
-    session = aiohttp.ClientSession()
+    session = aiohttp.ClientSession(timeout=aiohttp.ClientTimeout(total=_CONNECT_TIMEOUT_S * 3))
     _state["session"] = session
-    _state["ip"] = LG_TV_IP
+    _state["ip"] = host
 
     sslctx = ssl.create_default_context()
     sslctx.check_hostname = False
@@ -114,39 +145,43 @@ async def _connect():
 
     # webOS 2nd-gen+ uses wss:3001; older uses ws:3000. Try secure first.
     ws = None
-    for url, kw in ((f"wss://{LG_TV_IP}:3001", {"ssl": sslctx}),
-                    (f"ws://{LG_TV_IP}:3000", {})):
+    for url, kw in ((f"wss://{host}:3001", {"ssl": sslctx}),
+                    (f"ws://{host}:3000", {})):
         try:
-            ws = await session.ws_connect(url, heartbeat=30, **kw)
+            ws = await asyncio.wait_for(
+                session.ws_connect(url, heartbeat=30, **kw), _CONNECT_TIMEOUT_S)
             break
         except Exception as e:  # noqa: BLE001
             log.debug(f"LG pointer: connect {url} failed: {e}")
     if ws is None:
         await session.close()
-        raise ConnectionError(f"Cannot reach LG TV at {LG_TV_IP}")
+        raise ConnectionError(f"Cannot reach LG TV at {host}")
     _state["ws"] = ws
 
-    # Register / pair.
+    # Register. With the webostv integration's client key the TV answers
+    # "registered" immediately — no on-screen prompt.
     payload = json.loads(json.dumps(_REGISTER_PAYLOAD))
-    if LG_CLIENT_KEY:
-        payload["payload"]["client-key"] = LG_CLIENT_KEY
+    if client_key:
+        payload["payload"]["client-key"] = client_key
     await ws.send_str(json.dumps(payload))
 
     registered = False
-    for _ in range(60):  # ~30s to accept the on-screen prompt
-        msg = await ws.receive(timeout=30)
+    for _ in range(60):  # ~30s to accept the on-screen prompt (first pairing only)
+        msg = await ws.receive(timeout=30 if not client_key else _CONNECT_TIMEOUT_S)
         if msg.type != aiohttp.WSMsgType.TEXT:
             continue
         data = json.loads(msg.data)
         if data.get("type") == "registered":
             key = data.get("payload", {}).get("client-key")
-            if key and key != LG_CLIENT_KEY:
+            if key and key != client_key:
                 log.warning(f"LG pointer: paired, client-key = {key}  "
                             f"(paste this into LG_CLIENT_KEY in lg_pointer.py)")
             registered = True
             break
         if data.get("type") == "response" and data.get("payload", {}).get("pairingType"):
             continue  # prompt shown, keep waiting
+        if data.get("type") == "error":
+            raise PermissionError(f"LG TV rejected registration: {data.get('error')}")
     if not registered:
         raise PermissionError("LG TV did not complete pairing (accept the prompt)")
 
@@ -158,7 +193,7 @@ async def _connect():
     }))
     socket_path = None
     for _ in range(10):
-        msg = await ws.receive(timeout=10)
+        msg = await ws.receive(timeout=_CONNECT_TIMEOUT_S)
         if msg.type != aiohttp.WSMsgType.TEXT:
             continue
         data = json.loads(msg.data)
@@ -169,9 +204,10 @@ async def _connect():
         raise ConnectionError("LG TV did not return a pointer socket")
 
     pkw = {"ssl": sslctx} if socket_path.startswith("wss") else {}
-    pointer = await session.ws_connect(socket_path, heartbeat=30, **pkw)
+    pointer = await asyncio.wait_for(
+        session.ws_connect(socket_path, heartbeat=30, **pkw), _CONNECT_TIMEOUT_S)
     _state["pointer"] = pointer
-    log.info("LG pointer: connected")
+    log.info(f"LG pointer: connected to {host}")
     return pointer
 
 
