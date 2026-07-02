@@ -43,7 +43,7 @@ import ssl
 
 import aiohttp
 
-LG_TV_IP = ""                 # fallback only — auto-discovered from webostv normally
+LG_TV_IP = "10.0.0.112"           # living-room LG G3 (fallback; key via pairing or webostv)
 LG_CLIENT_KEY = ""            # fallback only — auto-discovered from webostv normally
 LG_TV_NAME_HINT = "living"    # picks the webostv entry whose title matches (multi-TV homes)
 
