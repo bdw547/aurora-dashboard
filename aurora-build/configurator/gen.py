@@ -1088,32 +1088,9 @@ def c_tvremote(card, x, y, w, h, base):
     n = len(bar); bw = (mw - (n - 1) * 8) // n; by = h - 80
     for i, (g, key) in enumerate(bar):
         bx = mx + i * (bw + 8)
-        if key == "pad":                              # show/hide trackpad overlay + engage gesture engine
-            inner += (
-                "              - button:\n"
-                "                  x: %d\n                  y: %d\n                  width: %d\n                  height: 62\n"
-                "                  bg_color: 0x161B24\n                  radius: 12\n                  pad_all: 0\n                  scrollable: false\n"
-                "                  widgets: [label: { text: %s, align: center, text_font: f_icon, text_color: 0x2ED5B8 }]\n"
-                "                  on_click:\n"
-                "                    - lambda: |-\n"
-                "                        if (lv_obj_has_flag(id(tv_tp_overlay), LV_OBJ_FLAG_HIDDEN)) {\n"
-                "                          lv_obj_clear_flag(id(tv_tp_overlay), LV_OBJ_FLAG_HIDDEN);\n"
-                "                          lv_obj_update_layout(id(tv_tp_overlay));\n"
-                "                          // gesture zones = the pad/strip widgets' REAL screen rects\n"
-                "                          lv_area_t pa, sa;\n"
-                "                          lv_obj_get_coords(id(tv_tp_pad), &pa);\n"
-                "                          lv_obj_get_coords(id(tv_tp_strip), &sa);\n"
-                "                          id(g_tp_px1) = pa.x1; id(g_tp_py1) = pa.y1; id(g_tp_px2) = pa.x2; id(g_tp_py2) = pa.y2;\n"
-                "                          id(g_tp_sx1) = sa.x1; id(g_tp_sy1) = sa.y1; id(g_tp_sx2) = sa.x2; id(g_tp_sy2) = sa.y2;\n"
-                "                          ESP_LOGI(\"tp\", \"pad on: pad=[%%d,%%d..%%d,%%d] strip=[%%d,%%d..%%d,%%d]\",\n"
-                "                                   (int) pa.x1, (int) pa.y1, (int) pa.x2, (int) pa.y2,\n"
-                "                                   (int) sa.x1, (int) sa.y1, (int) sa.x2, (int) sa.y2);\n"
-                "                          id(g_tp_active) = true;\n"
-                "                        } else {\n"
-                "                          lv_obj_add_flag(id(tv_tp_overlay), LV_OBJ_FLAG_HIDDEN);\n"
-                "                          id(g_tp_active) = false;\n"
-                "                        }\n"
-                % (bx, by, bw, esc(g)))
+        if key == "pad":                              # open the dedicated trackpad page (the proven gesture path)
+            inner += btn(bx, by, bw, 62, g, "lvgl.page.show: page_trackpad",
+                         font="f_icon", bg="0x161B24", color="0x2ED5B8")
             continue
         if key in media_acts:
             act = ha(media_acts[key], e) if e else "lvgl.page.show: page_home"
@@ -1679,55 +1656,48 @@ def gen_settings_page(layout):
     return "    - id: page_settings\n      bg_color: 0x0A0B0F\n      scrollable: false\n%s      widgets:\n%s" % (onload, w)
 
 
-def _tv_trackpad_overlay():
-    """Page-level LG-trackpad overlay for the TV page, positioned in screen-absolute
-    coords so it lines up with aurora.yaml's hardcoded touchscreen gesture zones
-    (move pad x96-856, scroll strip x872-1004, both y120-470). Hidden until the
-    remote's Pad button toggles it (which also flips g_tp_active). The pad/strip
-    are clickable:false so LVGL leaves the raw touches to the gesture engine; the
-    engine's deltas are flushed to HA by TP_FLUSH_INTERVAL. This is the same
-    move-pad + scroll-strip surface as the original page_trackpad, in-place."""
-    return (
-        "        - obj:\n"
-        "            id: tv_tp_overlay\n"
-        "            x: 0\n            y: 0\n            width: 1024\n            height: 600\n"
-        "            bg_color: 0x0A0B0F\n            bg_opa: 100%\n            border_width: 0\n            radius: 0\n"
-        "            pad_all: 0\n            hidden: true\n            clickable: false\n            scrollable: false\n"
-        "            widgets:\n"
-        "              - label: { text: \"Trackpad\", x: 96, y: 42, text_font: f_title, text_color: 0xF3F5F8 }\n"
-        "              - label: { text: \"LG Magic pointer \\u00B7 drag to move, tap to click\", x: 96, y: 80, text_font: f_small, text_color: 0x868CA0 }\n"
-        "              - button:\n"
-        "                  id: tv_tp_close\n"
-        "                  x: 872\n                  y: 40\n                  width: 132\n                  height: 56\n"
-        "                  bg_color: 0x161B24\n                  border_color: 0x2ED5B8\n                  border_width: 2\n                  radius: 12\n"
-        "                  pad_all: 0\n                  scrollable: false\n"
-        "                  widgets: [label: { text: \"Buttons\", align: center, text_font: f_body, text_color: 0x2ED5B8 }]\n"
-        "                  on_click:\n"
-        "                    - lambda: |-\n"
-        "                        lv_obj_add_flag(id(tv_tp_overlay), LV_OBJ_FLAG_HIDDEN);\n"
-        "                        id(g_tp_active) = false;\n"
-        "              - obj:\n"
-        "                  id: tv_tp_pad\n"
-        "                  x: 96\n                  y: 120\n                  width: 760\n                  height: 350\n"
-        "                  bg_color: 0x10121A\n                  bg_opa: 100%\n                  border_color: 0x2ED5B8\n                  border_width: 1\n                  radius: 22\n"
-        "                  pad_all: 0\n                  clickable: true\n                  scrollable: false\n"
-        "                  widgets:\n"
-        "                    - label: { text: \"\\U000F0297\", align: center, y: -34, text_font: f_bigicon, text_color: 0x2ED5B8 }\n"
-        "                    - label: { text: \"Drag to move  \\u00B7  tap to click\", align: center, y: 40, text_font: f_body, text_color: 0x868CA0 }\n"
-        "              - obj:\n"
-        "                  id: tv_tp_strip\n"
-        "                  x: 872\n                  y: 120\n                  width: 132\n                  height: 350\n"
-        "                  bg_color: 0x10121A\n                  bg_opa: 100%\n                  border_color: 0x4FA8F5\n                  border_width: 1\n                  radius: 22\n"
-        "                  pad_all: 0\n                  clickable: true\n                  scrollable: false\n"
-        "                  widgets:\n"
-        "                    - label: { text: \"\\U000F0143\", align: top_mid, y: 20, text_font: f_bigicon, text_color: 0x4FA8F5 }\n"
-        "                    - label: { text: \"SCROLL\", align: center, text_font: f_micro, text_color: 0x868CA0 }\n"
-        "                    - label: { text: \"\\U000F0140\", align: bottom_mid, y: -20, text_font: f_bigicon, text_color: 0x4FA8F5 }\n"
-    )
+def gen_trackpad_page(layout, back_pid, active):
+    """Dedicated LG trackpad page — a verbatim clone of the PROVEN hand-built
+    page_trackpad (aurora.yaml): a full page whose pad/strip sit at exactly the
+    gesture engine's default zones (move pad 96,120..856,470; scroll strip
+    872,120..1004,470), entered via the remote's Pad button. on_load re-asserts
+    the canonical zone globals + engages the engine (g_tp_active); on_unload
+    disengages. Surfaces are clickable:false, same as the hand-built page —
+    the raw touchscreen handlers see every touch regardless."""
+    onload = _nav_onload(layout, active)
+    onload += ("        - lambda: |-\n"
+               "            id(g_tp_px1) = 96;  id(g_tp_py1) = 120; id(g_tp_px2) = 856;  id(g_tp_py2) = 470;\n"
+               "            id(g_tp_sx1) = 872; id(g_tp_sy1) = 120; id(g_tp_sx2) = 1004; id(g_tp_sy2) = 470;\n"
+               "            id(g_tp_active) = true;\n")
+    w = "        - image: { src: img_aurora_bg, x: 0, y: 0 }\n"
+    w += "        - label: { text: \"Trackpad\", x: 96, y: 26, text_font: f_title, text_color: 0xF3F5F8 }\n"
+    w += "        - label: { text: \"LG Magic pointer \\u00B7 drag to move, tap to click\", x: 96, y: 60, text_font: f_small, text_color: 0x868CA0 }\n"
+    w += ("        - button:\n            align: top_right\n            x: -12\n            y: 12\n            width: 132\n            height: 48\n"
+          "            bg_color: 0x161B24\n            border_color: 0x2ED5B8\n            border_width: 2\n            radius: 12\n"
+          "            pad_all: 0\n            scrollable: false\n"
+          "            widgets: [label: { text: \"Buttons\", align: center, text_font: f_body, text_color: 0x2ED5B8 }]\n"
+          "            on_click: [lvgl.page.show: %s]\n" % back_pid)
+    w += ("        - obj:\n            x: 96\n            y: 120\n            width: 760\n            height: 350\n"
+          "            bg_color: 0x10121A\n            bg_opa: 60%\n            radius: 22\n            border_width: 1\n            border_color: 0x2A5048\n"
+          "            pad_all: 0\n            scrollable: false\n            clickable: false\n"
+          "            widgets:\n"
+          "              - label: { text: \"\\U000F0297\", align: center, y: -34, text_font: f_bigicon, text_color: 0x2ED5B8 }\n"
+          "              - label: { text: \"Drag to move  \\u00B7  tap to click\", align: center, y: 40, text_font: f_body, text_color: 0x868CA0 }\n")
+    w += ("        - obj:\n            x: 872\n            y: 120\n            width: 132\n            height: 350\n"
+          "            bg_color: 0x10121A\n            bg_opa: 60%\n            radius: 22\n            border_width: 1\n            border_color: 0x2A5048\n"
+          "            pad_all: 0\n            scrollable: false\n            clickable: false\n"
+          "            widgets:\n"
+          "              - label: { text: \"\\U000F0143\", align: top_mid, y: 20, text_font: f_bigicon, text_color: 0x4FA8F5 }\n"
+          "              - label: { text: \"SCROLL\", align: center, text_font: f_micro, text_color: 0x868CA0 }\n"
+          "              - label: { text: \"\\U000F0140\", align: bottom_mid, y: -20, text_font: f_bigicon, text_color: 0x4FA8F5 }\n")
+    return ("    - id: page_trackpad\n      bg_color: 0x0A0B0F\n      scrollable: false\n%s"
+            "      on_unload:\n        - lambda: 'id(g_tp_active) = false;'\n"
+            "      widgets:\n%s" % (onload, w))
 
 
 def gen_pages(layout, pagemap):
     pages_yaml, sens, txt, clocks = "", [], [], []
+    tp_page = None                                        # (back_pid, active nav) of the tvremote page
     for key, page in layout.get("pages", {}).items():
         hdr = page.get("header") or {}
         header_on = bool(hdr.get("on"))
@@ -1751,14 +1721,12 @@ def gen_pages(layout, pagemap):
                 widgets += btn(884, 540, 110, 44, "Next", "lvgl.page.show: %s" % nxt, font="f_body")
             active = next((slug(n.get("id", "")) for n in layout.get("nav", []) if n.get("page") == key), None)
             onload = _nav_onload(layout, active)
-            if has_tv:                                    # in-place LG trackpad overlay + disengage on leave
-                widgets += _tv_trackpad_overlay()
-                onload += ("      on_unload:\n"
-                           "        - lambda: |-\n"
-                           "            lv_obj_add_flag(id(tv_tp_overlay), LV_OBJ_FLAG_HIDDEN);\n"
-                           "            id(g_tp_active) = false;\n")
+            if has_tv and tp_page is None:                # remember where the remote lives (Pad links here back)
+                tp_page = (pid, active)
             pages_yaml += (
                 "    - id: %s\n      bg_color: 0x0A0B0F\n      scrollable: false\n%s      widgets:\n%s" % (pid, onload, widgets))
+    if tp_page is not None:                               # dedicated trackpad page (hand-built clone)
+        pages_yaml += gen_trackpad_page(layout, tp_page[0], tp_page[1])
     pages_yaml += gen_settings_page(layout)
     return pages_yaml, sens, txt, clocks
 
