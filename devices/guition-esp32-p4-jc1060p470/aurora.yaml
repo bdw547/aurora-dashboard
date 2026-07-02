@@ -316,12 +316,15 @@ touchscreen:
           then:
             - lambda: |-
                 auto &t = touches[0];
-                bool inpad    = (t.x >= 96  && t.x <= 856  && t.y >= 120 && t.y <= 470);
-                bool inscroll = (t.x >= 872 && t.x <= 1004 && t.y >= 120 && t.y <= 470);
+                bool inpad    = (t.x >= id(g_tp_px1) && t.x <= id(g_tp_px2) && t.y >= id(g_tp_py1) && t.y <= id(g_tp_py2));
+                bool inscroll = (t.x >= id(g_tp_sx1) && t.x <= id(g_tp_sx2) && t.y >= id(g_tp_sy1) && t.y <= id(g_tp_sy2));
                 if (!inpad && !inscroll) { id(g_tp_have_last) = false; return; }
                 if (!id(g_tp_have_last)) {
                   id(g_tp_zone) = inpad ? 1 : 2;   // 1 = move pad, 2 = scroll strip
                   id(g_tp_inpad) = inpad;
+                  ESP_LOGI("tp", "gesture start raw=(%d,%d) zone=%d pad=[%d,%d..%d,%d]",
+                           (int) t.x, (int) t.y, id(g_tp_zone),
+                           id(g_tp_px1), id(g_tp_py1), id(g_tp_px2), id(g_tp_py2));
                 }
                 if (id(g_tp_have_last)) {
                   int ddx = (int) t.x - id(g_tp_lastx);
@@ -2262,6 +2265,46 @@ globals:
   - id: g_spot_ctx
     type: std::string
     restore_value: false
+  # Sonos speaker link state: entity_id -> currently grouped (group_members has >1).
+  # Fed by per-speaker group_members text_sensors; read by tap-to-link/leave rows.
+  - id: g_spk_grouped
+    type: std::map<std::string, bool>
+    restore_value: false
+  # Trackpad gesture zones (touch coords). Default to the legacy hand-built rects;
+  # the generated TV Pad overlay overwrites them from its real widget coords when
+  # shown, so the zones always match wherever the pad actually renders.
+  - id: g_tp_px1
+    type: int
+    restore_value: false
+    initial_value: '96'
+  - id: g_tp_py1
+    type: int
+    restore_value: false
+    initial_value: '120'
+  - id: g_tp_px2
+    type: int
+    restore_value: false
+    initial_value: '856'
+  - id: g_tp_py2
+    type: int
+    restore_value: false
+    initial_value: '470'
+  - id: g_tp_sx1
+    type: int
+    restore_value: false
+    initial_value: '872'
+  - id: g_tp_sy1
+    type: int
+    restore_value: false
+    initial_value: '120'
+  - id: g_tp_sx2
+    type: int
+    restore_value: false
+    initial_value: '1004'
+  - id: g_tp_sy2
+    type: int
+    restore_value: false
+    initial_value: '470'
   - id: light_bri
     type: std::map<std::string, int>
     restore_value: false

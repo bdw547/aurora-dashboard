@@ -379,6 +379,13 @@ def c_action(card, x, y, w, h, base):
     return [card_obj(x, y, w, h, inner, on)], [], []
 
 
+# Album art plumbing: c_media registers (size, image_widget_id, entity) here; assemble()
+# emits one online_image decoder per distinct size + a sp_nowplaying_image_url readback
+# per entity that set_url+updates every used decoder. Host builds skip art (no decoders).
+ART_IMAGES = []
+ART_ENABLED = True
+
+
 def c_media(card, x, y, w, h, base):
     """Media / Spotify / Sonos now-playing card. Volume slider on every card >= 3 cells (image 1)."""
     e = card.get("entity", "")
@@ -401,10 +408,16 @@ def c_media(card, x, y, w, h, base):
     plpz = ha("media_player.media_play_pause", e) if e else "lvgl.page.show: page_home"
     nxt = ha("media_player.media_next_track", e) if e else "lvgl.page.show: page_home"
 
-    def art(ax, ay, aw, ah):
+    def art(ax, ay, aw, ah, real=0):
         s = ("              - obj: { x: %d, y: %d, width: %d, height: %d, bg_color: 0x1B1E27, "
              "radius: 12, border_width: 0, pad_all: 0, scrollable: false }\n" % (ax, ay, aw, ah))
-        s += lbl("\\U000F075A", ax + (aw - 30) // 2, ay + (ah - 34) // 2, "f_icon", "0x5D6470")  # desaturated art placeholder
+        s += lbl("\\U000F075A", ax + (aw - 30) // 2, ay + (ah - 34) // 2, "f_icon", "0x5D6470")  # placeholder under the art
+        if real and e and ART_ENABLED:                    # live album art on top (device build only)
+            img_id = "%s_art" % base
+            ix = ax + (aw - real) // 2
+            iy = ay + (ah - real) // 2
+            s += ("              - image: { id: %s, x: %d, y: %d, src: gen_art_%d }\n" % (img_id, ix, iy, real))
+            ART_IMAGES.append((real, img_id, e))
         return s
 
     def transport_center(ty):
@@ -483,14 +496,14 @@ def c_media(card, x, y, w, h, base):
     # ---- now-playing (>=2 wide, >=3 tall): big art + progress ----
     if nowplaying:
         if gw >= 3:                                    # art beside the title block
-            inner += art(14, 14, 110, 110)
+            inner += art(14, 14, 110, 110, real=108)
             inner += lbl(subtxt, 136, 20, "f_small", "0x2ED5B8", width=w - 150, long="dot", height=16)
             inner += lbl("Midnight City", 136, 40, "f_track", "0xF3F5F8", wid=tid, width=w - 150, long="dot", height=32)
             inner += lbl("M83", 136, 86, "f_body", "0x868CA0", wid=aid, width=w - 150, long="dot", height=18)
             py = 152
             tport = py + 40
         else:                                          # narrow: art on top, full-width title
-            inner += art(14, 14, w - 28, 108)
+            inner += art(14, 14, w - 28, 108, real=108)
             inner += lbl(subtxt, 14, 130, "f_small", "0x2ED5B8", width=w - 28, long="dot", height=16)
             inner += lbl("Midnight City", 14, 146, "f_track", "0xF3F5F8", wid=tid, width=w - 28, long="dot", height=32)
             inner += lbl("M83", 14, 180, "f_body", "0x868CA0", wid=aid, width=w - 28, long="dot", height=18)
@@ -504,7 +517,7 @@ def c_media(card, x, y, w, h, base):
         inner += vol_slider(h - 34)
         return [card_obj(x, y, w, h, inner)], [], ts
     # ---- medium (2x2, 3x2) ----
-    inner += art(14, 14, 58, 58)
+    inner += art(14, 14, 58, 58, real=58)
     inner += lbl(subtxt, 82, 18, "f_small", "0x2ED5B8", width=w - 96, long="dot", height=16)
     inner += lbl("Midnight City", 82, 36, "f_title", "0xF3F5F8", wid=tid, width=w - 96, long="dot", height=28)
     inner += lbl("M83", 82, 68, "f_small", "0x868CA0", wid=aid, width=w - 96, long="dot", height=16)
@@ -1085,6 +1098,16 @@ def c_tvremote(card, x, y, w, h, base):
                 "                    - lambda: |-\n"
                 "                        if (lv_obj_has_flag(id(tv_tp_overlay), LV_OBJ_FLAG_HIDDEN)) {\n"
                 "                          lv_obj_clear_flag(id(tv_tp_overlay), LV_OBJ_FLAG_HIDDEN);\n"
+                "                          lv_obj_update_layout(id(tv_tp_overlay));\n"
+                "                          // gesture zones = the pad/strip widgets' REAL screen rects\n"
+                "                          lv_area_t pa, sa;\n"
+                "                          lv_obj_get_coords(id(tv_tp_pad), &pa);\n"
+                "                          lv_obj_get_coords(id(tv_tp_strip), &sa);\n"
+                "                          id(g_tp_px1) = pa.x1; id(g_tp_py1) = pa.y1; id(g_tp_px2) = pa.x2; id(g_tp_py2) = pa.y2;\n"
+                "                          id(g_tp_sx1) = sa.x1; id(g_tp_sy1) = sa.y1; id(g_tp_sx2) = sa.x2; id(g_tp_sy2) = sa.y2;\n"
+                "                          ESP_LOGI(\"tp\", \"pad on: pad=[%%d,%%d..%%d,%%d] strip=[%%d,%%d..%%d,%%d]\",\n"
+                "                                   (int) pa.x1, (int) pa.y1, (int) pa.x2, (int) pa.y2,\n"
+                "                                   (int) sa.x1, (int) sa.y1, (int) sa.x2, (int) sa.y2);\n"
                 "                          id(g_tp_active) = true;\n"
                 "                        } else {\n"
                 "                          lv_obj_add_flag(id(tv_tp_overlay), LV_OBJ_FLAG_HIDDEN);\n"
@@ -1134,26 +1157,38 @@ def c_spot_playlists(card, x, y, w, h, base):
     """Spotify playlist dropdown, bound to sensor.aurora_spotify_playlists (names +
     uris). Reuses aurora.yaml's g_pl_uris (uris string) + g_spot_ctx (selected uri).
     Picking a playlist stores its URI in g_spot_ctx and loads its tracks via the
-    aurora_spotify_load_playlist script. Refresh re-pulls the playlists sensor.
+    aurora_spotify_load_playlist script (which repopulates the songs card). Refresh
+    re-pulls the playlists sensor. Compact 2x1/3x1 = micro-label + dropdown row.
     NB: LVGL C calls need the widget's ->obj (id(x) is the ESPHome wrapper)."""
     ddid = base + "_dd"
-    inner = ic("spotify_playlists", color="0x1DB954") + lbl(card.get("name", "Playlists"), 50, 16, "f_small", "0x868CA0")
-    inner += ("              - button:\n                  x: %d\n                  y: 12\n                  width: 40\n                  height: 34\n"
-              "                  bg_color: 0x161B24\n                  radius: 10\n                  pad_all: 0\n                  scrollable: false\n"
-              "                  widgets: [label: { text: \"\\U000F0450\", align: center, text_font: f_iconsm, text_color: 0x1DB954 }]\n"
-              "                  on_click: [homeassistant.action: { action: script.aurora_spotify_refresh_playlists }]\n" % (w - 54))
-    # pick i -> uris[i]: split g_pl_uris on newline (char 10), stash in g_spot_ctx, return it
+    compact = h <= 110
+    # pick i -> uris[i]: split g_pl_uris on newline (char 10), stash in g_spot_ctx
     ext = ("std::string all = id(g_pl_uris); int idx = lv_dropdown_get_selected(id(" + ddid + ")->obj); "
            "size_t s = 0; for (int k = 0; k < idx; k++) { size_t nl = all.find((char)10, s); "
            "if (nl == std::string::npos) { s = all.size(); break; } s = nl + 1; } "
            "size_t e2 = all.find((char)10, s); std::string uri = all.substr(s, e2 == std::string::npos ? std::string::npos : e2 - s); "
-           "id(g_spot_ctx) = uri; return uri;")
-    inner += ("              - dropdown:\n                  id: " + ddid + "\n                  x: 14\n                  y: 52\n                  width: " + str(w - 28) + "\n                  height: 46\n"
-              "                  options: [\"Loading playlists\"]\n"
-              "                  bg_color: 0x0F1117\n                  border_color: 0x23262F\n                  border_width: 1\n                  radius: 10\n                  text_color: 0xF3F5F8\n"
-              "                  on_value:\n                    - homeassistant.action:\n                        action: script.aurora_spotify_load_playlist\n                        data:\n"
-              "                          playlist_uri: !lambda '" + ext + "'\n")
-    inner += lbl("Pick a playlist to load its songs", 14, 108, "f_small", "0x5D6470", width=w - 28, long="dot")
+           "id(g_spot_ctx) = uri;")
+    dd_y = 40 if compact else 52
+    dropdown = ("              - dropdown:\n                  id: " + ddid + "\n                  x: 14\n                  y: " + str(dd_y) + "\n                  width: " + str(w - 28) + "\n                  height: 46\n"
+                "                  options: [\"Loading playlists\"]\n"
+                "                  bg_color: 0x0F1117\n                  border_color: 0x23262F\n                  border_width: 1\n                  radius: 10\n                  text_color: 0xF3F5F8\n"
+                "                  dropdown_list:\n                    bg_color: 0x14161C\n                    border_color: 0x23262F\n                    border_width: 1\n                    radius: 12\n                    text_color: 0xF3F5F8\n"
+                "                  on_value:\n"
+                "                    - lambda: '" + ext + "'\n"
+                "                    - if:\n"
+                "                        condition:\n"
+                "                          lambda: 'return !id(g_spot_ctx).empty();'\n"
+                "                        then:\n"
+                "                          - homeassistant.action:\n                              action: script.aurora_spotify_load_playlist\n                              data:\n"
+                "                                playlist_uri: !lambda 'return id(g_spot_ctx);'\n")
+    inner = lbl("PLAYLIST", 14, 16, "f_micro", "0x868CA0")
+    inner += ("              - button:\n                  x: %d\n                  y: 10\n                  width: 40\n                  height: 30\n"
+              "                  bg_color: 0x161B24\n                  radius: 10\n                  pad_all: 0\n                  scrollable: false\n"
+              "                  widgets: [label: { text: \"\\U000F0450\", align: center, text_font: f_iconsm, text_color: 0x1DB954 }]\n"
+              "                  on_click: [homeassistant.action: { action: script.aurora_spotify_refresh_playlists }]\n" % (w - 54))
+    inner += dropdown
+    if not compact:
+        inner += lbl("Pick a playlist to load its songs", 14, dd_y + 56, "f_small", "0x5D6470", width=w - 28, long="dot")
     ts = ["  - platform: homeassistant\n    id: ha_" + base + "_pn\n    entity_id: sensor.aurora_spotify_playlists\n    attribute: names\n    on_value:\n"
           "      - lambda: 'lv_dropdown_set_options(id(" + ddid + ")->obj, x.c_str());'\n",
           "  - platform: homeassistant\n    id: ha_" + base + "_pu\n    entity_id: sensor.aurora_spotify_playlists\n    attribute: uris\n    on_value:\n"
@@ -1161,24 +1196,62 @@ def c_spot_playlists(card, x, y, w, h, base):
     return [card_obj(x, y, w, h, inner)], [], ts
 
 
+SPOT_MAX_TRACKS = 50
+
+
 def c_spot_tracks(card, x, y, w, h, base):
-    """Spotify track list (scrolling roller) bound to sensor.aurora_spotify_tracks
-    (names). Play plays the selected row within the loaded playlist (g_spot_ctx) via
-    the aurora_spotify_play_track script (context_uri + zero-based position)."""
-    rlid = base + "_rl"
-    rows = max(3, (h - 116) // 34)
-    inner = ic("spotify_tracks", color="0x1DB954") + lbl(card.get("name", "Songs"), 50, 16, "f_small", "0x868CA0")
-    inner += ("              - roller:\n                  id: " + rlid + "\n                  x: 14\n                  y: 50\n                  width: " + str(w - 28) + "\n                  height: " + str(h - 116) + "\n"
-              "                  visible_row_count: " + str(rows) + "\n                  options: [\"Load a playlist\"]\n"
-              "                  bg_color: 0x0F1117\n                  radius: 10\n                  text_color: 0xC2C7D2\n")
-    inner += ("              - button:\n                  x: 14\n                  y: " + str(h - 54) + "\n                  width: " + str(w - 28) + "\n                  height: 44\n"
-              "                  bg_color: 0x1DB954\n                  radius: 12\n                  pad_all: 0\n                  scrollable: false\n"
-              "                  widgets: [label: { text: \"Play\", align: center, text_font: f_body, text_color: 0x06210F }]\n"
-              "                  on_click:\n                    - homeassistant.action:\n                        action: script.aurora_spotify_play_track\n                        data:\n"
-              "                          context_uri: !lambda 'return id(g_spot_ctx);'\n"
-              "                          position: !lambda 'return std::to_string(lv_roller_get_selected(id(" + rlid + ")->obj));'\n")
+    """Spotify song list: a scrolling column of tap-to-play rows bound to
+    sensor.aurora_spotify_tracks (names, one "Track — Artist" per line). Tapping
+    row i plays position i within the loaded playlist (g_spot_ctx) via the
+    aurora_spotify_play_track script. Rows are pre-built (hand-built sng_0..49
+    pattern) and shown/hidden by the populate lambda."""
+    inner = ic("spotify_tracks", color="0x1DB954")
+    inner += lbl("TRACKS \\u00B7 TAP TO PLAY", 50, 18, "f_micro", "0x868CA0")
+    rh, gap = 44, 6
+    list_y = 48
+    list_h = h - list_y - 12
+    # scrollable list container (rows overflow -> swipe to scroll)
+    inner += ("              - obj:\n                  id: %s_lst\n                  x: 14\n                  y: %d\n                  width: %d\n                  height: %d\n"
+              "                  bg_opa: 0\n                  border_width: 0\n                  radius: 0\n                  pad_all: 0\n"
+              % (base, list_y, w - 28, list_h))
+    inner += "                  widgets:\n"
+    for i in range(SPOT_MAX_TRACKS):
+        inner += ("                    - button:\n                        id: %s_r%d\n                        x: 0\n                        y: %d\n"
+                  "                        width: %d\n                        height: %d\n"
+                  "                        bg_color: 0x0F1117\n                        radius: 8\n                        pad_all: 0\n                        scrollable: false\n"
+                  "                        hidden: true\n"
+                  "                        widgets:\n"
+                  "                          - label: { id: %s_l%d, text: \"\", x: 12, align: left_mid, width: %d, long_mode: dot, text_font: f_body, text_color: 0xF3F5F8 }\n"
+                  "                        on_click:\n"
+                  "                          - homeassistant.action:\n                              action: script.aurora_spotify_play_track\n                              data:\n"
+                  "                                context_uri: !lambda 'return id(g_spot_ctx);'\n"
+                  "                                position: \"%d\"\n"
+                  % (base, i, i * (rh + gap), w - 32, rh, base, i, w - 56, i))
+    inner += ("                    - label: { id: %s_empty, text: \"Pick a playlist to load songs\", align: top_mid, y: 12, text_font: f_small, text_color: 0x5D6470 }\n" % base)
+    # populate rows from the newline-joined names (hand-built array-split pattern)
+    larr = ", ".join("id(%s_l%d)" % (base, i) for i in range(SPOT_MAX_TRACKS))
+    rarr = ", ".join("id(%s_r%d)" % (base, i) for i in range(SPOT_MAX_TRACKS))
     ts = ["  - platform: homeassistant\n    id: ha_" + base + "_tn\n    entity_id: sensor.aurora_spotify_tracks\n    attribute: names\n    on_value:\n"
-          "      - lambda: 'lv_roller_set_options(id(" + rlid + ")->obj, x.c_str(), LV_ROLLER_MODE_NORMAL);'\n"]
+          "      then:\n"
+          "        - lambda: |-\n"
+          "            const std::string &str = x;\n"
+          "            lv_obj_t* L[" + str(SPOT_MAX_TRACKS) + "] = { " + larr + " };\n"
+          "            lv_obj_t* R[" + str(SPOT_MAX_TRACKS) + "] = { " + rarr + " };\n"
+          "            int idx = 0; size_t st = 0;\n"
+          "            for (size_t i = 0; i <= str.size() && idx < " + str(SPOT_MAX_TRACKS) + "; i++) {\n"
+          "              if (i == str.size() || str[i] == '\\n') {\n"
+          "                std::string tok = str.substr(st, i - st);\n"
+          "                if (!tok.empty()) {\n"
+          "                  lv_label_set_text(L[idx], tok.c_str());\n"
+          "                  lv_obj_clear_flag(R[idx], LV_OBJ_FLAG_HIDDEN);\n"
+          "                  idx++;\n"
+          "                }\n"
+          "                st = i + 1;\n"
+          "              }\n"
+          "            }\n"
+          "            for (int j = idx; j < " + str(SPOT_MAX_TRACKS) + "; j++) lv_obj_add_flag(R[j], LV_OBJ_FLAG_HIDDEN);\n"
+          "            if (idx > 0) lv_obj_add_flag(id(" + base + "_empty), LV_OBJ_FLAG_HIDDEN);\n"
+          "            else lv_obj_clear_flag(id(" + base + "_empty), LV_OBJ_FLAG_HIDDEN);\n"]
     return [card_obj(x, y, w, h, inner)], [], ts
 
 
@@ -1318,6 +1391,7 @@ def c_speakers(card, x, y, w, h, base):
         return (e.split(".")[-1] if "." in e else e).replace("_", " ") if e else ("Speaker %d" % (i + 1))
 
     ts = []
+    ss = []
 
     def sensor(i, sld):
         if ents[i]:
@@ -1347,69 +1421,71 @@ def c_speakers(card, x, y, w, h, base):
         sensor(0, sld)
         return [card_obj(x, y, w, h, inner)], [], ts
 
-    # ---- wide: group ribbon + 2-col tile grid (image 2) ----
-    if card["w"] >= 4:
-        inner = ""
-        rh = 46
-        inner += ("              - obj: { x: 14, y: 14, width: %d, height: %d, bg_color: 0x101D1C, border_color: 0x2A5048, border_width: 1, radius: 12, pad_all: 0, scrollable: false }\n" % (w - 28, rh))
-        inner += lbl("\\U000F0502", 28, 14 + (rh - 18) // 2, "f_iconsm", "0x2ED5B8")
-        inner += lbl("%s \\u00B7 %d speakers" % (nm(0), gcount), 56, 14 + (rh - 20) // 2, "f_body", "0xF3F5F8", width=w - 56 - 130, long="dot", height=20)
-        inner += btn(w - 14 - 104, 14 + (rh - 32) // 2, 104, 32, "Ungroup", _unjoin(master), font="f_small", bg="0x0A0B0F", color="0xC2C7D2", radius=8)
-        top = 14 + rh + 12
-        cols, gap = 2, 12
-        tw = (w - 28 - (cols - 1) * gap) // cols
-        rows = (n + cols - 1) // cols
-        th = (h - top - 14 - (rows - 1) * gap) // rows
-        for i in range(n):
-            cx = 14 + (i % cols) * (tw + gap)
-            cy = top + (i // cols) * (th + gap)
-            gr = i < gcount
-            tbg = "0x101D1C" if gr else "0x14161C"
-            tbd = "0x2A5048" if gr else "0x23262F"
-            inner += ("              - obj: { x: %d, y: %d, width: %d, height: %d, bg_color: %s, border_color: %s, border_width: 1, radius: 12, pad_all: 0, scrollable: false }\n" % (cx, cy, tw, th, tbg, tbd))
-            inner += lbl(sg, cx + 14, cy + 14, "f_icon", "0x2ED5B8" if gr else "0x5D6470")
-            inner += lbl(nm(i), cx + 46, cy + 16, "f_body", "0xF3F5F8" if gr else "0xAEB4C2", width=tw - 130, long="dot", height=20)
-            if i == 0:
-                inner += lbl("SOURCE", cx + tw - 92, cy + 18, "f_micro", "0x2ED5B8", width=78, text_align="right")
-            elif gr:
-                inner += btn(cx + tw - 92, cy + 12, 78, 28, "Leave", _unjoin(ents[i]), font="f_small", bg="0x0A0B0F", color="0xC2C7D2", radius=8)
-            if gr:
-                sld = base + "_v%d" % i
-                v = SPK_DEMO_VOL[i % len(SPK_DEMO_VOL)]
-                inner += lbl("\\U000F057E", cx + 14, cy + th - 40, "f_icon", "0x868CA0")
-                inner += vol_slider_yaml(sld, cx + 46, cy + th - 34, tw - 100, v, ents[i])
-                inner += lbl(str(v), cx + tw - 46, cy + th - 38, "f_mono", "0x2ED5B8", width=32, text_align="right")
-                sensor(i, sld)
-            else:
-                inner += lbl("Available", cx + 46, cy + 40, "f_micro", "0x5D6470")
-                inner += btn(cx + 14, cy + (th - 36) // 2 + 14, tw - 28, 36, "+ Join", _join(master, ents[i]), font="f_body", bg="0x0F1117", color="0x2ED5B8", radius=10)
-        return [card_obj(x, y, w, h, inner)], [], ts
-
-    # ---- vertical list: PLAYING ON + per-speaker volume (image 3) ----
-    inner = lbl("\\U000F04C4", 14, 14, "f_icon", "0x2ED5B8")
-    inner += lbl("PLAYING ON  %d/%d" % (gcount, n), 46, 20, "f_micro", "0x868CA0")
-    yy = 48
-    for i in range(gcount):
-        sld = base + "_v%d" % i
-        v = SPK_DEMO_VOL[i % len(SPK_DEMO_VOL)]
-        inner += lbl(sg, 14, yy, "f_icon", "0x2ED5B8")
-        inner += lbl(nm(i), 46, yy + 2, "f_body", "0xF3F5F8", width=w - 200, long="dot", height=20)
-        if i == 0:
-            inner += lbl("SOURCE", w - 14 - 80, yy + 4, "f_micro", "0x2ED5B8", width=80, text_align="right")
-        else:
-            inner += btn(w - 14 - 92, yy - 2, 92, 30, "Leave", _unjoin(ents[i]), font="f_small", bg="0x0A0B0F", color="0xC2C7D2", radius=8)
-        inner += vol_slider_yaml(sld, 46, yy + 30, w - 60, v, ents[i])
-        sensor(i, sld)
-        yy += 62
-    if n > gcount:
-        inner += lbl("AVAILABLE", 14, yy, "f_micro", "0x5D6470")
-        yy += 22
-        for i in range(gcount, n):
-            inner += lbl(sg, 14, yy + 2, "f_icon", "0x5D6470")
-            inner += lbl(nm(i), 46, yy + 2, "f_body", "0xAEB4C2", width=w - 160, long="dot", height=20)
-            inner += btn(w - 14 - 92, yy - 4, 92, 34, "+ Join", _join(master, ents[i]), font="f_body", bg="0x0F1117", color="0x2ED5B8", radius=9)
-            yy += 44
-    return [card_obj(x, y, w, h, inner)], [], ts
+    # ---- link list (design: ACTIVE·GROUPED teal rows + AVAILABLE '+' rows) ----
+    # One live-styled row per speaker; state from the entity's group_members attr.
+    # Tap a row: grouped -> unjoin (leave); solo -> join to the card's master zone.
+    master = card.get("entity") or ents[0]
+    inner = lbl(sg, 14, 14, "f_icon", "0x2ED5B8")
+    inner += lbl("SPEAKERS \\u00B7 TAP TO LINK OR LEAVE", 50, 20, "f_micro", "0x868CA0")
+    list_y = 48
+    gap = 8
+    rh = max(56, min(78, (h - list_y - 14 - (n - 1) * gap) // max(1, n)))
+    scroll_h = h - list_y - 12
+    # scrollable when the rows overflow the card
+    inner += ("              - obj:\n                  x: 14\n                  y: %d\n                  width: %d\n                  height: %d\n"
+              "                  bg_opa: 0\n                  border_width: 0\n                  radius: 0\n                  pad_all: 0\n"
+              "                  widgets:\n" % (list_y, w - 28, scroll_h))
+    rw = w - 32
+    for i, e in enumerate(ents):
+        rowid, plusid, lnkid, sldv = "%s_rw%d" % (base, i), "%s_pl%d" % (base, i), "%s_lk%d" % (base, i), "%s_v%d" % (base, i)
+        icid, nmid = "%s_ic%d" % (base, i), "%s_nm%d" % (base, i)
+        ry = i * (rh + gap)
+        tog = ("                        on_click:\n"
+               "                          - if:\n"
+               "                              condition:\n"
+               "                                lambda: 'return id(g_spk_grouped).count(\"%s\") && id(g_spk_grouped)[\"%s\"];'\n"
+               "                              then:\n"
+               "                                - homeassistant.action: { action: media_player.unjoin, data: { entity_id: %s } }\n"
+               "                              else:\n"
+               "                                - homeassistant.action: { action: media_player.join, data: { entity_id: %s, group_members: %s } }\n"
+               % (e, e, e, master, e)) if e else ""
+        inner += ("                    - obj:\n                        id: %s\n                        x: 0\n                        y: %d\n                        width: %d\n                        height: %d\n"
+                  "                        bg_color: 0x14161C\n                        border_color: 0x23262F\n                        border_width: 1\n                        radius: 12\n"
+                  "                        pad_all: 0\n                        clickable: true\n                        scrollable: false\n%s"
+                  "                        widgets:\n"
+                  "                          - label: { id: %s, text: \"%s\", x: 14, y: 10, text_font: f_iconsm, text_color: 0x5D6470 }\n"
+                  "                          - label: { id: %s, text: %s, x: 42, y: 9, width: %d, long_mode: dot, text_font: f_body, text_color: 0xC2C7D2 }\n"
+                  "                          - label: { id: %s, text: \"\\U000F0415\", align: top_right, x: -14, y: 8, text_font: f_icon, text_color: 0x2ED5B8 }\n"
+                  "                          - label: { id: %s, text: \"LINKED\", align: top_right, x: -14, y: 12, text_font: f_micro, text_color: 0x2ED5B8, hidden: true }\n"
+                  % (rowid, ry, rw, rh, tog, icid, sg, nmid, esc(nm(i)), rw - 150, plusid, lnkid))
+        if e and rh >= 56:
+            inner += ("                          - slider:\n                              id: %s\n                              x: 42\n                              y: %d\n                              width: %d\n                              height: 8\n"
+                      "                              bg_color: 0x23262F\n                              bg_opa: 100%%\n"
+                      "                              min_value: 0\n                              max_value: 100\n                              value: 30\n"
+                      "                              indicator:\n                                bg_color: 0x2ED5B8\n"
+                      "                              knob:\n                                bg_color: 0x2ED5B8\n"
+                      "                              on_release:\n                                - homeassistant.action:\n"
+                      "                                    action: media_player.volume_set\n"
+                      "                                    data: { entity_id: %s, volume_level: !lambda 'char b[8]; snprintf(b, sizeof(b), \"%%.2f\", lv_slider_get_value(id(%s)) / 100.0); return std::string(b);' }\n"
+                      % (sldv, rh - 22, rw - 120, e, sldv))
+        if e:
+            # live volume (numeric sensor)
+            ss.append("  - platform: homeassistant\n    id: ha_%s\n    entity_id: %s\n    attribute: volume_level\n    on_value:\n"
+                      "      - lvgl.slider.update: { id: %s, value: !lambda 'return (int)(x * 100);' }\n" % (sldv, e, sldv))
+            # live group state (group_members list attr as text) -> restyle row in place
+            ts.append("  - platform: homeassistant\n    id: ha_%s_g%d\n    entity_id: %s\n    attribute: group_members\n    on_value:\n"
+                      "      then:\n"
+                      "        - lambda: |-\n"
+                      "            bool g = x.find(',') != std::string::npos;\n"
+                      "            id(g_spk_grouped)[\"%s\"] = g;\n"
+                      "            lv_obj_set_style_bg_color(id(%s), lv_color_hex(g ? 0x101D1C : 0x14161C), 0);\n"
+                      "            lv_obj_set_style_border_color(id(%s), lv_color_hex(g ? 0x2A5048 : 0x23262F), 0);\n"
+                      "            lv_obj_set_style_text_color(id(%s), lv_color_hex(g ? 0x2ED5B8 : 0x5D6470), 0);\n"
+                      "            lv_obj_set_style_text_color(id(%s), lv_color_hex(g ? 0xF3F5F8 : 0xC2C7D2), 0);\n"
+                      "            if (g) { lv_obj_add_flag(id(%s), LV_OBJ_FLAG_HIDDEN); lv_obj_clear_flag(id(%s), LV_OBJ_FLAG_HIDDEN); }\n"
+                      "            else { lv_obj_clear_flag(id(%s), LV_OBJ_FLAG_HIDDEN); lv_obj_add_flag(id(%s), LV_OBJ_FLAG_HIDDEN); }\n"
+                      % (base, i, e, e, rowid, rowid, icid, nmid, plusid, lnkid, plusid, lnkid))
+    return [card_obj(x, y, w, h, inner)], ss, ts
 
 
 def c_generic(card, x, y, w, h, base):
@@ -1627,16 +1703,18 @@ def _tv_trackpad_overlay():
         "                        lv_obj_add_flag(id(tv_tp_overlay), LV_OBJ_FLAG_HIDDEN);\n"
         "                        id(g_tp_active) = false;\n"
         "              - obj:\n"
+        "                  id: tv_tp_pad\n"
         "                  x: 96\n                  y: 120\n                  width: 760\n                  height: 350\n"
         "                  bg_color: 0x10121A\n                  bg_opa: 100%\n                  border_color: 0x2ED5B8\n                  border_width: 1\n                  radius: 22\n"
-        "                  pad_all: 0\n                  clickable: false\n                  scrollable: false\n"
+        "                  pad_all: 0\n                  clickable: true\n                  scrollable: false\n"
         "                  widgets:\n"
         "                    - label: { text: \"\\U000F0297\", align: center, y: -34, text_font: f_bigicon, text_color: 0x2ED5B8 }\n"
         "                    - label: { text: \"Drag to move  \\u00B7  tap to click\", align: center, y: 40, text_font: f_body, text_color: 0x868CA0 }\n"
         "              - obj:\n"
+        "                  id: tv_tp_strip\n"
         "                  x: 872\n                  y: 120\n                  width: 132\n                  height: 350\n"
         "                  bg_color: 0x10121A\n                  bg_opa: 100%\n                  border_color: 0x4FA8F5\n                  border_width: 1\n                  radius: 22\n"
-        "                  pad_all: 0\n                  clickable: false\n                  scrollable: false\n"
+        "                  pad_all: 0\n                  clickable: true\n                  scrollable: false\n"
         "                  widgets:\n"
         "                    - label: { text: \"\\U000F0143\", align: top_mid, y: 20, text_font: f_bigicon, text_color: 0x4FA8F5 }\n"
         "                    - label: { text: \"SCROLL\", align: center, text_font: f_micro, text_color: 0x868CA0 }\n"
@@ -1770,6 +1848,7 @@ TP_FLUSH_INTERVAL = (
     "          condition:\n"
     "            lambda: 'return id(g_tp_active) && (id(g_tp_dx) != 0 || id(g_tp_dy) != 0);'\n"
     "          then:\n"
+    "            - lambda: 'ESP_LOGI(\"tp\", \"flush move dx=%d dy=%d\", id(g_tp_dx), id(g_tp_dy));'\n"
     "            - homeassistant.action:\n"
     "                action: pyscript.lg_pointer_move\n"
     "                data:\n"
@@ -1907,13 +1986,33 @@ def assemble(layout):
     # scrub references to dropped UI scripts + lvgl widget actions in the base
     keep_text = re.sub(r"(?m)^[ \t]*-?[ \t]*script\.(execute|stop):.*\n", "", keep_text)
     keep_text = scrub_lvgl_actions(keep_text)
+    ART_IMAGES.clear()
     nav, pages, sens, txt, _, clocks = build_lvgl(layout)
     clocks += [("lbl_ss_time", "time_hm"), ("lbl_ss_date", "date_full")]   # screensaver clock
     pages += gen_screensaver_page()
     txt.append(SS_TEXT_SENSOR)
+    # album art: one decoder per art size in use; each entity's sp_nowplaying_image_url
+    # (SpotifyPlus; absolute scdn JPEG) set_urls + updates every decoder on track change.
+    art_items = ""
+    if ART_IMAGES:
+        sizes = sorted({s for s, _, _ in ART_IMAGES})
+        for s in sizes:
+            ups = "".join("      - lvgl.image.update: { id: %s, src: gen_art_%d }\n" % (iid, s)
+                          for sz, iid, _ in ART_IMAGES if sz == s)
+            art_items += ("  - id: gen_art_%d\n    url: \"http://127.0.0.1/none.jpg\"\n    format: JPEG\n    type: RGB565\n"
+                          "    resize: %dx%d\n    update_interval: never\n"
+                          "    on_download_finished:\n%s"
+                          "    on_error:\n      - logger.log: \"ART %d: download error\"\n" % (s, s, s, ups, s))
+        for n_i, ent in enumerate(sorted({e for _, _, e in ART_IMAGES})):
+            acts = "".join("              - online_image.set_url: { id: gen_art_%d, url: !lambda 'return x;' }\n"
+                           "              - component.update: gen_art_%d\n" % (s, s) for s in sizes)
+            txt.append("  - platform: homeassistant\n    id: ha_gen_art_%d\n    entity_id: %s\n    attribute: sp_nowplaying_image_url\n"
+                       "    on_value:\n      then:\n        - if:\n            condition:\n"
+                       "              lambda: 'return x.rfind(\"http\", 0) == 0;'\n            then:\n%s"
+                       % (n_i, ent, acts))
     # interval: list = trackpad flush + screensaver photo cycle + clock repaint
     out = keep_text + TP_FLUSH_INTERVAL + SS_INTERVAL_ITEM + clock_items(clocks)
-    out += SS_ONLINE_IMAGE + SS_SCRIPT
+    out += SS_ONLINE_IMAGE + art_items + SS_SCRIPT
     if sens:
         out += "\nsensor:\n" + "".join(sens)
     out += "\ntext_sensor:\n" + "".join(txt)
@@ -1944,7 +2043,12 @@ def host_assemble(layout):
     keep = "".join(t for n, t in secs if n in ("substitutions", "globals", "font"))
     keep = re.sub(r"(?m)^[ \t]*-?[ \t]*script\.(execute|stop):.*\n", "", keep)
     keep = scrub_lvgl_actions(keep)
-    nav, pages, _sens, _txt, _, _clocks = build_lvgl(layout)   # host has no ha_time -> no clock interval
+    global ART_ENABLED
+    ART_ENABLED = False                                  # host build: no online_image decoders
+    try:
+        nav, pages, _sens, _txt, _, _clocks = build_lvgl(layout)   # host has no ha_time -> no clock interval
+    finally:
+        ART_ENABLED = True
     pages = re.sub(r"(?m)^\s*- image: \{ src: img_aurora_bg.*\n", "", pages)
     # host build has no display_backlight light / restart button — stub those local actions
     pages = re.sub(r"light\.turn_on: \{ id: display_backlight[^}]*\}", "logger.log: emul", pages)
