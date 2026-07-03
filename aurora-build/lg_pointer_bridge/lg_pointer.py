@@ -100,17 +100,24 @@ _state = {"ws": None, "pointer": None, "session": None, "ip": None}
 
 
 def _tv_config():
-    """(host, client_key) from the webostv integration — the TV already trusts
-    that pairing, so no prompt. Prefers the entry whose title matches
-    LG_TV_NAME_HINT (multi-TV homes); falls back to the manual constants."""
+    """(host, client_key). A fully-specified manual pairing (BOTH constants set)
+    WINS — it is verified against the actual TV, whereas the webostv entry can
+    hold a stale host (e.g. the TV's other network interface after a DHCP move).
+    The integration lookup is the fallback for keyless installs."""
+    if LG_TV_IP and LG_CLIENT_KEY:
+        return LG_TV_IP, LG_CLIENT_KEY
+    entries = []
     try:
         entries = [e for e in hass.config_entries.async_entries("webostv")]
     except Exception as e:  # noqa: BLE001  (no hass_is_global / no webostv)
         log.debug(f"LG pointer: webostv lookup unavailable ({e}); using constants")
-        entries = []
     if entries:
         hint = (LG_TV_NAME_HINT or "").lower()
-        pick = next((e for e in entries if hint and hint in (e.title or "").lower()), entries[0])
+        pick = entries[0]
+        for e in entries:                       # plain loop (pyscript has no genexprs)
+            if hint and hint in (e.title or "").lower():
+                pick = e
+                break
         host = pick.data.get("host")
         key = pick.data.get("client_secret") or ""
         if host:
@@ -139,7 +146,9 @@ async def _connect():
     _state["session"] = session
     _state["ip"] = host
 
-    sslctx = ssl.create_default_context()
+    # Bare TLS context (no CA load): create_default_context() reads the system
+    # cert store — a blocking call HA flags inside the event loop.
+    sslctx = ssl.SSLContext(ssl.PROTOCOL_TLS_CLIENT)
     sslctx.check_hostname = False
     sslctx.verify_mode = ssl.CERT_NONE
 
@@ -207,7 +216,9 @@ async def _connect():
     pointer = await asyncio.wait_for(
         session.ws_connect(socket_path, heartbeat=30, **pkw), _CONNECT_TIMEOUT_S)
     _state["pointer"] = pointer
-    log.info(f"LG pointer: connected to {host}")
+    # warning-level on purpose: system_log only surfaces WARNING+, and this one
+    # line per (re)connect is the remote proof the bridge reached the TV.
+    log.warning(f"LG pointer: connected to {host}")
     return pointer
 
 
