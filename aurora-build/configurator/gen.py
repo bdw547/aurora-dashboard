@@ -1790,9 +1790,12 @@ def gen_trackpad_page(layout, back_pid, active):
     disengages. Surfaces are clickable:false, same as the hand-built page —
     the raw touchscreen handlers see every touch regardless."""
     onload = _nav_onload(layout, active)
+    # Pad/scroll shrink to h320 (bottom 440) to seat a Back/Home row + a volume row
+    # underneath; the gesture zones MUST track the visual rects, so on_load re-asserts
+    # them with the matching bottom edge (440).
     onload += ("        - lambda: |-\n"
-               "            id(g_tp_px1) = 96;  id(g_tp_py1) = 120; id(g_tp_px2) = 856;  id(g_tp_py2) = 470;\n"
-               "            id(g_tp_sx1) = 872; id(g_tp_sy1) = 120; id(g_tp_sx2) = 1004; id(g_tp_sy2) = 470;\n"
+               "            id(g_tp_px1) = 96;  id(g_tp_py1) = 120; id(g_tp_px2) = 856;  id(g_tp_py2) = 440;\n"
+               "            id(g_tp_sx1) = 872; id(g_tp_sy1) = 120; id(g_tp_sx2) = 1004; id(g_tp_sy2) = 440;\n"
                "            id(g_tp_active) = true;\n")
     w = "        - image: { src: img_aurora_bg, x: 0, y: 0 }\n"
     w += "        - label: { text: \"Trackpad\", x: 96, y: 26, text_font: f_title, text_color: 0xF3F5F8 }\n"
@@ -1802,32 +1805,40 @@ def gen_trackpad_page(layout, back_pid, active):
           "            pad_all: 0\n            scrollable: false\n"
           "            widgets: [label: { text: \"Buttons\", align: center, text_font: f_body, text_color: 0x2ED5B8 }]\n"
           "            on_click: [lvgl.page.show: %s]\n" % back_pid)
-    w += ("        - obj:\n            x: 96\n            y: 120\n            width: 760\n            height: 350\n"
+    w += ("        - obj:\n            x: 96\n            y: 120\n            width: 760\n            height: 320\n"
           "            bg_color: 0x10121A\n            bg_opa: 60%\n            radius: 22\n            border_width: 1\n            border_color: 0x2A5048\n"
           "            pad_all: 0\n            scrollable: false\n            clickable: false\n"
           "            widgets:\n"
-          "              - label: { text: \"\\U000F0297\", align: center, y: -34, text_font: f_bigicon, text_color: 0x2ED5B8 }\n"
-          "              - label: { text: \"Drag to move  \\u00B7  tap to click\", align: center, y: 40, text_font: f_body, text_color: 0x868CA0 }\n")
-    w += ("        - obj:\n            x: 872\n            y: 120\n            width: 132\n            height: 350\n"
+          "              - label: { text: \"\\U000F0297\", align: center, y: -30, text_font: f_bigicon, text_color: 0x2ED5B8 }\n"
+          "              - label: { text: \"Drag to move  \\u00B7  tap to click\", align: center, y: 36, text_font: f_body, text_color: 0x868CA0 }\n")
+    w += ("        - obj:\n            x: 872\n            y: 120\n            width: 132\n            height: 320\n"
           "            bg_color: 0x10121A\n            bg_opa: 60%\n            radius: 22\n            border_width: 1\n            border_color: 0x2A5048\n"
           "            pad_all: 0\n            scrollable: false\n            clickable: false\n"
           "            widgets:\n"
           "              - label: { text: \"\\U000F0143\", align: top_mid, y: 20, text_font: f_bigicon, text_color: 0x4FA8F5 }\n"
           "              - label: { text: \"SCROLL\", align: center, text_font: f_micro, text_color: 0x868CA0 }\n"
           "              - label: { text: \"\\U000F0140\", align: bottom_mid, y: -20, text_font: f_bigicon, text_color: 0x4FA8F5 }\n")
-    # Back + Home remote buttons below the pad (outside the gesture zone y>470), sent
-    # over the proven pointer socket via the lg_pointer bridge (name=BACK/HOME).
-    def _remote_btn(bx, glyph, label, name):
-        return ("        - button:\n            x: %d\n            y: 486\n            width: 366\n            height: 66\n"
+    # Remote buttons below the pad (outside the gesture zone y>440), all sent over the
+    # proven pointer socket via the lg_pointer bridge. Row 1: labeled Back + Home.
+    # Row 2: Volume down / Mute / Volume up (VOLUMEDOWN/MUTE/VOLUMEUP button names).
+    def _remote_btn(bx, bw, by, glyph, label, name, gcol="0xF3F5F8"):
+        if label:
+            wid = ("              - label: { text: \"%s\", x: 40, align: left_mid, text_font: f_icon, text_color: %s }\n"
+                   "              - label: { text: \"%s\", x: 88, align: left_mid, text_font: f_title, text_color: 0xF3F5F8 }\n"
+                   % (glyph, gcol, label))
+        else:
+            wid = "              - label: { text: \"%s\", align: center, text_font: f_icon, text_color: %s }\n" % (glyph, gcol)
+        return ("        - button:\n            x: %d\n            y: %d\n            width: %d\n            height: 60\n"
                 "            bg_color: 0x161B24\n            border_color: 0x23262F\n            border_width: 1\n            radius: 14\n"
                 "            pad_all: 0\n            scrollable: false\n"
-                "            widgets:\n"
-                "              - label: { text: \"%s\", x: 44, align: left_mid, text_font: f_icon, text_color: 0xF3F5F8 }\n"
-                "              - label: { text: \"%s\", x: 92, align: left_mid, text_font: f_title, text_color: 0xF3F5F8 }\n"
+                "            widgets:\n%s"
                 "            on_click: [homeassistant.action: { action: pyscript.lg_pointer_button, data: { name: %s } }]\n"
-                % (bx, glyph, label, name))
-    w += _remote_btn(96, "\\U000F004D", "Back", "BACK")
-    w += _remote_btn(490, "\\U000F02DC", "Home", "HOME")
+                % (bx, by, bw, wid, name))
+    w += _remote_btn(96, 450, 452, "\\U000F004D", "Back", "BACK")
+    w += _remote_btn(554, 450, 452, "\\U000F02DC", "Home", "HOME")
+    w += _remote_btn(96, 297, 520, "\\U000F075E", "", "VOLUMEDOWN", gcol="0x2ED5B8")
+    w += _remote_btn(401, 297, 520, "\\U000F075F", "", "MUTE", gcol="0x2ED5B8")
+    w += _remote_btn(706, 298, 520, "\\U000F075D", "", "VOLUMEUP", gcol="0x2ED5B8")
     return ("    - id: page_trackpad\n      bg_color: 0x0A0B0F\n      scrollable: false\n%s"
             "      on_unload:\n        - lambda: 'id(g_tp_active) = false;'\n"
             "      widgets:\n%s" % (onload, w))
