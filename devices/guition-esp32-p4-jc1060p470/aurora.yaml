@@ -2265,6 +2265,12 @@ globals:
   - id: g_spot_ctx
     type: std::string
     restore_value: false
+  # Spotify Connect target: the speaker/device name the user picked to play on
+  # (from the SpotifyPlus source_list). Passed as `device` to play_track and used
+  # to highlight the chosen speaker row. Blank = play on the active device.
+  - id: g_spot_dev
+    type: std::string
+    restore_value: false
   # Sonos speaker link state: entity_id -> currently grouped (group_members has >1).
   # Fed by per-speaker group_members text_sensors; read by tap-to-link/leave rows.
   - id: g_spk_grouped

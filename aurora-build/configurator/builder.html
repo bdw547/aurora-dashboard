@@ -246,6 +246,7 @@ const C = {
   spotify:  {label:'Spotify now-playing', domain:'media_player', icon:'spotify', color:'#1DB954', spans:[[1,1],[2,2],[3,2],[4,3],[6,5]], def:[3,2], ctrl:'media'},
   spotify_playlists:{label:'Spotify playlists (dropdown)', domain:'media_player', icon:'playlist-play', color:'#1DB954', spans:[[2,1],[3,1],[2,2],[3,2],[2,3],[3,3]], def:[3,1], ctrl:'spot_pl'},
   spotify_tracks:{label:'Spotify songs (list)', domain:'media_player', icon:'playlist-music', color:'#1DB954', spans:[[2,3],[2,4],[2,5],[3,4],[3,5],[4,5]], def:[2,5], ctrl:'spot_tr'},
+  spotify_speakers:{label:'Spotify speakers (Play on)', domain:'media_player', icon:'speaker-multiple', color:'#1DB954', spans:[[2,2],[3,2],[2,3],[3,3],[2,4],[3,4]], def:[3,3], ctrl:'spot_spk'},
   playlist: {label:'Spotify playlist', domain:'media_player', icon:'playlist-play', color:'#1DB954', spans:[[1,1],[2,1],[3,1]], def:[2,1], ctrl:'playlist', playlistField:true},
   songlist: {label:'Spotify song list', domain:'media_player', icon:'playlist-music', color:'#1DB954', spans:[[4,3],[3,4],[4,4],[3,5],[4,5],[5,5]], def:[4,4], ctrl:'songlist'},
   sonos:    {label:'Sonos (multi-room)', domain:'media_player', icon:'speaker-multiple', color:'var(--teal)', spans:[[3,2],[3,3],[4,4],[6,5]], def:[4,4], ctrl:'media'},
@@ -273,7 +274,7 @@ const C = {
 const CATS = [
   ['Lighting', ['light','light_t','switch','lightgroup','outletgroup']],
   ['Comfort', ['climate','fan','cover']],
-  ['Spotify', ['spotify_playlists','spotify_tracks','spotify','playlist','songlist','volume','volumes']],
+  ['Spotify', ['spotify_playlists','spotify_tracks','spotify_speakers','spotify','playlist','songlist','volume','volumes']],
   ['Sonos', ['sonos','speakers','sonos_sources','sonos_library','sonos_fav','volume','volumes']],
   ['TV', ['tvremote','tv_dpad','tv_transport','tv_channel','tv_volume','tv_sources','tv_trackpad']],
   ['Media', ['media','volume','volumes']],
@@ -285,8 +286,8 @@ const CATS = [
 const GICON={light:['lightbulb','var(--amber)'],switch:['toggle-switch','var(--teal)'],lock:['lock','var(--teal)'],binary_sensor:['motion-sensor','var(--blue)'],sensor:['thermometer','var(--red)'],cover:['blinds-horizontal','var(--blue)'],fan:['fan','var(--teal)'],person:['account','var(--blue)'],climate:['thermostat','var(--amber)'],media_player:['speaker','var(--teal)']};
 const GVAL={light:'On',switch:'On',lock:'Locked',binary_sensor:'Clear',sensor:'72°',cover:'Open',fan:'Med',person:'Home',climate:'72°',media_player:'Idle'};
 const NAV_ICONS = ['home-variant','sofa','lightbulb','thermostat','music','shield-home','wifi','cog','blinds','camera','weather-partly-cloudy','speaker','bed','silverware-fork-knife','desk','tree','door','stairs','garage','television','remote-tv','playlist-music'];
-const APP_CAT = {'Netflix':'#E50914','YouTube':'#FF0000','YouTube TV':'#FF0000','Disney+':'#113CCF','Spotify':'#1DB954','Plex':'#E5A00D','Hulu':'#1CE783','Prime Video':'#00A8E1','Max':'#7B2BF9','HBO Max':'#7B2BF9','Apple TV':'#3A3A3C','Peacock':'#05AC3F','Paramount+':'#0064FF','Showtime':'#C10000','STARZ':'#000000','ESPN':'#D50A0A'};
-const APP_DEFAULT = ['Netflix','YouTube','YouTube TV','Disney+','Showtime'];
+const APP_CAT = {'Netflix':'#E50914','YouTube':'#FF0000','YouTube TV':'#FF0000','Disney+':'#113CCF','Spotify':'#1DB954','Plex':'#E5A00D','Hulu':'#1CE783','Prime Video':'#00A8E1','Max':'#7B2BF9','HBO Max':'#7B2BF9','Apple TV':'#3A3A3C','Peacock':'#05AC3F','Paramount+':'#0064FF','STARZ':'#000000','ESPN':'#D50A0A'};
+const APP_DEFAULT = ['Netflix','YouTube','YouTube TV','Disney+','Hulu'];
 const APP_MAX = 8;
 // configurable top-bar status chips (right zone)
 const HEADER_ITEMS = {
@@ -504,6 +505,8 @@ function cardInner(c){ const def=C[c.ck], nm=c.name||def.label, big=c.w>=3, ctrl
     return head+`<div class="toprow"><span class="csub" style="letter-spacing:1px;font-size:10px">PLAYLIST</span><span class="mdi mdi-refresh" style="color:#1DB954;margin-left:auto"></span></div>${dd}<div class="csub" style="margin-top:8px;font-size:11px">Pick a playlist to load its songs</div>`; }
   if(ctrl==='spot_tr'){ const rows=[['MakeDamnSure','Taking Back Sunday'],['Cute Without The E','Taking Back Sunday'],['Buried a Lie','Senses Fail'],['The Quiet Things','Brand New'],['Sic Transit Gloria','Brand New'],['Ohio Is For Lovers','Hawthorne Heights'],['Vindicated','Dashboard Confessional']]; const n=Math.max(3,c.h*2); let lis=''; for(let i=0;i<n;i++){ const r=rows[i%rows.length]; lis+=`<div class="trk"><span style="color:var(--tx);white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${r[0]}</span><span class="csub">${r[1]}</span></div>`; }
     return head+`<div class="toprow">${ico}<span class="csub" style="letter-spacing:1px">TRACKS · TAP TO PLAY</span></div><div class="trklist">${lis}</div>`; }
+  if(ctrl==='spot_spk'){ const rooms=['Living Room','Kitchen','Office','Dining Room','Patio','Gameroom']; const n=Math.max(3,c.h*2); let lis=''; for(let i=0;i<n;i++){ const nm=rooms[i%rooms.length]; const on=i===0; lis+=`<div class="trk" style="${on?'background:#1DB954;':''}"><span style="color:${on?'#06231D':'var(--tx)'};white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${nm}</span></div>`; }
+    return head+`<div class="toprow">${ico}<span class="csub" style="letter-spacing:1px">PLAY ON · TAP A SPEAKER</span></div><div class="trklist">${lis}</div>`; }
   return head+ico+nme;
 }
 

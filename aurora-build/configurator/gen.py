@@ -141,6 +141,7 @@ CARD_ICON = {
     "playlist": "\\U000F075A", "sonos_fav": "\\U000F04CE", "songlist": "\\U000F075A",
     "sonos_library": "\\U000F125F",
     "spotify_playlists": "\\U000F075A", "spotify_tracks": "\\U000F075A",
+    "spotify_speakers": "\\U000F04C4",
     # TV control cards (purple family)
     "tv_sources": "\\U000F0502", "tv_dpad": "\\U000F0297", "tv_transport": "\\U000F040A",
     "tv_channel": "\\U000F0502", "tv_volume": "\\U000F057E", "tv_trackpad": "\\U000F0297",
@@ -398,12 +399,7 @@ def c_media(card, x, y, w, h, base):
     has_vol = cells >= 3
     nowplaying = gh >= 3 and gw >= 2
     prev_g, play_g, next_g, vol_g = "\\U000F04AE", "\\U000F03E4", "\\U000F04AD", "\\U000F057E"  # pause glyph (demo = playing)
-    if ck == "sonos":
-        subtxt = "Kitchen \\u00B7 Sonos"
-    elif nowplaying:
-        subtxt = "Playlist \\u00B7 Late Night Drive"
-    else:
-        subtxt = "NOW PLAYING"
+    subtxt = "NOW PLAYING"
     prev = ha("media_player.media_previous_track", e) if e else "lvgl.page.show: page_home"
     plpz = ha("media_player.media_play_pause", e) if e else "lvgl.page.show: page_home"
     nxt = ha("media_player.media_next_track", e) if e else "lvgl.page.show: page_home"
@@ -444,6 +440,13 @@ def c_media(card, x, y, w, h, base):
                   "      - lvgl.label.update: { id: %s, text: !lambda 'return x.empty() ? std::string(\"Nothing playing\") : x;' }\n" % (tid, e, tid))
         ts.append("  - platform: homeassistant\n    id: ha_%s\n    entity_id: %s\n    attribute: media_artist\n    on_value:\n"
                   "      - lvgl.label.update: { id: %s, text: !lambda 'return x;' }\n" % (aid, e, aid))
+        # media_player state: when it is NOT actively playing, force the honest
+        # "Nothing playing" text (media_title/artist attrs are absent when idle,
+        # so their readbacks never fire to clear the last-played track).
+        ts.append("  - platform: homeassistant\n    id: ha_%s_st\n    entity_id: %s\n    on_value:\n"
+                  "      - lvgl.label.update: { id: %s, text: !lambda 'return (x == \"playing\" || x == \"paused\" || x == \"buffering\") ? std::string(lv_label_get_text(id(%s))) : std::string(\"Nothing playing\");' }\n"
+                  "      - lvgl.label.update: { id: %s, text: !lambda 'return (x == \"playing\" || x == \"paused\" || x == \"buffering\") ? std::string(lv_label_get_text(id(%s))) : std::string(\"\");' }\n"
+                  % (base, e, tid, tid, aid, aid))
         if has_vol:
             ts.append("  - platform: homeassistant\n    id: ha_%s\n    entity_id: %s\n    attribute: volume_level\n    on_value:\n"
                       "      - lvgl.slider.update: { id: %s, value: !lambda 'return (int)(atof(x.c_str()) * 100);' }\n" % (sld, e, sld))
@@ -452,8 +455,8 @@ def c_media(card, x, y, w, h, base):
     # ---- 1x1: art + title + play ----
     if gw == 1 and gh == 1:
         inner += art(14, 14, 40, 40)
-        inner += lbl("Midnight City", 62, 18, "f_body", "0xF3F5F8", wid=tid, width=w - 74, long="dot", height=20)
-        inner += lbl("M83", 62, 44, "f_small", "0x868CA0", wid=aid, width=w - 74, long="dot", height=16)
+        inner += lbl("Nothing playing",62, 18, "f_body", "0xF3F5F8", wid=tid, width=w - 74, long="dot", height=20)
+        inner += lbl("",62, 44, "f_small", "0x868CA0", wid=aid, width=w - 74, long="dot", height=16)
         inner += btn(w - 46, h - 46, 34, 34, play_g, plpz, bg="0x2ED5B8", color="0x06231D", radius=17, font="f_icon")
         return [card_obj(x, y, w, h, inner)], [], ts
     # ---- h==1 row (2x1, 3x1): title + artist only (no subtitle line) ----
@@ -469,16 +472,16 @@ def c_media(card, x, y, w, h, base):
         inner += btn(nx, cy - bw // 2, bw, bw, next_g, nxt, radius=bw // 2, font="f_icon")
         if has_vol:
             txtw = 108
-            inner += lbl("Midnight City", 82, 26, "f_body", "0xF3F5F8", wid=tid, width=txtw, long="dot", height=20)
-            inner += lbl("M83", 82, 50, "f_small", "0x868CA0", wid=aid, width=txtw if has_vol else tw, long="dot", height=16)
+            inner += lbl("Nothing playing",82, 26, "f_body", "0xF3F5F8", wid=tid, width=txtw, long="dot", height=20)
+            inner += lbl("",82, 50, "f_small", "0x868CA0", wid=aid, width=txtw if has_vol else tw, long="dot", height=16)
             vsx = 82 + txtw + 12
             inner += lbl(vol_g, vsx, cy - 6, "f_icon", "0x868CA0")
             svx = vsx + 30
             inner += vol_slider_yaml(sld, svx, cy - 4, (vx - 12) - svx, 55, e)
         else:
             tw = (vx - 12) - 82
-            inner += lbl("Midnight City", 82, 26, "f_body", "0xF3F5F8", wid=tid, width=tw, long="dot", height=20)
-            inner += lbl("M83", 82, 50, "f_small", "0x868CA0", wid=aid, width=txtw if has_vol else tw, long="dot", height=16)
+            inner += lbl("Nothing playing",82, 26, "f_body", "0xF3F5F8", wid=tid, width=tw, long="dot", height=20)
+            inner += lbl("",82, 50, "f_small", "0x868CA0", wid=aid, width=txtw if has_vol else tw, long="dot", height=16)
         return [card_obj(x, y, w, h, inner)], [], ts
     # ---- w==1 tall narrow (1x2, 1x3): art on top ----
     if gw == 1:
@@ -487,8 +490,8 @@ def c_media(card, x, y, w, h, base):
         inner += art(14, 14, asz, arth)
         ty0 = 14 + arth + 8
         inner += lbl(subtxt, 14, ty0, "f_small", "0x2ED5B8", width=w - 28, long="dot")
-        inner += lbl("Midnight City", 14, ty0 + 16, "f_body", "0xF3F5F8", wid=tid, width=w - 28, long="dot")
-        inner += lbl("M83", 14, ty0 + 38, "f_small", "0x868CA0", wid=aid, width=w - 28, long="dot", height=16)
+        inner += lbl("Nothing playing",14, ty0 + 16, "f_body", "0xF3F5F8", wid=tid, width=w - 28, long="dot")
+        inner += lbl("",14, ty0 + 38, "f_small", "0x868CA0", wid=aid, width=w - 28, long="dot", height=16)
         inner += transport_center(ty0 + 56)
         if has_vol:
             inner += vol_slider(h - 34)
@@ -498,15 +501,15 @@ def c_media(card, x, y, w, h, base):
         if gw >= 3:                                    # art beside the title block
             inner += art(14, 14, 110, 110, real=108)
             inner += lbl(subtxt, 136, 20, "f_small", "0x2ED5B8", width=w - 150, long="dot", height=16)
-            inner += lbl("Midnight City", 136, 40, "f_track", "0xF3F5F8", wid=tid, width=w - 150, long="dot", height=32)
-            inner += lbl("M83", 136, 86, "f_body", "0x868CA0", wid=aid, width=w - 150, long="dot", height=18)
+            inner += lbl("Nothing playing",136, 40, "f_track", "0xF3F5F8", wid=tid, width=w - 150, long="dot", height=32)
+            inner += lbl("",136, 86, "f_body", "0x868CA0", wid=aid, width=w - 150, long="dot", height=18)
             py = 152
             tport = py + 40
         else:                                          # narrow: art on top, full-width title
             inner += art(14, 14, w - 28, 108, real=108)
             inner += lbl(subtxt, 14, 130, "f_small", "0x2ED5B8", width=w - 28, long="dot", height=16)
-            inner += lbl("Midnight City", 14, 146, "f_track", "0xF3F5F8", wid=tid, width=w - 28, long="dot", height=32)
-            inner += lbl("M83", 14, 180, "f_body", "0x868CA0", wid=aid, width=w - 28, long="dot", height=18)
+            inner += lbl("Nothing playing",14, 146, "f_track", "0xF3F5F8", wid=tid, width=w - 28, long="dot", height=32)
+            inner += lbl("",14, 180, "f_body", "0x868CA0", wid=aid, width=w - 28, long="dot", height=18)
             py = 202
             tport = 226
         inner += ("              - obj: { x: 14, y: %d, width: %d, height: 6, bg_color: 0x23262F, radius: 3, border_width: 0, pad_all: 0, scrollable: false }\n" % (py, w - 28))
@@ -519,8 +522,8 @@ def c_media(card, x, y, w, h, base):
     # ---- medium (2x2, 3x2) ----
     inner += art(14, 14, 58, 58, real=58)
     inner += lbl(subtxt, 82, 18, "f_small", "0x2ED5B8", width=w - 96, long="dot", height=16)
-    inner += lbl("Midnight City", 82, 36, "f_title", "0xF3F5F8", wid=tid, width=w - 96, long="dot", height=28)
-    inner += lbl("M83", 82, 68, "f_small", "0x868CA0", wid=aid, width=w - 96, long="dot", height=16)
+    inner += lbl("Nothing playing", 82, 36, "f_title", "0xF3F5F8", wid=tid, width=w - 96, long="dot", height=28)
+    inner += lbl("",82, 68, "f_small", "0x868CA0", wid=aid, width=w - 96, long="dot", height=16)
     inner += transport_center(h - 108)
     inner += vol_slider(h - 40)
     return [card_obj(x, y, w, h, inner)], [], ts
@@ -995,10 +998,10 @@ APP_CATALOG = {
     "Disney+": ("0x113CCF", "D"), "Spotify": ("0x1DB954", "S"), "Plex": ("0xE5A00D", "P"),
     "Hulu": ("0x1CE783", "H"), "Prime Video": ("0x00A8E1", "P"), "Max": ("0x7B2BF9", "M"),
     "HBO Max": ("0x7B2BF9", "M"), "Apple TV": ("0x3A3A3C", "A"), "Peacock": ("0x05AC3F", "P"),
-    "Paramount+": ("0x0064FF", "P"), "Showtime": ("0xC10000", "SHO"), "STARZ": ("0x000000", "SZ"),
+    "Paramount+": ("0x0064FF", "P"), "STARZ": ("0x000000", "SZ"),
     "ESPN": ("0xD50A0A", "E"), "Prime": ("0x00A8E1", "P"),
 }
-TV_APPS_DEFAULT = ["Netflix", "YouTube", "YouTube TV", "Disney+", "Showtime"]
+TV_APPS_DEFAULT = ["Netflix", "YouTube", "YouTube TV", "Disney+", "Hulu"]
 TV_APPS_MAX = 8
 TV_SOURCES = ["HDMI 1", "Apple TV", "Roku", "Cable"]
 
@@ -1217,6 +1220,7 @@ def c_spot_tracks(card, x, y, w, h, base):
                   "                          - homeassistant.action:\n                              action: script.aurora_spotify_play_track\n                              data:\n"
                   "                                context_uri: !lambda 'return id(g_spot_ctx);'\n"
                   "                                position: \"%d\"\n"
+                  "                                device: !lambda 'return id(g_spot_dev);'\n"
                   % (base, i, i * (rh + gap), w - 32, rh, base, i, w - 56, i))
     inner += ("                    - label: { id: %s_empty, text: \"Pick a playlist to load songs\", align: top_mid, y: 12, text_font: f_small, text_color: 0x5D6470 }\n" % base)
     # populate rows from the newline-joined names (hand-built array-split pattern)
@@ -1243,6 +1247,112 @@ def c_spot_tracks(card, x, y, w, h, base):
           "            for (int j = idx; j < " + str(SPOT_MAX_TRACKS) + "; j++) lv_obj_add_flag(R[j], LV_OBJ_FLAG_HIDDEN);\n"
           "            if (idx > 0) lv_obj_add_flag(id(" + base + "_empty), LV_OBJ_FLAG_HIDDEN);\n"
           "            else lv_obj_clear_flag(id(" + base + "_empty), LV_OBJ_FLAG_HIDDEN);\n"]
+    return [card_obj(x, y, w, h, inner)], [], ts
+
+
+SPOT_MAX_SPEAKERS = 14
+
+
+def _spk_arrays(base, n):
+    L = ", ".join("id(%s_sl%d)" % (base, i) for i in range(n))
+    B = ", ".join("id(%s_sr%d)" % (base, i) for i in range(n))
+    return L, B
+
+
+def _indent(lines, spaces):
+    pad = " " * spaces
+    return "".join(pad + ln + "\n" for ln in lines)
+
+
+def _spk_hl_lines(base, n):
+    """Recolor each visible speaker row: the one whose name == g_spot_dev is the
+    picked target (Spotify green), the rest dark."""
+    L, B = _spk_arrays(base, n)
+    return [
+        "lv_obj_t* HL[%d] = { %s };" % (n, L),
+        "lv_obj_t* HB[%d] = { %s };" % (n, B),
+        "const std::string &sel = id(g_spot_dev);",
+        "for (int i = 0; i < %d; i++) {" % n,
+        "  if (lv_obj_has_flag(HB[i], LV_OBJ_FLAG_HIDDEN)) continue;",
+        "  bool on = (sel == lv_label_get_text(HL[i]));",
+        "  lv_obj_set_style_bg_color(HB[i], lv_color_hex(on ? 0x1DB954 : 0x0F1117), 0);",
+        "  lv_obj_set_style_text_color(HL[i], lv_color_hex(on ? 0x06231D : 0xF3F5F8), 0);",
+        "}",
+    ]
+
+
+def c_spot_speakers(card, x, y, w, h, base):
+    """Spotify Connect speaker picker. Loads the available speakers straight from
+    the SpotifyPlus media_player's `source_list` attribute (no HA-side helper
+    needed) and renders one tap-to-select row per speaker. Tapping a row stores
+    its name in g_spot_dev (the target the song list plays onto via play_track's
+    `device`) and transfers any current playback there via select_source. The
+    picked row is highlighted; g_spot_dev defaults to the active `source`.
+    source_list arrives as a quoted list string ("['Kitchen', 'Office', ...]"),
+    so rows are parsed by pulling each quoted token (single- or double-quoted)."""
+    e = card.get("entity") or "media_player.spotifyplus_ben_walton"
+    n = SPOT_MAX_SPEAKERS
+    inner = ic("speakers", color="0x1DB954")
+    inner += lbl("PLAY ON \\u00B7 TAP A SPEAKER", 50, 18, "f_micro", "0x868CA0")
+    # refresh: re-poll the media_player so a newly-woken speaker shows up
+    inner += ("              - button:\n                  x: %d\n                  y: 10\n                  width: 40\n                  height: 30\n"
+              "                  bg_color: 0x161B24\n                  radius: 10\n                  pad_all: 0\n                  scrollable: false\n"
+              "                  widgets: [label: { text: \"\\U000F0450\", align: center, text_font: f_iconsm, text_color: 0x1DB954 }]\n"
+              "                  on_click: [homeassistant.action: { action: homeassistant.update_entity, data: { entity_id: %s } }]\n" % (w - 54, e))
+    rh, gap = 44, 6
+    list_y = 48
+    list_h = h - list_y - 12
+    inner += ("              - obj:\n                  id: %s_lst\n                  x: 14\n                  y: %d\n                  width: %d\n                  height: %d\n"
+              "                  bg_opa: 0\n                  border_width: 0\n                  radius: 0\n                  pad_all: 0\n"
+              % (base, list_y, w - 28, list_h))
+    inner += "                  widgets:\n"
+    for i in range(n):
+        tap = ["id(g_spot_dev) = std::string(lv_label_get_text(id(%s_sl%d)));" % (base, i)]
+        tap += _spk_hl_lines(base, n)
+        inner += ("                    - button:\n                        id: %s_sr%d\n                        x: 0\n                        y: %d\n"
+                  "                        width: %d\n                        height: %d\n"
+                  "                        bg_color: 0x0F1117\n                        radius: 8\n                        pad_all: 0\n                        scrollable: false\n"
+                  "                        hidden: true\n"
+                  "                        widgets:\n"
+                  "                          - label: { id: %s_sl%d, text: \"\", x: 12, align: left_mid, width: %d, long_mode: dot, text_font: f_body, text_color: 0xF3F5F8 }\n"
+                  "                        on_click:\n"
+                  "                          - lambda: |-\n"
+                  "%s"
+                  "                          - homeassistant.action:\n                              action: media_player.select_source\n                              data:\n"
+                  "                                entity_id: %s\n"
+                  "                                source: !lambda 'return id(g_spot_dev);'\n"
+                  % (base, i, i * (rh + gap), w - 32, rh, base, i, w - 56, _indent(tap, 30), e))
+    inner += ("                    - label: { id: %s_empty, text: \"Loading speakers\", align: top_mid, y: 12, text_font: f_small, text_color: 0x5D6470 }\n" % base)
+    # source_list -> (re)populate rows, then highlight the picked target
+    pop = [
+        "const std::string &str = x;",
+    ]
+    L, B = _spk_arrays(base, n)
+    pop += [
+        "lv_obj_t* PL[%d] = { %s };" % (n, L),
+        "lv_obj_t* PB[%d] = { %s };" % (n, B),
+        "int idx = 0; char q = 0; std::string cur;",
+        "for (size_t i = 0; i < str.size() && idx < %d; i++) {" % n,
+        "  char c = str[i];",
+        "  if (q == 0) { if (c == '\\'' || c == '\"') { q = c; cur.clear(); } }",
+        "  else if (c == q) {",
+        "    lv_label_set_text(PL[idx], cur.c_str());",
+        "    lv_obj_clear_flag(PB[idx], LV_OBJ_FLAG_HIDDEN);",
+        "    idx++; q = 0;",
+        "  } else cur += c;",
+        "}",
+        "for (int j = idx; j < %d; j++) lv_obj_add_flag(PB[j], LV_OBJ_FLAG_HIDDEN);" % n,
+        "if (idx > 0) lv_obj_add_flag(id(%s_empty), LV_OBJ_FLAG_HIDDEN);" % base,
+        "else lv_obj_clear_flag(id(%s_empty), LV_OBJ_FLAG_HIDDEN);" % base,
+    ]
+    pop += _spk_hl_lines(base, n)
+    src = ["if (id(g_spot_dev).empty()) id(g_spot_dev) = x;"] + _spk_hl_lines(base, n)
+    ts = [
+        "  - platform: homeassistant\n    id: ha_%s_sl\n    entity_id: %s\n    attribute: source_list\n    on_value:\n      then:\n        - lambda: |-\n%s"
+        % (base, e, _indent(pop, 12)),
+        "  - platform: homeassistant\n    id: ha_%s_sc\n    entity_id: %s\n    attribute: source\n    on_value:\n      then:\n        - lambda: |-\n%s"
+        % (base, e, _indent(src, 12)),
+    ]
     return [card_obj(x, y, w, h, inner)], [], ts
 
 
@@ -1498,6 +1608,7 @@ CTRL = {
     "playlist": c_playlist, "sonos_fav": c_playlist, "songlist": c_songlist,
     "sonos_library": c_songlist, "volume": c_volume, "volumes": c_volumes,
     "spotify_playlists": c_spot_playlists, "spotify_tracks": c_spot_tracks,
+    "spotify_speakers": c_spot_speakers,
 }
 
 
