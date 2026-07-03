@@ -1009,6 +1009,7 @@ def c_tvremote(card, x, y, w, h, base):
     transport bar; small cards fall back to d-pad + 3 transport buttons."""
     e = card.get("entity", "")
     inner = ""
+    ts = []                                              # source-highlight readback (rich+sidebar)
     powA = ("homeassistant.action: { action: media_player.toggle, data: { entity_id: %s } }" % e) if e else "lvgl.page.show: page_home"
     rich = w >= 560 and h >= 320
     if not rich:                       # compact: icon + title + d-pad + 3 transport
@@ -1034,19 +1035,27 @@ def c_tvremote(card, x, y, w, h, base):
         apps = (card.get("apps") or TV_APPS_DEFAULT)[:TV_APPS_MAX]
         na = max(1, len(apps))
         ah = (h - ay - 14 - (na - 1) * 8) // na
+        ups = ""                                          # live source-highlight lines
         for i, nm in enumerate(apps):
             col, ltr = APP_CATALOG.get(nm, ("0x555555", (nm[:1] or "?").upper()))
             ty = ay + i * (ah + 8)
-            sel = (i == 0)
+            appid = "%s_app%d" % (base, i)
             inner += (
                 "              - button:\n"
+                "                  id: %s\n"
                 "                  x: 14\n                  y: %d\n                  width: 152\n                  height: %d\n"
-                "                  bg_color: %s\n                  radius: 14\n                  pad_all: 0\n                  scrollable: false\n"
+                "                  bg_color: 0x10141C\n                  radius: 14\n                  pad_all: 0\n                  scrollable: false\n"
                 "                  widgets:\n"
                 "                    - obj: { x: 14, align: left_mid, width: 32, height: 32, bg_color: %s, radius: 8, pad_all: 0, scrollable: false, widgets: [label: { text: \"%s\", align: center, text_font: f_body, text_color: 0xFFFFFF }] }\n"
                 "                    - label: { text: \"%s\", x: 56, align: left_mid, width: 88, long_mode: dot, text_font: f_body, text_color: 0xFFFFFF }\n"
                 "                  on_click: [%s]\n"
-                % (ty, ah, (col if sel else "0x10141C"), col, ltr, nm, _src(e, nm)))
+                % (appid, ty, ah, col, ltr, nm, _src(e, nm)))
+            if e:                                         # highlight this tile when it IS the TV's current source
+                ups += ("      - lvgl.widget.update: { id: " + appid +
+                        ", bg_color: !lambda 'return x == \"" + nm + "\" ? lv_color_hex(" + col + ") : lv_color_hex(0x10141C);' }\n")
+        if e and ups:
+            ts.append("  - platform: homeassistant\n    id: ha_" + base + "_src\n    entity_id: " + e +
+                      "\n    attribute: source\n    on_value:\n" + ups)
     # --- header ---
     inner += lbl("\\U000F0502", mx, 14, "f_icon", "0xB06CFF")
     inner += lbl("LG OLED", mx + 42, 12, "f_title")
@@ -1106,7 +1115,7 @@ def c_tvremote(card, x, y, w, h, base):
         main = (key == "play")
         inner += btn(bx, by, bw, 62, g, act, font="f_icon",
                      bg=("0x2ED5B8" if main else "0x161B24"), color=("0x06231D" if main else "0xF3F5F8"))
-    return [card_obj(x, y, w, h, inner)], [], []
+    return [card_obj(x, y, w, h, inner)], [], ts
 
 
 def c_playlist(card, x, y, w, h, base):
@@ -1695,6 +1704,19 @@ def gen_trackpad_page(layout, back_pid, active):
           "              - label: { text: \"\\U000F0143\", align: top_mid, y: 20, text_font: f_bigicon, text_color: 0x4FA8F5 }\n"
           "              - label: { text: \"SCROLL\", align: center, text_font: f_micro, text_color: 0x868CA0 }\n"
           "              - label: { text: \"\\U000F0140\", align: bottom_mid, y: -20, text_font: f_bigicon, text_color: 0x4FA8F5 }\n")
+    # Back + Home remote buttons below the pad (outside the gesture zone y>470), sent
+    # over the proven pointer socket via the lg_pointer bridge (name=BACK/HOME).
+    def _remote_btn(bx, glyph, label, name):
+        return ("        - button:\n            x: %d\n            y: 486\n            width: 366\n            height: 66\n"
+                "            bg_color: 0x161B24\n            border_color: 0x23262F\n            border_width: 1\n            radius: 14\n"
+                "            pad_all: 0\n            scrollable: false\n"
+                "            widgets:\n"
+                "              - label: { text: \"%s\", x: 44, align: left_mid, text_font: f_icon, text_color: 0xF3F5F8 }\n"
+                "              - label: { text: \"%s\", x: 92, align: left_mid, text_font: f_title, text_color: 0xF3F5F8 }\n"
+                "            on_click: [homeassistant.action: { action: pyscript.lg_pointer_button, data: { name: %s } }]\n"
+                % (bx, glyph, label, name))
+    w += _remote_btn(96, "\\U000F004D", "Back", "BACK")
+    w += _remote_btn(490, "\\U000F02DC", "Home", "HOME")
     return ("    - id: page_trackpad\n      bg_color: 0x0A0B0F\n      scrollable: false\n%s"
             "      on_unload:\n        - lambda: 'id(g_tp_active) = false;'\n"
             "      widgets:\n%s" % (onload, w))
