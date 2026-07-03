@@ -101,22 +101,12 @@
             "h": 3
           },
           {
-            "id": "c9gwa0g",
-            "ck": "volume",
-            "entity": "media_player.living_room_juke_audio_office_zone",
-            "name": "Juke Audio Office Zone",
-            "x": 4,
-            "y": 3,
-            "w": 1,
-            "h": 2
-          },
-          {
             "id": "c1n28dn",
             "ck": "volumes",
             "entity": "",
             "name": "Speaker volumes (per-speaker)",
             "x": 4,
-            "y": 1,
+            "y": 3,
             "w": 3,
             "h": 2,
             "entities": [
@@ -145,13 +135,13 @@
             "h": 1
           },
           {
-            "id": "cer463c",
-            "ck": "weather",
-            "entity": "weather.forecast_home",
-            "name": "Forecast Home",
-            "x": 5,
-            "y": 3,
-            "w": 2,
+            "id": "cfmm20w",
+            "ck": "spotify",
+            "entity": "media_player.spotifyplus_ben_walton",
+            "name": "SpotifyPlus Ben Walton",
+            "x": 4,
+            "y": 1,
+            "w": 3,
             "h": 2
           }
         ],
@@ -373,19 +363,6 @@
       "subpages": [
         [
           {
-            "id": "k1",
-            "ck": "speakers",
-            "name": "Speakers",
-            "x": 1,
-            "y": 3,
-            "w": 3,
-            "h": 3,
-            "entities": [
-              "media_player.office",
-              "media_player.spotifyplus_ben_walton"
-            ]
-          },
-          {
             "id": "n1",
             "ck": "spotify",
             "entity": "media_player.spotifyplus_ben_walton",
@@ -414,6 +391,16 @@
             "y": 2,
             "w": 3,
             "h": 4
+          },
+          {
+            "id": "ci5bzcq",
+            "ck": "spotify_speakers",
+            "entity": "media_player.spotifyplus_ben_walton",
+            "name": "SpotifyPlus Ben Walton",
+            "x": 1,
+            "y": 3,
+            "w": 3,
+            "h": 3
           }
         ]
       ]
@@ -580,11 +567,14 @@
             "w": 6,
             "h": 5,
             "apps": [
-              "YouTube",
-              "Plex",
+              "YouTube TV",
               "Apple TV",
-              "Max",
-              "Peacock"
+              "Peacock",
+              "HBO Max",
+              "Plex",
+              "Netflix",
+              "Prime Video",
+              "Disney+"
             ]
           }
         ],
