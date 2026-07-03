@@ -1,5 +1,16 @@
 # Custom Dashboard — Feature Design (JC1060P470 fork)
 
+> **⚠️ Historical design doc — superseded by Aurora.** This is an early feature
+> exploration written against the **upstream espcontrol button-grid engine**
+> (`components/espcontrol/`, `common/config/card_contract.json`, `scripts/build.py`).
+> The dashboard was ultimately built as **Aurora** — an independent ESPHome + LVGL
+> rewrite (`devices/guition-esp32-p4-jc1060p470/aurora.yaml`) that does **not** use that
+> engine — so the file paths and the "how a card type is wired" recipe below no longer
+> describe the shipping product. In Aurora, card types are `c_*` functions in the `CTRL`
+> dict of `aurora-build/configurator/gen.py`. Several features below have since **shipped
+> in Aurora** (see the per-feature status notes and the **[README](README.md)** / the
+> configurator's `gen.py`). Kept for history, not as current build guidance.
+
 Grounded in code exploration. Target device: `devices/guition-esp32-p4-jc1060p470/`.
 Firmware = ESPHome + header-only C++/LVGL in `components/espcontrol/`.
 
@@ -40,6 +51,9 @@ soft shadow, per-card accent colors. All reversible token edits.
 
 ## Feature 3 — Weather animation (MEDIUM effort)
 
+> **Status: partially shipped in Aurora.** A rich full-forecast weather card shipped
+> (gen.py `c_weather`). The animated-primitives idea below is still unbuilt.
+
 Today: static MDI glyph. `weather_icon_for_state()` maps ~29 conditions to glyphs
 (`button_grid_config.h:1498`); `subscribe_weather_state()` updates the label
 (`button_grid_subscriptions.h:194`); `setup_weather_card()` builds it
@@ -56,6 +70,11 @@ in `button_grid_grid.h`, option in `card_contract.json`.
 (Alternative: enable `lv_gif` in the LVGL build + ship condition GIFs — heavier flash/RAM.)
 
 ## Feature 4 — Sonos / media library browsing (MEDIUM-HIGH effort)
+
+> **Status: SHIPPED in Aurora** — as gen.py cards, not the C++ `MEDIA_BROWSE` modal below.
+> Sources via `sonos_sources`/`tv_sources` + `media_player.select_source`; a full Spotify
+> suite `spotify_playlists` / `spotify_tracks` (scrollable tap-to-play) / `spotify_speakers`
+> (dynamic Connect-speaker picker reading `source_list`); Sonos favorites via `sonos_fav`.
 
 Today: `media` card = transport + volume arc + now-playing (art via `artwork_image`
 component, `button_grid_image.h` `ImageCardCtx`). Services used:
@@ -74,6 +93,11 @@ Missing: source/favorites/playlist browsing. Plan:
 Start with **source-list selection** (1 attribute + 1 service) before full browse trees.
 
 ## Feature 5 — TV remote (HIGH effort; fully net-new)
+
+> **Status: SHIPPED in Aurora** — built in gen.py, not as the C++ `remote` card / `REMOTE_CONTROL`
+> modal below. `c_tvremote` gives a full LG webOS remote (D-pad, transport, volume/mute, channel,
+> app shortcuts that highlight the running app) and `gen_trackpad_page` a Magic-Remote trackpad
+> (cursor + scroll + Back/Home/Volume) over a pyscript pointer bridge (`pyscript.lg_pointer_button`).
 
 Confirmed net-new: no `remote.` usage anywhere in firmware/contract.
 

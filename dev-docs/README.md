@@ -8,6 +8,13 @@ usage instructions live in `README.md` and the public documentation under
 This folder is intentionally outside the public VitePress documentation site. It
 is the source of truth for repo-internal developer guidance.
 
+> **Note — Aurora vs. the engine.** This fork's active dashboard, **Aurora**, is an
+> independent ESPHome + LVGL rewrite (`devices/guition-esp32-p4-jc1060p470/aurora.yaml`
+> + `aurora-build/configurator/gen.py`) that does **not** use the espcontrol button-grid
+> engine these dev-docs describe. The pages here remain accurate *for the engine*, but for
+> Aurora work see the root [`README.md`](../README.md) and the Aurora section of
+> [`DEVELOPERS.md`](../DEVELOPERS.md).
+
 ## Quick Start
 
 Install local dependencies before running generators or checks:

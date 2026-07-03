@@ -13,13 +13,13 @@ A custom, high-end **Home Assistant touch dashboard** for the **Guition ESP32‑
 | **Home** | Live clock + greeting, weather/presence/secured chips, a large Now-Playing card (album art + transport), and a 2×2 grid (Climate, Lights, Doors & Sensors, Quick nav). |
 | **Rooms** | Pick a room → control that room's lights (tap to toggle, slider to dim), fans (with spin animation), and switches. Rooms are **data-driven** — generated from `rooms.json` by the configurator, so you can add/rename/reassign rooms and entities without editing YAML. |
 | **Lights** | Selectable light list with a brightness arc + on/off. |
-| **Media** | Spotify (SpotifyPlus): now-playing with progress bar + elapsed/remaining, play/pause/skip/volume, an 8-room speaker selector, and a Library (playlist → scrollable track list → tap to play). |
+| **Media** | Spotify (SpotifyPlus): now-playing (album art + progress bar + elapsed/remaining, honest "Nothing playing" when idle), play/pause/skip/volume, a **speaker picker** that loads every available Spotify Connect speaker so you can choose which room to play in, and a Library (playlist → scrollable track list → tap to play on the chosen speaker). |
 | **Climate** | Outdoor temperature, condition, humidity, wind (from `weather.forecast_home`). |
 | **Security** | Front/back door lock state + control, presence, and a **live camera feed** from the panel's onboard camera (streamed to HA over RTSP/H.264). |
 | **Network** | Panel WiFi signal, Synology status. |
 | **Settings** | Display brightness, screen timeout, wake-on-presence, screen saver, and **Approach wake** (night-time camera wake-on-approach). |
 | **Screensaver** | Photo slideshow (images served from HA) with a clock + outdoor temperature overlay. |
-| **TV Remote** | Full LG webOS remote (D-pad, Power/Home/Back/Exit/Menu/Info, volume/mute, channel, media transport, app shortcuts) — reached from the Living Room view. |
+| **TV Remote** | Full LG webOS remote (D-pad, Power/Home/Back/Exit/Menu/Info, volume/mute, channel, media transport, and app shortcuts that highlight the app currently on screen), plus a **Magic-Remote trackpad page** — a real drag-to-move cursor + scroll wheel with Back / Home / Volume buttons, driven by the LG pointer bridge. |
 
 ---
 
@@ -40,10 +40,11 @@ Aurora controls **your** Home Assistant entities, so you need HA running on your
 | Media (Spotify) | The **SpotifyPlus** integration (via HACS: `thlucas1/homeassistantcomponent_spotifyplus`), authenticated to your Spotify Premium account. |
 | Media **Library** (playlist/track browsing) | The Aurora HA package **`aurora-build/aurora_spotify_library.yaml`** installed in HA (see *Spotify Library setup* below). |
 | TV Remote | The **webOS TV** (`webostv`) integration for your LG TV. |
+| TV Remote **trackpad** (cursor / scroll / volume) | The **LG pointer bridge** pyscript module (`aurora-build/lg_pointer_bridge/`) — it opens webOS's Magic-Remote pointer socket, which `webostv` can't. See that folder's README to install. |
 | Climate | A weather entity (default `weather.forecast_home`). |
 | Lights / Fans / Locks / Presence / NAS | Your own `light.*`, `fan.*`, `switch.*`, `lock.*`, `person.*`, `sensor.*` entities. |
 
-> **Important:** the entity IDs in `aurora.yaml` are currently **specific to the author's home** (e.g. `light.living_room_main`, `media_player.spotifyplus_ben_walton`, `lock.front_door`). To use Aurora in *your* home you must rebind them — see **[Customizing for your home](#customizing-for-your-home)**. (A no-code web configurator to do this for you is on the [roadmap](#roadmap).)
+> **Important:** the entity IDs in `aurora.yaml` are currently **specific to the author's home** (e.g. `light.living_room_main`, `media_player.spotifyplus_ben_walton`, `lock.front_door`). To use Aurora in *your* home you can either rebind them by hand (see **[Customizing for your home](#customizing-for-your-home)**) or use the **[no-code web configurator](#web-configurator)** — a browser app that maps the panel's entity slots to yours, lets you lay out screens by drag-and-drop, and flashes the panel for you.
 
 ---
 
@@ -134,6 +135,34 @@ esphome run    devices/guition-esp32-p4-jc1060p470/aurora.yaml --device <panel-i
 
 ---
 
+## Web configurator
+
+Instead of hand-editing YAML, Aurora ships a **no-code web configurator** that runs locally on your build machine and does the rebinding, layout, and flashing for you. It lives in **`aurora-build/configurator/`**.
+
+```bash
+source ~/aurora-venv/bin/activate        # the venv with esphome installed
+python3 aurora-build/configurator/serve.py
+# then open http://localhost:8765
+```
+
+What it does:
+
+- **Entity-rebind wizard** — reads the panel's `ent_*` entity slots, lists your Home Assistant entities (you supply your HA URL + a long-lived token), and lets you map each slot to one of yours.
+- **Drag-and-drop page builder** (`builder.html`) — arrange cards on a 6×5 grid per page, pick each card's type and entity, and see a live preview. Card types include lights, climate, sensors, locks, covers, fans, media/now-playing, the **Spotify** playlist / track-list / **speaker-picker** cards, Sonos speaker grouping, the **TV remote** (with trackpad), cameras, weather, and more. Your layout is saved to **`layout.json`**.
+- **Rooms wizard** — add/rename/reassign rooms and their entities, saved to **`rooms.json`**.
+
+The builder writes `layout.json`; the generator turns it into firmware:
+
+```bash
+python3 aurora-build/configurator/gen.py            # layout.json -> aurora-gen.yaml
+python3 aurora-build/configurator/gen.py --check    # generate + validate, no write
+esphome run devices/guition-esp32-p4-jc1060p470/aurora-gen.yaml --device <panel-ip>
+```
+
+`gen.py` reuses the hand-built hardware/font/style base from `aurora.yaml` and splices in the generated pages + state sensors, producing a self-contained `aurora-gen.yaml` (gitignored — it's a build artifact). The configurator's Flash button runs this pipeline for you.
+
+---
+
 ## Spotify Library setup (HA package)
 
 The Media **Library** (browse playlists → tracks → tap to play in a room) needs a small HA package, because the panel can't browse Spotify directly — Home Assistant fetches the data and exposes it as sensors.
@@ -163,7 +192,12 @@ components/
   ov02c10_support/     ← injects the OV02C10 camera-sensor driver
 aurora-build/
   aurora_spotify_library.yaml   ← HA package for the Spotify Library
-  configurator/        ← no-code web configurator (rooms.json + Rooms wizard)
+  configurator/        ← no-code web configurator:
+                          serve.py     (local server, entity-rebind wizard, flash)
+                          builder.html (drag-drop page builder, 6×5 grid)
+                          gen.py       (layout.json → aurora-gen.yaml generator)
+                          layout.json / rooms.json (saved config)
+  lg_pointer_bridge/   ← HA pyscript module for LG Magic-Remote cursor/scroll/volume
   assets/              ← baked background + fan animation frames
 ```
 
@@ -189,16 +223,16 @@ RTP is sent **TCP‑interleaved**, so it works through Home Assistant / ffmpeg's
 
 ## Status & roadmap
 
-Active development is on the **`camera-experiment`** branch.
-
 **Recently shipped:**
+- **No-code web configurator** — entity-rebind wizard + drag-and-drop page builder (6×5 grid, per-card type/entity selection, live preview) + a `layout.json → aurora-gen.yaml` generator, so you can point Aurora at your own HA and design screens without editing YAML. See **[Web configurator](#web-configurator)**. ✅
 - **Live camera** — OV02C10 → hardware H.264 → on-device RTSP, viewable in Home Assistant. ✅
 - **Wake-on-approach + evening-gated screen sleep** — the camera wakes the panel when you walk up at night. ✅
-- **Dynamic rooms** — room pages/picker/state sensors generated from `rooms.json`; add/rename/reassign via the configurator's Rooms wizard. ✅
+- **Dynamic rooms** — room pages/picker/state sensors generated from `rooms.json`; add/rename/reassign in the configurator's Rooms wizard. ✅
+- **TV Magic-Remote trackpad** — real cursor + scroll wheel + Back/Home/Volume over the LG pointer bridge, with the on-screen app highlighted live. ✅
+- **Spotify speaker picker** — pick any available Spotify Connect speaker to play onto. ✅
 - **Photo screensaver** with clock + outdoor-temperature overlay. ✅
 
 **In progress / planned:**
-- **No-code web configurator** — the Rooms wizard works today; next is drag-and-drop home-screen layout, per-card entity selection, and live preview, so anyone can point Aurora at their own HA without editing YAML.
 - **Notifications** surfaced on the panel.
 - **Weather radar** on the Climate screen.
 - **Intercom** — video calls between multiple panels *(long-term)*.
