@@ -97,14 +97,15 @@ def title(name, w, x=50, y=16):
     return lbl(name, x, y, f, width=w - x - 14, long="dot", height=36 if wide else 22)
 
 
-def btn(x, y, w, h, label_glyph, action, bg="0x161B24", color="0xF3F5F8", radius=12, font="f_body"):
+def btn(x, y, w, h, label_glyph, action, bg="0x161B24", color="0xF3F5F8", radius=12, font="f_body", lid=None):
+    idpart = ("id: %s, " % lid) if lid else ""           # id on the label so a readback can update its glyph/text
     return (
         "              - button:\n"
         "                  x: %d\n                  y: %d\n                  width: %d\n                  height: %d\n"
         "                  bg_color: %s\n                  radius: %d\n                  pad_all: 0\n                  scrollable: false\n"
-        "                  widgets: [label: { text: %s, align: center, text_font: %s, text_color: %s }]\n"
+        "                  widgets: [label: { %stext: %s, align: center, text_font: %s, text_color: %s }]\n"
         "                  on_click: [%s]\n"
-        % (x, y, w, h, bg, radius, esc(label_glyph), font, color, action)
+        % (x, y, w, h, bg, radius, idpart, esc(label_glyph), font, color, action)
     )
 
 
@@ -394,6 +395,7 @@ def c_media(card, x, y, w, h, base):
     tid = base + "_t"
     aid = base + "_a"
     sld = base + "_vol"
+    ppid = base + "_pp"                                   # play/pause button glyph (updated from media state)
     gw, gh = card["w"], card["h"]
     cells = gw * gh
     has_vol = cells >= 3
@@ -425,7 +427,7 @@ def c_media(card, x, y, w, h, base):
         sx = (w - total) // 2
         yo = (big - small) // 2
         s = btn(sx, ty + yo, small, small, prev_g, prev, radius=small // 2, font="f_icon")
-        s += btn(sx + small + gap, ty, big, big, play_g, plpz, bg="0x2ED5B8", color="0x06231D", radius=big // 2, font="f_icon")
+        s += btn(sx + small + gap, ty, big, big, play_g, plpz, bg="0x2ED5B8", color="0x06231D", radius=big // 2, font="f_icon", lid=ppid)
         s += btn(sx + small + gap + big + gap, ty + yo, small, small, next_g, nxt, radius=small // 2, font="f_icon")
         return s
 
@@ -446,7 +448,8 @@ def c_media(card, x, y, w, h, base):
         ts.append("  - platform: homeassistant\n    id: ha_%s_st\n    entity_id: %s\n    on_value:\n"
                   "      - lvgl.label.update: { id: %s, text: !lambda 'return (x == \"playing\" || x == \"paused\" || x == \"buffering\") ? std::string(lv_label_get_text(id(%s))) : std::string(\"Nothing playing\");' }\n"
                   "      - lvgl.label.update: { id: %s, text: !lambda 'return (x == \"playing\" || x == \"paused\" || x == \"buffering\") ? std::string(lv_label_get_text(id(%s))) : std::string(\"\");' }\n"
-                  % (base, e, tid, tid, aid, aid))
+                  "      - lvgl.label.update: { id: %s, text: !lambda 'return x == \"playing\" ? std::string(\"\\U000F03E4\") : std::string(\"\\U000F040A\");' }\n"
+                  % (base, e, tid, tid, aid, aid, ppid))
         if has_vol:
             ts.append("  - platform: homeassistant\n    id: ha_%s\n    entity_id: %s\n    attribute: volume_level\n    on_value:\n"
                       "      - lvgl.slider.update: { id: %s, value: !lambda 'return (int)(atof(x.c_str()) * 100);' }\n" % (sld, e, sld))
@@ -457,7 +460,7 @@ def c_media(card, x, y, w, h, base):
         inner += art(14, 14, 40, 40)
         inner += lbl("Nothing playing",62, 18, "f_body", "0xF3F5F8", wid=tid, width=w - 74, long="dot", height=20)
         inner += lbl("",62, 44, "f_small", "0x868CA0", wid=aid, width=w - 74, long="dot", height=16)
-        inner += btn(w - 46, h - 46, 34, 34, play_g, plpz, bg="0x2ED5B8", color="0x06231D", radius=17, font="f_icon")
+        inner += btn(w - 46, h - 46, 34, 34, play_g, plpz, bg="0x2ED5B8", color="0x06231D", radius=17, font="f_icon", lid=ppid)
         return [card_obj(x, y, w, h, inner)], [], ts
     # ---- h==1 row (2x1, 3x1): title + artist only (no subtitle line) ----
     if gh == 1:
@@ -468,7 +471,7 @@ def c_media(card, x, y, w, h, base):
         px = nx - (bw + g)
         vx = px - (bw + g)
         inner += btn(vx, cy - bw // 2, bw, bw, prev_g, prev, radius=bw // 2, font="f_icon")
-        inner += btn(px, cy - bw // 2, bw, bw, play_g, plpz, bg="0x2ED5B8", color="0x06231D", radius=bw // 2, font="f_icon")
+        inner += btn(px, cy - bw // 2, bw, bw, play_g, plpz, bg="0x2ED5B8", color="0x06231D", radius=bw // 2, font="f_icon", lid=ppid)
         inner += btn(nx, cy - bw // 2, bw, bw, next_g, nxt, radius=bw // 2, font="f_icon")
         if has_vol:
             txtw = 108
@@ -1864,10 +1867,24 @@ def gen_pages(layout, pagemap):
                 widgets += "".join(ws)
                 sens += ss
                 txt += ts
-            # Next affordance if a following sub-page exists
-            if si < len(subs) - 1:
+            # Sub-page paging affordances. These MUST be emitted as PAGE-LEVEL widgets at
+            # 8-space indent: btn() emits 14-space card-inner YAML, which would nest inside
+            # the last card's widgets and never render as a page button (the original bug).
+            # Prev starts at x=94 to clear the left nav rail; both float on the bottom strip.
+            if si > 0:                                    # Prev -> previous sub-page (sub-page 1's prev is the base page id)
+                prv = pagemap[key] if si == 1 else "%s_%d" % (pagemap[key], si - 1)
+                widgets += ("        - button:\n            x: 94\n            y: 540\n            width: 128\n            height: 46\n"
+                            "            bg_color: 0x161B24\n            border_color: 0x2ED5B8\n            border_width: 1\n            radius: 12\n"
+                            "            pad_all: 0\n            scrollable: false\n"
+                            "            widgets: [label: { text: \"Prev\", align: center, text_font: f_body, text_color: 0x2ED5B8 }]\n"
+                            "            on_click: [lvgl.page.show: %s]\n" % prv)
+            if si < len(subs) - 1:                        # Next -> following sub-page
                 nxt = "%s_%d" % (pagemap[key], si + 1)
-                widgets += btn(884, 540, 110, 44, "Next", "lvgl.page.show: %s" % nxt, font="f_body")
+                widgets += ("        - button:\n            x: 802\n            y: 540\n            width: 128\n            height: 46\n"
+                            "            bg_color: 0x161B24\n            border_color: 0x2ED5B8\n            border_width: 1\n            radius: 12\n"
+                            "            pad_all: 0\n            scrollable: false\n"
+                            "            widgets: [label: { text: \"Next\", align: center, text_font: f_body, text_color: 0x2ED5B8 }]\n"
+                            "            on_click: [lvgl.page.show: %s]\n" % nxt)
             active = next((slug(n.get("id", "")) for n in layout.get("nav", []) if n.get("page") == key), None)
             onload = _nav_onload(layout, active)
             if has_tv and tp_page is None:                # remember where the remote lives (Pad links here back)
