@@ -988,13 +988,18 @@ def _src(e, src):
             % (e, esc(src))) if e else "lvgl.page.show: page_home"
 
 
+# App name -> (badge color, short mark). Names MUST match the TV's source_list
+# for media_player.select_source to launch them.
 APP_CATALOG = {
-    "Netflix": ("0xE50914", "N"), "YouTube": ("0xFF0000", "Y"), "Disney+": ("0x113CCF", "D"),
-    "Spotify": ("0x1DB954", "S"), "Plex": ("0xE5A00D", "P"), "Hulu": ("0x1CE783", "H"),
-    "Prime Video": ("0x00A8E1", "P"), "Max": ("0x7B2BF9", "M"), "Apple TV": ("0x3A3A3C", "A"),
-    "Peacock": ("0x05AC3F", "P"), "Paramount+": ("0x0064FF", "P"),
+    "Netflix": ("0xE50914", "N"), "YouTube": ("0xFF0000", "Y"), "YouTube TV": ("0xFF0000", "TV"),
+    "Disney+": ("0x113CCF", "D"), "Spotify": ("0x1DB954", "S"), "Plex": ("0xE5A00D", "P"),
+    "Hulu": ("0x1CE783", "H"), "Prime Video": ("0x00A8E1", "P"), "Max": ("0x7B2BF9", "M"),
+    "HBO Max": ("0x7B2BF9", "M"), "Apple TV": ("0x3A3A3C", "A"), "Peacock": ("0x05AC3F", "P"),
+    "Paramount+": ("0x0064FF", "P"), "Showtime": ("0xC10000", "SHO"), "STARZ": ("0x000000", "SZ"),
+    "ESPN": ("0xD50A0A", "E"), "Prime": ("0x00A8E1", "P"),
 }
-TV_APPS_DEFAULT = ["Netflix", "YouTube", "Disney+", "Spotify", "Plex"]
+TV_APPS_DEFAULT = ["Netflix", "YouTube", "YouTube TV", "Disney+", "Showtime"]
+TV_APPS_MAX = 8
 TV_SOURCES = ["HDMI 1", "Apple TV", "Roku", "Cable"]
 
 
@@ -1026,7 +1031,7 @@ def c_tvremote(card, x, y, w, h, base):
     if sidebar:
         inner += lbl("APPS \\u00B7 PRE-BAKED", 16, 14, "f_micro", "0x5D6470")
         ay = 40
-        apps = (card.get("apps") or TV_APPS_DEFAULT)[:5]
+        apps = (card.get("apps") or TV_APPS_DEFAULT)[:TV_APPS_MAX]
         na = max(1, len(apps))
         ah = (h - ay - 14 - (na - 1) * 8) // na
         for i, nm in enumerate(apps):

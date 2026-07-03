@@ -285,8 +285,9 @@ const CATS = [
 const GICON={light:['lightbulb','var(--amber)'],switch:['toggle-switch','var(--teal)'],lock:['lock','var(--teal)'],binary_sensor:['motion-sensor','var(--blue)'],sensor:['thermometer','var(--red)'],cover:['blinds-horizontal','var(--blue)'],fan:['fan','var(--teal)'],person:['account','var(--blue)'],climate:['thermostat','var(--amber)'],media_player:['speaker','var(--teal)']};
 const GVAL={light:'On',switch:'On',lock:'Locked',binary_sensor:'Clear',sensor:'72°',cover:'Open',fan:'Med',person:'Home',climate:'72°',media_player:'Idle'};
 const NAV_ICONS = ['home-variant','sofa','lightbulb','thermostat','music','shield-home','wifi','cog','blinds','camera','weather-partly-cloudy','speaker','bed','silverware-fork-knife','desk','tree','door','stairs','garage','television','remote-tv','playlist-music'];
-const APP_CAT = {'Netflix':'#E50914','YouTube':'#FF0000','Disney+':'#113CCF','Spotify':'#1DB954','Plex':'#E5A00D','Hulu':'#1CE783','Prime Video':'#00A8E1','Max':'#7B2BF9','Apple TV':'#3A3A3C','Peacock':'#05AC3F','Paramount+':'#0064FF'};
-const APP_DEFAULT = ['Netflix','YouTube','Disney+','Spotify','Plex'];
+const APP_CAT = {'Netflix':'#E50914','YouTube':'#FF0000','YouTube TV':'#FF0000','Disney+':'#113CCF','Spotify':'#1DB954','Plex':'#E5A00D','Hulu':'#1CE783','Prime Video':'#00A8E1','Max':'#7B2BF9','HBO Max':'#7B2BF9','Apple TV':'#3A3A3C','Peacock':'#05AC3F','Paramount+':'#0064FF','Showtime':'#C10000','STARZ':'#000000','ESPN':'#D50A0A'};
+const APP_DEFAULT = ['Netflix','YouTube','YouTube TV','Disney+','Showtime'];
+const APP_MAX = 8;
 // configurable top-bar status chips (right zone)
 const HEADER_ITEMS = {
   user:            {label:'User logged in', icon:'account', txt:'Ben', color:'var(--t2)'},
@@ -567,7 +568,7 @@ function renderInspector(){ const el=document.getElementById('insp'); const c=se
     const al=el.querySelector('#applist');
     Object.keys(APP_CAT).forEach(nm=>{ const on=c.apps.includes(nm); const r=document.createElement('div'); r.className='erow'+(on?' on':'');
       r.innerHTML=`<span style="min-width:0;overflow:hidden;text-overflow:ellipsis"><span style="display:inline-block;width:14px;height:14px;border-radius:4px;background:${APP_CAT[nm]};margin-right:8px;vertical-align:middle"></span>${nm}</span><span class="mdi mdi-${on?'check-circle':'plus-circle-outline'}" style="color:${on?'var(--teal)':'var(--t2)'}"></span>`;
-      r.onclick=()=>{ const i=c.apps.indexOf(nm); if(i>=0) c.apps.splice(i,1); else { if(c.apps.length>=5){toast('Up to 5 apps');return;} c.apps.push(nm); } renderGrid(); renderInspector(); };
+      r.onclick=()=>{ const i=c.apps.indexOf(nm); if(i>=0) c.apps.splice(i,1); else { if(c.apps.length>=APP_MAX){toast('Up to '+APP_MAX+' apps');return;} c.apps.push(nm); } renderGrid(); renderInspector(); };
       al.appendChild(r); });
     el.querySelector('#fName').oninput=(e)=>{c.name=e.target.value; renderGrid();};
     el.querySelector('#delCard').onclick=()=>{ const a=curCards(); a.splice(a.indexOf(c),1); sel=null; renderGrid(); renderInspector(); };
