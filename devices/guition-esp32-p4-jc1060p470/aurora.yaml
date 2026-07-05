@@ -83,6 +83,11 @@ esp32:
     advanced:
       enable_idf_experimental_features: true
       execute_from_psram: true
+      # ESPHome runs setup()/loop() on "loopTask" (a STATIC stack array). The default
+      # 8192 overflowed on large configurator layouts (100+ cards -> a ~10KB generated
+      # setup() frame) causing a boot-loop "Stack protection fault". 32768 is the max
+      # ESPHome allows; static so it can't fail to allocate at runtime.
+      loop_task_stack_size: 32768
     # Board-specific options carried over from the proven stock firmware.
     # The ESP_HOSTED mempool/SPIRAM + stack settings are required or the C6
     # WiFi init fails ("HS_MP: mempool create failed: no mem") and boot-loops.
