@@ -195,6 +195,7 @@ h3.sec{font-size:11px;letter-spacing:1.4px;text-transform:uppercase;color:var(--
   <span class="pill"><span class="dot" id="cdot"></span><span id="cstat">not connected</span></span>
   <div class="sp"></div>
   <button class="btn ghost" id="tplBtn">Templates</button>
+  <button class="btn ghost" id="verBtn">Versions</button>
   <button class="btn ghost" id="saveBtn">Save</button>
   <button class="btn amber" id="flashBtn">Build &amp; Flash</button>
   <button class="btn ghost" id="acctBtn" title="Change access password"><span class="mdi mdi-key-variant"></span></button>
@@ -725,6 +726,59 @@ function openTemplates(){ const mbox=document.getElementById('mbox');
     d.onclick=()=>{ curPageInit=null; L=TEMPLATES[name](); curPage=curPageInit||Object.keys(L.pages)[0]; curSub=0; sel=null; closeModal(); renderAll(); toast('Loaded template'); }; t.appendChild(d); });
   document.getElementById('modal').style.display='flex'; mbox.querySelector('#mCancel').onclick=closeModal; }
 
+// Normalize a page object (from a restored version or an applied template) so it
+// has the fields the renderer expects — mirrors boot()'s per-page fixups.
+function normPage(p){ if(typeof p.header!=='object'||p.header===null) p.header=defHeader(p.header===true);
+  if(!Array.isArray(p.header.right)) p.header.right=['weather_current','secured']; if(!p.header.left) p.header.left='greeting';
+  if(!Array.isArray(p.subpages)||!p.subpages.length) p.subpages=[[]];
+  p.subpages.forEach(sp=>sp.forEach(c=>{ if(C[c.ck]&&C[c.ck].multi&&!c.entities)c.entities=[]; if(c.ck==='shortcuts'&&!c.shortcuts)c.shortcuts=[]; }));
+  if(!p.title) p.title='Page'; return p; }
+
+// Insert an applied page template as a NEW page (+ nav item if there's room).
+function insertPageTemplate(page,name){ const pg=normPage(JSON.parse(JSON.stringify(page)));
+  const b=(pg.title||name||'page').toLowerCase().replace(/[^a-z0-9]+/g,'_').replace(/^_|_$/g,'')||'page';
+  let key=b, i=2; while(L.pages[key]){ key=b+'_'+i; i++; }
+  L.pages[key]=pg;
+  if(L.nav.length<7){ L.nav.push({id:uid(),icon:'view-dashboard-variant',label:pg.title||name,page:key}); toast('Inserted “'+name+'” as a new page ✓'); }
+  else{ toast('Page added — nav is full (7), wire it up manually'); }
+  curPage=key; curSub=0; sel=null; closeModal(); renderAll(); }
+
+async function versionsModal(){ const mbox=document.getElementById('mbox');
+  const esc=s=>String(s==null?'':s).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+  const pt=(L.pages[curPage]&&L.pages[curPage].title)||curPage;
+  mbox.innerHTML=`<h2>Versions &amp; page templates</h2>
+    <h3 class="sec">Dashboard versions</h3>
+    <p class="muted" style="margin:2px 0 8px;font-size:12px">Snapshot the whole dashboard so you can revert to it later.</p>
+    <div style="display:flex;gap:6px"><input id="verName" placeholder="Name this version (e.g. before-redesign)" style="flex:1"><button class="btn" id="verSave">Save current</button></div>
+    <div id="verList" style="margin:10px 0 4px;max-height:200px;overflow:auto"></div>
+    <h3 class="sec" style="margin-top:16px">Page templates</h3>
+    <p class="muted" style="margin:2px 0 8px;font-size:12px">Save a page's buildout to reuse on other pages or dashboards.</p>
+    <div style="display:flex;gap:6px"><input id="tplName" placeholder="Name this page template" style="flex:1"><button class="btn" id="tplSave">Save “${esc(pt)}”</button></div>
+    <div id="tplList" style="margin:10px 0 4px;max-height:200px;overflow:auto"></div>
+    <div class="mfoot"><button class="btn ghost" id="mCancel">Close</button></div>`;
+  document.getElementById('modal').style.display='flex'; mbox.querySelector('#mCancel').onclick=closeModal;
+  const P={method:'POST',headers:{'Content-Type':'application/json'}};
+  const post=(u,o)=>j(u,{...P,body:JSON.stringify(o)});
+  const row=(it,btns)=>{ const d=document.createElement('div'); d.className='pitem'; d.style.marginBottom='6px';
+    d.innerHTML=`<div style="flex:1;min-width:0"><div class="nm" style="white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${esc(it.name)}</div><div class="muted" style="font-size:11px">${esc(it.created||'')}</div></div><div style="display:flex;gap:6px;flex:none"></div>`;
+    const bar=d.querySelector('div:last-child'); btns.forEach(([lbl,cls,fn])=>{ const b=document.createElement('button'); b.className=cls; b.style.padding='7px 10px'; b.innerHTML=lbl; b.onclick=fn; bar.appendChild(b); }); return d; };
+  async function refreshVer(){ const el=mbox.querySelector('#verList'); let items=[]; try{items=(await j('/api/versions')).items||[];}catch(e){}
+    el.innerHTML=''; if(!items.length){ el.innerHTML='<div class="muted" style="font-size:12px">No saved versions yet.</div>'; return; }
+    items.forEach(it=>el.appendChild(row(it,[
+      ['Restore','btn',async()=>{ if(!confirm('Restore “'+it.name+'”? This replaces the current dashboard.'))return; const r=await post('/api/versions/restore',{id:it.id}); L=r.layout; Object.values(L.pages).forEach(normPage); curPage=L.nav[0]?L.nav[0].page:Object.keys(L.pages)[0]; curSub=0; sel=null; closeModal(); renderAll(); toast('Restored “'+it.name+'” ✓'); }],
+      ['<span class="mdi mdi-pencil"></span>','btn ghost',async()=>{ const n=prompt('Rename version',it.name); if(n){ await post('/api/versions/rename',{id:it.id,name:n}); refreshVer(); } }],
+      ['<span class="mdi mdi-close"></span>','btn ghost',async()=>{ if(!confirm('Delete version “'+it.name+'”?'))return; await post('/api/versions/delete',{id:it.id}); refreshVer(); }] ]))); }
+  async function refreshTpl(){ const el=mbox.querySelector('#tplList'); let items=[]; try{items=(await j('/api/page-templates')).items||[];}catch(e){}
+    el.innerHTML=''; if(!items.length){ el.innerHTML='<div class="muted" style="font-size:12px">No page templates yet.</div>'; return; }
+    items.forEach(it=>el.appendChild(row(it,[
+      ['New page','btn',async()=>{ const r=await post('/api/page-templates/apply',{id:it.id}); insertPageTemplate(r.page,r.name); }],
+      ['Replace','btn ghost',async()=>{ if(!confirm('Replace the current page (“'+((L.pages[curPage]&&L.pages[curPage].title)||curPage)+'”) with “'+it.name+'”?'))return; const r=await post('/api/page-templates/apply',{id:it.id}); const pg=normPage(JSON.parse(JSON.stringify(r.page))); pg.title=L.pages[curPage].title; L.pages[curPage]=pg; curSub=0; sel=null; closeModal(); renderAll(); toast('Applied “'+it.name+'” ✓'); }],
+      ['<span class="mdi mdi-pencil"></span>','btn ghost',async()=>{ const n=prompt('Rename template',it.name); if(n){ await post('/api/page-templates/rename',{id:it.id,name:n}); refreshTpl(); } }],
+      ['<span class="mdi mdi-close"></span>','btn ghost',async()=>{ if(!confirm('Delete template “'+it.name+'”?'))return; await post('/api/page-templates/delete',{id:it.id}); refreshTpl(); }] ]))); }
+  mbox.querySelector('#verSave').onclick=async()=>{ await post('/api/versions/save',{name:mbox.querySelector('#verName').value,layout:L}); mbox.querySelector('#verName').value=''; refreshVer(); toast('Version saved ✓'); };
+  mbox.querySelector('#tplSave').onclick=async()=>{ await post('/api/page-templates/save',{name:mbox.querySelector('#tplName').value,page:L.pages[curPage]}); mbox.querySelector('#tplName').value=''; refreshTpl(); toast('Page template saved ✓'); };
+  refreshVer(); refreshTpl(); }
+
 async function logout(){ try{ await j('/api/logout',{method:'POST',headers:{'Content-Type':'application/json'},body:'{}'}); }catch(e){} location.reload(); }
 function accountModal(){ const mbox=document.getElementById('mbox');
   mbox.innerHTML=`<h2>Change access password</h2><p>This password gates the whole configurator. Default is “Admin”.</p>
@@ -771,6 +825,7 @@ async function boot(){ try{ L=await j('/api/layout'); if(!L||!L.pages||!Object.k
   document.getElementById('connect').onclick=connect; document.getElementById('saveBtn').onclick=save;
   document.getElementById('flashBtn').onclick=flash; document.getElementById('tplBtn').onclick=openTemplates;
   document.getElementById('lockBtn').onclick=logout; document.getElementById('acctBtn').onclick=accountModal;
+  document.getElementById('verBtn').onclick=versionsModal;
   document.getElementById('grid').addEventListener('click',(e)=>{ if(e.target.classList.contains('gcell')&&!placing){ sel=null; renderInspector(); markSel(); }});
   if(cfg.has_token||cfg.ha_url) connect();
 }

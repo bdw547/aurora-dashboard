@@ -25,3 +25,5 @@ devices/*/aurora-emul.yaml
 wifi-secrets*.yaml
 wifi_secrets*.yaml
 aurora-build/lg_pointer_bridge/lg_pointer.local.py
+aurora-build/configurator/versions.json
+aurora-build/configurator/page_templates.json

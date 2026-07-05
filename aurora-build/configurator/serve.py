@@ -1038,6 +1038,64 @@ def write_layout(data):
     return True
 
 
+# --- saved dashboard versions + reusable page templates (local JSON stores) ---
+# Each store is {"items": [{id, name, created, data}]}. `data` is a whole layout
+# (versions) or a single page object (page templates). Lists return metadata only.
+import time as _time
+
+VERSIONS_JSON = os.path.join(HERE, "versions.json")
+PAGETPL_JSON = os.path.join(HERE, "page_templates.json")
+
+
+def _read_store(path):
+    try:
+        with open(path, encoding="utf-8") as f:
+            d = json.load(f)
+        if isinstance(d, dict) and isinstance(d.get("items"), list):
+            return d
+    except Exception:  # noqa: BLE001
+        pass
+    return {"items": []}
+
+
+def _write_store(path, d):
+    with open(path, "w", encoding="utf-8") as f:
+        json.dump(d, f, indent=2)
+
+
+def _store_meta(items):
+    return [{"id": it.get("id"), "name": it.get("name"), "created": it.get("created", "")} for it in items]
+
+
+def _store_add(path, name, data, fallback):
+    st = _read_store(path)
+    it = {"id": _secrets.token_hex(4), "name": (name or "").strip() or fallback,
+          "created": _time.strftime("%Y-%m-%d %H:%M"), "data": data}
+    st["items"].append(it)
+    _write_store(path, st)
+    return it
+
+
+def _store_find(path, sid):
+    return next((x for x in _read_store(path)["items"] if x.get("id") == sid), None)
+
+
+def _store_rename(path, sid, name):
+    st = _read_store(path)
+    it = next((x for x in st["items"] if x.get("id") == sid), None)
+    if it and (name or "").strip():
+        it["name"] = name.strip()
+        _write_store(path, st)
+    return bool(it)
+
+
+def _store_delete(path, sid):
+    st = _read_store(path)
+    st["items"] = [x for x in st["items"] if x.get("id") != sid]
+    _write_store(path, st)
+    return True
+
+
 # --- admin config + auth (config.json holds HA url/token + panel IP; gitignored) ---
 import hashlib as _hashlib
 import secrets as _secrets
@@ -1255,6 +1313,10 @@ class H(BaseHTTPRequestHandler):
             import glob as _glob
             ports = sorted(_glob.glob("/dev/ttyACM*") + _glob.glob("/dev/ttyUSB*"))
             return self._send(200, json.dumps({"serial": ports}))
+        if self.path == "/api/versions":
+            return self._send(200, json.dumps({"items": _store_meta(_read_store(VERSIONS_JSON)["items"])}))
+        if self.path == "/api/page-templates":
+            return self._send(200, json.dumps({"items": _store_meta(_read_store(PAGETPL_JSON)["items"])}))
         return self._send(404, "{}")
 
     def do_POST(self):
@@ -1327,6 +1389,35 @@ class H(BaseHTTPRequestHandler):
                 if not FLASH["running"]:
                     threading.Thread(target=flash_job, args=(dev, tgt), daemon=True).start()
                 return self._send(200, json.dumps({"started": True}))
+            # --- dashboard versions (full-layout snapshots) ---
+            if self.path == "/api/versions/save":
+                it = _store_add(VERSIONS_JSON, d.get("name"), d.get("layout") or read_layout(),
+                                "Version " + _time.strftime("%Y-%m-%d %H:%M"))
+                return self._send(200, json.dumps({"ok": True, "id": it["id"], "name": it["name"], "created": it["created"]}))
+            if self.path == "/api/versions/restore":
+                it = _store_find(VERSIONS_JSON, d.get("id"))
+                if not it:
+                    return self._send(404, json.dumps({"error": "version not found"}))
+                write_layout(it["data"])                 # make the snapshot the active layout
+                return self._send(200, json.dumps({"ok": True, "layout": it["data"]}))
+            if self.path == "/api/versions/rename":
+                return self._send(200, json.dumps({"ok": _store_rename(VERSIONS_JSON, d.get("id"), d.get("name"))}))
+            if self.path == "/api/versions/delete":
+                return self._send(200, json.dumps({"ok": _store_delete(VERSIONS_JSON, d.get("id"))}))
+            # --- reusable page templates (single-page buildouts) ---
+            if self.path == "/api/page-templates/save":
+                it = _store_add(PAGETPL_JSON, d.get("name"), d.get("page") or {},
+                                "Page " + _time.strftime("%Y-%m-%d %H:%M"))
+                return self._send(200, json.dumps({"ok": True, "id": it["id"], "name": it["name"]}))
+            if self.path == "/api/page-templates/apply":
+                it = _store_find(PAGETPL_JSON, d.get("id"))
+                if not it:
+                    return self._send(404, json.dumps({"error": "template not found"}))
+                return self._send(200, json.dumps({"ok": True, "name": it["name"], "page": it["data"]}))
+            if self.path == "/api/page-templates/rename":
+                return self._send(200, json.dumps({"ok": _store_rename(PAGETPL_JSON, d.get("id"), d.get("name"))}))
+            if self.path == "/api/page-templates/delete":
+                return self._send(200, json.dumps({"ok": _store_delete(PAGETPL_JSON, d.get("id"))}))
         except Exception as e:  # noqa
             return self._send(500, json.dumps({"error": str(e)}))
         return self._send(404, "{}")
