@@ -1921,7 +1921,8 @@ KEEP = ["substitutions", "esphome", "esp32", "psram", "esp_ldo", "esp32_hosted",
         "wifi", "api", "ota", "safe_mode", "logger", "web_server", "output", "light",
         "external_components", "i2c", "touchscreen", "display", "http_request",
         "image", "font", "globals", "number", "button", "time",
-        "ov02c10_support", "esp_video_camera"]   # onboard camera (HA entity + RTSP :8554)
+        "ov02c10_support", "esp_video_camera",   # onboard camera (HA entity + RTSP :8554)
+        "drv2605"]   # DRV2605L haptic driver (id: haptic)
 
 
 def scrub_lvgl_actions(text):

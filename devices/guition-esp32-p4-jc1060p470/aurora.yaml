@@ -242,6 +242,12 @@ button:
     name: "Restart Panel"
     id: btn_restart_panel
     icon: "mdi:restart"
+  - platform: template
+    name: "Test buzz"
+    id: btn_test_buzz
+    icon: "mdi:vibrate"
+    on_press:
+      - lambda: 'id(haptic).play(1);'   # DRV2605 effect 1 = Strong Click
 
 # --- I2C + GT911 touch ---
 # --- On-board camera (OV02C10 MIPI-CSI) -------------------------------------
@@ -257,9 +263,16 @@ external_components:
   - source:
       type: local
       path: ../../components
-    components: [esp_video_camera, ov02c10_support]
+    components: [esp_video_camera, ov02c10_support, drv2605]
 
 ov02c10_support:
+
+# --- DRV2605L haptic driver (Pimoroni LRA breakout, I2C 0x5A on bus_a) ---
+# On-board linear resonant actuator. `id(haptic).play(n)` fires ROM effect n.
+drv2605:
+  id: haptic
+  i2c_id: bus_a
+  actuator: lra
 
 esp_video_camera:
   id: aurora_cam
