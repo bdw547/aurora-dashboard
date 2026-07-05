@@ -195,6 +195,11 @@ h3.sec{font-size:11px;letter-spacing:1.4px;text-transform:uppercase;color:var(--
   <button class="btn ghost" id="connect">Connect</button>
   <span class="pill"><span class="dot" id="cdot"></span><span id="cstat">not connected</span></span>
   <div class="sp"></div>
+  <div id="capWrap" title="Device capacity — an estimate of how full the generated firmware is vs the panel's memory limit. Too many cards can overflow the panel's memory and stop it booting." style="display:flex;align-items:center;gap:6px;font-size:11px;color:var(--t2)">
+    <span id="capTxt">Capacity</span>
+    <div style="width:92px;height:8px;background:#10121a;border:1px solid var(--hair);border-radius:5px;overflow:hidden"><div id="capBar" style="height:100%;width:0%;background:var(--teal);transition:width .2s,background .2s"></div></div>
+    <span id="capPct" style="min-width:30px">0%</span>
+  </div>
   <button class="btn ghost" id="tplBtn">Templates</button>
   <button class="btn ghost" id="verBtn">Versions</button>
   <button class="btn ghost" id="saveBtn">Save</button>
@@ -611,7 +616,33 @@ function renderInspector(){ const el=document.getElementById('insp'); const c=se
 function fillRooms(){ const s=document.getElementById('instRoom'); if(!s) return;
   Object.values(AREAS).forEach(a=>{ const o=document.createElement('option'); o.value=a.name; o.textContent=a.name; if(L.install_room===a.name)o.selected=true; s.appendChild(o); });
   s.onchange=(e)=>{ L.install_room=e.target.value; renderHeader(); }; }
-function renderAll(){ ROWS=rowsFor(); renderNav(); renderTabs(); renderRail(); renderHeader(); renderGrid(); renderInspector(); }
+// ---- Device capacity meter ----
+// Weighted "load score" ~ how big the generated setup() gets. Heavy cards pre-build
+// many widgets/rows. Calibrated so Ben's known-good 116-card layout (score ~324,
+// boots fine on the 32KB loopTask stack) sits at ~54%. Exceeding ~100% risks a
+// boot-loop stack overflow — warn well before that. It's an ESTIMATE, not exact.
+const LOAD_W={ spotify_tracks:8, tvremote:8, spotify_speakers:5, speakers:5,
+  songlist:4, sonos_library:4, shortcuts:4, volumes:4, group:4, lightgroup:4,
+  media:3, spotify:3, sonos:3, camera:3, climate:2, weather:2, cover:2, outletgroup:2,
+  spotify_playlists:2, playlist:2, sonos_fav:2, volume:2, tv_dpad:2, tv_transport:2,
+  tv_channel:2, tv_volume:2, tv_trackpad:2, tv_sources:2, sonos_sources:2 };
+const LOAD_DEFAULT=1, LOAD_BUDGET=600, LOAD_WARN=0.75, LOAD_DANGER=0.90;
+function layoutLoad(){ let s=0; if(!L||!L.pages) return 0;
+  for(const k in L.pages){ for(const sp of (L.pages[k].subpages||[])){ for(const c of sp){
+    s+=LOAD_W[c.ck]||LOAD_DEFAULT; s+=0.3*((c.entities&&c.entities.length)||0); } } }
+  return s; }
+function capacityPct(){ return layoutLoad()/LOAD_BUDGET; }
+function renderCapacity(){ const bar=document.getElementById('capBar'); if(!bar) return;
+  const f=capacityPct(), pct=Math.round(f*100);
+  const col=f>=LOAD_DANGER?'var(--red)':(f>=LOAD_WARN?'#E6A700':'var(--teal)');
+  bar.style.width=Math.min(100,pct)+'%'; bar.style.background=col;
+  const lbl=document.getElementById('capPct'); lbl.textContent=pct+'%'; lbl.style.color=col;
+  const txt=document.getElementById('capTxt'); txt.textContent=f>=LOAD_DANGER?'⚠ Capacity':'Capacity'; txt.style.color=f>=LOAD_WARN?col:'var(--t2)';
+  document.getElementById('capWrap').title = f>=LOAD_DANGER
+      ? 'DANGER ('+pct+'%): this layout is at/over the panel memory limit and may fail to boot (stack overflow / boot-loop). Remove some cards or pages before flashing.'
+    : f>=LOAD_WARN ? 'Getting large ('+pct+'%): approaching the panel memory limit. Still OK to flash, but avoid adding many more heavy cards (media, TV remote, track/speaker lists).'
+    : 'Device capacity ('+pct+'%): estimated fullness of the generated firmware vs the panel memory limit.'; }
+function renderAll(){ ROWS=rowsFor(); renderNav(); renderTabs(); renderRail(); renderHeader(); renderGrid(); renderInspector(); renderCapacity(); }
 
 function attachDrag(el,c){ el.addEventListener('pointerdown',(e)=>{ if(e.target.closest('button')) return;
   sel=c.id; renderInspector(); markSel(); const grid=document.getElementById('grid');
@@ -809,7 +840,10 @@ async function scanSerial(){ const chk=document.getElementById('usbChk'), lbl=do
   chk.disabled=!has; if(!has){ chk.checked=false; } else if(wasNone){ chk.checked=true; }
   lbl.textContent=has?('USB ('+SERIAL_DEV.replace('/dev/','')+')'):'No USB panel';
   wrap.style.opacity=has?'1':'.55'; return has; }
-async function flash(){ await save();
+async function flash(){
+  const f=capacityPct();
+  if(f>=LOAD_DANGER && !confirm('This layout is at '+Math.round(f*100)+'% of the estimated panel memory capacity. It may fail to boot (stack overflow / boot-loop). Remove some cards or pages first, or flash anyway?')) return;
+  await save();
   const useSerial=SERIAL_DEV && document.getElementById('usbChk').checked;
   const device=useSerial?SERIAL_DEV:document.getElementById('panip').value.trim();
   if(!device){ toast('Enter the panel IP, or plug in USB for serial'); return; }
