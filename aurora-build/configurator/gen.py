@@ -1196,12 +1196,24 @@ def c_spot_playlists(card, x, y, w, h, base):
 SPOT_MAX_TRACKS = 50
 
 
+def _card_rows(card, default, hi, lo=4):
+    """Per-card pre-built row count (builder 'rows' option), clamped. Fewer rows =
+    lighter generated firmware (see the builder capacity meter); more rows = longer
+    lists. lo floor keeps a usable list; hi caps it (tracks: SpotifyPlus fetch = 50)."""
+    try:
+        n = int(card.get("rows"))
+    except (TypeError, ValueError):
+        n = default
+    return max(lo, min(hi, n))
+
+
 def c_spot_tracks(card, x, y, w, h, base):
     """Spotify song list: a scrolling column of tap-to-play rows bound to
     sensor.aurora_spotify_tracks (names, one "Track — Artist" per line). Tapping
     row i plays position i within the loaded playlist (g_spot_ctx) via the
-    aurora_spotify_play_track script. Rows are pre-built (hand-built sng_0..49
-    pattern) and shown/hidden by the populate lambda."""
+    aurora_spotify_play_track script. Rows are pre-built and shown/hidden by the
+    populate lambda; the count is the per-card 'rows' option (default/cap 50)."""
+    n = _card_rows(card, SPOT_MAX_TRACKS, SPOT_MAX_TRACKS)
     inner = ic("spotify_tracks", color="0x1DB954")
     inner += lbl("TRACKS \\u00B7 TAP TO PLAY", 50, 18, "f_micro", "0x868CA0")
     rh, gap = 44, 6
@@ -1212,7 +1224,7 @@ def c_spot_tracks(card, x, y, w, h, base):
               "                  bg_opa: 0\n                  border_width: 0\n                  radius: 0\n                  pad_all: 0\n"
               % (base, list_y, w - 28, list_h))
     inner += "                  widgets:\n"
-    for i in range(SPOT_MAX_TRACKS):
+    for i in range(n):
         inner += ("                    - button:\n                        id: %s_r%d\n                        x: 0\n                        y: %d\n"
                   "                        width: %d\n                        height: %d\n"
                   "                        bg_color: 0x0F1117\n                        radius: 8\n                        pad_all: 0\n                        scrollable: false\n"
@@ -1227,16 +1239,16 @@ def c_spot_tracks(card, x, y, w, h, base):
                   % (base, i, i * (rh + gap), w - 32, rh, base, i, w - 56, i))
     inner += ("                    - label: { id: %s_empty, text: \"Pick a playlist to load songs\", align: top_mid, y: 12, text_font: f_small, text_color: 0x5D6470 }\n" % base)
     # populate rows from the newline-joined names (hand-built array-split pattern)
-    larr = ", ".join("id(%s_l%d)" % (base, i) for i in range(SPOT_MAX_TRACKS))
-    rarr = ", ".join("id(%s_r%d)" % (base, i) for i in range(SPOT_MAX_TRACKS))
+    larr = ", ".join("id(%s_l%d)" % (base, i) for i in range(n))
+    rarr = ", ".join("id(%s_r%d)" % (base, i) for i in range(n))
     ts = ["  - platform: homeassistant\n    id: ha_" + base + "_tn\n    entity_id: sensor.aurora_spotify_tracks\n    attribute: names\n    on_value:\n"
           "      then:\n"
           "        - lambda: |-\n"
           "            const std::string &str = x;\n"
-          "            lv_obj_t* L[" + str(SPOT_MAX_TRACKS) + "] = { " + larr + " };\n"
-          "            lv_obj_t* R[" + str(SPOT_MAX_TRACKS) + "] = { " + rarr + " };\n"
+          "            lv_obj_t* L[" + str(n) + "] = { " + larr + " };\n"
+          "            lv_obj_t* R[" + str(n) + "] = { " + rarr + " };\n"
           "            int idx = 0; size_t st = 0;\n"
-          "            for (size_t i = 0; i <= str.size() && idx < " + str(SPOT_MAX_TRACKS) + "; i++) {\n"
+          "            for (size_t i = 0; i <= str.size() && idx < " + str(n) + "; i++) {\n"
           "              if (i == str.size() || str[i] == '\\n') {\n"
           "                std::string tok = str.substr(st, i - st);\n"
           "                if (!tok.empty()) {\n"
@@ -1247,7 +1259,7 @@ def c_spot_tracks(card, x, y, w, h, base):
           "                st = i + 1;\n"
           "              }\n"
           "            }\n"
-          "            for (int j = idx; j < " + str(SPOT_MAX_TRACKS) + "; j++) lv_obj_add_flag(R[j], LV_OBJ_FLAG_HIDDEN);\n"
+          "            for (int j = idx; j < " + str(n) + "; j++) lv_obj_add_flag(R[j], LV_OBJ_FLAG_HIDDEN);\n"
           "            if (idx > 0) lv_obj_add_flag(id(" + base + "_empty), LV_OBJ_FLAG_HIDDEN);\n"
           "            else lv_obj_clear_flag(id(" + base + "_empty), LV_OBJ_FLAG_HIDDEN);\n"]
     return [card_obj(x, y, w, h, inner)], [], ts
@@ -1294,7 +1306,7 @@ def c_spot_speakers(card, x, y, w, h, base):
     source_list arrives as a quoted list string ("['Kitchen', 'Office', ...]"),
     so rows are parsed by pulling each quoted token (single- or double-quoted)."""
     e = card.get("entity") or "media_player.spotifyplus_ben_walton"
-    n = SPOT_MAX_SPEAKERS
+    n = _card_rows(card, SPOT_MAX_SPEAKERS, 24)
     inner = ic("speakers", color="0x1DB954")
     inner += lbl("PLAY ON \\u00B7 TAP A SPEAKER", 50, 18, "f_micro", "0x868CA0")
     # refresh: re-poll the media_player so a newly-woken speaker shows up

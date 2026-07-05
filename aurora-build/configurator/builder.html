@@ -603,6 +603,7 @@ function renderInspector(){ const el=document.getElementById('insp'); const c=se
     <div class="field"><label>Name</label><input id="fName" value="${(c.name||'').replace(/"/g,'&quot;')}"></div>
     <div class="field"><label>Entity (${def.domain})</label><div style="display:flex;gap:6px"><input id="fEnt" value="${c.entity||''}" placeholder="none" style="flex:1"><button class="btn ghost" id="pickEnt" style="padding:8px 10px">Pick</button></div></div>
     ${def.playlistField?`<div class="field"><label>${c.ck==='sonos_fav'?'Favorite':'Playlist'} name (used as the button label)</label><input id="fPl" value="${(c.pl||'').replace(/"/g,'&quot;')}" placeholder="e.g. Liked Songs"></div>`:''}
+    ${ROW_CFG[c.ck]?`<div class="field"><label>List rows (default ${ROW_CFG[c.ck].def}, max ${ROW_CFG[c.ck].max}) — fewer = lighter firmware</label><input id="fRows" type="number" min="4" max="${ROW_CFG[c.ck].max}" value="${cardRows(c)}"></div>`:''}
     <div class="field"><label>Size (span)</label><div class="szrow" id="szrow"></div></div>
     <div class="field"><label>Position</label><div class="mono" style="font-size:12px;color:var(--t2)">col ${c.x}, row ${c.y} — drag on grid to move</div></div>
     <button class="btn ghost" id="delCard" style="width:100%;color:var(--red);border-color:#3a2422">Delete card</button>`;
@@ -611,6 +612,7 @@ function renderInspector(){ const el=document.getElementById('insp'); const c=se
   el.querySelector('#fEnt').onchange=(e)=>{c.entity=e.target.value; renderGrid();};
   el.querySelector('#pickEnt').onclick=()=>openEntityPicker(c.ck,c);
   { const pe=el.querySelector('#fPl'); if(pe) pe.oninput=(e)=>{c.pl=e.target.value; renderGrid();}; }
+  { const re=el.querySelector('#fRows'); if(re) re.oninput=(e)=>{ const v=parseInt(e.target.value,10); c.rows=isNaN(v)?undefined:v; renderCapacity(); }; }
   el.querySelector('#delCard').onclick=()=>{ const a=curCards(); a.splice(a.indexOf(c),1); sel=null; renderGrid(); renderInspector(); };
 }
 function fillRooms(){ const s=document.getElementById('instRoom'); if(!s) return;
@@ -621,15 +623,22 @@ function fillRooms(){ const s=document.getElementById('instRoom'); if(!s) return
 // many widgets/rows. Calibrated so Ben's known-good 116-card layout (score ~324,
 // boots fine on the 32KB loopTask stack) sits at ~54%. Exceeding ~100% risks a
 // boot-loop stack overflow — warn well before that. It's an ESTIMATE, not exact.
-const LOAD_W={ spotify_tracks:8, tvremote:8, spotify_speakers:5, speakers:5,
+const LOAD_W={ tvremote:8, speakers:5,
   songlist:4, sonos_library:4, shortcuts:4, volumes:4, group:4, lightgroup:4,
   media:3, spotify:3, sonos:3, camera:3, climate:2, weather:2, cover:2, outletgroup:2,
   spotify_playlists:2, playlist:2, sonos_fav:2, volume:2, tv_dpad:2, tv_transport:2,
   tv_channel:2, tv_volume:2, tv_trackpad:2, tv_sources:2, sonos_sources:2 };
+// Cards whose pre-built row count is a per-card 'rows' option. per = load per row,
+// set so the default count matches the old fixed weight (tracks 50->8, speakers 14->5),
+// so the meter's calibration is unchanged at defaults but drops as you trim rows.
+const ROW_CFG={ spotify_tracks:{def:50,max:50,per:0.16}, spotify_speakers:{def:14,max:24,per:0.357} };
 const LOAD_DEFAULT=1, LOAD_BUDGET=600, LOAD_WARN=0.75, LOAD_DANGER=0.90;
+function cardRows(c){ const cf=ROW_CFG[c.ck]; if(!cf) return null; let v=parseInt(c.rows,10); if(isNaN(v)) v=cf.def; return Math.max(4,Math.min(cf.max,v)); }
 function layoutLoad(){ let s=0; if(!L||!L.pages) return 0;
   for(const k in L.pages){ for(const sp of (L.pages[k].subpages||[])){ for(const c of sp){
-    s+=LOAD_W[c.ck]||LOAD_DEFAULT; s+=0.3*((c.entities&&c.entities.length)||0); } } }
+    const cf=ROW_CFG[c.ck];
+    if(cf){ s+=cardRows(c)*cf.per; }
+    else { s+=LOAD_W[c.ck]||LOAD_DEFAULT; s+=0.3*((c.entities&&c.entities.length)||0); } } } }
   return s; }
 function capacityPct(){ return layoutLoad()/LOAD_BUDGET; }
 function renderCapacity(){ const bar=document.getElementById('capBar'); if(!bar) return;
