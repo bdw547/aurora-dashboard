@@ -45,6 +45,15 @@ void DRV2605Component::play(uint8_t effect) {
   this->write_byte(REG_GO, 1);
 }
 
+void DRV2605Component::click() {
+  // Strength -> ROM effect: off / Strong Click 30% / 60% / 100% / Double Click.
+  static const uint8_t EFFECT[5] = {0, 3, 2, 1, 10};
+  uint8_t lvl = this->level_ > 4 ? 4 : this->level_;
+  if (EFFECT[lvl] == 0)
+    return;  // off
+  this->play(EFFECT[lvl]);
+}
+
 void DRV2605Component::dump_config() {
   ESP_LOGCONFIG(TAG, "DRV2605L haptic (%s):", this->lra_ ? "LRA" : "ERM");
   LOG_I2C_DEVICE(this);

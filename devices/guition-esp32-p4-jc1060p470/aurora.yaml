@@ -70,6 +70,7 @@ esphome:
       then:
         - lvgl.display.set_rotation: 0
         - script.execute: demo_watchdog
+        - lambda: 'id(haptic).set_level(id(g_haptic_level));'   # apply saved touch-feedback strength
 
 esp32:
   variant: esp32p4
@@ -307,11 +308,12 @@ touchscreen:
     interrupt_pin: GPIO21
     on_touch:
       # Haptic click on every touch/button press (skip the wake-from-sleep tap).
+      # Strength comes from g_haptic_level (Settings page); click() is a no-op when Off.
       - if:
           condition:
             lambda: 'return !id(g_screen_off);'
           then:
-            - lambda: 'id(haptic).play(1);'
+            - lambda: 'id(haptic).click();'
       - if:
           condition:
             lambda: 'return id(g_screen_off);'
@@ -2363,6 +2365,11 @@ globals:
     type: int
     restore_value: true
     initial_value: '80'
+  # Haptic touch-feedback strength: 0=off,1=low,2=med,3=high,4=max (Settings page).
+  - id: g_haptic_level
+    type: int
+    restore_value: true
+    initial_value: '3'
   - id: g_timeout_ms
     type: int
     restore_value: true

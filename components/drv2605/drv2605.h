@@ -18,8 +18,14 @@ class DRV2605Component : public Component, public i2c::I2CDevice {
   // Trigger one built-in effect (1 = "Strong Click"). Clamped to 1..123.
   void play(uint8_t effect);
 
+  // Touch-feedback strength: 0=off, 1=low, 2=med, 3=high, 4=max.
+  void set_level(uint8_t level) { this->level_ = level > 4 ? 4 : level; }
+  // Play the click for the current strength level (no-op when level 0 / off).
+  void click();
+
  protected:
   bool lra_{true};
+  uint8_t level_{3};  // default High
 };
 
 }  // namespace drv2605

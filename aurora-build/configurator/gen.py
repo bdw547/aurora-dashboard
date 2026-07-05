@@ -1751,7 +1751,10 @@ def gen_settings_page(layout):
     onload += ("        - lambda: |-\n"
                "            if (id(g_wake_presence)) lv_obj_add_state(id(set_motion), LV_STATE_CHECKED);\n"
                "            if (id(g_screensaver)) lv_obj_add_state(id(set_saver), LV_STATE_CHECKED);\n"
-               "            if (id(g_cam_wake)) lv_obj_add_state(id(set_cwake), LV_STATE_CHECKED);\n")
+               "            if (id(g_cam_wake)) lv_obj_add_state(id(set_cwake), LV_STATE_CHECKED);\n"
+               "            { lv_obj_t* HB[5] = { id(set_hap0),id(set_hap1),id(set_hap2),id(set_hap3),id(set_hap4) };\n"
+               "              lv_obj_t* HL[5] = { id(set_hap0_l),id(set_hap1_l),id(set_hap2_l),id(set_hap3_l),id(set_hap4_l) };\n"
+               "              for (int k=0;k<5;k++){ bool on=(k==id(g_haptic_level)); lv_obj_set_style_bg_color(HB[k], lv_color_hex(on?0x2ED5B8:0x0F1117),0); lv_obj_set_style_text_color(HL[k], lv_color_hex(on?0x06231D:0xC2C7D2),0); } }\n")
     w = "        - image: { src: img_aurora_bg, x: 0, y: 0 }\n"
     w += "        - label: { text: \"Settings\", x: 94, y: 18, text_font: f_h1, text_color: 0xF3F5F8 }\n"
     w += "        - label: { text: \"AURORA PANEL \\u00B7 10.0.0.174\", x: 94, y: 58, text_font: f_micro, text_color: 0x868CA0 }\n"
@@ -1775,6 +1778,23 @@ def gen_settings_page(layout):
                "                  on_click:\n                    - lambda: 'id(g_timeout_ms) = %d;'\n"
                % (i, 20 + i * (tbw + 8), tbw, ("0x2ED5B8" if sel else "0x0F1117"), lab, ("0x06231D" if sel else "0xC2C7D2"), ms))
     w += card_obj(94, 224, 448, 116, to)
+    # --- Haptics card: touch-feedback strength (Off/Low/Med/High/Max) ---
+    hlevels = [("Off", 0), ("Low", 1), ("Med", 2), ("High", 3), ("Max", 4)]
+    hbw = (448 - 40 - 4 * 8) // 5
+    hap = lbl("HAPTICS", 20, 16, "f_micro", "0x868CA0")
+    hap += lbl("Touch feedback", 20, 34, "f_title", "0xF3F5F8", height=26)
+    for i, (lab, lvl) in enumerate(hlevels):
+        body = ("id(g_haptic_level) = %d; id(haptic).set_level(%d);\n"
+                "                        lv_obj_t* HB[5] = { id(set_hap0),id(set_hap1),id(set_hap2),id(set_hap3),id(set_hap4) };\n"
+                "                        lv_obj_t* HL[5] = { id(set_hap0_l),id(set_hap1_l),id(set_hap2_l),id(set_hap3_l),id(set_hap4_l) };\n"
+                "                        for (int k=0;k<5;k++){ bool on=(k==id(g_haptic_level)); lv_obj_set_style_bg_color(HB[k], lv_color_hex(on?0x2ED5B8:0x0F1117),0); lv_obj_set_style_text_color(HL[k], lv_color_hex(on?0x06231D:0xC2C7D2),0); }\n"
+                "                        id(haptic).click();" % (lvl, lvl))
+        hap += ("              - button:\n                  id: set_hap%d\n                  x: %d\n                  y: 70\n                  width: %d\n                  height: 44\n"
+                "                  bg_color: 0x0F1117\n                  radius: 10\n                  pad_all: 0\n                  scrollable: false\n"
+                "                  widgets: [label: { id: set_hap%d_l, text: \"%s\", align: center, text_font: f_small, text_color: 0xC2C7D2 }]\n"
+                "                  on_click:\n                    - lambda: |-\n                        %s\n"
+                % (i, 20 + i * (hbw + 8), hbw, i, lab, body))
+    w += card_obj(94, 352, 448, 116, hap)
     # --- Behavior card: motion wake + screensaver ---
     beh = lbl("BEHAVIOR", 20, 16, "f_micro", "0x868CA0")
     beh += lbl("Motion wake", 20, 50, "f_body", "0xF3F5F8", height=22)
@@ -1792,7 +1812,7 @@ def gen_settings_page(layout):
           "            bg_color: 0x2a1414\n            radius: 14\n            scrollable: false\n"
           "            widgets: [label: { text: \"Restart Panel\", align: center, text_font: f_body, text_color: 0xF2685A }]\n"
           "            on_click: [button.press: btn_restart_panel]\n")
-    w += "        - label: { text: \"Guition JC1060P470 \\u00B7 web UI on :80\", x: 94, y: 356, text_font: f_small, text_color: 0x5D6470 }\n"
+    w += "        - label: { text: \"Guition JC1060P470 \\u00B7 web UI on :80\", x: 94, y: 576, text_font: f_small, text_color: 0x5D6470 }\n"
     return "    - id: page_settings\n      bg_color: 0x0A0B0F\n      scrollable: false\n%s      widgets:\n%s" % (onload, w)
 
 
