@@ -306,6 +306,12 @@ touchscreen:
     reset_pin: GPIO22
     interrupt_pin: GPIO21
     on_touch:
+      # Haptic click on every touch/button press (skip the wake-from-sleep tap).
+      - if:
+          condition:
+            lambda: 'return !id(g_screen_off);'
+          then:
+            - lambda: 'id(haptic).play(1);'
       - if:
           condition:
             lambda: 'return id(g_screen_off);'
