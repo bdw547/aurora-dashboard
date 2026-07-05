@@ -87,7 +87,7 @@ esp32:
       # 8192 overflowed on large configurator layouts (100+ cards -> a ~10KB generated
       # setup() frame) causing a boot-loop "Stack protection fault". 32768 is the max
       # ESPHome allows; static so it can't fail to allocate at runtime.
-      loop_task_stack_size: 32768
+      loop_task_stack_size: 20480   # was 32768; trimmed to free internal RAM for the C6 WiFi/SDIO RX buffers (fixes intermittent sdio_rx_get_buffer crash) while still clearing the ~10KB generated setup() frame
     # Board-specific options carried over from the proven stock firmware.
     # The ESP_HOSTED mempool/SPIRAM + stack settings are required or the C6
     # WiFi init fails ("HS_MP: mempool create failed: no mem") and boot-loops.
