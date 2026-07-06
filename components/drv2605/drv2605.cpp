@@ -13,7 +13,21 @@ static const uint8_t REG_LIBRARY = 0x03;   // effect library select
 static const uint8_t REG_WAVESEQ1 = 0x04;  // first effect in the sequence
 static const uint8_t REG_WAVESEQ2 = 0x05;  // 0 terminates the sequence
 static const uint8_t REG_GO = 0x0C;        // write 1 to fire the sequence
-static const uint8_t REG_FEEDBACK = 0x1A;  // bit7 N_ERM_LRA: 1 = LRA, 0 = ERM
+static const uint8_t REG_RATED_VOLTAGE = 0x16;
+static const uint8_t REG_OD_CLAMP = 0x17;      // overdrive clamp (max drive voltage)
+static const uint8_t REG_FEEDBACK = 0x1A;      // bit7 N_ERM_LRA: 1 = LRA, 0 = ERM
+static const uint8_t REG_CONTROL1 = 0x1B;      // bits4:0 DRIVE_TIME (LRA half-period target)
+static const uint8_t REG_OL_LRA_PERIOD = 0x20;
+
+// Tuning for the Pimoroni breakout's ELV1411A LRA: resonant freq 150 Hz, 2 Vrms.
+// The DRV2605 defaults assume ~205 Hz, so at 150 Hz it drives far off resonance
+// (weak/buzzy). DRIVE_TIME = half-period: (1/150/2 - 0.5ms)/0.1ms = 28 -> 0x9C
+// (keeps STARTUP_BOOST). OL_LRA_PERIOD = 6.667ms/98.46us = 68 -> 0x44.
+// RATED_VOLTAGE ~2 Vrms @150Hz -> 0x55; OD_CLAMP ~3.0 V -> 0x90.
+static const uint8_t LRA_RATED = 0x55;
+static const uint8_t LRA_ODCLAMP = 0x90;
+static const uint8_t LRA_CONTROL1 = 0x9C;
+static const uint8_t LRA_OL_PERIOD = 0x44;
 
 void DRV2605Component::setup() {
   // Wake out of standby into internal-trigger mode. This is the first write, so
@@ -27,9 +41,15 @@ void DRV2605Component::setup() {
     uint8_t fb = 0;
     this->read_byte(REG_FEEDBACK, &fb);
     this->write_byte(REG_FEEDBACK, fb | 0x80);  // N_ERM_LRA = 1 (linear actuator)
-    // Auto-calibrate to the actuator's resonant frequency + braking so effects
-    // are a crisp snap instead of an off-resonance buzz. Uses TI default rated/
-    // OD-clamp voltages; ~1s, blocking (runs once at boot).
+    // Tell the driver the ELV1411A's real parameters (150 Hz / 2 Vrms) BEFORE
+    // calibrating, so it drives on-resonance (strong) and auto-cal locks the
+    // right frequency + braking (crisp) instead of the ~205 Hz default (buzzy).
+    this->write_byte(REG_RATED_VOLTAGE, LRA_RATED);
+    this->write_byte(REG_OD_CLAMP, LRA_ODCLAMP);
+    this->write_byte(REG_CONTROL1, LRA_CONTROL1);
+    this->write_byte(REG_OL_LRA_PERIOD, LRA_OL_PERIOD);
+    // Auto-calibrate braking/back-EMF around the 150 Hz drive time set above.
+    // ~1s, blocking (runs once at boot).
     this->write_byte(REG_MODE, 0x07);  // auto-calibration mode
     this->write_byte(REG_GO, 1);
     uint32_t start = millis();
