@@ -165,6 +165,13 @@ h3.sec{font-size:11px;letter-spacing:1.4px;text-transform:uppercase;color:var(--
 .szrow{display:flex;flex-wrap:wrap;gap:6px}
 .szb{padding:6px 9px;border-radius:8px;background:#0E0F14;border:1px solid var(--bd);font-size:12px;color:var(--t2);cursor:pointer}
 .szb.on{background:var(--teal);color:var(--ink);font-weight:700;border-color:var(--teal)}
+.ipick input{width:100%;background:#0F1117;border:1px solid var(--bd);border-radius:9px;color:var(--tx);padding:8px 10px;font:inherit;font-size:13px;margin-bottom:8px}
+.ipgrid{display:grid;grid-template-columns:repeat(auto-fill,minmax(42px,1fr));gap:6px;max-height:264px;overflow:auto;padding:2px}
+.ipgrid .ic{display:flex;align-items:center;justify-content:center;height:42px;border-radius:8px;background:#0E0F14;border:1px solid var(--bd);color:var(--t2);cursor:pointer}
+.ipgrid .ic:hover{border-color:var(--teal);color:var(--tx)}
+.ipgrid .ic.on{background:var(--teal);color:var(--ink);border-color:var(--teal)}
+.ipgrid .ic .mdi{font-size:21px}
+.iphint{font-size:11px;color:var(--t3);margin-top:6px}
 .empty{color:var(--t3);font-size:13px;line-height:1.6;padding:14px 0}
 .tgl{display:flex;align-items:center;justify-content:space-between;background:#0E0F14;border:1px solid var(--bd);border-radius:10px;padding:10px 12px;margin-bottom:12px;cursor:pointer}
 .tgl .sw{width:46px;height:26px;border-radius:13px;background:#2a2e38;position:relative}
@@ -293,6 +300,45 @@ const CATS = [
 const GICON={light:['lightbulb','var(--amber)'],switch:['toggle-switch','var(--teal)'],lock:['lock','var(--teal)'],binary_sensor:['motion-sensor','var(--blue)'],sensor:['thermometer','var(--red)'],cover:['blinds-horizontal','var(--blue)'],fan:['fan','var(--teal)'],person:['account','var(--blue)'],climate:['thermostat','var(--amber)'],media_player:['speaker','var(--teal)']};
 const GVAL={light:'On',switch:'On',lock:'Locked',binary_sensor:'Clear',sensor:'72°',cover:'Open',fan:'Med',person:'Home',climate:'72°',media_player:'Idle'};
 const NAV_ICONS = ['home-variant','sofa','lightbulb','thermostat','music','shield-home','wifi','cog','blinds','camera','weather-partly-cloudy','speaker','bed','silverware-fork-knife','desk','tree','door','stairs','garage','television','remote-tv','playlist-music'];
+// --- comprehensive icon library: the full ~7,400 Material Design Icons ---
+// Lazy-loaded once from /api/icons (the same dataset gen.py embeds on the device).
+let MDI_ICONS=null, MDI_LOADING=null;
+function loadIcons(){
+  if(MDI_ICONS) return Promise.resolve(MDI_ICONS);
+  if(MDI_LOADING) return MDI_LOADING;
+  MDI_LOADING=fetch('/api/icons').then(r=>r.json()).then(d=>{MDI_ICONS=d.icons||[];return MDI_ICONS;})
+    .catch(()=>{MDI_ICONS=NAV_ICONS.map(n=>({n,c:'',k:''}));return MDI_ICONS;});
+  return MDI_LOADING;
+}
+const ICON_CAP=300;  // cap rendered tiles per search so the grid stays snappy
+// Mount a searchable icon picker into `host`; calls onPick(name) on selection.
+function mountIconPicker(host, current, onPick){
+  host.className='ipick';
+  host.innerHTML='<input type="text" placeholder="Search 7,000+ icons… (lamp, fan, lock…)" spellcheck="false"><div class="ipgrid"></div><div class="iphint"></div>';
+  const inp=host.querySelector('input'), grid=host.querySelector('.ipgrid'), hint=host.querySelector('.iphint');
+  let sel=current;
+  function tiles(names, note){
+    grid.innerHTML='';
+    names.forEach(name=>{ const d=document.createElement('div'); d.className='ic'+(name===sel?' on':''); d.title=name;
+      d.innerHTML=`<span class="mdi mdi-${name}"></span>`;
+      d.onclick=()=>{ sel=name; onPick(name); grid.querySelectorAll('.ic.on').forEach(x=>x.classList.remove('on')); d.classList.add('on'); };
+      grid.appendChild(d); });
+    hint.textContent=note||'';
+  }
+  const suggested=()=>tiles([...new Set([sel,...NAV_ICONS])].filter(Boolean),'Suggested — type to search all icons');
+  suggested();
+  let deb;
+  inp.oninput=()=>{ clearTimeout(deb); deb=setTimeout(()=>{
+    const q=inp.value.trim().toLowerCase();
+    if(!q){ suggested(); return; }
+    loadIcons().then(all=>{
+      const hits=[]; for(const it of all){ if(it.n.indexOf(q)>=0||it.k.indexOf(q)>=0){ hits.push(it.n); if(hits.length>ICON_CAP) break; } }
+      const capped=hits.length>ICON_CAP;
+      tiles(hits.slice(0,ICON_CAP), capped?`Showing first ${ICON_CAP} — refine your search`:(hits.length?`${hits.length} match${hits.length===1?'':'es'}`:'No icons match'));
+    });
+  },120); };
+  loadIcons();  // warm the cache while the user reads the modal
+}
 const APP_CAT = {'Netflix':'#E50914','YouTube':'#FF0000','YouTube TV':'#FF0000','Disney+':'#113CCF','Spotify':'#1DB954','Plex':'#E5A00D','Hulu':'#1CE783','Prime Video':'#00A8E1','Max':'#7B2BF9','HBO Max':'#7B2BF9','Apple TV':'#3A3A3C','Peacock':'#05AC3F','Paramount+':'#0064FF','STARZ':'#000000','ESPN':'#D50A0A'};
 const APP_DEFAULT = ['Netflix','YouTube','YouTube TV','Disney+','Hulu'];
 const APP_MAX = 8;
@@ -734,7 +780,7 @@ function shortcutModal(card){ const mbox=document.getElementById('mbox');
     <div class="field"><label>Icon</label><div class="szrow" id="scIcons"></div></div>
     <div class="mfoot"><button class="btn ghost" id="mCancel">Cancel</button><button class="btn" id="mOk">Add</button></div>`;
   const ig=mbox.querySelector('#scIcons'), tsel=mbox.querySelector('#scTarget'), lin=mbox.querySelector('#scLabel'); let icon='arrow-right-bold';
-  function renderIcons(){ ig.innerHTML=''; NAV_ICONS.forEach(ic=>{ const b=document.createElement('div'); b.className='szb'+(ic===icon?' on':''); b.innerHTML=`<span class="mdi mdi-${ic}" style="font-size:18px"></span>`; b.onclick=()=>{icon=ic; renderIcons();}; ig.appendChild(b); }); }
+  function renderIcons(){ mountIconPicker(ig, icon, v=>{icon=v;}); }
   const sync=()=>{ const v=tsel.value; if(v.startsWith('page:')){ const p=v.slice(5); lin.placeholder=L.pages[p].title; const nv=L.nav.find(x=>x.page===p); if(nv) icon=nv.icon; }
     else if(v.startsWith('room:')){ lin.placeholder=v.slice(5); icon='sofa'; } else { lin.placeholder=v.split(':')[1]; icon=v.includes('camera')?'camera':'image'; } renderIcons(); };
   tsel.onchange=sync; renderIcons(); sync();
@@ -752,8 +798,7 @@ function navModal(n,isNew,idx){ const mbox=document.getElementById('mbox');
     <div class="field"><label>Opens page</label><select id="nPage">${pageOpts}<option value="__new">+ new blank page…</option></select></div>
     <div class="mfoot"><button class="btn ghost" id="mCancel">Cancel</button><button class="btn" id="mOk">${isNew?'Add':'Save'}</button></div>`;
   let icon=n.icon; const ig=mbox.querySelector('#nIcons');
-  NAV_ICONS.forEach(ic=>{ const b=document.createElement('div'); b.className='szb'+(ic===icon?' on':''); b.innerHTML=`<span class="mdi mdi-${ic}" style="font-size:18px"></span>`;
-    b.onclick=()=>{icon=ic; ig.querySelectorAll('.szb').forEach(x=>x.classList.remove('on')); b.classList.add('on');}; ig.appendChild(b); });
+  mountIconPicker(ig, icon, v=>{icon=v;});
   document.getElementById('modal').style.display='flex'; mbox.querySelector('#mCancel').onclick=closeModal;
   mbox.querySelector('#mOk').onclick=()=>{ const label=mbox.querySelector('#nLabel').value||'Page'; let page=mbox.querySelector('#nPage').value;
     if(page==='__new'){ page=label.toLowerCase().replace(/[^a-z0-9]+/g,'_').replace(/^_|_$/g,'')||uid(); L.pages[page]=blankPage(label); }

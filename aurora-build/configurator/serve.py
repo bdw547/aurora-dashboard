@@ -36,7 +36,7 @@ YAML = os.path.normpath(os.path.join(
 # Phase 2: the firmware generated from the page-builder layout.json
 GEN_YAML = os.path.normpath(os.path.join(
     HERE, "..", "..", "devices", "guition-esp32-p4-jc1060p470", "aurora-gen.yaml"))
-PORT = 8765
+PORT = int(os.environ.get("AURORA_PORT", "8765"))
 
 
 def generate_gen_yaml():
@@ -1023,6 +1023,29 @@ def ha_areas(url, token):
 LAYOUT_JSON = os.path.join(HERE, "layout.json")
 BUILDER_HTML = os.path.join(HERE, "builder.html")
 
+# --- comprehensive icon dataset (Material Design Icons v7.4.47 metadata) ---
+# Single source of truth for the whole ~7,400-icon library, shared by the web
+# picker (this endpoint) and the device generator (gen.py resolves name->glyph
+# and embeds only the icons a layout actually uses). Slimmed + cached on first use.
+MDI_META_JSON = os.path.join(HERE, "mdi-meta.json")
+_ICONS_CACHE = None
+
+
+def icons_payload():
+    """{"icons":[{"n":name,"c":codepoint,"k":search-keywords}]} for the picker."""
+    global _ICONS_CACHE
+    if _ICONS_CACHE is None:
+        try:
+            with open(MDI_META_JSON, encoding="utf-8") as f:
+                meta = json.load(f)
+        except Exception:  # noqa: BLE001
+            meta = []
+        out = [{"n": m["name"], "c": m["codepoint"],
+                "k": " ".join(m.get("aliases", []) + m.get("tags", [])).lower()}
+               for m in meta if m.get("name") and m.get("codepoint")]
+        _ICONS_CACHE = json.dumps({"icons": out})
+    return _ICONS_CACHE
+
 
 def read_layout():
     try:
@@ -1296,6 +1319,8 @@ class H(BaseHTTPRequestHandler):
                 return self._send(500, "builder.html missing: " + str(e), "text/plain")
         if not self._authed():
             return self._send(401, json.dumps({"error": "auth required"}))
+        if self.path == "/api/icons":
+            return self._send(200, icons_payload())
         if self.path == "/api/config":
             c = read_config()
             return self._send(200, json.dumps({"ha_url": c["ha_url"], "panel_ip": c["panel_ip"], "has_token": bool(c["ha_token"])}))

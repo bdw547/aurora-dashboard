@@ -46,6 +46,60 @@ NAV_GLYPH = {
 }
 FALLBACK_GLYPH = "\\U000F0142"  # chevron-right (shortcuts default to "go to")
 
+# ---- comprehensive icon library (shared with the web picker via mdi-meta.json) ----
+# Resolve ANY Material Design Icon name to its device glyph, and remember which
+# icons a layout used so assemble() can embed exactly those into the f_icon font
+# (the device can't bake all ~7,400 glyphs; it only needs the ones in use).
+MDI_META = os.path.join(HERE, "mdi-meta.json")
+
+
+def _load_mdi():
+    try:
+        with open(MDI_META, encoding="utf-8") as f:
+            meta = json.load(f)
+    except Exception:  # noqa: BLE001
+        return {}
+    out = {}
+    for m in meta:
+        n, cp = m.get("name"), m.get("codepoint")
+        if n and cp:
+            out[n] = cp.rjust(8, "0").upper()  # "F0599" -> "000F0599"
+    return out
+
+
+MDI_CP = _load_mdi()   # icon name -> 8-hex codepoint
+USED_ICON_CP = set()   # 8-hex codepoints referenced by the layout being built
+
+
+def glyph_for(name, fallback=FALLBACK_GLYPH):
+    r"""MDI name -> "\U000F...." device glyph, recording it for font embedding."""
+    cp = MDI_CP.get(name or "")
+    if not cp:  # unknown name: try the legacy explicit map, else fall back
+        g = NAV_GLYPH.get(name or "", fallback)
+        cp = g[2:].rjust(8, "0").upper()
+        USED_ICON_CP.add(cp)
+        return g
+    USED_ICON_CP.add(cp)
+    return "\\U" + cp
+
+
+def inject_used_glyphs(font_text):
+    """Append any used-but-not-embedded icons to the f_icon `glyphs:` list."""
+    if not USED_ICON_CP:
+        return font_text
+    i = font_text.find("id: f_icon")
+    g = font_text.find("glyphs:", i) if i >= 0 else -1
+    if g < 0:
+        return font_text
+    nxt = font_text.find("\n  - ", g)          # start of the next font entry
+    end = nxt if nxt != -1 else len(font_text)
+    have = {m.upper() for m in re.findall(r"\\U(000[0-9A-Fa-f]{5})", font_text[g:end])}
+    add = sorted(cp for cp in USED_ICON_CP if cp.upper() not in have)
+    if not add:
+        return font_text
+    ins = "".join('      - "\\U%s"  # auto (layout icon)\n' % cp for cp in add)
+    return font_text[:end] + "\n" + ins.rstrip("\n") + font_text[end:]
+
 
 def slug(s):
     return re.sub(r"[^a-z0-9]+", "_", (s or "").lower()).strip("_") or "x"
@@ -1386,7 +1440,7 @@ def c_shortcuts(card, x, y, w, h, pagemap, base):
         cx = pad + (i % cols) * (bw + gap)
         cy = pad + (i // cols) * (bh + gap)
         if s:
-            glyph = NAV_GLYPH.get(s.get("icon", ""), FALLBACK_GLYPH)
+            glyph = glyph_for(s.get("icon", ""))
             tgt = s.get("target", "")
             act = "lvgl.page.show: page_home"
             if tgt.startswith("page:"):
@@ -1641,7 +1695,7 @@ def gen_nav(layout, pagemap):
     out = ""
     nav = layout.get("nav", [])[:7]
     for i, n in enumerate(nav):
-        g = NAV_GLYPH.get(n.get("icon", ""), FALLBACK_GLYPH)
+        g = glyph_for(n.get("icon", ""))
         pid = pagemap.get(n.get("page", ""), "page_home")
         nid = slug(n.get("id", str(i)))
         # all default inactive; the per-page on_load highlights the current one
@@ -1930,6 +1984,7 @@ def gen_pages(layout, pagemap):
 
 
 def build_lvgl(layout):
+    USED_ICON_CP.clear()  # repopulated by glyph_for() as icons are placed
     pagemap = {key: "page_" + slug(key) for key in layout.get("pages", {})}
     nav = gen_nav(layout, pagemap)
     pages, sens, txt, clocks = gen_pages(layout, pagemap)
@@ -2200,12 +2255,14 @@ def assemble(layout):
     with open(AURORA, encoding="utf-8") as f:
         secs = split_sections(f.read())
     lvgl_text = dict(secs).get("lvgl", "")
-    keep_text = "".join(t for n, t in secs if n in KEEP)
+    ART_IMAGES.clear()
+    nav, pages, sens, txt, _, clocks = build_lvgl(layout)  # populates USED_ICON_CP
+    # keep the hardware/font/style base; embed the icons this layout uses into f_icon
+    keep_text = "".join(inject_used_glyphs(t) if n == "font" else t
+                        for n, t in secs if n in KEEP)
     # scrub references to dropped UI scripts + lvgl widget actions in the base
     keep_text = re.sub(r"(?m)^[ \t]*-?[ \t]*script\.(execute|stop):.*\n", "", keep_text)
     keep_text = scrub_lvgl_actions(keep_text)
-    ART_IMAGES.clear()
-    nav, pages, sens, txt, _, clocks = build_lvgl(layout)
     clocks += [("lbl_ss_time", "time_hm"), ("lbl_ss_date", "date_full")]   # screensaver clock
     pages += gen_screensaver_page()
     txt.append(SS_TEXT_SENSOR)
@@ -2258,15 +2315,16 @@ def host_assemble(layout):
     with open(AURORA, encoding="utf-8") as f:
         secs = split_sections(f.read())
     lvgl_text = dict(secs).get("lvgl", "")
-    keep = "".join(t for n, t in secs if n in ("substitutions", "globals", "font"))
-    keep = re.sub(r"(?m)^[ \t]*-?[ \t]*script\.(execute|stop):.*\n", "", keep)
-    keep = scrub_lvgl_actions(keep)
     global ART_ENABLED
     ART_ENABLED = False                                  # host build: no online_image decoders
     try:
         nav, pages, _sens, _txt, _, _clocks = build_lvgl(layout)   # host has no ha_time -> no clock interval
     finally:
         ART_ENABLED = True
+    keep = "".join(inject_used_glyphs(t) if n == "font" else t
+                   for n, t in secs if n in ("substitutions", "globals", "font"))
+    keep = re.sub(r"(?m)^[ \t]*-?[ \t]*script\.(execute|stop):.*\n", "", keep)
+    keep = scrub_lvgl_actions(keep)
     pages = re.sub(r"(?m)^\s*- image: \{ src: img_aurora_bg.*\n", "", pages)
     # host build has no display_backlight light / restart button — stub those local actions
     pages = re.sub(r"light\.turn_on: \{ id: display_backlight[^}]*\}", "logger.log: emul", pages)
