@@ -458,6 +458,67 @@ def c_state(card, x, y, w, h, base):
     return [card_obj(x, y, w, h, inner)], [], ts
 
 
+# One column of the sparkline (a thin vertical lv_bar): id, x, y, width, height, accent.
+BAR_TMPL = (
+    "              - bar:\n"
+    "                  id: %s\n"
+    "                  x: %d\n                  y: %d\n                  width: %d\n                  height: %d\n"
+    "                  min_value: 0\n                  max_value: 100\n                  value: 0\n"
+    "                  bg_color: 0x1A1F2A\n                  bg_opa: 55%%\n                  radius: 2\n                  pad_all: 0\n                  scrollable: false\n"
+    "                  indicator:\n                    bg_color: %s\n                    radius: 2\n"
+)
+
+
+def c_chart(card, x, y, w, h, base):
+    """Live trend chart: N vertical bars the panel samples from the sensor over time
+    (a scrolling column sparkline). ESPHome's LVGL has no `chart`/`line` widget, so
+    we build it from `bar`s (LV_USE_BAR) + a static ring buffer, updated on_value."""
+    e = card.get("entity", "")
+    st = _stype(card)
+    icon_name, unit, dec, defcol = SENSOR_TYPES.get(st, SENSOR_TYPES["generic"])
+    glyph = card_glyph(card, glyph_for(icon_name))
+    vid = base + "_v"
+    pad, ctop = 14, 84
+    cw, ch = w - 2 * pad, h - 84 - pad
+    n = max(8, min(40, cw // 10))
+    pitch = cw / float(n)
+    bw = max(3, int(pitch) - 2)
+    inner = ic(card["ck"], color=defcol, glyph=glyph)
+    inner += lbl(card.get("name", "Sensor"), 48, 18, "f_small", "0x868CA0", width=w - 62, long="dot", height=20)
+    inner += lbl("--", 14, 40, "f_head", defcol, wid=vid, height=34, width=w - 28)
+    bar_ids = []
+    for i in range(n):
+        bid = base + "_b%d" % i
+        bar_ids.append(bid)
+        inner += BAR_TMPL % (bid, pad + int(round(i * pitch)), ctop, bw, ch, defcol)
+    ts = []
+    if e:
+        fmt = "%." + str(dec) + "f" + unit
+        fixed = st in ("humidity", "battery", "percentage")
+        ptr = ", ".join("id(%s)" % b for b in bar_ids)
+        N, N1 = str(n), str(n - 1)
+        body = (
+            "          static float buf[" + N + "]; static int filled = 0;\n"
+            "          if (x.empty() || x == \"unknown\" || x == \"unavailable\") return;\n"
+            "          float v = atof(x.c_str());\n"
+            "          for (int i = 0; i < " + N1 + "; i++) buf[i] = buf[i+1];\n"
+            "          buf[" + N1 + "] = v; if (filled < " + N + ") filled++;\n"
+            "          float mn = v, mx = v;\n"
+            "          for (int i = " + N + " - filled; i < " + N + "; i++) { if (buf[i] < mn) mn = buf[i]; if (buf[i] > mx) mx = buf[i]; }\n"
+            + ("          mn = 0; mx = 100;\n" if fixed else "")
+            + "          float span = mx - mn; if (span < 0.001f) span = 1;\n"
+            "          lv_obj_t* bars[" + N + "] = { " + ptr + " };\n"
+            "          for (int i = 0; i < " + N + "; i++) {\n"
+            "            int32_t p = (i < " + N + " - filled) ? 0 : (int32_t)((buf[i] - mn) / span * 100.0f);\n"
+            "            if (p < 0) p = 0; if (p > 100) p = 100;\n"
+            "            lv_bar_set_value(bars[i], p, LV_ANIM_OFF);\n"
+            "          }\n"
+            "          char b[24]; snprintf(b, sizeof(b), \"" + fmt + "\", v); lv_label_set_text(id(" + vid + "), b);\n")
+        ts.append("  - platform: homeassistant\n    id: ha_" + vid + "\n    entity_id: " + e
+                  + "\n    on_value:\n      - lambda: |-\n" + body)
+    return [card_obj(x, y, w, h, inner)], [], ts
+
+
 def _setbox(bx, by, bw, bh, label, temp, accent, bg, vid, e, heat_vid, cool_vid):
     """A HEAT TO / COOL TO setpoint box with working +/- (climate.set_temperature).
     vid = this box's value label id; heat_vid/cool_vid = both setpoint label ids
@@ -1791,6 +1852,7 @@ def c_generic(card, x, y, w, h, base):
 CTRL = {
     "switch": c_toggle, "light_t": c_toggle, "light": c_light, "sensor": c_sensor,
     "binary": c_binary, "person": c_binary, "vacuum": c_state, "alarm": c_state,
+    "chart": c_chart,
     "climate": c_climate, "scene": c_action, "script": c_action, "media": c_media,
     "spotify": c_media, "sonos": c_media, "fan": c_fan, "cover": c_cover,
     "lock": c_lock, "weather": c_weather, "camera": c_camera, "group": c_group,
