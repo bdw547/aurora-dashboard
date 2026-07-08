@@ -998,8 +998,11 @@ def ha_entities(url, token):
     ents = []
     for s in states:
         eid = s.get("entity_id", "")
+        attrs = s.get("attributes") or {}
         ents.append({"entity_id": eid, "domain": eid.split(".")[0],
-                     "name": (s.get("attributes") or {}).get("friendly_name", eid)})
+                     "name": attrs.get("friendly_name", eid),
+                     "dc": attrs.get("device_class", ""),
+                     "unit": attrs.get("unit_of_measurement", "")})
     return sorted(ents, key=lambda e: e["entity_id"])
 
 

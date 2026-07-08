@@ -168,14 +168,15 @@ def ha(action, entity, extra=""):
     return "homeassistant.action: { action: %s, data: { %s } }" % (action, data)
 
 
-def card_obj(x, y, w, h, inner, on_click=None, bg=None):
+def card_obj(x, y, w, h, inner, on_click=None, bg=None, oid=None):
     oc = ("\n            clickable: true\n            on_click: [%s]" % on_click) if on_click else ""
     bgline = ("\n            bg_color: %s" % bg) if bg else ""    # override st_glass (e.g. "on" state)
+    idline = ("\n            id: %s" % oid) if oid else ""        # so a state readback can recolor the whole card
     return (
-        "        - obj:\n"
+        "        - obj:%s\n"
         "            x: %d\n            y: %d\n            width: %d\n            height: %d\n"
         "            styles: st_glass\n            pad_all: 0\n            clip_corner: true%s\n            scrollable: false%s\n"
-        "            widgets:\n%s" % (x, y, w, h, bgline, oc, inner)
+        "            widgets:\n%s" % (idline, x, y, w, h, bgline, oc, inner)
     )
 
 
@@ -204,16 +205,23 @@ CARD_ICON = {
 }
 
 
-def ic(ck, x=14, y=14, color="0x2ED5B8"):
-    g = CARD_ICON.get(ck, "\\U000F0493")
-    return ("              - label: { text: \"%s\", x: %d, y: %d, text_font: f_icon, text_color: %s }\n"
-            % (g, x, y, color))
+def ic(ck, x=14, y=14, color="0x2ED5B8", glyph=None, wid=None):
+    g = glyph or CARD_ICON.get(ck, "\\U000F0493")
+    idpart = ("id: %s, " % wid) if wid else ""
+    return ("              - label: { %stext: \"%s\", x: %d, y: %d, text_font: f_icon, text_color: %s }\n"
+            % (idpart, g, x, y, color))
+
+
+def card_glyph(card, default_glyph):
+    """Per-card icon override (any MDI name, auto-embedded) or the card's default."""
+    name = card.get("icon")
+    return glyph_for(name) if name else default_glyph
 
 
 def c_toggle(card, x, y, w, h, base):
     e = card.get("entity", "")
     sid = base + "_st"
-    inner = ic(card["ck"], color="0x2ED5B8")
+    inner = ic(card["ck"], color="0x2ED5B8", glyph=card_glyph(card, None))
     inner += title(card.get("name", "Switch"), w, x=14, y=48)
     inner += lbl("--", 14, -14, "f_small", "0x2ED5B8", wid=sid, align="bottom_left")
     on = ha("homeassistant.toggle", e) if e else None
@@ -231,14 +239,14 @@ def c_toggle(card, x, y, w, h, base):
 def c_light(card, x, y, w, h, base):
     e = card.get("entity", "")
     gw, gh = card["w"], card["h"]
-    icon = CARD_ICON.get(card["ck"], "\\U000F0335")
+    icon = card_glyph(card, CARD_ICON.get(card["ck"], "\\U000F0335"))
     name = card.get("name", "Light")
     sldid, pct, fillid, pwrid = base + "_sld", base + "_pct", base + "_fill", base + "_pwr"
     bri = 74
     tog = ("homeassistant.action: { action: light.toggle, data: { entity_id: " + e + " } }") if e else "lvgl.page.show: page_home"
 
     if gh == 1:                                           # short/wide tile: title + inline slider + %
-        inner = ic(card["ck"], color="0xF2B84B")
+        inner = ic(card["ck"], color="0xF2B84B", glyph=icon)
         inner += title(name, w)
         if e:
             inner += ("              - slider:\n                  id: " + sldid + "\n                  x: 14\n                  y: 56\n                  width: " + str(w - 28) + "\n"
@@ -302,29 +310,145 @@ def c_light(card, x, y, w, h, base):
     return [card_obj(x, y, w, h, inner)], s, t
 
 
-SENSOR_ICON_COLOR = {"temp": "0xF2685A", "humid": "0x4FA8F5", "illum": "0xF2B84B",
-                     "lux": "0xF2B84B", "power": "0xF2B84B", "watt": "0xF2B84B",
-                     "energy": "0xF2B84B", "batt": "0x2ED5B8"}
+# Sensor sub-types: name -> (MDI icon name, unit appended in the device snprintf
+# format [%% = percent, ° = degree], decimals, accent color). The icon name
+# is resolved + auto-embedded via glyph_for().
+SENSOR_TYPES = {
+    "temperature": ("thermometer",    "\\u00b0", 0, "0xF2685A"),
+    "humidity":    ("water-percent",  "%%",      0, "0x4FA8F5"),
+    "battery":     ("battery",        "%%",      0, "0x2ED5B8"),
+    "percentage":  ("gauge",          "%%",      0, "0x2ED5B8"),   # CPU / load / memory
+    "power":       ("flash",          "W",       0, "0xF2B84B"),
+    "energy":      ("lightning-bolt", " kWh",    1, "0xF2B84B"),
+    "illuminance": ("brightness-5",   " lx",     0, "0xF2B84B"),
+    "pressure":    ("gauge-low",      " hPa",    0, "0x8FA6FF"),
+    "voltage":     ("sine-wave",      "V",       1, "0xF2B84B"),
+    "current":     ("current-ac",     "A",       2, "0xF2B84B"),
+    "co2":         ("molecule-co2",   " ppm",    0, "0xF2B84B"),
+    "speed":       ("speedometer",    "",        0, "0x2ED5B8"),
+    "generic":     ("gauge",          "",        0, "0xF2685A"),
+}
+
+_STYPE_INFER = [("temp", "temperature"), ("\\u00b0", "temperature"), ("humid", "humidity"),
+                ("batt", "battery"), ("cpu", "percentage"), ("mem", "percentage"),
+                ("load", "percentage"), ("%", "percentage"), ("energy", "energy"),
+                ("kwh", "energy"), ("power", "power"), ("watt", "power"),
+                ("illum", "illuminance"), ("lux", "illuminance"), ("press", "pressure"),
+                ("co2", "co2"), ("volt", "voltage"), ("current", "current"), ("speed", "speed")]
 
 
-def _sensor_color(card):
-    ck = card.get("ck", "")
-    if ck in ("person", "binary"):
-        return "0x4FA8F5"
-    if ck == "alarm":
-        return "0xF2685A"
-    key = (card.get("device_class") or card.get("entity") or card.get("name") or "").lower()
-    for k, c in SENSOR_ICON_COLOR.items():
-        if k in key:
-            return c
-    return "0xF2685A"
+def _stype(card):
+    st = card.get("stype")
+    if st in SENSOR_TYPES:
+        return st
+    key = " ".join(str(card.get(k, "")) for k in ("device_class", "unit", "name", "entity")).lower()
+    for sub, t in _STYPE_INFER:
+        if sub in key:
+            return t
+    return "generic"
+
+
+def _darken(hexstr, f=0.16):
+    v = int(hexstr, 16)
+    r, g, b = (v >> 16) & 255, (v >> 8) & 255, v & 255
+    return "0x%06X" % ((int(r * f) << 16) | (int(g * f) << 8) | int(b * f))
+
+
+def _rule_lines(rules, defcol):
+    """C++ if-chain that sets `c` (accent) + `bg` (card tint) from thresholds; last match wins."""
+    out = ""
+    for rl in rules or []:
+        if rl.get("val") is None:
+            continue
+        op = rl.get("op", ">=")
+        op = op if op in (">=", ">", "<=", "<", "==") else ">="
+        col = rl.get("color", defcol)
+        out += ("          if (v %s %s) { c = lv_color_hex(%s); bg = lv_color_hex(%s); }\n"
+                % (op, ("%g" % float(rl["val"])), col, _darken(col)))
+    return out
 
 
 def c_sensor(card, x, y, w, h, base):
+    """Numeric sensor: type-driven icon + unit + decimals, optional threshold coloring."""
+    e = card.get("entity", "")
+    icon_name, unit, dec, defcol = SENSOR_TYPES.get(_stype(card), SENSOR_TYPES["generic"])
+    glyph = card_glyph(card, glyph_for(icon_name))
+    vid, oid = base + "_v", base + "_c"
+    rules = card.get("rules")
+    inner = ic(card["ck"], color=defcol, glyph=glyph)
+    inner += lbl("--", 14, -32, "f_title", "0xF3F5F8", wid=vid, align="bottom_left")
+    inner += lbl(card.get("name", "Sensor"), 14, -12, "f_small", "0x868CA0", align="bottom_left")
+    ts = []
+    if e:
+        fmt = "%." + str(dec) + "f" + unit
+        color_body = ""
+        if rules:
+            color_body = ("          lv_color_t c = lv_color_hex(" + defcol + "); lv_color_t bg = lv_color_hex(0x161B24);\n"
+                          + _rule_lines(rules, defcol)
+                          + "          lv_obj_set_style_text_color(L, c, 0); lv_obj_set_style_bg_color(id(" + oid + "), bg, 0);\n")
+        body = ("          lv_obj_t* L = id(" + vid + ");\n"
+                "          if (x.empty() || x == \"unknown\" || x == \"unavailable\") { lv_label_set_text(L, \"--\"); return; }\n"
+                "          float v = atof(x.c_str());\n"
+                "          char b[24]; snprintf(b, sizeof(b), \"" + fmt + "\", v); lv_label_set_text(L, b);\n"
+                + color_body)
+        ts.append("  - platform: homeassistant\n    id: ha_" + vid + "\n    entity_id: " + e
+                  + "\n    on_value:\n      - lambda: |-\n" + body)
+    return [card_obj(x, y, w, h, inner, oid=(oid if rules else None))], [], ts
+
+
+# Binary sensor / presence: device-class-aware label + icon, and the WHOLE card
+# lights up when active / dims when inactive (e.g. occupancy).
+BINARY_LABELS = {  # device_class -> (active text, inactive text, active color)
+    "occupancy": ("Occupied", "Empty", "0x2ED5B8"), "motion": ("Motion", "Clear", "0x2ED5B8"),
+    "presence": ("Present", "Away", "0x2ED5B8"), "door": ("Open", "Closed", "0xF2B84B"),
+    "window": ("Open", "Closed", "0xF2B84B"), "garage_door": ("Open", "Closed", "0xF2B84B"),
+    "moisture": ("Wet", "Dry", "0x4FA8F5"), "smoke": ("Smoke", "Clear", "0xF2685A"),
+    "gas": ("Gas", "Clear", "0xF2685A"), "connectivity": ("Online", "Offline", "0x2ED5B8"),
+    "problem": ("Problem", "OK", "0xF2685A"), "sound": ("Sound", "Quiet", "0x2ED5B8"),
+}
+BINARY_ICON = {
+    "occupancy": "account", "motion": "motion-sensor", "presence": "home-account",
+    "door": "door", "window": "window-closed-variant", "garage_door": "garage",
+    "moisture": "water", "smoke": "smoke-detector", "gas": "gas-cylinder",
+    "connectivity": "wifi", "problem": "alert-circle", "sound": "ear-hearing",
+}
+
+
+def c_binary(card, x, y, w, h, base):
+    e = card.get("entity", "")
+    if card.get("ck") == "person":
+        atxt, itxt, acol0, icon_name, active = "Home", "Away", "0x2ED5B8", "home-account", 'x == "home"'
+    else:
+        dc = (card.get("device_class") or card.get("bclass") or "").lower()
+        atxt, itxt, acol0 = BINARY_LABELS.get(dc, ("Active", "Clear", "0x4FA8F5"))
+        icon_name = BINARY_ICON.get(dc, "motion-sensor")
+        active = 'x == "on"'
+    acol = card.get("activeColor", acol0)
+    glyph = card_glyph(card, glyph_for(icon_name))
+    vid, iid, oid = base + "_v", base + "_i", base + "_c"
+    inner = ic(card["ck"], color=acol, glyph=glyph, wid=iid)
+    inner += lbl(itxt, 14, -32, "f_title", "0xF3F5F8", wid=vid, align="bottom_left")
+    inner += lbl(card.get("name", "Sensor"), 14, -12, "f_small", "0x868CA0", align="bottom_left")
+    ts = []
+    if e:
+        lit = _darken(acol, 0.22)
+        body = ("          bool on = (" + active + ");\n"
+                "          lv_obj_set_style_bg_color(id(" + oid + "), on ? lv_color_hex(" + lit + ") : lv_color_hex(0x0B0C10), 0);\n"
+                "          lv_obj_set_style_text_color(id(" + iid + "), on ? lv_color_hex(" + acol + ") : lv_color_hex(0x4A5160), 0);\n"
+                "          lv_obj_set_style_text_color(id(" + vid + "), on ? lv_color_hex(" + acol + ") : lv_color_hex(0x6B7280), 0);\n"
+                "          lv_label_set_text(id(" + vid + "), on ? \"" + atxt + "\" : \"" + itxt + "\");\n")
+        ts.append("  - platform: homeassistant\n    id: ha_" + vid + "\n    entity_id: " + e
+                  + "\n    on_value:\n      - lambda: |-\n" + body)
+    return [card_obj(x, y, w, h, inner, oid=oid)], [], ts
+
+
+def c_state(card, x, y, w, h, base):
+    """Raw-state text card (vacuum / alarm): unchanged legacy behavior."""
     e = card.get("entity", "")
     vid = base + "_v"
-    inner = ic(card["ck"], color=_sensor_color(card))          # icon top, per-domain color
-    inner += lbl("--", 14, -32, "f_title", "0xF3F5F8", wid=vid, align="bottom_left")  # value (bottom stack)
+    col = "0xF2685A" if card.get("ck") == "alarm" else "0x4FA8F5"
+    inner = ic(card["ck"], color=col, glyph=card_glyph(card, None))
+    inner += lbl("--", 14, -32, "f_title", "0xF3F5F8", wid=vid, align="bottom_left")
     inner += lbl(card.get("name", "Sensor"), 14, -12, "f_small", "0x868CA0", align="bottom_left")
     ts = []
     if e:
@@ -1666,7 +1790,7 @@ def c_generic(card, x, y, w, h, base):
 
 CTRL = {
     "switch": c_toggle, "light_t": c_toggle, "light": c_light, "sensor": c_sensor,
-    "binary": c_sensor, "person": c_sensor, "vacuum": c_sensor, "alarm": c_sensor,
+    "binary": c_binary, "person": c_binary, "vacuum": c_state, "alarm": c_state,
     "climate": c_climate, "scene": c_action, "script": c_action, "media": c_media,
     "spotify": c_media, "sonos": c_media, "fan": c_fan, "cover": c_cover,
     "lock": c_lock, "weather": c_weather, "camera": c_camera, "group": c_group,
