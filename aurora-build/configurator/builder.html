@@ -244,11 +244,11 @@ h3.sec{font-size:11px;letter-spacing:1.4px;text-transform:uppercase;color:var(--
 const V=[[1,3],[1,4],[1,5]];
 const C = {
   light:    {label:'Light (dimmable / RGB)', domain:'light', icon:'lightbulb', color:'var(--amber)', spans:[[2,1],[3,1],[4,1],[5,1],[6,1],[1,2],[1,3],[1,4],[1,5],[2,2],[3,2],[4,4]], def:[2,1], ctrl:'light'},
-  light_t:  {label:'Light toggle', domain:'light', icon:'lightbulb-outline', color:'var(--amber)', spans:[[1,1],[2,1],...V], def:[2,1], ctrl:'toggle'},
+  light_t:  {label:'Light toggle', domain:'light', icon:'lightbulb-outline', color:'var(--amber)', spans:[[1,1],[1,2],[2,1],[2,2],[3,3]], def:[2,1], ctrl:'toggle'},
   switch:   {label:'Switch / outlet', domain:'switch', icon:'toggle-switch', color:'var(--teal)', spans:[[1,1],[2,1],[2,2],...V], def:[2,1], ctrl:'toggle'},
   lightgroup:{label:'Light group', domain:'light', icon:'lightbulb-multiple', color:'var(--amber)', spans:[[2,2],[3,2],[2,3],[3,3],[4,3],[2,4],[4,4],[2,5],[5,4],[6,4],[5,5],[6,5]], def:[3,3], ctrl:'lightgroup', multi:true},
   outletgroup:{label:'Outlets', domain:'switch', icon:'power-socket-us', color:'var(--teal)', spans:[[1,1],[1,2],[2,1],[1,3],[3,1]], def:[1,2], ctrl:'outletgroup', multi:true},
-  fan:      {label:'Fan', domain:'fan', icon:'fan', color:'var(--teal)', spans:[[1,1],[2,1],[1,2],[2,2]], def:[2,1], ctrl:'seg'},
+  fan:      {label:'Fan', domain:'fan', domains:['fan','switch'], icon:'fan', color:'var(--teal)', spans:[[1,1],[1,2],[2,1],[2,2],[3,3]], def:[1,1], ctrl:'seg'},
   cover:    {label:'Cover / blinds', domain:'cover', icon:'blinds-horizontal', color:'var(--blue)', spans:[[1,1],[2,1],[1,2],[1,3],[2,2],[2,3]], def:[2,2], ctrl:'pos'},
   climate:  {label:'Climate / thermostat', domain:'climate', icon:'thermostat', color:'var(--amber)', spans:[[1,1],[2,2],[3,2],[3,3],[4,4],[6,5],...V], def:[4,4], ctrl:'dial'},
   group:    {label:'Status group', domain:'mixed', icon:'view-grid-outline', color:'var(--teal)', spans:[[2,2],[2,3],[2,4],[2,5]], def:[2,3], ctrl:'group', multi:true},
@@ -347,6 +347,7 @@ const SENSOR_TYPE_OPTS=[['','Auto (from HA)'],['temperature','Temperature (°)']
   ['battery','Battery (%)'],['percentage','Percentage / CPU (%)'],['power','Power (W)'],['energy','Energy (kWh)'],
   ['illuminance','Illuminance (lx)'],['pressure','Pressure (hPa)'],['voltage','Voltage (V)'],['current','Current (A)'],
   ['co2','CO₂ (ppm)'],['speed','Speed'],['generic','Generic (number)']];
+const SWITCH_TYPE_OPTS=[['','Switch (default)'],['outlet','Outlet'],['light','Light-style'],['fan','Fan'],['generic','Generic']];
 const ICON_CARDS=new Set(['light','light_t','switch','sensor','chart','binary','person','vacuum','alarm','fan','cover']);
 const RULE_COLORS=['0xF2685A','0xF2B84B','0x2ED5B8','0x4FA8F5','0x8FA6FF','0xB06CFF','0x868CA0'];
 function hexToInput(h){ return '#'+(h||'0x000000').replace(/^0x/i,'').padStart(6,'0').slice(0,6); }
@@ -727,6 +728,7 @@ function renderInspector(){ const el=document.getElementById('insp'); const c=se
     <div class="field"><label>Entity (${def.domain})</label><div style="display:flex;gap:6px"><input id="fEnt" value="${c.entity||''}" placeholder="none" style="flex:1"><button class="btn ghost" id="pickEnt" style="padding:8px 10px">Pick</button></div></div>
     ${ICON_CARDS.has(c.ck)?`<div class="field"><label>Icon</label><div id="cIcon"></div></div>`:''}
     ${(c.ck==='sensor'||c.ck==='chart')?`<div class="field"><label>Sensor type</label><select id="fStype">${SENSOR_TYPE_OPTS.map(o=>`<option value="${o[0]}" ${(c.stype||'')===o[0]?'selected':''}>${o[1]}</option>`).join('')}</select></div>`:''}
+    ${c.ck==='switch'?`<div class="field"><label>Switch type <span style="color:var(--t3);font-weight:400">— sets the icon</span></label><select id="fStype">${SWITCH_TYPE_OPTS.map(o=>`<option value="${o[0]}" ${(c.stype||'')===o[0]?'selected':''}>${o[1]}</option>`).join('')}</select></div>`:''}
     ${c.ck==='chart'?`<div class="csub" style="padding:2px 0 8px;color:var(--t3)">Live trend — the panel samples this sensor over time (a scrolling sparkline). % types plot 0–100; others auto-scale.</div>`:''}
     ${c.ck==='sensor'?`<div class="field"><label>Color rules (value → color)</label><div id="ruleList"></div><button class="btn ghost" id="addRule" style="width:100%;margin-top:6px">+ Add rule</button></div>`:''}
     ${(c.ck==='binary'||c.ck==='person')?`<div class="field"><label>Active color <span style="color:var(--t3);font-weight:400">— dims when inactive</span></label><input id="fActive" type="color" value="${hexToInput(c.activeColor||'0x2ED5B8')}" style="width:56px;height:34px;padding:2px;border:1px solid var(--bd);border-radius:8px;background:#0F1117"></div>`:''}
@@ -818,7 +820,7 @@ function openEntityPicker(ck,existing){ const def=C[ck], mbox=document.getElemen
       b.onclick=()=>{szc=[w,h]; msz.querySelectorAll('.szb').forEach(x=>x.classList.remove('on')); b.classList.add('on');}; msz.appendChild(b); });
     document.getElementById('modal').style.display='flex'; mbox.querySelector('#mCancel').onclick=closeModal;
     mbox.querySelector('#mPlace').onclick=()=>{ closeModal(); enterPlacing(ck,null,null,szc[0],szc[1]); }; return; }
-  const dom=def.domain; const list=ENTS.filter(e=>e.domain===dom);
+  const doms=def.domains||[def.domain]; const dom=doms.join(' / '); const list=ENTS.filter(e=>doms.includes(e.domain));
   let chosen=existing?existing.entity:((list[0]&&list[0].entity_id)||''); let szc=existing?[existing.w,existing.h]:def.def;
   mbox.innerHTML=`<h2>${def.label}</h2><p>${list.length} ${dom} entit${list.length===1?'y':'ies'} from Home Assistant${ENTS.length?'':' — connect to load yours'}</p>
     <input id="esrch" placeholder="Filter…" style="width:100%;margin-bottom:8px;background:#0F1117;border:1px solid var(--bd);border-radius:9px;color:var(--tx);padding:8px 10px;font:inherit">

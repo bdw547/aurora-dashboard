@@ -218,15 +218,36 @@ def card_glyph(card, default_glyph):
     return glyph_for(name) if name else default_glyph
 
 
+# Switch sub-type -> (MDI icon name, accent). Lets a switch entity present as what
+# it actually controls (outlet / light / fan / generic). All stay simple on/off.
+SWITCH_TYPES = {
+    "switch": ("toggle-switch", "0x2ED5B8"), "outlet": ("power-plug", "0x2ED5B8"),
+    "light": ("lightbulb", "0xE6A62B"), "fan": ("fan", "0x2ED5B8"),
+    "generic": ("power", "0x2ED5B8"),
+}
+
+
 def c_toggle(card, x, y, w, h, base):
     e = card.get("entity", "")
+    gw, gh = card["w"], card["h"]
     sid, oid, iid = base + "_st", base + "_c", base + "_i"
-    acc = "0xE6A62B" if card["ck"] == "light_t" else "0x2ED5B8"   # amber for light toggle, teal for switch
+    st = card.get("stype")
+    if st in SWITCH_TYPES:
+        icon_name, acc = SWITCH_TYPES[st]
+    elif card["ck"] == "light_t":
+        icon_name, acc = "lightbulb", "0xE6A62B"                  # amber light toggle
+    else:
+        icon_name, acc = "toggle-switch", "0x2ED5B8"              # teal switch
+    glyph = card_glyph(card, glyph_for(icon_name))
     lit = _darken(acc, 0.22)
-    inner = ic(card["ck"], color=acc, glyph=card_glyph(card, None), wid=iid)
-    inner += title(card.get("name", "Switch"), w, x=14, y=48)
-    inner += lbl("--", 14, -14, "f_small", acc, wid=sid, align="bottom_left")
-    on = ha("homeassistant.toggle", e) if e else None
+    on = ha("homeassistant.toggle", e) if e else None            # domain-agnostic (switch/light/fan)
+    if gw == 1 and gh == 1:                                       # compact 1x1: centered icon + state
+        inner = lbl(glyph, 0, 20, "f_icon", acc, wid=iid, align="top_mid")
+        inner += lbl("--", 0, -14, "f_body", acc, wid=sid, align="bottom_mid")
+    else:                                                        # icon top-left, name, state (aligned stack)
+        inner = ic(card["ck"], color=acc, glyph=glyph, wid=iid)
+        inner += title(card.get("name", "Switch"), w, x=14, y=48)
+        inner += lbl("--", 14, -14, "f_small", acc, wid=sid, align="bottom_left")
     ts = []
     if e:
         # whole card lights up when on / dims when off (fixes "stays the same color")
@@ -860,7 +881,7 @@ def c_fan(card, x, y, w, h, base):
     e = card.get("entity", "")
     gw, gh = card["w"], card["h"]
     if gw * gh <= 2:                                  # small: icon + centered label, card lights when on
-        act = ha("fan.toggle", e) if e else "lvgl.page.show: page_home"
+        act = ha("homeassistant.toggle", e) if e else "lvgl.page.show: page_home"   # works for fan.* or switch.* fans
         oid, iid, nlid, acc = base + "_c", base + "_i", base + "_n", "0x2ED5B8"
         glyph = card_glyph(card, CARD_ICON.get(card["ck"], "\\U000F0210"))
         inner = lbl(glyph, 0, -20, "f_icon", acc, wid=iid, align="center")
