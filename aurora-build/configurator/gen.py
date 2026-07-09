@@ -1630,12 +1630,11 @@ def c_spot_playlists(card, x, y, w, h, base):
                 "                        then:\n"
                 "                          - homeassistant.action:\n                              action: script.aurora_spotify_load_playlist\n                              data:\n"
                 "                                playlist_uri: !lambda 'return id(g_spot_ctx);'\n")
-    glyph_for("reload")   # record F0450 so it's embedded in f_icon (reload button)
     inner = lbl("PLAYLIST", 14, 16, "f_micro", "0x868CA0")
     inner += ("              - button:\n                  x: %d\n                  y: 10\n                  width: 40\n                  height: 30\n"
               "                  bg_color: 0x161B24\n                  radius: 10\n                  pad_all: 0\n                  scrollable: false\n"
-              "                  widgets: [label: { text: \"\\U000F0450\", align: center, text_font: f_icon, text_color: 0x1DB954 }]\n"
-              "                  on_click: [homeassistant.action: { action: script.aurora_spotify_refresh_playlists }]\n" % (w - 54))
+              "                  widgets: [label: { text: \"%s\", align: center, text_font: f_icon, text_color: 0x1DB954 }]\n"
+              "                  on_click: [homeassistant.action: { action: script.aurora_spotify_refresh_playlists }]\n" % (w - 54, glyph_for("reload")))
     inner += dropdown
     if not compact:
         inner += lbl("Pick a playlist to load its songs", 14, dd_y + 56, "f_small", "0x5D6470", width=w - 28, long="dot")
@@ -1765,14 +1764,13 @@ def c_spot_speakers(card, x, y, w, h, base):
     so rows are parsed by pulling each quoted token (single- or double-quoted)."""
     e = card.get("entity") or "media_player.spotifyplus_ben_walton"
     n = _card_rows(card, SPOT_MAX_SPEAKERS, 24)
-    glyph_for("reload")   # record F0450 so it's embedded in f_icon (reload button)
     inner = ic("speakers", color="0x1DB954")
     inner += lbl("PLAY ON \\u00B7 TAP A SPEAKER", 50, 18, "f_micro", "0x868CA0")
     # refresh: re-poll the media_player so a newly-woken speaker shows up
     inner += ("              - button:\n                  x: %d\n                  y: 10\n                  width: 40\n                  height: 30\n"
               "                  bg_color: 0x161B24\n                  radius: 10\n                  pad_all: 0\n                  scrollable: false\n"
-              "                  widgets: [label: { text: \"\\U000F0450\", align: center, text_font: f_icon, text_color: 0x1DB954 }]\n"
-              "                  on_click: [homeassistant.action: { action: homeassistant.update_entity, data: { entity_id: %s } }]\n" % (w - 54, e))
+              "                  widgets: [label: { text: \"%s\", align: center, text_font: f_icon, text_color: 0x1DB954 }]\n"
+              "                  on_click: [homeassistant.action: { action: homeassistant.update_entity, data: { entity_id: %s } }]\n" % (w - 54, glyph_for("reload"), e))
     rh, gap = 44, 6
     list_y = 48
     list_h = h - list_y - 12
