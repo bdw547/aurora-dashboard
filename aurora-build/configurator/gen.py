@@ -197,7 +197,7 @@ CARD_ICON = {
     "playlist": "\\U000F075A", "sonos_fav": "\\U000F04CE", "songlist": "\\U000F075A",
     "sonos_library": "\\U000F125F",
     "spotify_playlists": "\\U000F075A", "spotify_tracks": "\\U000F075A",
-    "spotify_speakers": "\\U000F04C4",
+    "spotify_speakers": "\\U000F04C4", "spotify_speaker": "\\U000F04C3",
     # TV control cards (purple family)
     "tv_sources": "\\U000F0502", "tv_dpad": "\\U000F0297", "tv_transport": "\\U000F040A",
     "tv_channel": "\\U000F0502", "tv_volume": "\\U000F057E", "tv_trackpad": "\\U000F0297",
@@ -1704,6 +1704,13 @@ def c_spot_tracks(card, x, y, w, h, base):
           "            const std::string &str = x;\n"
           "            lv_obj_t* L[" + str(n) + "] = { " + larr + " };\n"
           "            lv_obj_t* R[" + str(n) + "] = { " + rarr + " };\n"
+          # only populate once a playlist has been chosen this session; ignore the
+          # stale track list HA replays on connect (design: list stays empty until pick)
+          "            if (id(g_spot_ctx).empty()) {\n"
+          "              for (int j = 0; j < " + str(n) + "; j++) lv_obj_add_flag(R[j], LV_OBJ_FLAG_HIDDEN);\n"
+          "              lv_obj_clear_flag(id(" + base + "_empty), LV_OBJ_FLAG_HIDDEN);\n"
+          "              return;\n"
+          "            }\n"
           "            int idx = 0; size_t st = 0;\n"
           "            for (size_t i = 0; i <= str.size() && idx < " + str(n) + "; i++) {\n"
           "              if (i == str.size() || str[i] == '\\n') {\n"
@@ -1826,6 +1833,44 @@ def c_spot_speakers(card, x, y, w, h, base):
         % (base, e, _indent(src, 12)),
     ]
     return [card_obj(x, y, w, h, inner)], [], ts
+
+
+def c_spot_speaker(card, x, y, w, h, base):
+    """Single-speaker Spotify "Play on" tile (1x1+). Assign ONE speaker by its
+    Spotify Connect source name (exactly as it appears in the SpotifyPlus
+    media_player's source_list). Tapping transfers playback there via
+    media_player.select_source and marks it the play-track target (g_spot_dev);
+    the tile lights green while it is the player's active `source`. Drop several
+    tiles for a curated set of cast targets. The source name is carried in a
+    hidden label so the tap + highlight lambdas never embed it (dodges C++/YAML
+    string escaping of speaker names with quotes/apostrophes)."""
+    e = card.get("entity") or "media_player.spotifyplus_ben_walton"
+    spk = card.get("speaker") or card.get("name") or "Speaker"
+    disp = card.get("name") or spk
+    oid, iid, srcid = base + "_c", base + "_i", base + "_src"
+    acc = "0x1DB954"
+    lit = _darken(acc, 0.22)
+    inner = lbl(CARD_ICON["spotify_speaker"], 0, 20, "f_icon", acc, wid=iid, align="top_mid")
+    inner += lbl(disp, 0, -12, "f_small", "0xF3F5F8", align="bottom_mid",
+                 width=w - 14, text_align="center", long="dot", height=16)
+    inner += ("              - label: { id: %s, text: %s, hidden: true, x: 0, y: 0, "
+              "text_font: f_micro, text_color: 0x000000 }\n" % (srcid, esc(spk)))
+    # tap: mark this the target, transfer playback there, light self immediately.
+    tap = ("id(g_spot_dev) = std::string(lv_label_get_text(id(%s))); "
+           "lv_obj_set_style_bg_color(id(%s), lv_color_hex(%s), 0); "
+           "lv_obj_set_style_text_color(id(%s), lv_color_hex(0xFFFFFF), 0);"
+           % (srcid, oid, lit, iid))
+    on = ("lambda: '%s', homeassistant.action: { action: media_player.select_source, "
+          "data: { entity_id: %s, source: !lambda 'return id(g_spot_dev);' } }" % (tap, e))
+    # highlight = truth from the player's `source` attr: green when it is us.
+    hl = [
+        "bool on = (std::string(x) == std::string(lv_label_get_text(id(%s))));" % srcid,
+        "lv_obj_set_style_bg_color(id(%s), lv_color_hex(on ? %s : 0x0E1116), 0);" % (oid, lit),
+        "lv_obj_set_style_text_color(id(%s), lv_color_hex(on ? 0xFFFFFF : %s), 0);" % (iid, acc),
+    ]
+    ts = ["  - platform: homeassistant\n    id: ha_%s_src\n    entity_id: %s\n    attribute: source\n"
+          "    on_value:\n      then:\n        - lambda: |-\n%s" % (base, e, _indent(hl, 12))]
+    return [card_obj(x, y, w, h, inner, on, oid=oid)], [], ts
 
 
 def c_shortcuts(card, x, y, w, h, pagemap, base):
@@ -2175,7 +2220,7 @@ CTRL = {
     "playlist": c_playlist, "sonos_fav": c_playlist, "songlist": c_songlist,
     "sonos_library": c_songlist, "volume": c_volume, "volumes": c_volumes,
     "spotify_playlists": c_spot_playlists, "spotify_tracks": c_spot_tracks,
-    "spotify_speakers": c_spot_speakers,
+    "spotify_speakers": c_spot_speakers, "spotify_speaker": c_spot_speaker,
 }
 
 

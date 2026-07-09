@@ -262,6 +262,7 @@ const C = {
   spotify_playlists:{label:'Spotify playlists (dropdown)', domain:'media_player', icon:'playlist-play', color:'#1DB954', spans:[[2,1],[3,1],[2,2],[3,2],[2,3],[3,3]], def:[3,1], ctrl:'spot_pl'},
   spotify_tracks:{label:'Spotify songs (list)', domain:'media_player', icon:'playlist-music', color:'#1DB954', spans:[[2,3],[2,4],[2,5],[3,4],[3,5],[4,5]], def:[2,5], ctrl:'spot_tr'},
   spotify_speakers:{label:'Spotify speakers (Play on)', domain:'media_player', icon:'speaker-multiple', color:'#1DB954', spans:[[2,2],[3,2],[2,3],[3,3],[2,4],[3,4]], def:[3,3], ctrl:'spot_spk'},
+  spotify_speaker:{label:'Spotify speaker (1×1 Play-on)', domain:'media_player', icon:'speaker', color:'#1DB954', spans:[[1,1],[2,1],[1,2],[2,2]], def:[1,1], ctrl:'spot_spk1', speakerField:true},
   playlist: {label:'Spotify playlist', domain:'media_player', icon:'playlist-play', color:'#1DB954', spans:[[1,1],[2,1],[3,1]], def:[2,1], ctrl:'playlist', playlistField:true},
   songlist: {label:'Spotify song list', domain:'media_player', icon:'playlist-music', color:'#1DB954', spans:[[4,3],[3,4],[4,4],[3,5],[4,5],[5,5]], def:[4,4], ctrl:'songlist'},
   sonos:    {label:'Sonos (multi-room)', domain:'media_player', icon:'speaker-multiple', color:'var(--teal)', spans:[[3,2],[3,3],[4,4],[6,5]], def:[4,4], ctrl:'media'},
@@ -294,7 +295,7 @@ const C = {
 const CATS = [
   ['Lighting', ['light','light_t','switch','lightgroup','outletgroup']],
   ['Comfort', ['climate','fan','cover']],
-  ['Spotify', ['spotify_playlists','spotify_tracks','spotify_speakers','spotify','spotify_art','playlist','songlist','volume','volumes']],
+  ['Spotify', ['spotify_playlists','spotify_tracks','spotify_speakers','spotify_speaker','spotify','spotify_art','playlist','songlist','volume','volumes']],
   ['Sonos', ['sonos','speakers','sonos_sources','sonos_library','sonos_fav','volume','volumes']],
   ['TV', ['tvremote','tv_dpad','tv_transport','tv_channel','tv_volume','tv_sources','tv_trackpad']],
   ['Media', ['media','volume','volumes']],
@@ -673,6 +674,8 @@ function cardInner(c){ const def=C[c.ck], nm=c.name||def.label, big=c.w>=3, ctrl
     return head+`<div class="toprow">${ico}<span class="csub" style="letter-spacing:1px">TRACKS · TAP TO PLAY</span></div><div class="trklist">${lis}</div>`; }
   if(ctrl==='spot_spk'){ const rooms=['Living Room','Kitchen','Office','Dining Room','Patio','Gameroom']; const n=Math.max(3,c.h*2); let lis=''; for(let i=0;i<n;i++){ const nm=rooms[i%rooms.length]; const on=i===0; lis+=`<div class="trk" style="${on?'background:#1DB954;':''}"><span style="color:${on?'#06231D':'var(--tx)'};white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${nm}</span></div>`; }
     return head+`<div class="toprow">${ico}<span class="csub" style="letter-spacing:1px">PLAY ON · TAP A SPEAKER</span></div><div class="trklist">${lis}</div>`; }
+  if(ctrl==='spot_spk1'){ const label=c.speaker||c.name||'Speaker';
+    return `<div style="position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:8px;padding:6px"><span class="mdi mdi-speaker" style="font-size:26px;color:#1DB954"></span><div style="font-size:12px;font-weight:600;text-align:center;color:var(--tx);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:100%">${label}</div></div>`+head; }
   return head+ico+nme;
 }
 
@@ -769,6 +772,7 @@ function renderInspector(){ const el=document.getElementById('insp'); const c=se
     ${c.ck==='sensor'?`<div class="field"><label>Color rules (value → color)</label><div id="ruleList"></div><button class="btn ghost" id="addRule" style="width:100%;margin-top:6px">+ Add rule</button></div>`:''}
     ${(c.ck==='binary'||c.ck==='person')?`<div class="field"><label>Active color <span style="color:var(--t3);font-weight:400">— dims when inactive</span></label><input id="fActive" type="color" value="${hexToInput(c.activeColor||'0x2ED5B8')}" style="width:56px;height:34px;padding:2px;border:1px solid var(--bd);border-radius:8px;background:#0F1117"></div>`:''}
     ${def.playlistField?`<div class="field"><label>${c.ck==='sonos_fav'?'Favorite':'Playlist'} name (used as the button label)</label><input id="fPl" value="${(c.pl||'').replace(/"/g,'&quot;')}" placeholder="e.g. Liked Songs"></div>`:''}
+    ${def.speakerField?`<div class="field"><label>Speaker name <span style="color:var(--t3);font-weight:400">— exact Spotify Connect / source name</span></label><input id="fSpk" value="${(c.speaker||'').replace(/"/g,'&quot;')}" placeholder="e.g. Kitchen"></div>`:''}
     ${ROW_CFG[c.ck]?`<div class="field"><label>List rows (default ${ROW_CFG[c.ck].def}, max ${ROW_CFG[c.ck].max}) — fewer = lighter firmware</label><input id="fRows" type="number" min="4" max="${ROW_CFG[c.ck].max}" value="${cardRows(c)}"></div>`:''}
     <div class="field"><label>Size (span)</label><div class="szrow" id="szrow"></div></div>
     <div class="field"><label>Position</label><div class="mono" style="font-size:12px;color:var(--t2)">col ${c.x}, row ${c.y} — drag on grid to move</div></div>
@@ -782,6 +786,7 @@ function renderInspector(){ const el=document.getElementById('insp'); const c=se
   { const rl=el.querySelector('#ruleList'); if(rl){ renderRules(c,rl); el.querySelector('#addRule').onclick=()=>{ c.rules=c.rules||[]; c.rules.push({op:'>=',val:0,color:RULE_COLORS[Math.min(c.rules.length,RULE_COLORS.length-1)]}); renderInspector(); }; } }
   { const ac=el.querySelector('#fActive'); if(ac) ac.oninput=(e)=>{c.activeColor=inputToHex(e.target.value); renderGrid();}; }
   { const pe=el.querySelector('#fPl'); if(pe) pe.oninput=(e)=>{c.pl=e.target.value; renderGrid();}; }
+  { const se=el.querySelector('#fSpk'); if(se) se.oninput=(e)=>{c.speaker=e.target.value; renderGrid();}; }
   { const re=el.querySelector('#fRows'); if(re) re.oninput=(e)=>{ const v=parseInt(e.target.value,10); c.rows=isNaN(v)?undefined:v; renderCapacity(); }; }
   el.querySelector('#delCard').onclick=()=>{ const a=curCards(); a.splice(a.indexOf(c),1); sel=null; renderGrid(); renderInspector(); };
 }
