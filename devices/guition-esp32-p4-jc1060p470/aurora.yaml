@@ -47,6 +47,10 @@ substitutions:
   ent_camera_front: "camera.front_door"
   ent_event_chime: "event.front_door_front_door_chime"
   ha_base: "http://10.0.0.208:8123"
+  # Optional go2rtc MJPEG URL for the live view, e.g.
+  # http://10.0.0.208:1984/api/stream.mjpeg?src=camera.front_door (full fps).
+  # Empty = derive from HA camera_proxy_stream (~2fps).
+  cam_stream_url_override: ""
   ent_person: "person.ben"
   ent_weather: "weather.forecast_home"
   ent_weather_fc: "sensor.aurora_weather_daily"
@@ -71,6 +75,11 @@ esphome:
         - lvgl.display.set_rotation: 0
         - script.execute: demo_watchdog
         - lambda: 'id(haptic).set_level(id(g_haptic_level));'   # apply saved touch-feedback strength
+        # Apply the go2rtc stream override at boot so live video doesn't
+        # depend on HA delivering the entity_picture attribute first.
+        - lambda: |-
+            std::string ov = "$cam_stream_url_override";
+            if (!ov.empty()) id(cam_stream).set_url(ov);
 
 esp32:
   variant: esp32p4
@@ -264,7 +273,7 @@ external_components:
   - source:
       type: local
       path: ../../components
-    components: [esp_video_camera, ov02c10_support, drv2605]
+    components: [esp_video_camera, ov02c10_support, drv2605, mjpeg_stream]
 
 ov02c10_support:
 
@@ -287,6 +296,65 @@ esp_video_camera:
   max_framerate: 10
   enable_xclk: false
   xclk_pin: -1
+
+# --- MJPEG live stream viewer (front-door camera -> LVGL) -------------------
+# Pulls the HA camera_proxy_stream (or go2rtc override) on a dedicated FreeRTOS
+# task, HW-decodes + PPA-scales frames into the LVGL image widgets off-loop.
+# Target index 0 = Security card (600x452), index 1 = Doorbell page (800x600).
+mjpeg_stream:
+  - id: cam_stream
+    max_fps: 8.0
+    max_jpeg_size: 512kB
+    max_source_width: 1920
+    max_source_height: 1080
+    targets:                 # list index = target_idx passed to start()
+      - width: 600
+        height: 452
+      - width: 800
+        height: 600
+    task_core: 1
+    task_priority: 4
+    read_timeout: 10s
+    on_state:
+      - if:
+          condition:
+            lambda: 'return state == esphome::mjpeg_stream::StreamState::CONNECTING;'
+          then:
+            - lvgl.widget.update: { id: spin_cam, hidden: false }
+      - if:
+          condition:
+            lambda: 'return state == esphome::mjpeg_stream::StreamState::LIVE;'
+          then:
+            - lvgl.widget.update: { id: spin_cam, hidden: true }
+            - lvgl.widget.update: { id: pill_live_card, bg_color: 0xE5484D }
+            - lvgl.label.update: { id: lbl_live_card, text: "LIVE" }
+            - lvgl.widget.update: { id: pill_live_big, bg_color: 0xE5484D }
+            - lvgl.label.update: { id: lbl_live_big, text: "LIVE" }
+      - if:
+          condition:
+            lambda: 'return state == esphome::mjpeg_stream::StreamState::ERROR_NET || state == esphome::mjpeg_stream::StreamState::ERROR_AUTH;'
+          then:
+            - lvgl.widget.update: { id: spin_cam, hidden: true }
+            - lvgl.widget.update: { id: pill_live_card, bg_color: 0x2A2F3A }
+            - lvgl.label.update: { id: lbl_live_card, text: "SNAP" }
+            - lvgl.widget.update: { id: pill_live_big, bg_color: 0x2A2F3A }
+            - lvgl.label.update: { id: lbl_live_big, text: "SNAP" }
+            # Snapshot fallback so the widget still shows something recent.
+            - if:
+                condition:
+                  lambda: 'return id(g_cam_view) == 1;'
+                then:
+                  - script.execute: cam_snap_once
+            - if:
+                condition:
+                  lambda: 'return id(g_cam_view) == 2;'
+                then:
+                  - script.execute: cam_snap_big
+      - if:
+          condition:
+            lambda: 'return state == esphome::mjpeg_stream::StreamState::STOPPED;'
+          then:
+            - lvgl.widget.update: { id: spin_cam, hidden: true }
 
 i2c:
   - id: bus_a
@@ -1494,7 +1562,15 @@ text_sensor:
     attribute: entity_picture
     on_value:
       then:
-        - lambda: 'id(g_cam_url) = std::string("$ha_base") + x;'
+        - lambda: |-
+            id(g_cam_url) = std::string("$ha_base") + x;
+            // Derive the MJPEG stream URL from the snapshot proxy path.
+            std::string sp = x;
+            size_t p = sp.find("/api/camera_proxy/");
+            if (p != std::string::npos) sp.replace(p, 18, "/api/camera_proxy_stream/");
+            id(g_cam_stream_url) = std::string("$ha_base") + sp;
+            std::string ov = "$cam_stream_url_override";
+            id(cam_stream).set_url(!ov.empty() ? ov : id(g_cam_stream_url));
   # ---- Doorbell chime -> pop up the camera (guard: ignore initial sync) ----
   - platform: homeassistant
     id: ha_chime
@@ -2522,6 +2598,10 @@ globals:
   - id: g_cam_url
     type: std::string
     restore_value: false
+  - id: g_cam_stream_url
+    type: std::string
+    restore_value: false
+    initial_value: '""'
   - id: g_cam_view
     type: int
     restore_value: false
@@ -2821,10 +2901,12 @@ number:
     step: 5
 
 interval:
-  # NOTE: camera images are NOT polled on an interval. ESPHome's image fetch is
-  # synchronous (blocks the UI loop) and the cloud-Nest camera_proxy is slow, so
-  # both the Security card and the fullscreen view load a single snapshot on open
-  # (deferred) plus a manual Refresh — auto-polling locked up the screen.
+  # NOTE: live camera video now runs off the main loop via the mjpeg_stream
+  # component (dedicated FreeRTOS task + HW JPEG decode/PPA scale), so nothing
+  # camera-related is polled on an interval. The online_image snapshots
+  # (cam_image/cam_big) remain only for first paint on page open and as a
+  # fallback when the stream errors — their fetch is synchronous and would
+  # block the UI loop if auto-polled.
   - interval: 50ms
     then:
       - if:
@@ -4121,9 +4203,13 @@ lvgl:
         - lvgl.widget.update: { id: nav_network, bg_color: 0x10121A }
         - lvgl.widget.update: { id: nav_settings, bg_color: 0x10121A }
         - lambda: 'id(g_cam_view) = 1;'
+        # First paint: one deferred snapshot, then hand off to the live stream.
+        - script.execute: cam_snap_once
+        - lambda: 'id(cam_stream).start(0, id(img_cam_security));'
       on_unload:
         - lambda: 'id(g_cam_view) = 0;'
         - script.stop: cam_snap_once
+        - lambda: 'id(cam_stream).stop();'
       widgets:
         - image: { src: img_aurora_bg, x: 0, y: 0 }
         - label: { text: "Security", x: 100, y: 26, text_font: f_title, text_color: 0xEEF0F6 }
@@ -4151,7 +4237,9 @@ lvgl:
                   radius: 8
                   bg_color: 0x1B2230
                   widgets: [label: { text: "Refresh", align: center, text_font: f_small, text_color: 0xEEF0F6 }]
-                  on_click: [script.execute: cam_snap_once]
+                  on_click:
+                    - lambda: 'id(cam_stream).restart();'
+                    - script.execute: cam_snap_once
               - spinner:
                   id: spin_cam
                   align: center
@@ -4166,6 +4254,7 @@ lvgl:
                     arc_width: 6
               - label: { id: lbl_cam_demo, text: "DEMO FEED", align: center, text_font: f_title, text_color: 0x6E727E, hidden: true }
               - obj:
+                  id: pill_live_card
                   x: 14
                   y: 14
                   width: 78
@@ -4173,7 +4262,7 @@ lvgl:
                   radius: 15
                   bg_color: 0xE5484D
                   border_width: 0
-                  widgets: [label: { text: "LIVE", align: center, text_font: f_small, text_color: 0xFFFFFF }]
+                  widgets: [label: { id: lbl_live_card, text: "LIVE", align: center, text_font: f_small, text_color: 0xFFFFFF }]
               - label: { text: "Front Door · tap for fullscreen", align: bottom_left, x: 14, y: -12, text_font: f_small, text_color: 0xC8CCD6 }
         # Front-door lock controls (icons)
         - obj:
@@ -7993,14 +8082,18 @@ lvgl:
         - lvgl.widget.update: { id: lbl_ssid, hidden: true }
         - lvgl.widget.update: { id: lbl_ip, hidden: true }
         - lambda: 'id(g_cam_view) = 2;'
+        - script.execute: cam_snap_big   # instant first paint while the stream connects
+        - lambda: 'id(cam_stream).start(1, id(img_cam_big));'
       on_unload:
         - lambda: 'id(g_cam_view) = 0;'
         - script.stop: cam_snap_big
+        - lambda: 'id(cam_stream).stop();'
       widgets:
         # Fullscreen live feed (800x600 = 1/2 of source, fills height, centered)
         - image: { id: img_cam_big, src: cam_big, x: 112, y: 0 }
         - label: { id: lbl_cam_demo_big, text: "DEMO FEED — offline", align: center, y: -70, text_font: f_head, text_color: 0x6E727E, hidden: true }
         - obj:
+            id: pill_live_big
             x: 20
             y: 20
             width: 78
@@ -8008,7 +8101,7 @@ lvgl:
             radius: 15
             bg_color: 0xE5484D
             border_width: 0
-            widgets: [label: { text: "LIVE", align: center, text_font: f_small, text_color: 0xFFFFFF }]
+            widgets: [label: { id: lbl_live_big, text: "LIVE", align: center, text_font: f_small, text_color: 0xFFFFFF }]
         # Translucent control overlay across the bottom
         - obj:
             x: 0
@@ -8032,6 +8125,7 @@ lvgl:
                   bg_color: 0x1B2230
                   widgets: [label: { text: "Refresh", align: center, text_font: f_body, text_color: 0xEEF0F6 }]
                   on_click:
+                    - lambda: 'id(cam_stream).restart();'
                     - if:
                         condition:
                           lambda: 'return !id(g_cam_url).empty();'
