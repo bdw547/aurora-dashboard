@@ -220,20 +220,23 @@ def card_glyph(card, default_glyph):
 
 def c_toggle(card, x, y, w, h, base):
     e = card.get("entity", "")
-    sid = base + "_st"
-    inner = ic(card["ck"], color="0x2ED5B8", glyph=card_glyph(card, None))
+    sid, oid, iid = base + "_st", base + "_c", base + "_i"
+    acc = "0xE6A62B" if card["ck"] == "light_t" else "0x2ED5B8"   # amber for light toggle, teal for switch
+    lit = _darken(acc, 0.22)
+    inner = ic(card["ck"], color=acc, glyph=card_glyph(card, None), wid=iid)
     inner += title(card.get("name", "Switch"), w, x=14, y=48)
-    inner += lbl("--", 14, -14, "f_small", "0x2ED5B8", wid=sid, align="bottom_left")
+    inner += lbl("--", 14, -14, "f_small", acc, wid=sid, align="bottom_left")
     on = ha("homeassistant.toggle", e) if e else None
     ts = []
     if e:
+        # whole card lights up when on / dims when off (fixes "stays the same color")
         ts.append(
             "  - platform: homeassistant\n    id: ha_%s\n    entity_id: %s\n    on_value:\n"
-            "      - lvgl.label.update:\n          id: %s\n"
-            "          text: !lambda 'return x == \"on\" ? std::string(\"On\") : std::string(\"Off\");'\n"
-            "          text_color: !lambda 'return x == \"on\" ? lv_color_hex(0x2ED5B8) : lv_color_hex(0x868CA0);'\n"
-            % (sid, e, sid))
-    return [card_obj(x, y, w, h, inner, on)], [], ts
+            "      - lvgl.label.update: { id: %s, text: !lambda 'return x == \"on\" ? std::string(\"On\") : std::string(\"Off\");', text_color: !lambda 'return x == \"on\" ? lv_color_hex(%s) : lv_color_hex(0x6B7280);' }\n"
+            "      - lvgl.label.update: { id: %s, text_color: !lambda 'return x == \"on\" ? lv_color_hex(%s) : lv_color_hex(0x4A5160);' }\n"
+            "      - lvgl.widget.update: { id: %s, bg_color: !lambda 'return x == \"on\" ? lv_color_hex(%s) : lv_color_hex(0x0E1116);' }\n"
+            % (sid, e, sid, acc, iid, acc, oid, lit))
+    return [card_obj(x, y, w, h, inner, on, oid=oid)], [], ts
 
 
 # Fill-strip palette (Aurora "Light + Spotify Styles" handoff): warm amber light.
@@ -706,6 +709,7 @@ def c_action(card, x, y, w, h, base):
 # per entity that set_url+updates every used decoder. Host builds skip art (no decoders).
 ART_IMAGES = []
 ART_ENABLED = True
+EXTRA_CLOCKS = []   # (label_id, kind) live-clock bindings contributed by card emitters
 
 
 def c_media(card, x, y, w, h, base):
@@ -855,13 +859,22 @@ def c_media(card, x, y, w, h, base):
 def c_fan(card, x, y, w, h, base):
     e = card.get("entity", "")
     gw, gh = card["w"], card["h"]
-    if gw * gh <= 2:                                  # small: icon + centered label, card colored when on
-        on = True                                     # demo (no HA); real per-entity state is TODO
+    if gw * gh <= 2:                                  # small: icon + centered label, card lights when on
         act = ha("fan.toggle", e) if e else "lvgl.page.show: page_home"
-        col = "0x2ED5B8" if on else "0xC2C7D2"
-        inner = lbl(CARD_ICON.get(card["ck"], "\\U000F0210"), 0, -20, "f_icon", col, align="center")
-        inner += lbl(card.get("name", "Fan"), 0, 24, "f_body", col, align="center", width=w - 24, text_align="center", long="dot")
-        return [card_obj(x, y, w, h, inner, act, bg=("0x0F3D34" if on else None))], [], []
+        oid, iid, nlid, acc = base + "_c", base + "_i", base + "_n", "0x2ED5B8"
+        glyph = card_glyph(card, CARD_ICON.get(card["ck"], "\\U000F0210"))
+        inner = lbl(glyph, 0, -20, "f_icon", acc, wid=iid, align="center")
+        inner += lbl(card.get("name", "Fan"), 0, 24, "f_body", acc, wid=nlid, align="center", width=w - 24, text_align="center", long="dot")
+        ts = []
+        if e:  # real fan state: whole card lights up when on / dims when off
+            lit = _darken(acc, 0.22)
+            ts.append(
+                "  - platform: homeassistant\n    id: ha_%s\n    entity_id: %s\n    on_value:\n"
+                "      - lvgl.widget.update: { id: %s, bg_color: !lambda 'return x == \"on\" ? lv_color_hex(%s) : lv_color_hex(0x0E1116);' }\n"
+                "      - lvgl.label.update: { id: %s, text_color: !lambda 'return x == \"on\" ? lv_color_hex(%s) : lv_color_hex(0x4A5160);' }\n"
+                "      - lvgl.label.update: { id: %s, text_color: !lambda 'return x == \"on\" ? lv_color_hex(%s) : lv_color_hex(0x6B7280);' }\n"
+                % (base, e, oid, lit, iid, acc, nlid, acc))
+        return [card_obj(x, y, w, h, inner, act, oid=oid)], [], ts
     inner = ic(card["ck"], color="0x2ED5B8")
     inner += title(card.get("name", "Fan"), w, x=14, y=48)   # larger: Off / Low / Med / High segments
     speeds = ["Off", "Low", "Med", "High"]
@@ -951,24 +964,47 @@ def _wx_temp_readback(base, e, tid):
             % (base, e, tid))
 
 
+# HA weather condition (entity STATE) -> (f_wxicon glyph, label). Drives the hero
+# icon + condition text live, so the card isn't stuck on the pre-baked night glyph.
+WX_COND = [("clear-night", "\\U000F0594", "Clear"), ("sunny", "\\U000F0599", "Sunny"),
+           ("partlycloudy", "\\U000F0595", "Partly Cloudy"), ("cloudy", "\\U000F0590", "Cloudy"),
+           ("pouring", "\\U000F0596", "Pouring"), ("rainy", "\\U000F0597", "Rain"),
+           ("snowy", "\\U000F0598", "Snow"), ("snowy-rainy", "\\U000F067F", "Sleet"),
+           ("fog", "\\U000F0591", "Fog"), ("hail", "\\U000F0592", "Hail"),
+           ("lightning", "\\U000F0593", "Lightning"), ("lightning-rainy", "\\U000F067E", "Storms"),
+           ("windy", "\\U000F059D", "Windy"), ("windy-variant", "\\U000F059D", "Windy"),
+           ("exceptional", "\\U000F0026", "Alert")]
+
+
+def _wx_cond_readback(base, e, hid, cid):
+    """Map the weather entity state -> hero glyph + condition label (device build)."""
+    gifs = "".join("if (x == \"%s\") return std::string(\"%s\"); " % (c, g) for c, g, _ in WX_COND)
+    tifs = "".join("if (x == \"%s\") return std::string(\"%s\"); " % (c, l) for c, _, l in WX_COND)
+    return ("  - platform: homeassistant\n    id: ha_%s_cond\n    entity_id: %s\n    on_value:\n"
+            "      - lvgl.label.update: { id: %s, text: !lambda '%sreturn std::string(\"\\U000F0599\");' }\n"
+            "      - lvgl.label.update: { id: %s, text: !lambda '%sreturn x;' }\n"
+            % (base, e, hid, gifs, cid, tifs))
+
+
 def c_weather(card, x, y, w, h, base):
     e = card.get("entity", "")
-    tid, cid = base + "_t", base + "_c"
+    tid, cid, hid = base + "_t", base + "_c", base + "_h"
     if w < 620 or h < 400:                               # compact: icon + temp + condition
-        inner = "              - label: { text: \"\\U000F0599\", x: 14, y: 14, text_font: f_wxicon, text_color: 0xF2B84B }\n"
+        inner = "              - label: { id: " + hid + ", text: \"\\U000F0599\", x: 14, y: 14, text_font: f_wxicon, text_color: 0xF2B84B }\n"
         inner += lbl("72\\u00B0", -16, 20, "f_display", "0xF3F5F8", wid=tid, align="top_right")
         inner += lbl("Sunny", 14, -12, "f_body", "0x2ED5B8", wid=cid, align="bottom_left")
-        return [card_obj(x, y, w, h, inner)], ([_wx_temp_readback(base, e, tid)] if e else []), []
+        return [card_obj(x, y, w, h, inner)], ([_wx_temp_readback(base, e, tid)] if e else []), ([_wx_cond_readback(base, e, hid, cid)] if e else [])
     # large: full forecast (hero + hourly + daily + stats), values pre-baked
     pad = 14
     hh = 128
     inner = ("              - obj: { x: %d, y: %d, width: %d, height: %d, bg_color: 0x141F38, bg_grad_color: 0x0E1524, bg_grad_dir: VER, border_width: 0, radius: 16, pad_all: 0, scrollable: false }\n" % (pad, pad, w - 2 * pad, hh))
-    inner += "              - label: { text: \"\\U000F0594\", x: %d, y: %d, text_font: f_wxicon, text_color: 0x8FA6FF }\n" % (pad + 26, pad + 26)
+    inner += "              - label: { id: %s, text: \"\\U000F0599\", x: %d, y: %d, text_font: f_wxicon, text_color: 0xF2B84B }\n" % (hid, pad + 26, pad + 26)
     inner += lbl("72\\u00B0", pad + 150, pad + 10, "f_display", "0xF3F5F8", wid=tid)
-    inner += lbl("Clear \\u00B7 Feels like 73\\u00B0", pad + 152, pad + 72, "f_body", "0xC2C7D2", wid=cid, width=340, long="dot", height=20)
-    inner += lbl("PRE-BAKED SKY", -(pad + 4), pad + 14, "f_micro", "0x5D6470", align="top_right")
+    inner += lbl("Sunny", pad + 152, pad + 72, "f_body", "0xC2C7D2", wid=cid, width=340, long="dot", height=20)
     inner += lbl("Home", -(pad + 4), pad + 34, "f_title", "0xF3F5F8", align="top_right")
-    inner += lbl("Friday \\u00B7 9:41 PM", -(pad + 4), pad + 70, "f_small", "0x868CA0", align="top_right")
+    wtime = base + "_clk"
+    inner += lbl("Friday \\u00B7 9:41 PM", -(pad + 4), pad + 70, "f_small", "0x868CA0", wid=wtime, align="top_right")
+    EXTRA_CLOCKS.append((wtime, "dow_time"))            # live device time (fixes "stuck 9pm")
     inner += lbl("High 96\\u00B0 \\u00B7 Low 74\\u00B0", -(pad + 4), pad + 92, "f_small", "0x868CA0", align="top_right")
     hy, ht, gap = pad + hh + 12, 116, 10
     n = len(WX_HOURLY)
@@ -1006,7 +1042,7 @@ def c_weather(card, x, y, w, h, base):
                   "label: { text: %s, x: 14, y: 14, text_font: f_micro, text_color: 0x868CA0 }, "
                   "label: { text: %s, x: 14, y: 32, text_font: f_title, text_color: %s }] }\n"
                   % (cx, cy, sw, srh, esc(lt), esc(val), col))
-    return [card_obj(x, y, w, h, inner)], ([_wx_temp_readback(base, e, tid)] if e else []), []
+    return [card_obj(x, y, w, h, inner)], ([_wx_temp_readback(base, e, tid)] if e else []), ([_wx_cond_readback(base, e, hid, cid)] if e else [])
 
 
 def c_camera(card, x, y, w, h, base):
@@ -1498,10 +1534,11 @@ def c_spot_playlists(card, x, y, w, h, base):
                 "                        then:\n"
                 "                          - homeassistant.action:\n                              action: script.aurora_spotify_load_playlist\n                              data:\n"
                 "                                playlist_uri: !lambda 'return id(g_spot_ctx);'\n")
+    glyph_for("reload")   # record F0450 so it's embedded in f_icon (reload button)
     inner = lbl("PLAYLIST", 14, 16, "f_micro", "0x868CA0")
     inner += ("              - button:\n                  x: %d\n                  y: 10\n                  width: 40\n                  height: 30\n"
               "                  bg_color: 0x161B24\n                  radius: 10\n                  pad_all: 0\n                  scrollable: false\n"
-              "                  widgets: [label: { text: \"\\U000F0450\", align: center, text_font: f_iconsm, text_color: 0x1DB954 }]\n"
+              "                  widgets: [label: { text: \"\\U000F0450\", align: center, text_font: f_icon, text_color: 0x1DB954 }]\n"
               "                  on_click: [homeassistant.action: { action: script.aurora_spotify_refresh_playlists }]\n" % (w - 54))
     inner += dropdown
     if not compact:
@@ -1536,6 +1573,11 @@ def c_spot_tracks(card, x, y, w, h, base):
     n = _card_rows(card, SPOT_MAX_TRACKS, SPOT_MAX_TRACKS)
     inner = ic("spotify_tracks", color="0x1DB954")
     inner += lbl("TRACKS \\u00B7 TAP TO PLAY", 50, 18, "f_micro", "0x868CA0")
+    inner += ("              - button:\n                  x: " + str(w - 54) + "\n                  y: 10\n                  width: 40\n                  height: 30\n"
+              "                  bg_color: 0x161B24\n                  radius: 10\n                  pad_all: 0\n                  scrollable: false\n"
+              "                  widgets: [label: { text: \"" + glyph_for("reload") + "\", align: center, text_font: f_icon, text_color: 0x1DB954 }]\n"
+              "                  on_click:\n                    - if:\n                        condition:\n                          lambda: 'return !id(g_spot_ctx).empty();'\n"
+              "                        then:\n                          - homeassistant.action:\n                              action: script.aurora_spotify_load_playlist\n                              data:\n                                playlist_uri: !lambda 'return id(g_spot_ctx);'\n")
     rh, gap = 44, 6
     list_y = 48
     list_h = h - list_y - 12
@@ -1627,12 +1669,13 @@ def c_spot_speakers(card, x, y, w, h, base):
     so rows are parsed by pulling each quoted token (single- or double-quoted)."""
     e = card.get("entity") or "media_player.spotifyplus_ben_walton"
     n = _card_rows(card, SPOT_MAX_SPEAKERS, 24)
+    glyph_for("reload")   # record F0450 so it's embedded in f_icon (reload button)
     inner = ic("speakers", color="0x1DB954")
     inner += lbl("PLAY ON \\u00B7 TAP A SPEAKER", 50, 18, "f_micro", "0x868CA0")
     # refresh: re-poll the media_player so a newly-woken speaker shows up
     inner += ("              - button:\n                  x: %d\n                  y: 10\n                  width: 40\n                  height: 30\n"
               "                  bg_color: 0x161B24\n                  radius: 10\n                  pad_all: 0\n                  scrollable: false\n"
-              "                  widgets: [label: { text: \"\\U000F0450\", align: center, text_font: f_iconsm, text_color: 0x1DB954 }]\n"
+              "                  widgets: [label: { text: \"\\U000F0450\", align: center, text_font: f_icon, text_color: 0x1DB954 }]\n"
               "                  on_click: [homeassistant.action: { action: homeassistant.update_entity, data: { entity_id: %s } }]\n" % (w - 54, e))
     rh, gap = 44, 6
     list_y = 48
@@ -2345,10 +2388,11 @@ def gen_pages(layout, pagemap):
 
 def build_lvgl(layout):
     USED_ICON_CP.clear()  # repopulated by glyph_for() as icons are placed
+    EXTRA_CLOCKS.clear()  # repopulated by card emitters (e.g. weather time/date)
     pagemap = {key: "page_" + slug(key) for key in layout.get("pages", {})}
     nav = gen_nav(layout, pagemap)
     pages, sens, txt, clocks = gen_pages(layout, pagemap)
-    return nav, pages, sens, txt, pagemap, clocks
+    return nav, pages, sens, txt, pagemap, clocks + EXTRA_CLOCKS
 
 
 # ---- base extraction: keep hardware/font/style sections, drop UI bindings ----
@@ -2504,6 +2548,7 @@ CAM_WAKE_INTERVAL = (
 CLOCK_FMT = {
     "time": ("%I:%M %p", True), "time_hm": ("%I:%M", True), "date": ("%a %b %d", False),
     "date_full": ("%A, %B %d", False), "dow": ("%A", False), "date_long": ("%B %d", False),
+    "dow_time": ("%A \\u00b7 %I:%M %p", False),   # "Friday · 9:41 PM" (weather hero)
 }
 
 
