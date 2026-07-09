@@ -1069,20 +1069,20 @@ def c_weather(card, x, y, w, h, base):
 # --- Weather decomposed into selectable component cards (share the weather entity;
 # current temp + condition are live, forecast/stats are pre-baked demo like the 6x5) ---
 def c_wx_current(card, x, y, w, h, base):
-    """Current conditions: big condition icon + temp + condition + H/L (+ location/time on wide)."""
+    """Current conditions — mirrors page_weather: amber condition icon (left), the
+    condition as the big title + 'Outdoor conditions', and the temp with H/L on the
+    right. Temp + condition bind live to the weather entity."""
     e = card.get("entity", "")
     tid, cid, hid = base + "_t", base + "_c", base + "_h"
-    inner = "              - label: { id: %s, text: \"\\U000F0599\", x: 16, y: %d, text_font: f_wxicon, text_color: 0xF2B84B }\n" % (hid, max(14, (h - 72) // 2))
-    inner += lbl("72\\u00B0", 108, h // 2 - 40, "f_display", "0xF3F5F8", wid=tid)
-    inner += lbl("Sunny", 110, h // 2 + 14, "f_body", "0xC2C7D2", wid=cid, width=w - 124, long="dot", height=22)
-    inner += lbl("H 96\\u00B0 \\u00B7 L 74\\u00B0", 110, h // 2 + 40, "f_small", "0x868CA0", width=w - 124)
+    cy = h // 2
+    inner = "              - label: { id: %s, text: \"\\U000F0599\", x: 16, align: left_mid, text_font: f_wxicon, text_color: 0xFFCE54 }\n" % hid
+    inner += lbl("Sunny", 118, cy - 34, "f_head", "0xEEF0F6", wid=cid, width=max(60, w - 250), long="dot", height=40)
+    inner += lbl("Outdoor conditions", 120, cy + 12, "f_small", "0x8A8F9E")
+    inner += lbl("72\\u00B0", -16, cy - 44, "f_display", "0xEEF0F6", wid=tid, align="top_right")
+    inner += lbl("H 78\\u00B0", -16, cy + 6, "f_body", "0xC8CCD6", wid=base + "_hi", align="top_right")
+    inner += lbl("L 61\\u00B0", -16, cy + 32, "f_small", "0x8A8F9E", wid=base + "_lo", align="top_right")
     ts_s = [_wx_temp_readback(base, e, tid)] if e else []
     ts_t = [_wx_cond_readback(base, e, hid, cid)] if e else []
-    if w >= 420:
-        wtime = base + "_clk"
-        inner += lbl("Home", -16, 16, "f_title", "0xF3F5F8", align="top_right")
-        inner += lbl("Friday \\u00B7 9:41 PM", -16, 46, "f_small", "0x868CA0", wid=wtime, align="top_right")
-        EXTRA_CLOCKS.append((wtime, "dow_time"))
     return [card_obj(x, y, w, h, inner)], ts_s, ts_t
 
 
@@ -1104,38 +1104,41 @@ def c_wx_hourly(card, x, y, w, h, base):
 
 
 def c_wx_daily(card, x, y, w, h, base):
-    """Weekly forecast: day, condition icon, Low - gradient bar - High (pre-baked demo)."""
+    """Weekly forecast — mirrors page_weather: day / amber condition icon / high / low
+    as centered columns across the card (pre-baked demo forecast)."""
+    n = len(WX_DAILY)
     pad = 12
-    rn = len(WX_DAILY)
-    rh = (h - 2 * pad) // rn
+    pitch = (w - 2 * pad) // n
+    top = pad + 4
     inner = ""
     for i, (dn, g, lo, hi) in enumerate(WX_DAILY):
-        ry = pad + i * rh
-        ly = ry + (rh - 18) // 2
-        inner += lbl(dn, 14, ly, "f_body", "0xF3F5F8", width=56)
-        inner += "              - label: { text: \"%s\", x: 70, y: %d, text_font: f_icon, text_color: 0xF2B84B }\n" % (g, ry + (rh - 30) // 2)
-        inner += lbl(lo + "\\u00B0", 108, ly, "f_body", "0x868CA0", width=36)
-        barx, barw = 150, w - 44 - 150
-        inner += "              - obj: { x: %d, y: %d, width: %d, height: 8, bg_color: 0x4FA8F5, bg_grad_color: 0xF2B84B, bg_grad_dir: HOR, border_width: 0, radius: 4, pad_all: 0, scrollable: false }\n" % (barx, ry + (rh - 8) // 2, max(20, barw))
-        inner += lbl(hi + "\\u00B0", w - 42, ly, "f_body", "0xF3F5F8", width=36)
+        cx = pad + i * pitch
+        inner += "              - label: { text: %s, x: %d, y: %d, width: %d, text_align: center, text_font: f_body, text_color: 0xEEF0F6 }\n" % (esc(dn), cx, top, pitch)
+        inner += "              - label: { text: \"%s\", x: %d, y: %d, width: %d, text_align: center, text_font: f_icon, text_color: 0xFFCE54 }\n" % (g, cx, top + 30, pitch)
+        inner += "              - label: { text: \"%s\\u00B0\", x: %d, y: %d, width: %d, text_align: center, text_font: f_body, text_color: 0xEEF0F6 }\n" % (hi, cx, top + 70, pitch)
+        inner += "              - label: { text: \"%s\\u00B0\", x: %d, y: %d, width: %d, text_align: center, text_font: f_small, text_color: 0x8A8F9E }\n" % (lo, cx, top + 96, pitch)
     return [card_obj(x, y, w, h, inner)], [], []
 
 
 def c_wx_stats(card, x, y, w, h, base):
-    """Weather stats grid: humidity / wind / UV / pressure / sunrise / sunset (pre-baked demo)."""
-    pad, gap, cols = 12, 10, 2
-    rows = (len(WX_STATS) + cols - 1) // cols
-    cw = (w - 2 * pad - (cols - 1) * gap) // cols
-    ch = (h - 2 * pad - (rows - 1) * gap) // rows
+    """Weather stats — mirrors page_weather: Air pressure / Humidity / Wind speed rows
+    (label left, value right). Values bind live to the weather entity."""
+    e = card.get("entity", "")
+    pid, huid, wiid = base + "_pr", base + "_hu", base + "_wi"
+    rows = [("Air pressure", "30.05 inHg", pid), ("Humidity", "44%", huid), ("Wind speed", "7 mph NW", wiid)]
+    pad = 14
+    rh = (h - 2 * pad) // len(rows)
     inner = ""
-    for i, (lt, val, col) in enumerate(WX_STATS):
-        cx = pad + (i % cols) * (cw + gap)
-        cy = pad + (i // cols) * (ch + gap)
-        inner += ("              - obj: { x: %d, y: %d, width: %d, height: %d, bg_color: 0x14161C, border_width: 0, radius: 12, pad_all: 0, scrollable: false, widgets: ["
-                  "label: { text: %s, x: 14, y: 12, text_font: f_micro, text_color: 0x868CA0 }, "
-                  "label: { text: %s, x: 14, y: 30, text_font: f_title, text_color: %s }] }\n"
-                  % (cx, cy, cw, ch, esc(lt), esc(val), col))
-    return [card_obj(x, y, w, h, inner)], [], []
+    for i, (lab, val, vid) in enumerate(rows):
+        ry = pad + i * rh + (rh - 20) // 2
+        inner += lbl(lab, 14, ry, "f_body", "0xC8CCD6")
+        inner += lbl(val, -14, ry, "f_body", "0xEEF0F6", wid=vid, align="top_right")
+    ss = []
+    if e:
+        ss.append("  - platform: homeassistant\n    id: ha_%s_pr\n    entity_id: %s\n    attribute: pressure\n    on_value:\n      - lvgl.label.update: { id: %s, text: !lambda 'char b[20]; snprintf(b, sizeof(b), \"%%.2f inHg\", x); return std::string(b);' }\n" % (base, e, pid))
+        ss.append("  - platform: homeassistant\n    id: ha_%s_hu\n    entity_id: %s\n    attribute: humidity\n    on_value:\n      - lvgl.label.update: { id: %s, text: !lambda 'char b[8]; snprintf(b, sizeof(b), \"%%.0f%%%%\", x); return std::string(b);' }\n" % (base, e, huid))
+        ss.append("  - platform: homeassistant\n    id: ha_%s_wi\n    entity_id: %s\n    attribute: wind_speed\n    on_value:\n      - lvgl.label.update: { id: %s, text: !lambda 'char b[16]; snprintf(b, sizeof(b), \"%%.0f mph\", x); return std::string(b);' }\n" % (base, e, wiid))
+    return [card_obj(x, y, w, h, inner)], ss, []
 
 
 def c_camera(card, x, y, w, h, base):
