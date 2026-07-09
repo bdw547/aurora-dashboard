@@ -320,6 +320,41 @@ const STYLE_GROUPS=[
   {label:'Remote piece', opts:[['tvremote','Full remote'],['tv_dpad','D-pad'],['tv_transport','Transport row'],['tv_channel','Channel +/-'],['tv_volume','Volume'],['tv_sources','Sources / inputs'],['tv_trackpad','Trackpad']]},
 ];
 const STYLE_OF={}; STYLE_GROUPS.forEach(g=>g.opts.forEach(o=>STYLE_OF[o[0]]=g));
+// Palette subtext — one plain-language description per palette card (sizes live
+// in the add-modal + inspector; merged cards mention their styles here).
+const DESC={
+  light:'Dimmable light — fill-strip slider or a simple toggle',
+  switch:'On/off switch or outlet — card lights up when on',
+  lightgroup:'Several lights together as a card of tiles',
+  outletgroup:'Power strip — one on/off button per outlet',
+  climate:'Thermostat — current temp, setpoints and mode',
+  fan:'Fan on/off (works with fan or switch entities)',
+  cover:'Blinds / garage — open, stop, close',
+  spotify:'Now-playing + transport — classic or album-art style',
+  spotify_playlists:'Playlist picker — browse-all dropdown or a one-playlist button',
+  spotify_tracks:'Live song list of the picked playlist — tap to play',
+  spotify_speakers:'Where to play — all speakers or a single-speaker tile',
+  volume:'Volume slider — one player, or a per-speaker list',
+  sonos:'Sonos now-playing with transport',
+  speakers:'Link / unlink Sonos rooms + per-speaker volume',
+  sonos_sources:'Buttons that start a source on a speaker',
+  sonos_library:'Browse the Sonos music library',
+  sonos_fav:'One-tap button that plays a Sonos favorite',
+  media:'Any media player — art, transport, volume',
+  tvremote:'Full remote, or just one piece (D-pad, volume, sources…)',
+  group:'Live status tiles for a mix of entities',
+  shortcuts:'Quick-jump buttons to pages, rooms or the camera',
+  lock:'Lock / unlock with live state',
+  camera:'Live camera view',
+  alarm:'Alarm panel — state + arm / disarm',
+  binary:'Motion / door / occupancy — lights up when active',
+  sensor:'Numeric reading — plain value or a trend chart, with units + color rules',
+  weather:'Forecast — the full page or compact sections',
+  person:'Who is home / away',
+  vacuum:'Vacuum status',
+  scene:'One-tap scene button',
+  script:'Runs a script or button',
+};
 function styleField(c){ const g=STYLE_OF[c.ck]; if(!g) return '';
   return `<div class="field"><label>${g.label}</label><select id="fCkStyle">${g.opts.map(o=>`<option value="${o[0]}" ${c.ck===o[0]?'selected':''}>${o[1]}</option>`).join('')}</select></div>`; }
 function wireStyle(el,c){ const s=el.querySelector('#fCkStyle'); if(s) s.onchange=(e)=>switchStyle(c,e.target.value); }
@@ -478,10 +513,9 @@ function firstFit(w,h){ for(let y=1;y<=ROWS-h+1;y++) for(let x=1;x<=COLS-w+1;x++
 function renderPalette(){ const el=document.getElementById('palContent'); el.innerHTML='';
   for(const [cat,keys] of CATS){ const h=document.createElement('div'); h.className='pcat'; h.textContent=cat; el.appendChild(h);
     for(const k of keys){ const c=C[k]; const d=document.createElement('div'); d.className='pitem'; d.onclick=()=>openEntityPicker(k);
-      const g=STYLE_OF[k]; // merged card: advertise its styles instead of one variant's sizes
-      const hint=g? g.opts.map(o=>o[1]).join(' · ') : c.spans.map(s=>s[0]+'×'+s[1]).join(' · ');
+      const hint=DESC[k] || c.spans.map(s=>s[0]+'×'+s[1]).join(' · ');
       d.innerHTML=`<div class="ic" style="background:#0f1117;color:${c.color}"><span class="mdi mdi-${c.icon}"></span></div>
-        <div style="min-width:0"><div class="nm">${c.label}</div><div class="sz" style="white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${hint}</div></div>`; el.appendChild(d); } } }
+        <div style="min-width:0"><div class="nm">${c.label}</div><div class="sz">${hint}</div></div>`; el.appendChild(d); } } }
 
 function renderNav(){ const el=document.getElementById('navbuild'); el.innerHTML='';
   L.nav.forEach((n,i)=>{ const d=document.createElement('div'); d.className='navitem';
@@ -887,12 +921,17 @@ function enterPlacing(ck,entity,name,w,h){ placing={ck}; sel=null;
     grid.querySelectorAll('.gcell').forEach(c=>c.classList.remove('hot','bad')); document.getElementById('hint').textContent='6×'+ROWS+' grid · 1024×600 · drag a placed card to move it'; };
   grid.addEventListener('pointermove',onMove); grid.addEventListener('click',onClick); document.addEventListener('keydown',onKey); }
 
+function styleRow(ck){ const g=STYLE_OF[ck]; if(!g) return '';   // add-time style pills (re-renders the modal so sizes match)
+  return `<div class="field"><label>${g.label}</label><div class="szrow">${g.opts.map(o=>`<div class="szb stb${o[0]===ck?' on':''}" data-ck="${o[0]}">${o[1]}</div>`).join('')}</div></div>`; }
+function wireStyleRow(mbox){ mbox.querySelectorAll('.stb').forEach(b=>{ b.onclick=()=>{ if(!b.classList.contains('on')) openEntityPicker(b.dataset.ck); }; }); }
 function openEntityPicker(ck,existing){ const def=C[ck], mbox=document.getElementById('mbox');
   if(def.multi && !existing){  // multi: size-only modal, then place (entities added in inspector)
     let szc=def.def;
     mbox.innerHTML=`<h2>${def.label}</h2><p>Pick a size, drop it, then add its entities from the inspector on the right.</p>
+      ${styleRow(ck)}
       <div class="field"><label>Card size</label><div class="szrow" id="msz"></div></div>
       <div class="mfoot"><button class="btn ghost" id="mCancel">Cancel</button><button class="btn" id="mPlace">Place on grid</button></div>`;
+    wireStyleRow(mbox);
     const msz=mbox.querySelector('#msz'); def.spans.forEach(([w,h])=>{ const b=document.createElement('div'); b.className='szb'+(w===szc[0]&&h===szc[1]?' on':''); b.textContent=`${w}×${h}`;
       b.onclick=()=>{szc=[w,h]; msz.querySelectorAll('.szb').forEach(x=>x.classList.remove('on')); b.classList.add('on');}; msz.appendChild(b); });
     document.getElementById('modal').style.display='flex'; mbox.querySelector('#mCancel').onclick=closeModal;
@@ -900,10 +939,12 @@ function openEntityPicker(ck,existing){ const def=C[ck], mbox=document.getElemen
   const doms=def.domains||[def.domain]; const dom=doms.join(' / '); const list=ENTS.filter(e=>doms.includes(e.domain));
   let chosen=existing?existing.entity:((list[0]&&list[0].entity_id)||''); let szc=existing?[existing.w,existing.h]:def.def;
   mbox.innerHTML=`<h2>${def.label}</h2><p>${list.length} ${dom} entit${list.length===1?'y':'ies'} from Home Assistant${ENTS.length?'':' — connect to load yours'}</p>
+    ${existing?'':styleRow(ck)}
     <input id="esrch" placeholder="Filter…" style="width:100%;margin-bottom:8px;background:#0F1117;border:1px solid var(--bd);border-radius:9px;color:var(--tx);padding:8px 10px;font:inherit">
     <div class="field"><div class="elist" id="elist"></div></div>
     <div class="field"><label>Card size</label><div class="szrow" id="msz"></div></div>
     <div class="mfoot"><button class="btn ghost" id="mCancel">Cancel</button><button class="btn" id="mPlace">${existing?'Apply':'Place on grid'}</button></div>`;
+  if(!existing) wireStyleRow(mbox);
   const elist=mbox.querySelector('#elist'); const draw=(flt)=>{ elist.innerHTML=''; const ll=list.filter(e=>!flt||(e.name+e.entity_id).toLowerCase().includes(flt));
     if(!ll.length){ elist.innerHTML='<div class="erow" style="color:var(--t3)">No match. You can still place and bind later.</div>'; }
     ll.forEach(e=>{ const r=document.createElement('div'); r.className='erow'+(e.entity_id===chosen?' on':''); r.innerHTML=`<span>${e.name}</span><span class="eid">${e.entity_id}</span>`;
