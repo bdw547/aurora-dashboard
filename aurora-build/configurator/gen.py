@@ -236,30 +236,111 @@ def c_toggle(card, x, y, w, h, base):
     return [card_obj(x, y, w, h, inner, on)], [], ts
 
 
+# Fill-strip palette (Aurora "Light + Spotify Styles" handoff): warm amber light.
+STRIP_CARD_BG, STRIP_CARD_BD = "0x14161C", "0x2B2410"
+STRIP_TRACK, STRIP_GRAD_LO, STRIP_GRAD_HI = "0x0E1014", "0x5C4A14", "0xE6A62B"
+STRIP_PWR_ON, STRIP_PWR_BD_ON = "0x2B2410", "0xE6A62B"
+STRIP_PWR_OFF, STRIP_PWR_BD_OFF, STRIP_PWR_IC_OFF = "0x1B1E26", "0x2B2F3A", "0x5A6070"
+
+
+def _strip_card(x, y, w, h, radius, inner):
+    """Custom card shell for the fill-strip light styles (#14161C / #2B2410 border)."""
+    return ("        - obj:\n"
+            "            x: %d\n            y: %d\n            width: %d\n            height: %d\n"
+            "            bg_color: %s\n            border_color: %s\n            border_width: 1\n            radius: %d\n"
+            "            pad_all: 0\n            clip_corner: true\n            scrollable: false\n"
+            "            widgets:\n%s" % (x, y, w, h, STRIP_CARD_BG, STRIP_CARD_BD, radius, inner))
+
+
+def _strip_readbacks(base, e, sldid, fillid, gripid, pct, pwrid, pwic, axis, extent):
+    """HA brightness (resize/move fill+grip+%) + on/off (recolor power, hide fill)."""
+    dim = "width" if axis == "h" else "height"
+    # brightness attr is null/NaN when the light is off -> guard so % never shows a
+    # garbage int (design item: "off / 0% shows a long number"). b = clamped 0..100.
+    b = "(isnan(x)?0.0f:(x/2.55f))"
+    ext = str(extent)
+    s = ["  - platform: homeassistant\n    id: ha_" + base + "_b\n    entity_id: " + e + "\n    attribute: brightness\n    on_value:\n"
+         "      - lvgl.slider.update: { id: " + sldid + ", value: !lambda 'return (int)" + b + ";' }\n"
+         "      - lvgl.widget.update: { id: " + fillid + ", " + dim + ": !lambda 'return (int)(" + b + " * " + ext + " / 100.0f);' }\n"]
+    if axis == "v":  # bottom-anchored fill also moves its top edge; grip tracks the top
+        s[0] += ("      - lvgl.widget.update: { id: " + fillid + ", y: !lambda 'return (int)(" + ext + " - " + b + " * " + ext + " / 100.0f);' }\n"
+                 "      - lvgl.widget.update: { id: " + gripid + ", y: !lambda 'return (int)(" + ext + " - " + b + " * " + ext + " / 100.0f) - 3;' }\n")
+    else:
+        s[0] += "      - lvgl.widget.update: { id: " + gripid + ", x: !lambda 'return (int)(" + b + " * " + ext + " / 100.0f) - 3;' }\n"
+    s[0] += "      - lvgl.label.update: { id: " + pct + ", text: !lambda 'int p=(int)" + b + "; if(p<0)p=0; if(p>100)p=100; return std::to_string(p) + \"%\";' }\n"
+    t = ["  - platform: homeassistant\n    id: ha_" + base + "_s\n    entity_id: " + e + "\n    on_value:\n"
+         "      - lvgl.widget.update: { id: " + pwrid + ", bg_color: !lambda 'return x == \"on\" ? lv_color_hex(" + STRIP_PWR_ON + ") : lv_color_hex(" + STRIP_PWR_OFF + ");', border_color: !lambda 'return x == \"on\" ? lv_color_hex(" + STRIP_PWR_BD_ON + ") : lv_color_hex(" + STRIP_PWR_BD_OFF + ");' }\n"
+         "      - lvgl.label.update: { id: " + pwic + ", text_color: !lambda 'return x == \"on\" ? lv_color_hex(" + STRIP_PWR_BD_ON + ") : lv_color_hex(" + STRIP_PWR_IC_OFF + ");' }\n"
+         "      - lvgl.label.update: { id: " + pct + ", text: !lambda 'return x == \"on\" ? std::string(lv_label_get_text(id(" + pct + "))) : std::string(\"Off\");' }\n"
+         "      - lvgl.widget.update: { id: " + fillid + ", bg_opa: !lambda 'return x == \"on\" ? 255 : 0;' }\n"]
+    return s, t
+
+
 def c_light(card, x, y, w, h, base):
     e = card.get("entity", "")
     gw, gh = card["w"], card["h"]
     icon = card_glyph(card, CARD_ICON.get(card["ck"], "\\U000F0335"))
     name = card.get("name", "Light")
     sldid, pct, fillid, pwrid = base + "_sld", base + "_pct", base + "_fill", base + "_pwr"
+    gripid, pwic = base + "_grip", base + "_pi"
     bri = 74
     tog = ("homeassistant.action: { action: light.toggle, data: { entity_id: " + e + " } }") if e else "lvgl.page.show: page_home"
 
-    if gh == 1:                                           # short/wide tile: title + inline slider + %
-        inner = ic(card["ck"], color="0xF2B84B", glyph=icon)
-        inner += title(name, w)
+    if gh == 1:                                           # WIDE FILL STRIP (2x1..6x1)
+        pbs, th = 48, 60
+        pbx, pby = 12, (h - pbs) // 2
+        tx, ty = 12 + pbs + 12, (h - th) // 2
+        tw = w - tx - 12
+        fw0 = int(tw * bri / 100)
+        pwr = ("              - button:\n                  id: " + pwrid + "\n                  x: " + str(pbx) + "\n                  y: " + str(pby) + "\n                  width: 48\n                  height: 48\n"
+               "                  bg_color: " + STRIP_PWR_ON + "\n                  border_color: " + STRIP_PWR_BD_ON + "\n                  border_width: 2\n                  radius: 24\n                  pad_all: 0\n                  scrollable: false\n"
+               "                  widgets: [label: { id: " + pwic + ", text: \"\\U000F0425\", align: center, text_font: f_icon, text_color: " + STRIP_PWR_BD_ON + " }]\n"
+               "                  on_click: [" + tog + "]\n")
+        trk = ("              - obj:\n                  x: " + str(tx) + "\n                  y: " + str(ty) + "\n                  width: " + str(tw) + "\n                  height: " + str(th) + "\n"
+               "                  bg_color: " + STRIP_TRACK + "\n                  radius: 11\n                  clip_corner: true\n                  border_width: 0\n                  pad_all: 0\n                  scrollable: false\n                  widgets:\n"
+               "                    - obj: { id: " + fillid + ", x: 0, y: 0, width: " + str(fw0) + ", height: " + str(th) + ", bg_color: " + STRIP_GRAD_LO + ", bg_grad_color: " + STRIP_GRAD_HI + ", bg_grad_dir: HOR, border_width: 0, radius: 0, pad_all: 0, scrollable: false }\n"
+               "                    - obj: { id: " + gripid + ", x: " + str(fw0 - 3) + ", y: 8, width: 6, height: " + str(th - 16) + ", bg_color: 0xFFFFFF, radius: 3, border_width: 0, pad_all: 0, scrollable: false }\n"
+               "                    - label: { text: " + esc(name) + ", x: 16, align: left_mid, width: " + str(max(40, tw - 96)) + ", long_mode: dot, height: 40, text_font: f_body, text_color: 0xFFFFFF }\n"
+               "                    - label: { id: " + pct + ", text: \"" + str(bri) + "%\", x: -16, align: right_mid, text_font: f_head, text_color: 0xFFFFFF }\n")
         if e:
-            inner += ("              - slider:\n                  id: " + sldid + "\n                  x: 14\n                  y: 56\n                  width: " + str(w - 28) + "\n"
-                      "                  min_value: 0\n                  max_value: 100\n                  value: 0\n"
-                      "                  on_release:\n                    - homeassistant.action:\n                        action: light.turn_on\n"
-                      "                        data: { entity_id: " + e + ", brightness_pct: !lambda 'return std::to_string((int) lv_slider_get_value(id(" + sldid + ")));' }\n")
-        inner += lbl("--%", 14, -12, "f_head", "0x2ED5B8", wid=pct, align="bottom_left")
-        s = []
+            trk += ("                    - slider:\n                        id: " + sldid + "\n                        x: 0\n                        y: 0\n                        width: " + str(tw) + "\n                        height: " + str(th) + "\n"
+                    "                        bg_opa: 0%\n                        min_value: 0\n                        max_value: 100\n                        value: " + str(bri) + "\n                        indicator: { bg_opa: 0% }\n                        knob: { bg_opa: 0% }\n"
+                    "                        on_value:\n"
+                    "                          - lvgl.widget.update: { id: " + fillid + ", width: !lambda 'return (int)(lv_slider_get_value(id(" + sldid + ")) * " + str(tw) + " / 100.0);' }\n"
+                    "                          - lvgl.widget.update: { id: " + gripid + ", x: !lambda 'return (int)(lv_slider_get_value(id(" + sldid + ")) * " + str(tw) + " / 100.0) - 3;' }\n"
+                    "                          - lvgl.label.update: { id: " + pct + ", text: !lambda 'return std::to_string((int) lv_slider_get_value(id(" + sldid + "))) + \"%\";' }\n"
+                    "                        on_release:\n                          - homeassistant.action: { action: light.turn_on, data: { entity_id: " + e + ", brightness_pct: !lambda 'return (int) lv_slider_get_value(id(" + sldid + "));' } }\n")
+        s, t = _strip_readbacks(base, e, sldid, fillid, gripid, pct, pwrid, pwic, "h", tw) if e else ([], [])
+        return [_strip_card(x, y, w, h, 14, pwr + trk)], s, t
+
+    if gw == 1 and gh >= 2:                               # TALL FILL STRIP (1x2..1x5)
+        pbs = 44
+        pbx, pby = (w - pbs) // 2, h - 12 - pbs
+        tx, ty, tw = 12, 12, w - 24
+        th = pby - 12 - 12
+        fh0 = int(th * bri / 100)
+        trk = ("              - obj:\n                  x: " + str(tx) + "\n                  y: " + str(ty) + "\n                  width: " + str(tw) + "\n                  height: " + str(th) + "\n"
+               "                  bg_color: " + STRIP_TRACK + "\n                  radius: 11\n                  clip_corner: true\n                  border_width: 0\n                  pad_all: 0\n                  scrollable: false\n                  widgets:\n"
+               "                    - obj: { id: " + fillid + ", x: 0, y: " + str(th - fh0) + ", width: " + str(tw) + ", height: " + str(fh0) + ", bg_color: " + STRIP_GRAD_LO + ", bg_grad_color: " + STRIP_GRAD_HI + ", bg_grad_dir: VER, border_width: 0, radius: 0, pad_all: 0, scrollable: false }\n"
+               "                    - obj: { id: " + gripid + ", x: 8, y: " + str(th - fh0 - 3) + ", width: " + str(tw - 16) + ", height: 6, bg_color: 0xFFFFFF, radius: 3, border_width: 0, pad_all: 0, scrollable: false }\n"
+               "                    - label: { text: \"" + icon + "\", x: 11, y: 11, text_font: f_icon, text_color: 0xFFFFFF }\n"
+               "                    - label: { text: " + esc(name) + ", x: 11, y: " + str(th - 58) + ", width: " + str(tw - 22) + ", long_mode: dot, text_font: f_small, text_color: 0xFFFFFF }\n"
+               "                    - label: { id: " + pct + ", text: \"" + str(bri) + "%\", x: 11, y: " + str(th - 40) + ", text_font: f_head, text_color: 0xFFFFFF }\n")
         if e:
-            s.append("  - platform: homeassistant\n    id: ha_" + base + "_b\n    entity_id: " + e + "\n    attribute: brightness\n    on_value:\n"
-                     "      - lvgl.slider.update: { id: " + sldid + ", value: !lambda 'return (int)(x/2.55);' }\n"
-                     "      - lvgl.label.update: { id: " + pct + ", text: !lambda 'return std::to_string((int)(x/2.55)) + \"%\";' }\n")
-        return [card_obj(x, y, w, h, inner, None)], s, []
+            trk += ("                    - slider:\n                        id: " + sldid + "\n                        x: 0\n                        y: 0\n                        width: " + str(tw) + "\n                        height: " + str(th) + "\n"
+                    "                        bg_opa: 0%\n                        min_value: 0\n                        max_value: 100\n                        value: " + str(bri) + "\n                        indicator: { bg_opa: 0% }\n                        knob: { bg_opa: 0% }\n"
+                    "                        on_value:\n"
+                    "                          - lvgl.widget.update: { id: " + fillid + ", height: !lambda 'return (int)(lv_slider_get_value(id(" + sldid + ")) * " + str(th) + " / 100.0);' }\n"
+                    "                          - lvgl.widget.update: { id: " + fillid + ", y: !lambda 'return (int)(" + str(th) + " - lv_slider_get_value(id(" + sldid + ")) * " + str(th) + " / 100.0);' }\n"
+                    "                          - lvgl.widget.update: { id: " + gripid + ", y: !lambda 'return (int)(" + str(th) + " - lv_slider_get_value(id(" + sldid + ")) * " + str(th) + " / 100.0) - 3;' }\n"
+                    "                          - lvgl.label.update: { id: " + pct + ", text: !lambda 'return std::to_string((int) lv_slider_get_value(id(" + sldid + "))) + \"%\";' }\n"
+                    "                        on_release:\n                          - homeassistant.action: { action: light.turn_on, data: { entity_id: " + e + ", brightness_pct: !lambda 'return (int) lv_slider_get_value(id(" + sldid + "));' } }\n")
+        pwr = ("              - button:\n                  id: " + pwrid + "\n                  x: " + str(pbx) + "\n                  y: " + str(pby) + "\n                  width: 44\n                  height: 44\n"
+               "                  bg_color: " + STRIP_PWR_ON + "\n                  border_color: " + STRIP_PWR_BD_ON + "\n                  border_width: 2\n                  radius: 22\n                  pad_all: 0\n                  scrollable: false\n"
+               "                  widgets: [label: { id: " + pwic + ", text: \"\\U000F0425\", align: center, text_font: f_icon, text_color: " + STRIP_PWR_BD_ON + " }]\n"
+               "                  on_click: [" + tog + "]\n")
+        s, t = _strip_readbacks(base, e, sldid, fillid, gripid, pct, pwrid, pwic, "v", th) if e else ([], [])
+        return [_strip_card(x, y, w, h, 16, trk + pwr)], s, t
 
     # Whole-card dimmer (drag to dim; vertical fill for portrait, horizontal otherwise)
     # + an on/off button at the bottom. Transparent slider owns the drag region above it.

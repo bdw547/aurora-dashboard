@@ -243,7 +243,7 @@ h3.sec{font-size:11px;letter-spacing:1.4px;text-transform:uppercase;color:var(--
 // V = vertical strips added to every 1×1-capable type
 const V=[[1,3],[1,4],[1,5]];
 const C = {
-  light:    {label:'Light (dimmable / RGB)', domain:'light', icon:'lightbulb', color:'var(--amber)', spans:[[2,1],[1,3],[1,5],[2,2],[3,2],[4,4]], def:[2,2], ctrl:'light'},
+  light:    {label:'Light (dimmable / RGB)', domain:'light', icon:'lightbulb', color:'var(--amber)', spans:[[2,1],[3,1],[4,1],[5,1],[6,1],[1,2],[1,3],[1,4],[1,5],[2,2],[3,2],[4,4]], def:[2,1], ctrl:'light'},
   light_t:  {label:'Light toggle', domain:'light', icon:'lightbulb-outline', color:'var(--amber)', spans:[[1,1],[2,1],...V], def:[2,1], ctrl:'toggle'},
   switch:   {label:'Switch / outlet', domain:'switch', icon:'toggle-switch', color:'var(--teal)', spans:[[1,1],[2,1],[2,2],...V], def:[2,1], ctrl:'toggle'},
   lightgroup:{label:'Light group', domain:'light', icon:'lightbulb-multiple', color:'var(--amber)', spans:[[2,2],[3,2],[2,3],[3,3],[4,3],[2,4],[4,4],[2,5],[5,4],[6,4],[5,5],[6,5]], def:[3,3], ctrl:'lightgroup', multi:true},
@@ -486,8 +486,26 @@ function cardInner(c){ const def=C[c.ck], nm=c.name||def.label, big=c.w>=3, ctrl
       <div style="position:absolute;left:12px;right:12px;bottom:12px;top:66px;display:flex;align-items:flex-end;gap:2px">${spark}</div>`; }
   if(ctrl==='toggle'){ if(c.w===1) return head+`<div style="display:flex;flex-direction:column;align-items:center;gap:10px;height:100%">${ico}<div style="font-size:12px;font-weight:600;text-align:center">${nm}</div>${tog(true)}</div>`;
     return head+`<div class="toprow">${ico}${tog(true)}</div>${nme}<div class="csub" style="color:var(--teal)">On</div>`; }
-  if(ctrl==='light'){ const pwr=`<div style="position:absolute;left:10px;right:10px;bottom:8px;height:40px;background:#161B24;border:1px solid var(--bd);border-radius:12px;display:flex;align-items:center;justify-content:center"><span class="mdi mdi-power" style="color:var(--amber);font-size:22px"></span></div>`;
-    if(c.h===1) return head+`<div class="toprow">${ico}${tog(true)}</div>${nme}<div class="csub" style="color:var(--teal)">On · 74%</div>`;
+  if(ctrl==='light'){ const AM='#E6A62B';
+    // WIDE FILL STRIP (2x1..6x1): power btn left + horizontal amber fill
+    if(c.h===1) return head+`<div style="display:flex;align-items:center;gap:9px;height:100%">
+      <div style="width:40px;height:40px;flex:0 0 auto;border-radius:20px;background:#2b2410;border:2px solid ${AM};display:flex;align-items:center;justify-content:center"><span class="mdi mdi-power" style="color:${AM};font-size:19px"></span></div>
+      <div style="flex:1;position:relative;height:46px;border-radius:10px;overflow:hidden;background:#0e1014">
+        <div style="position:absolute;left:0;top:0;bottom:0;width:74%;background:linear-gradient(90deg,#5c4a14,${AM})"></div>
+        <div style="position:absolute;left:calc(74% - 3px);top:6px;bottom:6px;width:6px;border-radius:3px;background:#fff"></div>
+        <div style="position:absolute;inset:0;padding:0 12px;display:flex;align-items:center;justify-content:space-between"><span style="font-weight:700;color:#fff;font-size:13px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${nm}</span><span style="font-size:19px;font-weight:800;color:#fff">74%</span></div>
+      </div></div>`;
+    // TALL FILL STRIP (1x2..1x5): vertical amber fill + power btn below
+    if(c.w===1) return head+`<div style="display:flex;flex-direction:column;gap:8px;height:100%">
+      <div style="flex:1;position:relative;border-radius:10px;overflow:hidden;background:#0e1014">
+        <div style="position:absolute;left:0;right:0;bottom:0;height:60%;background:linear-gradient(180deg,#5c4a14,${AM})"></div>
+        <div style="position:absolute;left:6px;right:6px;bottom:calc(60% - 3px);height:6px;border-radius:3px;background:#fff"></div>
+        <div style="position:absolute;inset:0;padding:8px;display:flex;flex-direction:column;justify-content:space-between"><span class="mdi mdi-lightbulb" style="color:#fff;font-size:18px"></span><div><div style="font-size:11px;color:#fff;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${nm}</div><div style="font-size:19px;font-weight:800;color:#fff">60%</div></div></div>
+      </div>
+      <div style="display:flex;justify-content:center"><div style="width:36px;height:36px;border-radius:18px;background:#2b2410;border:2px solid ${AM};display:flex;align-items:center;justify-content:center"><span class="mdi mdi-power" style="color:${AM};font-size:17px"></span></div></div>
+    </div>`;
+    // whole-card dimmer (2x2, 3x2, 4x4)
+    const pwr=`<div style="position:absolute;left:10px;right:10px;bottom:8px;height:40px;background:#161B24;border:1px solid var(--bd);border-radius:12px;display:flex;align-items:center;justify-content:center"><span class="mdi mdi-power" style="color:var(--amber);font-size:22px"></span></div>`;
     const fill=(c.h>c.w)?`<div style="position:absolute;left:0;right:0;bottom:56px;height:calc((100% - 64px)*0.74);background:rgba(46,213,184,.5);border-radius:12px"></div>`:`<div style="position:absolute;left:0;top:0;height:calc(100% - 56px);width:74%;background:rgba(46,213,184,.5);border-radius:12px"></div>`;
     return fill+head+`<div style="position:relative;display:flex;flex-direction:column;align-items:center;height:100%"><span class="mdi mdi-lightbulb-on" style="font-size:24px;color:var(--amber)"></span><div style="font-weight:600;margin-top:4px;text-align:center;max-width:100%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${nm}</div><div style="font-size:38px;font-weight:800;margin:auto 0 64px">74%</div></div>`+pwr; }
   if(ctrl==='dial'){
