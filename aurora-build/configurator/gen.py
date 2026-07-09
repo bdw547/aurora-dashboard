@@ -1066,6 +1066,78 @@ def c_weather(card, x, y, w, h, base):
     return [card_obj(x, y, w, h, inner)], ([_wx_temp_readback(base, e, tid)] if e else []), ([_wx_cond_readback(base, e, hid, cid)] if e else [])
 
 
+# --- Weather decomposed into selectable component cards (share the weather entity;
+# current temp + condition are live, forecast/stats are pre-baked demo like the 6x5) ---
+def c_wx_current(card, x, y, w, h, base):
+    """Current conditions: big condition icon + temp + condition + H/L (+ location/time on wide)."""
+    e = card.get("entity", "")
+    tid, cid, hid = base + "_t", base + "_c", base + "_h"
+    inner = "              - label: { id: %s, text: \"\\U000F0599\", x: 16, y: %d, text_font: f_wxicon, text_color: 0xF2B84B }\n" % (hid, max(14, (h - 72) // 2))
+    inner += lbl("72\\u00B0", 108, h // 2 - 40, "f_display", "0xF3F5F8", wid=tid)
+    inner += lbl("Sunny", 110, h // 2 + 14, "f_body", "0xC2C7D2", wid=cid, width=w - 124, long="dot", height=22)
+    inner += lbl("H 96\\u00B0 \\u00B7 L 74\\u00B0", 110, h // 2 + 40, "f_small", "0x868CA0", width=w - 124)
+    ts_s = [_wx_temp_readback(base, e, tid)] if e else []
+    ts_t = [_wx_cond_readback(base, e, hid, cid)] if e else []
+    if w >= 420:
+        wtime = base + "_clk"
+        inner += lbl("Home", -16, 16, "f_title", "0xF3F5F8", align="top_right")
+        inner += lbl("Friday \\u00B7 9:41 PM", -16, 46, "f_small", "0x868CA0", wid=wtime, align="top_right")
+        EXTRA_CLOCKS.append((wtime, "dow_time"))
+    return [card_obj(x, y, w, h, inner)], ts_s, ts_t
+
+
+def c_wx_hourly(card, x, y, w, h, base):
+    """Hourly forecast strip (pre-baked demo forecast)."""
+    pad, gap = 12, 8
+    n = len(WX_HOURLY)
+    tw = (w - 2 * pad - (n - 1) * gap) // n
+    inner = ""
+    for i, (hl, g, tp) in enumerate(WX_HOURLY):
+        hx = pad + i * (tw + gap)
+        bg = "0x11201C" if i == 0 else "0x161B24"
+        inner += ("              - obj: { x: %d, y: %d, width: %d, height: %d, bg_color: %s, border_width: 0, radius: 12, pad_all: 0, scrollable: false, widgets: ["
+                  "label: { text: %s, align: top_mid, y: 10, text_font: f_small, text_color: 0x868CA0 }, "
+                  "label: { text: \"%s\", align: center, text_font: f_icon, text_color: 0x8FA6FF }, "
+                  "label: { text: \"%s\\u00B0\", align: bottom_mid, y: -10, text_font: f_body, text_color: 0xF3F5F8 }] }\n"
+                  % (hx, pad, tw, h - 2 * pad, bg, esc(hl), g, tp))
+    return [card_obj(x, y, w, h, inner)], [], []
+
+
+def c_wx_daily(card, x, y, w, h, base):
+    """Weekly forecast: day, condition icon, Low - gradient bar - High (pre-baked demo)."""
+    pad = 12
+    rn = len(WX_DAILY)
+    rh = (h - 2 * pad) // rn
+    inner = ""
+    for i, (dn, g, lo, hi) in enumerate(WX_DAILY):
+        ry = pad + i * rh
+        ly = ry + (rh - 18) // 2
+        inner += lbl(dn, 14, ly, "f_body", "0xF3F5F8", width=56)
+        inner += "              - label: { text: \"%s\", x: 70, y: %d, text_font: f_icon, text_color: 0xF2B84B }\n" % (g, ry + (rh - 30) // 2)
+        inner += lbl(lo + "\\u00B0", 108, ly, "f_body", "0x868CA0", width=36)
+        barx, barw = 150, w - 44 - 150
+        inner += "              - obj: { x: %d, y: %d, width: %d, height: 8, bg_color: 0x4FA8F5, bg_grad_color: 0xF2B84B, bg_grad_dir: HOR, border_width: 0, radius: 4, pad_all: 0, scrollable: false }\n" % (barx, ry + (rh - 8) // 2, max(20, barw))
+        inner += lbl(hi + "\\u00B0", w - 42, ly, "f_body", "0xF3F5F8", width=36)
+    return [card_obj(x, y, w, h, inner)], [], []
+
+
+def c_wx_stats(card, x, y, w, h, base):
+    """Weather stats grid: humidity / wind / UV / pressure / sunrise / sunset (pre-baked demo)."""
+    pad, gap, cols = 12, 10, 2
+    rows = (len(WX_STATS) + cols - 1) // cols
+    cw = (w - 2 * pad - (cols - 1) * gap) // cols
+    ch = (h - 2 * pad - (rows - 1) * gap) // rows
+    inner = ""
+    for i, (lt, val, col) in enumerate(WX_STATS):
+        cx = pad + (i % cols) * (cw + gap)
+        cy = pad + (i // cols) * (ch + gap)
+        inner += ("              - obj: { x: %d, y: %d, width: %d, height: %d, bg_color: 0x14161C, border_width: 0, radius: 12, pad_all: 0, scrollable: false, widgets: ["
+                  "label: { text: %s, x: 14, y: 12, text_font: f_micro, text_color: 0x868CA0 }, "
+                  "label: { text: %s, x: 14, y: 30, text_font: f_title, text_color: %s }] }\n"
+                  % (cx, cy, cw, ch, esc(lt), esc(val), col))
+    return [card_obj(x, y, w, h, inner)], [], []
+
+
 def c_camera(card, x, y, w, h, base):
     inner = ("              - obj: { x: 8, y: 8, width: %d, height: %d, bg_color: 0x10141C, "
              "border_width: 0, radius: 12, pad_all: 0, scrollable: false }\n" % (w - 16, h - 16))
@@ -2094,6 +2166,7 @@ CTRL = {
     "spotify": c_media, "sonos": c_media, "fan": c_fan, "cover": c_cover,
     "spotify_art": c_spotify_art,
     "lock": c_lock, "weather": c_weather, "camera": c_camera, "group": c_group,
+    "wx_current": c_wx_current, "wx_hourly": c_wx_hourly, "wx_daily": c_wx_daily, "wx_stats": c_wx_stats,
     "lightgroup": c_group, "outletgroup": c_outlet, "speakers": c_speakers,
     "sonos_sources": c_btngrid, "tv_sources": c_btngrid,
     "tv_dpad": c_tv_dpad, "tv_transport": c_tv_transport, "tv_channel": c_tv_channel,
