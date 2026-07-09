@@ -1924,6 +1924,98 @@ def c_speakers(card, x, y, w, h, base):
     return [card_obj(x, y, w, h, inner)], ss, ts
 
 
+def c_spotify_art(card, x, y, w, h, base):
+    """Album-art-forward Spotify control (handoff cards E/F): a pre-baked album-art
+    panel with a SOLID overlaid transport bar (LVGL-safe, no blur) + a green vertical
+    volume fill-strip and a mute button on the right. E = 4x3 (adds shuffle/repeat),
+    F = 3x3 compact. Art = server-fetched still via the shared online_image decoder."""
+    e = card.get("entity", "")
+    wide = card["w"] >= 4
+    tid, aid, ppid = base + "_t", base + "_a", base + "_pp"
+    sld, fillid, gripid, vpid = base + "_vs", base + "_vf", base + "_vg", base + "_vp"
+    GN, GN_LO = "0x1DB954", "0x0E7A37"
+    prev = ha("media_player.media_previous_track", e) if e else "lvgl.page.show: page_home"
+    plpz = ha("media_player.media_play_pause", e) if e else "lvgl.page.show: page_home"
+    nxt = ha("media_player.media_next_track", e) if e else "lvgl.page.show: page_home"
+    mute = ha("media_player.volume_mute", e, 'is_volume_muted: "true"') if e else "lvgl.page.show: page_home"
+    heart, shuf, rep = glyph_for("heart"), glyph_for("shuffle-variant"), glyph_for("repeat")
+    pad, gap = 12, 12
+    vw = 88 if wide else 72
+    ax = ay = pad
+    aw = w - pad - gap - vw - pad
+    ah = h - 2 * pad
+    tp_h = 118 if wide else 104
+    tpy = ay + ah - tp_h
+    vx = ax + aw + gap
+    vth = ah - 12 - 44                                    # volume track height (mute btn below)
+    vol0 = 65 if wide else 80
+    real = min(aw, ah)
+
+    # --- art panel (dark bg + centered pre-baked art) + heart chip ---
+    inner = ("              - obj: { x: " + str(ax) + ", y: " + str(ay) + ", width: " + str(aw) + ", height: " + str(ah) + ", bg_color: 0x1B1E27, radius: 12, clip_corner: true, border_width: 0, pad_all: 0, scrollable: false }\n")
+    inner += lbl("\\U000F075A", ax + (aw - 40) // 2, ay + (ah - tp_h - 44) // 2, "f_icon", "0x5D6470")
+    if e and ART_ENABLED:
+        img_id = base + "_art"
+        inner += "              - image: { id: " + img_id + ", x: " + str(ax + (aw - real) // 2) + ", y: " + str(ay + (ah - real) // 2) + ", src: gen_art_" + str(real) + " }\n"
+        ART_IMAGES.append((real, img_id, e))
+    inner += "              - obj: { x: " + str(ax + aw - 46) + ", y: " + str(ay + 10) + ", width: 36, height: 36, bg_color: 0x000000, bg_opa: 40%, radius: 18, border_width: 0, pad_all: 0, scrollable: false, widgets: [label: { text: \"" + heart + "\", align: center, text_font: f_icon, text_color: " + GN + " }] }\n"
+    # --- solid transport panel overlaid on the art bottom ---
+    inner += "              - obj: { x: " + str(ax) + ", y: " + str(tpy) + ", width: " + str(aw) + ", height: " + str(tp_h) + ", bg_color: 0x0B0D11, radius: 0, border_width: 0, pad_all: 0, scrollable: false }\n"
+    inner += lbl("Nothing playing", ax + 14, tpy + 12, "f_body", "0xF3F5F8", wid=tid, width=aw - 28, long="dot", height=22)
+    inner += lbl("", ax + 14, tpy + 36, "f_small", "0xAEB4C2", wid=aid, width=aw - 28, long="dot", height=18)
+    pgy = tpy + 60
+    inner += "              - obj: { x: " + str(ax + 14) + ", y: " + str(pgy) + ", width: " + str(aw - 28) + ", height: 4, bg_color: 0x2A2D36, radius: 2, border_width: 0, pad_all: 0, scrollable: false }\n"
+    inner += "              - obj: { x: " + str(ax + 14) + ", y: " + str(pgy) + ", width: " + str(int((aw - 28) * 0.4)) + ", height: 4, bg_color: " + GN + ", radius: 2, border_width: 0, pad_all: 0, scrollable: false }\n"
+    # transport buttons (prev / play-pause / next centered; shuffle+repeat on the wide E)
+    small, big = 42, 52
+    bty = tpy + tp_h - big - 10
+    cx = ax + aw // 2
+    yo = (big - small) // 2
+    inner += btn(cx - big // 2, bty, big, big, "\\U000F03E4", plpz, bg=GN, color="0x052E16", radius=big // 2, font="f_icon", lid=ppid)
+    inner += btn(cx - big // 2 - 18 - small, bty + yo, small, small, "\\U000F04AE", prev, bg="0x161B24", radius=small // 2, font="f_icon")
+    inner += btn(cx + big // 2 + 18, bty + yo, small, small, "\\U000F04AD", nxt, bg="0x161B24", radius=small // 2, font="f_icon")
+    if wide:
+        inner += lbl(shuf, ax + 16, bty + (big - 22) // 2, "f_icon", "0x868CA0")
+        inner += lbl(rep, ax + aw - 38, bty + (big - 22) // 2, "f_icon", "0x868CA0")
+    # --- green vertical volume fill-strip (right) ---
+    fh0 = int(vth * vol0 / 100)
+    trk = ("              - obj:\n                  x: " + str(vx) + "\n                  y: " + str(ay) + "\n                  width: " + str(vw) + "\n                  height: " + str(vth) + "\n"
+           "                  bg_color: 0x0E1014\n                  radius: 12\n                  clip_corner: true\n                  border_width: 0\n                  pad_all: 0\n                  scrollable: false\n                  widgets:\n"
+           "                    - obj: { id: " + fillid + ", x: 0, y: " + str(vth - fh0) + ", width: " + str(vw) + ", height: " + str(fh0) + ", bg_color: " + GN_LO + ", bg_grad_color: " + GN + ", bg_grad_dir: VER, border_width: 0, radius: 0, pad_all: 0, scrollable: false }\n"
+           "                    - obj: { id: " + gripid + ", x: 7, y: " + str(vth - fh0 - 3) + ", width: " + str(vw - 14) + ", height: 6, bg_color: 0xFFFFFF, radius: 3, border_width: 0, pad_all: 0, scrollable: false }\n"
+           "                    - label: { text: \"\\U000F057E\", align: top_mid, y: 10, text_font: f_icon, text_color: 0xFFFFFF }\n"
+           "                    - label: { id: " + vpid + ", text: \"" + str(vol0) + "\", align: bottom_mid, y: -10, text_font: f_title, text_color: 0xFFFFFF }\n")
+    if e:
+        trk += ("                    - slider:\n                        id: " + sld + "\n                        x: 0\n                        y: 0\n                        width: " + str(vw) + "\n                        height: " + str(vth) + "\n"
+                "                        bg_opa: 0%\n                        min_value: 0\n                        max_value: 100\n                        value: " + str(vol0) + "\n                        indicator: { bg_opa: 0% }\n                        knob: { bg_opa: 0% }\n"
+                "                        on_value:\n"
+                "                          - lvgl.widget.update: { id: " + fillid + ", height: !lambda 'return (int)(lv_slider_get_value(id(" + sld + ")) * " + str(vth) + " / 100.0f);' }\n"
+                "                          - lvgl.widget.update: { id: " + fillid + ", y: !lambda 'return (int)(" + str(vth) + " - lv_slider_get_value(id(" + sld + ")) * " + str(vth) + " / 100.0f);' }\n"
+                "                          - lvgl.widget.update: { id: " + gripid + ", y: !lambda 'return (int)(" + str(vth) + " - lv_slider_get_value(id(" + sld + ")) * " + str(vth) + " / 100.0f) - 3;' }\n"
+                "                          - lvgl.label.update: { id: " + vpid + ", text: !lambda 'return std::to_string((int) lv_slider_get_value(id(" + sld + ")));' }\n"
+                "                        on_release:\n                          - homeassistant.action:\n                              action: media_player.volume_set\n"
+                "                              data: { entity_id: " + e + ", volume_level: !lambda 'char b[8]; snprintf(b, sizeof(b), \"%.2f\", lv_slider_get_value(id(" + sld + ")) / 100.0); return std::string(b);' }\n")
+    inner += trk
+    inner += "              - button: { x: " + str(vx + (vw - 44) // 2) + ", y: " + str(ay + vth + 12) + ", width: 44, height: 44, bg_color: 0x1B1E26, border_color: 0x2B2F3A, border_width: 1, radius: 22, pad_all: 0, scrollable: false, widgets: [label: { text: \"\\U000F075F\", align: center, text_font: f_icon, text_color: 0x868CA0 }], on_click: [" + mute + "] }\n"
+
+    ts = []
+    if e:
+        ts.append("  - platform: homeassistant\n    id: ha_" + tid + "\n    entity_id: " + e + "\n    attribute: media_title\n    on_value:\n"
+                  "      - lvgl.label.update: { id: " + tid + ", text: !lambda 'return x.empty() ? std::string(\"Nothing playing\") : x;' }\n")
+        ts.append("  - platform: homeassistant\n    id: ha_" + aid + "\n    entity_id: " + e + "\n    attribute: media_artist\n    on_value:\n"
+                  "      - lvgl.label.update: { id: " + aid + ", text: !lambda 'return x;' }\n")
+        ts.append("  - platform: homeassistant\n    id: ha_" + base + "_st\n    entity_id: " + e + "\n    on_value:\n"
+                  "      - lvgl.label.update: { id: " + tid + ", text: !lambda 'return (x == \"playing\" || x == \"paused\" || x == \"buffering\") ? std::string(lv_label_get_text(id(" + tid + "))) : std::string(\"Nothing playing\");' }\n"
+                  "      - lvgl.label.update: { id: " + ppid + ", text: !lambda 'return x == \"playing\" ? std::string(\"\\U000F03E4\") : std::string(\"\\U000F040A\");' }\n")
+        ts.append("  - platform: homeassistant\n    id: ha_" + base + "_v\n    entity_id: " + e + "\n    attribute: volume_level\n    on_value:\n"
+                  "      - lvgl.slider.update: { id: " + sld + ", value: !lambda 'return (int)(atof(x.c_str()) * 100);' }\n"
+                  "      - lvgl.widget.update: { id: " + fillid + ", height: !lambda 'return (int)(atof(x.c_str()) * " + str(vth) + ");' }\n"
+                  "      - lvgl.widget.update: { id: " + fillid + ", y: !lambda 'return (int)(" + str(vth) + " - atof(x.c_str()) * " + str(vth) + ");' }\n"
+                  "      - lvgl.widget.update: { id: " + gripid + ", y: !lambda 'return (int)(" + str(vth) + " - atof(x.c_str()) * " + str(vth) + ") - 3;' }\n"
+                  "      - lvgl.label.update: { id: " + vpid + ", text: !lambda 'return std::to_string((int)(atof(x.c_str()) * 100));' }\n")
+    return [card_obj(x, y, w, h, inner)], [], ts
+
+
 def c_generic(card, x, y, w, h, base):
     inner = ic(card.get("ck", ""), color="0x868CA0")
     inner += lbl(card.get("name", card.get("ck", "Card")), 0, 8, "f_body", "0x868CA0", align="center")
@@ -1936,6 +2028,7 @@ CTRL = {
     "chart": c_chart,
     "climate": c_climate, "scene": c_action, "script": c_action, "media": c_media,
     "spotify": c_media, "sonos": c_media, "fan": c_fan, "cover": c_cover,
+    "spotify_art": c_spotify_art,
     "lock": c_lock, "weather": c_weather, "camera": c_camera, "group": c_group,
     "lightgroup": c_group, "outletgroup": c_outlet, "speakers": c_speakers,
     "sonos_sources": c_btngrid, "tv_sources": c_btngrid,
@@ -2264,6 +2357,7 @@ KEEP = ["substitutions", "esphome", "esp32", "psram", "esp_ldo", "esp32_hosted",
         "external_components", "i2c", "touchscreen", "display", "http_request",
         "image", "font", "globals", "number", "button", "time",
         "ov02c10_support", "esp_video_camera",   # onboard camera (HA entity + RTSP :8554)
+        "mjpeg_stream",   # front-door MJPEG viewer (defines id: cam_stream, ref'd by on_boot)
         "drv2605"]   # DRV2605L haptic driver (id: haptic)
 
 
