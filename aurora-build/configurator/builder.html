@@ -243,8 +243,8 @@ h3.sec{font-size:11px;letter-spacing:1.4px;text-transform:uppercase;color:var(--
 // V = vertical strips added to every 1×1-capable type
 const V=[[1,3],[1,4],[1,5]];
 const C = {
-  light:    {label:'Light (dimmable / RGB)', domain:'light', icon:'lightbulb', color:'var(--amber)', spans:[[2,1],[3,1],[4,1],[5,1],[6,1],[1,2],[1,3],[1,4],[1,5],[2,2],[3,2],[4,4]], def:[2,1], ctrl:'light'},
-  light_t:  {label:'Light toggle', domain:'light', icon:'lightbulb-outline', color:'var(--amber)', spans:[[1,1],[1,2],[2,1],[2,2],[3,3]], def:[2,1], ctrl:'toggle'},
+  light:    {label:'Light', domain:'light', icon:'lightbulb', color:'var(--amber)', spans:[[2,1],[3,1],[4,1],[5,1],[6,1],[1,2],[1,3],[1,4],[1,5],[2,2],[3,2],[4,4]], def:[2,1], ctrl:'light'},
+  light_t:  {label:'Light — simple toggle', domain:'light', icon:'lightbulb-outline', color:'var(--amber)', spans:[[1,1],[1,2],[2,1],[2,2],[3,3]], def:[2,1], ctrl:'toggle'},
   switch:   {label:'Switch / outlet', domain:'switch', icon:'toggle-switch', color:'var(--teal)', spans:[[1,1],[2,1],[2,2],...V], def:[2,1], ctrl:'toggle'},
   lightgroup:{label:'Light group', domain:'light', icon:'lightbulb-multiple', color:'var(--amber)', spans:[[2,2],[3,2],[2,3],[3,3],[4,3],[2,4],[4,4],[2,5],[5,4],[6,4],[5,5],[6,5]], def:[3,3], ctrl:'lightgroup', multi:true},
   outletgroup:{label:'Outlets', domain:'switch', icon:'power-socket-us', color:'var(--teal)', spans:[[1,1],[1,2],[2,1],[1,3],[3,1]], def:[1,2], ctrl:'outletgroup', multi:true},
@@ -257,19 +257,19 @@ const C = {
   sonos_sources:{label:'Sonos sources', domain:'media_player', icon:'music-box-multiple', color:'var(--teal)', spans:[[1,1],[2,1],[3,1],[1,2],[1,3],[3,2],[2,3],[3,3],[5,4]], def:[2,3], ctrl:'btngrid', btnIcon:'music-box', multi:true},
   sonos_library:{label:'Sonos library', domain:'media_player', icon:'bookshelf', color:'var(--teal)', spans:[[4,3],[3,4],[4,4],[3,5],[4,5],[5,5]], def:[4,4], ctrl:'songlist'},
   sonos_fav:{label:'Sonos favorite', domain:'media_player', icon:'bookmark-music', color:'var(--teal)', spans:[[1,1],[2,1],[3,1]], def:[1,1], ctrl:'playlist', playlistField:true},
-  spotify:  {label:'Spotify now-playing', domain:'media_player', icon:'spotify', color:'#1DB954', spans:[[1,1],[2,2],[3,2],[4,3],[6,5]], def:[3,2], ctrl:'media'},
-  spotify_art:{label:'Spotify (art + volume strip)', domain:'media_player', icon:'spotify', color:'#1DB954', spans:[[4,3],[3,3],[6,5],[4,4]], def:[4,3], ctrl:'media'},
-  spotify_playlists:{label:'Spotify playlists (dropdown)', domain:'media_player', icon:'playlist-play', color:'#1DB954', spans:[[2,1],[3,1],[2,2],[3,2],[2,3],[3,3]], def:[3,1], ctrl:'spot_pl'},
-  spotify_tracks:{label:'Spotify songs (list)', domain:'media_player', icon:'playlist-music', color:'#1DB954', spans:[[2,3],[2,4],[2,5],[3,4],[3,5],[4,5]], def:[2,5], ctrl:'spot_tr'},
+  spotify:  {label:'Spotify player', domain:'media_player', icon:'spotify', color:'#1DB954', spans:[[1,1],[2,2],[3,2],[4,3],[6,5]], def:[3,2], ctrl:'media'},
+  spotify_art:{label:'Spotify player — art + volume', domain:'media_player', icon:'spotify', color:'#1DB954', spans:[[4,3],[3,3],[6,5],[4,4]], def:[4,3], ctrl:'media'},
+  spotify_playlists:{label:'Spotify playlists', domain:'media_player', icon:'playlist-play', color:'#1DB954', spans:[[2,1],[3,1],[2,2],[3,2],[2,3],[3,3]], def:[3,1], ctrl:'spot_pl'},
+  spotify_tracks:{label:'Spotify songs', domain:'media_player', icon:'playlist-music', color:'#1DB954', spans:[[2,3],[2,4],[2,5],[3,4],[3,5],[4,5]], def:[2,5], ctrl:'spot_tr'},
   spotify_speakers:{label:'Spotify speakers (Play on)', domain:'media_player', icon:'speaker-multiple', color:'#1DB954', spans:[[2,2],[3,2],[2,3],[3,3],[2,4],[3,4]], def:[3,3], ctrl:'spot_spk'},
-  spotify_speaker:{label:'Spotify speaker (1×1 Play-on)', domain:'media_player', icon:'speaker', color:'#1DB954', spans:[[1,1],[2,1],[1,2],[2,2]], def:[1,1], ctrl:'spot_spk1', speakerField:true},
-  playlist: {label:'Spotify playlist', domain:'media_player', icon:'playlist-play', color:'#1DB954', spans:[[1,1],[2,1],[3,1]], def:[2,1], ctrl:'playlist', playlistField:true},
+  spotify_speaker:{label:'Spotify speaker — single tile', domain:'media_player', icon:'speaker', color:'#1DB954', spans:[[1,1],[2,1],[1,2],[2,2]], def:[1,1], ctrl:'spot_spk1', speakerField:true},
+  playlist: {label:'Spotify playlist — single button', domain:'media_player', icon:'playlist-play', color:'#1DB954', spans:[[1,1],[2,1],[3,1]], def:[2,1], ctrl:'playlist', playlistField:true},
   songlist: {label:'Spotify song list', domain:'media_player', icon:'playlist-music', color:'#1DB954', spans:[[4,3],[3,4],[4,4],[3,5],[4,5],[5,5]], def:[4,4], ctrl:'songlist'},
-  sonos:    {label:'Sonos (multi-room)', domain:'media_player', icon:'speaker-multiple', color:'var(--teal)', spans:[[3,2],[3,3],[4,4],[6,5]], def:[4,4], ctrl:'media'},
+  sonos:    {label:'Sonos now-playing', domain:'media_player', icon:'speaker-multiple', color:'var(--teal)', spans:[[3,2],[3,3],[4,4],[6,5]], def:[4,4], ctrl:'media'},
   media:    {label:'Media player', domain:'media_player', icon:'play-circle', color:'var(--violet)', spans:[[1,1],[2,1],[2,2],[3,2],[3,3],[4,3],[6,5]], def:[3,2], ctrl:'media'},
-  volume:   {label:'Media volume', domain:'media_player', icon:'volume-high', color:'var(--teal)', spans:[[1,1],[2,1],[1,2],[2,2],[3,2]], def:[2,2], ctrl:'vol'},
-  volumes:  {label:'Speaker volumes (per-speaker)', domain:'media_player', icon:'speaker-multiple', color:'var(--teal)', spans:[[2,2],[3,2],[2,3],[3,3],[2,4],[3,4]], def:[3,3], ctrl:'vols', multi:true},
-  tvremote: {label:'TV remote — full', domain:'media_player', icon:'remote-tv', color:'var(--violet)', spans:[[1,1],[2,2],[3,2],[4,4],[4,5],[5,5],[6,5]], def:[4,4], ctrl:'remote'},
+  volume:   {label:'Volume', domain:'media_player', icon:'volume-high', color:'var(--teal)', spans:[[1,1],[2,1],[1,2],[2,2],[3,2]], def:[2,2], ctrl:'vol'},
+  volumes:  {label:'Volume — per-speaker list', domain:'media_player', icon:'speaker-multiple', color:'var(--teal)', spans:[[2,2],[3,2],[2,3],[3,3],[2,4],[3,4]], def:[3,3], ctrl:'vols', multi:true},
+  tvremote: {label:'TV remote', domain:'media_player', icon:'remote-tv', color:'var(--violet)', spans:[[1,1],[2,2],[3,2],[4,4],[4,5],[5,5],[6,5]], def:[4,4], ctrl:'remote'},
   tv_dpad:  {label:'TV D-pad', domain:'media_player', icon:'gamepad-variant', color:'var(--violet)', spans:[[2,2],[3,2],[2,3],[3,3]], def:[3,3], ctrl:'tv_dpad'},
   tv_transport:{label:'TV transport', domain:'media_player', icon:'play-circle', color:'var(--violet)', spans:[[2,1],[3,1],[4,1],[6,1],[2,2],[4,2]], def:[4,1], ctrl:'tv_transport'},
   tv_channel:{label:'TV channel +/-', domain:'media_player', icon:'television-guide', color:'var(--violet)', spans:[[1,1],[1,2],[2,1],[2,2]], def:[1,2], ctrl:'tv_channel'},
@@ -281,8 +281,8 @@ const C = {
   alarm:    {label:'Alarm panel', domain:'alarm_control_panel', icon:'shield-home', color:'var(--red)', spans:[[2,2],[3,2]], def:[3,2], ctrl:'val'},
   binary:   {label:'Binary sensor', domain:'binary_sensor', icon:'motion-sensor', color:'var(--blue)', spans:[[1,1],[2,1],...V], def:[1,1], ctrl:'val'},
   sensor:   {label:'Sensor', domain:'sensor', icon:'thermometer', color:'var(--red)', spans:[[1,1],[2,1],[3,1],[4,1],[5,1]], def:[2,1], ctrl:'val'},
-  chart:    {label:'Sensor chart (trend)', domain:'sensor', icon:'chart-line', color:'var(--teal)', spans:[[2,2],[3,2],[4,2],[5,2]], def:[3,2], ctrl:'val'},
-  weather:  {label:'Weather — full (6×5)', domain:'weather', icon:'weather-partly-cloudy', color:'var(--amber)', spans:[[6,5],[5,5],[6,4]], def:[6,5], ctrl:'wx'},
+  chart:    {label:'Sensor — trend chart', domain:'sensor', icon:'chart-line', color:'var(--teal)', spans:[[2,2],[3,2],[4,2],[5,2]], def:[3,2], ctrl:'val'},
+  weather:  {label:'Weather', domain:'weather', icon:'weather-partly-cloudy', color:'var(--amber)', spans:[[6,5],[5,5],[6,4]], def:[6,5], ctrl:'wx'},
   wx_current:{label:'Weather — current', domain:'weather', icon:'weather-partly-cloudy', color:'var(--amber)', spans:[[2,2],[3,2],[4,2],[6,2],[3,3]], def:[3,2], ctrl:'wx'},
   wx_hourly:{label:'Weather — hourly', domain:'weather', icon:'clock-time-four-outline', color:'var(--blue)', spans:[[3,1],[4,1],[6,1],[4,2],[6,2]], def:[6,1], ctrl:'wx'},
   wx_daily: {label:'Weather — forecast (H/L)', domain:'weather', icon:'calendar-week', color:'var(--blue)', spans:[[2,3],[3,3],[2,4],[3,4],[2,5],[3,5]], def:[3,3], ctrl:'wx'},
@@ -293,17 +293,45 @@ const C = {
   script:   {label:'Script / button', domain:'script', icon:'gesture-tap-button', color:'var(--teal)', spans:[[1,1],[2,1],...V], def:[1,1], ctrl:'tile'},
 };
 const CATS = [
-  ['Lighting', ['light','light_t','switch','lightgroup','outletgroup']],
+  ['Lighting', ['light','switch','lightgroup','outletgroup']],
   ['Comfort', ['climate','fan','cover']],
-  ['Spotify', ['spotify_playlists','spotify_tracks','spotify_speakers','spotify_speaker','spotify','spotify_art','playlist','songlist','volume','volumes']],
-  ['Sonos', ['sonos','speakers','sonos_sources','sonos_library','sonos_fav','volume','volumes']],
-  ['TV', ['tvremote','tv_dpad','tv_transport','tv_channel','tv_volume','tv_sources','tv_trackpad']],
-  ['Media', ['media','volume','volumes']],
+  ['Spotify', ['spotify','spotify_playlists','spotify_tracks','spotify_speakers','volume']],
+  ['Sonos', ['sonos','speakers','sonos_sources','sonos_library','sonos_fav','volume']],
+  ['TV', ['tvremote']],
+  ['Media', ['media','volume']],
   ['Groups', ['group','shortcuts']],
   ['Safety', ['lock','camera','alarm','binary']],
-  ['Info', ['sensor','chart','weather','wx_current','wx_hourly','wx_daily','wx_stats','person','vacuum']],
+  ['Info', ['sensor','weather','person','vacuum']],
   ['Actions', ['scene','script']],
 ];
+// --- Card styles: duplicate palette entries merged into ONE card + a style option.
+// Members stay real cks in C (and in gen.py's CTRL), so existing layouts load
+// unchanged; the palette lists only the first (primary) ck and the inspector's
+// style dropdown swaps c.ck in place. 'songlist' (static demo) has no group —
+// it is retired from the palette, superseded by the live spotify_tracks card.
+const STYLE_GROUPS=[
+  {label:'Light style', opts:[['light','Fill strip — drag to dim'],['light_t','Simple toggle']]},
+  {label:'Sensor style', opts:[['sensor','Value'],['chart','Trend chart']]},
+  {label:'Player style', opts:[['spotify','Now playing'],['spotify_art','Album art + volume strip']]},
+  {label:'Playlist style', opts:[['spotify_playlists','Browse all (dropdown)'],['playlist','Single playlist button']]},
+  {label:'Speakers style', opts:[['spotify_speakers','All speakers (list)'],['spotify_speaker','Single speaker tile']]},
+  {label:'Volume style', opts:[['volume','Single player'],['volumes','Per-speaker list']]},
+  {label:'Weather section', opts:[['weather','Full page (6×5)'],['wx_current','Current conditions'],['wx_hourly','Hourly strip'],['wx_daily','Forecast (High/Low)'],['wx_stats','Stats (wind / humidity / pressure)']]},
+  {label:'Remote piece', opts:[['tvremote','Full remote'],['tv_dpad','D-pad'],['tv_transport','Transport row'],['tv_channel','Channel +/-'],['tv_volume','Volume'],['tv_sources','Sources / inputs'],['tv_trackpad','Trackpad']]},
+];
+const STYLE_OF={}; STYLE_GROUPS.forEach(g=>g.opts.forEach(o=>STYLE_OF[o[0]]=g));
+function styleField(c){ const g=STYLE_OF[c.ck]; if(!g) return '';
+  return `<div class="field"><label>${g.label}</label><select id="fCkStyle">${g.opts.map(o=>`<option value="${o[0]}" ${c.ck===o[0]?'selected':''}>${o[1]}</option>`).join('')}</select></div>`; }
+function wireStyle(el,c){ const s=el.querySelector('#fCkStyle'); if(s) s.onchange=(e)=>switchStyle(c,e.target.value); }
+function switchStyle(c,ck){ if(c.ck===ck) return; const prev=c.ck, d=C[ck]; c.ck=ck;
+  // carry the entity across the single<->multi divide so nothing gets lost
+  if(d.multi && !(c.entities&&c.entities.length) && c.entity) c.entities=[c.entity];
+  if(!d.multi && !c.entity && c.entities && c.entities.length) c.entity=c.entities[0];
+  if(!d.spans.some(s=>s[0]===c.w&&s[1]===c.h)){ const [w,h]=d.def;
+    if(fits(c.x,c.y,w,h,c.id)){ c.w=w; c.h=h; }
+    else { const f=firstFit(w,h); if(f){ c.x=f[0]; c.y=f[1]; c.w=w; c.h=h; toast('Moved to fit the new style'); }
+           else { c.ck=prev; toast('No room for that style’s size — clear space first'); renderInspector(); return; } } }
+  renderGrid(); renderInspector(); }
 const GICON={light:['lightbulb','var(--amber)'],switch:['toggle-switch','var(--teal)'],lock:['lock','var(--teal)'],binary_sensor:['motion-sensor','var(--blue)'],sensor:['thermometer','var(--red)'],cover:['blinds-horizontal','var(--blue)'],fan:['fan','var(--teal)'],person:['account','var(--blue)'],climate:['thermostat','var(--amber)'],media_player:['speaker','var(--teal)']};
 const GVAL={light:'On',switch:'On',lock:'Locked',binary_sensor:'Clear',sensor:'72°',cover:'Open',fan:'Med',person:'Home',climate:'72°',media_player:'Idle'};
 const NAV_ICONS = ['home-variant','sofa','lightbulb','thermostat','music','shield-home','wifi','cog','blinds','camera','weather-partly-cloudy','speaker','bed','silverware-fork-knife','desk','tree','door','stairs','garage','television','remote-tv','playlist-music'];
@@ -450,8 +478,10 @@ function firstFit(w,h){ for(let y=1;y<=ROWS-h+1;y++) for(let x=1;x<=COLS-w+1;x++
 function renderPalette(){ const el=document.getElementById('palContent'); el.innerHTML='';
   for(const [cat,keys] of CATS){ const h=document.createElement('div'); h.className='pcat'; h.textContent=cat; el.appendChild(h);
     for(const k of keys){ const c=C[k]; const d=document.createElement('div'); d.className='pitem'; d.onclick=()=>openEntityPicker(k);
+      const g=STYLE_OF[k]; // merged card: advertise its styles instead of one variant's sizes
+      const hint=g? g.opts.map(o=>o[1]).join(' · ') : c.spans.map(s=>s[0]+'×'+s[1]).join(' · ');
       d.innerHTML=`<div class="ic" style="background:#0f1117;color:${c.color}"><span class="mdi mdi-${c.icon}"></span></div>
-        <div style="min-width:0"><div class="nm">${c.label}</div><div class="sz">${c.spans.map(s=>s[0]+'×'+s[1]).join(' · ')}</div></div>`; el.appendChild(d); } } }
+        <div style="min-width:0"><div class="nm">${c.label}</div><div class="sz" style="white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${hint}</div></div>`; el.appendChild(d); } } }
 
 function renderNav(){ const el=document.getElementById('navbuild'); el.innerHTML='';
   L.nav.forEach((n,i)=>{ const d=document.createElement('div'); d.className='navitem';
@@ -733,9 +763,11 @@ function renderInspector(){ const el=document.getElementById('insp'); const c=se
   if(def.ctrl==='remote'){ c.apps=c.apps||APP_DEFAULT.slice();
     el.innerHTML=`<h3 class="sec">${def.label}</h3>
       <div class="field"><label>Name</label><input id="fName" value="${(c.name||'').replace(/"/g,'&quot;')}"></div>
+      ${styleField(c)}
       <div class="field"><label>Size (span)</label><div class="szrow" id="szrow"></div></div>
       <div class="field"><label>Apps sidebar (pick up to 5, shown on 6-wide)</label><div id="applist"></div></div>
       <button class="btn ghost" id="delCard" style="width:100%;color:var(--red);border-color:#3a2422">Delete card</button>`;
+    wireStyle(el,c);
     sizeButtons(c, el.querySelector('#szrow'));
     const al=el.querySelector('#applist');
     Object.keys(APP_CAT).forEach(nm=>{ const on=c.apps.includes(nm); const r=document.createElement('div'); r.className='erow'+(on?' on':'');
@@ -748,10 +780,12 @@ function renderInspector(){ const el=document.getElementById('insp'); const c=se
   if(def.multi){ const n=cap(c); c.entities=c.entities||[];
     el.innerHTML=`<h3 class="sec">${def.label}</h3>
       <div class="field"><label>Name</label><input id="fName" value="${(c.name||'').replace(/"/g,'&quot;')}"></div>
+      ${styleField(c)}
       <div class="field"><label>Size (span)</label><div class="szrow" id="szrow"></div></div>
       <div class="field"><label>Entities (${c.entities.length}/${n>=99?'∞':n})</label><div id="elist2"></div>
         <button class="btn ghost" id="addEnt" style="width:100%;margin-top:6px">+ Add entity</button></div>
       <button class="btn ghost" id="delCard" style="width:100%;color:var(--red);border-color:#3a2422">Delete card</button>`;
+    wireStyle(el,c);
     sizeButtons(c, el.querySelector('#szrow'));
     const list=el.querySelector('#elist2');
     c.entities.forEach((e,i)=>{ const r=document.createElement('div'); r.className='elrow'; r.innerHTML=`<span style="min-width:0;overflow:hidden;text-overflow:ellipsis">${e}</span><span class="x mdi mdi-close"></span>`;
@@ -764,6 +798,7 @@ function renderInspector(){ const el=document.getElementById('insp'); const c=se
   if((c.ck==='sensor'||c.ck==='chart'||c.ck==='binary'||c.ck==='person') && c.entity && c.device_class===undefined) applyEntityMeta(c,c.entity);
   el.innerHTML=`<h3 class="sec">${def.label}</h3>
     <div class="field"><label>Name</label><input id="fName" value="${(c.name||'').replace(/"/g,'&quot;')}"></div>
+    ${styleField(c)}
     <div class="field"><label>Entity (${def.domain})</label><div style="display:flex;gap:6px"><input id="fEnt" value="${c.entity||''}" placeholder="none" style="flex:1"><button class="btn ghost" id="pickEnt" style="padding:8px 10px">Pick</button></div></div>
     ${ICON_CARDS.has(c.ck)?`<div class="field"><label>Icon</label><div id="cIcon"></div></div>`:''}
     ${(c.ck==='sensor'||c.ck==='chart')?`<div class="field"><label>Sensor type</label><select id="fStype">${SENSOR_TYPE_OPTS.map(o=>`<option value="${o[0]}" ${(c.stype||'')===o[0]?'selected':''}>${o[1]}</option>`).join('')}</select></div>`:''}
@@ -778,6 +813,7 @@ function renderInspector(){ const el=document.getElementById('insp'); const c=se
     <div class="field"><label>Position</label><div class="mono" style="font-size:12px;color:var(--t2)">col ${c.x}, row ${c.y} — drag on grid to move</div></div>
     <button class="btn ghost" id="delCard" style="width:100%;color:var(--red);border-color:#3a2422">Delete card</button>`;
   sizeButtons(c, el.querySelector('#szrow'));
+  wireStyle(el,c);
   el.querySelector('#fName').oninput=(e)=>{c.name=e.target.value; renderGrid();};
   el.querySelector('#fEnt').onchange=(e)=>{c.entity=e.target.value; applyEntityMeta(c,c.entity); renderGrid(); renderInspector();};
   el.querySelector('#pickEnt').onclick=()=>openEntityPicker(c.ck,c);
