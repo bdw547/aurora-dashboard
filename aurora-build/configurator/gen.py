@@ -2091,7 +2091,23 @@ def emit_card(card, header, pagemap):
     if ck == "shortcuts":
         return c_shortcuts(card, x, y, w, h, pagemap, base)
     fn = CTRL.get(ck, c_generic)
-    return fn(card, x, y, w, h, base)
+    ws, ss, ts = fn(card, x, y, w, h, base)
+    # Generic availability: grey out the whole card when its entity is
+    # unavailable/unknown. `opa` on the card obj cascades to every child, so the
+    # card visibly fades to "disabled". Actions on a dead entity are harmless HA
+    # no-ops, so we fade rather than hard-block input.
+    e = card.get("entity", "")
+    if e and ws and ws[0].startswith("        - obj:"):
+        m = re.match(r"        - obj:\n            id: (\S+)\n", ws[0])
+        if m:
+            cid = m.group(1)
+        else:
+            cid = base + "_card"
+            ws = [ws[0].replace("        - obj:\n", "        - obj:\n            id: " + cid + "\n", 1)] + ws[1:]
+        ts = list(ts) + [
+            "  - platform: homeassistant\n    id: ha_" + base + "_av\n    entity_id: " + e + "\n    on_value:\n"
+            "      - lvgl.widget.update: { id: " + cid + ", opa: !lambda 'return (x == \"unavailable\" || x == \"unknown\") ? 90 : 255;' }\n"]
+    return ws, ss, ts
 
 
 def gen_nav(layout, pagemap):
