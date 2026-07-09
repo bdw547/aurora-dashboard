@@ -2845,9 +2845,11 @@ def host_assemble(layout):
     keep = re.sub(r"(?m)^[ \t]*-?[ \t]*script\.(execute|stop):.*\n", "", keep)
     keep = scrub_lvgl_actions(keep)
     pages = re.sub(r"(?m)^\s*- image: \{ src: img_aurora_bg.*\n", "", pages)
-    # host build has no display_backlight light / restart button — stub those local actions
+    # host build has no display_backlight light / restart button / drv2605 haptic —
+    # stub those local actions/refs (the emulator has none of that hardware)
     pages = re.sub(r"light\.turn_on: \{ id: display_backlight[^}]*\}", "logger.log: emul", pages)
     pages = pages.replace("button.press: btn_restart_panel", "logger.log: emul")
+    pages = re.sub(r"id\(haptic\)\.[A-Za-z_]+\([^;]*\);", "", pages)   # strip haptic calls (settings page)
     return (
         "# AUTO-GENERATED host/SDL emulator build of layout.json — DO NOT EDIT.\n"
         "esphome:\n  name: aurora-emul\n\n"
