@@ -2620,13 +2620,18 @@ def build_lvgl(layout):
 
 # ---- base extraction: keep hardware/font/style sections, drop UI bindings ----
 KEEP = ["substitutions", "esphome", "esp32", "psram", "esp_ldo", "esp32_hosted",
-        "wifi", "api", "ota", "safe_mode", "logger", "web_server", "output", "light",
+        "wifi", "api", "ota", "safe_mode", "logger", "output", "light",
         "external_components", "i2c", "touchscreen", "display", "http_request",
         "image", "font", "globals", "number", "button", "time",
         "ov02c10_support", "esp_video_camera",   # onboard camera (HA entity + RTSP :8554)
         # NOT kept: "mjpeg_stream" — its hand-built targets are sized for the hand
         # dashboard. assemble() ALWAYS emits its own id: cam_stream instance (the
         # kept esphome: on_boot $cam_stream_url_override lambda references that id).
+        # NOT kept: "web_server" — internal RAM is the scarcest resource on gen
+        # builds (large layouts). The web UI is redundant next to the configurator,
+        # and under combined load (live camera RX + art decode + HA API) the panel
+        # hit sdio_rx_get_buffer asserts / bad_alloc boot-loops; the web server's
+        # listener + per-connection buffers were the biggest discretionary cut.
         "drv2605"]   # DRV2605L haptic driver (id: haptic)
 
 
@@ -2697,6 +2702,17 @@ def style_defs(lvgl_text):
 # generator drops all `interval:` blocks (they reference dropped ids), so re-inject
 # the standalone g_tp_* -> pyscript.lg_pointer_* flush the TV trackpad depends on.
 # References only globals that survive into the generated build (g_tp_*) + HA services.
+# Internal RAM is the panel's scarcest resource (SDIO WiFi RX pool, mbedTLS,
+# every `new`); log it so famine shows up as a trend line instead of a crash.
+HEAP_LOG_INTERVAL_ITEM = (
+    "  - interval: 30s\n"
+    "    then:\n"
+    "      - lambda: |-\n"
+    "          ESP_LOGI(\"heap\", \"internal free=%u largest=%u | psram free=%u\",\n"
+    "                   (unsigned) heap_caps_get_free_size(MALLOC_CAP_INTERNAL),\n"
+    "                   (unsigned) heap_caps_get_largest_free_block(MALLOC_CAP_INTERNAL),\n"
+    "                   (unsigned) heap_caps_get_free_size(MALLOC_CAP_SPIRAM));\n")
+
 TP_FLUSH_INTERVAL = (
     "\ninterval:\n"
     "  - interval: 50ms\n"
@@ -2991,7 +3007,13 @@ def assemble(layout):
     lvgl_text = dict(secs).get("lvgl", "")
     nav, pages, sens, txt, _, clocks = build_lvgl(layout)  # populates USED_ICON_CP + ART/CAM registries
     # keep the hardware/font/style base; embed the icons this layout uses into f_icon
-    keep_text = "".join(inject_used_glyphs(t) if n == "font" else t
+    # (globals: gains the art-serializer flag — the section is otherwise verbatim,
+    # and a second top-level globals: key would be invalid YAML)
+    extra_globals = ("  - id: g_gen_art_busy\n    type: bool\n"
+                     "    restore_value: no\n    initial_value: 'false'\n")
+    keep_text = "".join(inject_used_glyphs(t) if n == "font"
+                        else (t.rstrip("\n") + "\n" + extra_globals) if n == "globals"
+                        else t
                         for n, t in secs if n in KEEP)
     # scrub references to dropped UI scripts + lvgl widget actions in the base
     keep_text = re.sub(r"(?m)^[ \t]*-?[ \t]*script\.(execute|stop):.*\n", "", keep_text)
@@ -3003,13 +3025,19 @@ def assemble(layout):
         pages += gen_camera_full_page()
         txt.append(gen_cam_text_sensor())
     # Album art: one decoder per (entity, size) in use; each entity's
-    # sp_nowplaying_image_url (SpotifyPlus; absolute scdn JPEG) set_urls + updates
-    # ONLY that entity's decoders on track change. Keying by size alone let
-    # entities sharing a size overwrite each other's art AND fired every size
-    # decoder back-to-back — 3 concurrent HTTP+JPEG decodes exhausted the heap
-    # and boot-looped the panel. PSRAM cost: a decoder buffers s*s*2 bytes, so
-    # per-(entity,size) keying adds at most a few hundred KB.
+    # entity_picture (HA's local media proxy — plain HTTP on the LAN) set_urls
+    # + updates ONLY that entity's decoders on track change. Two hard lessons:
+    # keying by size alone fired every size decoder back-to-back (3 concurrent
+    # decodes exhausted the heap -> boot-loop), and fetching art straight from
+    # the Spotify CDN (sp_nowplaying_image_url, https://i.scdn.co) forced a
+    # mbedTLS handshake per fetch — ~50KB of internal RAM + a multi-second
+    # main-loop block, which ALSO bad_alloc'd and boot-looped the panel while
+    # music played. The HA proxy is tokenized per state change, TLS-free, and
+    # works for every media_player (Sonos/LG too), not just SpotifyPlus.
+    # PSRAM cost: a decoder buffers s*s*2 bytes, so per-(entity,size) keying
+    # adds at most a few hundred KB.
     art_items = ""
+    art_scripts = []
     if ART_IMAGES:
         by_ent = {}
         for s, iid, e in ART_IMAGES:
@@ -3025,16 +3053,34 @@ def assemble(layout):
                               "    on_download_finished:\n%s"
                               "    on_error:\n      - logger.log: \"ART %s_%d: download error\"\n"
                               % (es, s, s, s, ups, es, s))
-            acts = ""
-            for k, s in enumerate(sizes):
-                if k:                                    # serialize multi-size downloads (heap; see above)
-                    acts += "              - delay: 1500ms\n"
-                acts += ("              - online_image.set_url: { id: gen_art_%s_%d, url: !lambda 'return x;' }\n"
-                         "              - component.update: gen_art_%s_%d\n" % (es, s, es, s))
-            txt.append("  - platform: homeassistant\n    id: ha_gen_art_%d\n    entity_id: %s\n    attribute: sp_nowplaying_image_url\n"
+            # All art work runs inside a per-entity mode:restart script: rapid
+            # track skips CANCEL the superseded fetch instead of stacking
+            # parallel automation runs (each on_value spawns a new run — three
+            # quick skips meant 3+ concurrent downloads+decodes, which crashed
+            # the panel even over plain HTTP). The g_gen_art_busy flag
+            # additionally serializes ACROSS entities (Sonos casting updates
+            # several media_players per track); wait_until has a timeout so a
+            # cancelled run that left the flag set self-heals instead of
+            # wedging art forever.
+            steps = ""
+            for s in sizes:
+                steps += ("      - wait_until:\n          condition:\n"
+                          "            lambda: 'return !id(g_gen_art_busy);'\n"
+                          "          timeout: 8s\n"
+                          "      - lambda: 'id(g_gen_art_busy) = true;'\n"
+                          "      - online_image.set_url: { id: gen_art_%s_%d, url: !lambda 'return url;' }\n"
+                          "      - component.update: gen_art_%s_%d\n"
+                          "      - delay: 2200ms\n"
+                          "      - lambda: 'id(g_gen_art_busy) = false;'\n" % (es, s, es, s))
+            art_scripts.append("  - id: gen_art_seq_%d\n    mode: restart\n"
+                               "    parameters:\n      url: string\n    then:\n%s" % (n_i, steps))
+            # entity_picture is a relative tokenized proxy path ("/api/media_player_proxy/...").
+            txt.append("  - platform: homeassistant\n    id: ha_gen_art_%d\n    entity_id: %s\n    attribute: entity_picture\n"
                        "    on_value:\n      then:\n        - if:\n            condition:\n"
-                       "              lambda: 'return x.rfind(\"http\", 0) == 0;'\n            then:\n%s"
-                       % (n_i, ent, acts))
+                       "              lambda: 'return x.rfind(\"/\", 0) == 0;'\n            then:\n"
+                       "              - script.execute:\n                  id: gen_art_seq_%d\n"
+                       "                  url: !lambda 'return std::string(\"$ha_base\") + x;'\n"
+                       % (n_i, ent, n_i))
     # Screen-off paths that do NOT navigate would leave the camera page loaded —
     # its on_unload (cam_stream.stop()) never fires and the stream keeps decoding
     # into a dark panel. With a live camera card, show page_home right before the
@@ -3056,8 +3102,8 @@ def assemble(layout):
                "            - lvgl.page.show: page_home\n"
                "            - light.turn_off: display_backlight\n")
     # interval: list = trackpad flush + camera night-wake + screensaver cycle + clock repaint
-    out = keep_text + TP_FLUSH_INTERVAL + cam_wake + SS_INTERVAL_ITEM + clock_items(clocks)
-    out += SS_ONLINE_IMAGE + art_items + SS_SCRIPT + gen_cam_stream()
+    out = keep_text + TP_FLUSH_INTERVAL + cam_wake + SS_INTERVAL_ITEM + HEAP_LOG_INTERVAL_ITEM + clock_items(clocks)
+    out += SS_ONLINE_IMAGE + art_items + SS_SCRIPT + "".join(art_scripts) + gen_cam_stream()
     if sens:
         out += "\nsensor:\n" + "".join(sens)
     out += "\ntext_sensor:\n" + "".join(txt)
