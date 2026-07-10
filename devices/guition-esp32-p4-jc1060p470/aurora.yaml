@@ -305,8 +305,10 @@ mjpeg_stream:
   - id: cam_stream
     max_fps: 8.0
     max_jpeg_size: 512kB
-    max_source_width: 1920
-    max_source_height: 1080
+    # HA's go2rtc image provider serves Nest stills at 1600x1200 (4:3), so the
+    # height cap must exceed 1200; sized with headroom (decode buf ~6.3MB max).
+    max_source_width: 2048
+    max_source_height: 1536
     targets:                 # list index = target_idx passed to start()
       - width: 600
         height: 452
@@ -1570,7 +1572,15 @@ text_sensor:
             if (p != std::string::npos) sp.replace(p, 18, "/api/camera_proxy_stream/");
             id(g_cam_stream_url) = std::string("$ha_base") + sp;
             std::string ov = "$cam_stream_url_override";
-            id(cam_stream).set_url(!ov.empty() ? ov : id(g_cam_stream_url));
+            // Default source is the SNAPSHOT proxy, not camera_proxy_stream:
+            // HA's MJPEG still-stream calls the camera's direct image method,
+            // which Nest never implements (NotImplementedError -> 0 frames),
+            // while snapshots go through the go2rtc image provider and work.
+            // mjpeg_stream treats an image/jpeg response as snapshot-poll mode
+            // (one frame per connection, paced to max_fps) => ~1-2 fps live.
+            // Set $cam_stream_url_override (e.g. go2rtc stream.mjpeg) for
+            // true full-rate MJPEG once a working source exists.
+            id(cam_stream).set_url(!ov.empty() ? ov : id(g_cam_url));
   # ---- Doorbell chime -> pop up the camera (guard: ignore initial sync) ----
   - platform: homeassistant
     id: ha_chime

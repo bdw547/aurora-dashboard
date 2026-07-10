@@ -364,7 +364,10 @@ void MJPEGStream::task_main_() {
 
     std::string boundary;
     bool net_ok;
-    uint32_t frames_before = this->frames_ok_.load();
+    // Empty-close detection counts frames RECEIVED (net), not presented: a
+    // connection that delivered bytes isn't the "server has nothing" case
+    // even if every frame was dropped (oversize, decode failure, fps gate).
+    uint32_t frames_before = this->frames_net_.load();
     if (stristr_(content_type.c_str(), "multipart") != nullptr && extract_boundary_(content_type, boundary)) {
       // Home Assistant declares "boundary=--frameboundary" — the parameter
       // value already carries the leading dashes the body delimiter uses, so
