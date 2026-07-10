@@ -6,6 +6,11 @@ frames (esp_driver_jpeg), hardware-scales them with the PPA into
 double-buffered RGB565 PSRAM buffers, and presents the frames to an LVGL
 image widget from the ESPHome main loop.
 
+Also exposes a lambda-only "stills channel" (no config keys):
+`id(x).fetch_still(url, widget, w, h)` queues a one-shot JPEG fetch (e.g.
+album art) serviced by the same task/decoder/PPA between stream frames,
+presented into per-widget PSRAM buffers from the main loop.
+
 esp_driver_jpeg and esp_driver_ppa are core ESP-IDF 5.5 components on the
 esp32p4 — no managed components are required.
 """

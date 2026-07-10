@@ -732,10 +732,13 @@ def c_action(card, x, y, w, h, base):
     return [card_obj(x, y, w, h, inner, on)], [], []
 
 
-# Album art plumbing: c_media registers (size, image_widget_id, entity) here; assemble()
-# emits one online_image decoder per (entity, size) + a sp_nowplaying_image_url readback
-# per entity that set_url+updates ONLY that entity's decoders. Host builds skip art
-# (no decoders).
+# Album art plumbing: c_media/c_spotify_art register (size, image_widget_id, entity)
+# here; assemble() emits one entity_picture readback per entity whose action queues
+# id(cam_stream).fetch_still(url, widget, size, size) for each of that entity's art
+# widgets — download + HW JPEG decode + PPA scale run on the mjpeg_stream worker
+# task (never the main loop), latest-wins per widget. Art image widgets start
+# hidden over the ss_image placeholder src; the component unhides each one when
+# its first still is applied. Host builds skip art (no mjpeg_stream component).
 ART_IMAGES = []
 ART_ENABLED = True
 EXTRA_CLOCKS = []   # (label_id, kind) live-clock bindings contributed by card emitters
@@ -772,7 +775,9 @@ def c_media(card, x, y, w, h, base):
             img_id = "%s_art" % base
             ix = ax + (aw - real) // 2
             iy = ay + (ah - real) // 2
-            s += ("              - image: { id: %s, x: %d, y: %d, src: gen_art_%s_%d }\n" % (img_id, ix, iy, slug(e), real))
+            # src is a required schema key: point at ss_image and start hidden
+            # (camera-widget pattern) — the stills channel unhides on first art.
+            s += ("              - image: { id: %s, x: %d, y: %d, src: ss_image, hidden: true }\n" % (img_id, ix, iy))
             ART_IMAGES.append((real, img_id, e))
         return s
 
@@ -2156,9 +2161,10 @@ def c_spotify_art(card, x, y, w, h, base):
     volume fill-rail with live percent readout and a mute button below it on
     the right. All geometry is anchored off (w, h) so every allowed span
     (3x3 .. 6x5) lays out without overlap: the strip is a fixed-height content
-    band (fonts don't scale) and the art + rail absorb the rest. Art =
-    server-fetched still via the shared online_image decoder; its square edge
-    is min(art column w, h) so it fills the column under the strip."""
+    band (fonts don't scale) and the art + rail absorb the rest. Art = single
+    JPEG still fetched + HW-decoded on the mjpeg_stream task (fetch_still);
+    its square edge is min(art column w, h) so it fills the column under the
+    strip."""
     e = card.get("entity", "")
     tid, aid, ppid, pgid = base + "_t", base + "_a", base + "_pp", base + "_pg"
     sld, fillid, gripid, vpid = base + "_vs", base + "_vf", base + "_vg", base + "_vp"
@@ -2189,7 +2195,9 @@ def c_spotify_art(card, x, y, w, h, base):
     inner += lbl("\\U000F075A", ax + (aw - 30) // 2, ay + (ah - 34) // 2, "f_icon", "0x5D6470")
     if e and ART_ENABLED:
         img_id = base + "_art"
-        inner += "              - image: { id: " + img_id + ", x: " + str(ax + (aw - real) // 2) + ", y: " + str(ay + (ah - real) // 2) + ", src: gen_art_" + slug(e) + "_" + str(real) + " }\n"
+        # ss_image placeholder src + hidden (camera-widget pattern): the stills
+        # channel unhides the widget when the first fetched art is applied.
+        inner += "              - image: { id: " + img_id + ", x: " + str(ax + (aw - real) // 2) + ", y: " + str(ay + (ah - real) // 2) + ", src: ss_image, hidden: true }\n"
         ART_IMAGES.append((real, img_id, e))
     # --- solid metadata strip overlaid on the art bottom; fixed bands never overlap:
     # title 8..28, artist 30..46, progress 52..55, transport 63..97, bottom pad 8 ---
@@ -2933,18 +2941,24 @@ def gen_cam_stream():
     id: cam_stream — the kept esphome: on_boot lambda applies
     $cam_stream_url_override via id(cam_stream), so the id must exist even in
     layouts with no camera card (always-emit chosen over scrubbing on_boot).
+    Album art rides this instance too (fetch_still shares its task + JPEG
+    accumulator), so a no-camera layout WITH art widgets keeps a full-size
+    accumulator — HA-proxied covers regularly exceed 64kB.
     Idle cost note: setup() unconditionally allocates 2 frame buffers sized to
     the LARGEST target + the max_jpeg_size accumulator + a 12kB-stack task, so
     the no-camera instance (64x64 target, 64kB accumulator) still holds ~0.1MB
     PSRAM while never started — fine on the 32MB P4."""
     head = ("\n# Live camera stream (generated; replaces aurora.yaml's hand-sized instance).\n"
+            "# Also the album-art stills worker: gen art readbacks call id(cam_stream).fetch_still().\n"
             "mjpeg_stream:\n"
             "  - id: cam_stream\n    max_fps: 8.0\n"
             "    max_source_width: 2048\n    max_source_height: 1536\n")
     tail = "    task_core: 1\n    task_priority: 4\n    read_timeout: 10s\n"
     if not CAM_CARDS:
-        return (head
-                + "    max_jpeg_size: 64kB      # idle instance: shrink the always-allocated accumulator\n"
+        acc = ("    max_jpeg_size: 512kB     # no camera card, but album-art stills use this accumulator\n"
+               if ART_IMAGES else
+               "    max_jpeg_size: 64kB      # idle instance: shrink the always-allocated accumulator\n")
+        return (head + acc
                 + "    targets:                 # idle placeholder — no camera card in this layout\n"
                   "      - width: 64\n        height: 64\n" + tail)
     _e, iw, ih, base, _pid = CAM_CARDS[0]
@@ -3007,13 +3021,7 @@ def assemble(layout):
     lvgl_text = dict(secs).get("lvgl", "")
     nav, pages, sens, txt, _, clocks = build_lvgl(layout)  # populates USED_ICON_CP + ART/CAM registries
     # keep the hardware/font/style base; embed the icons this layout uses into f_icon
-    # (globals: gains the art-serializer flag — the section is otherwise verbatim,
-    # and a second top-level globals: key would be invalid YAML)
-    extra_globals = ("  - id: g_gen_art_busy\n    type: bool\n"
-                     "    restore_value: no\n    initial_value: 'false'\n")
-    keep_text = "".join(inject_used_glyphs(t) if n == "font"
-                        else (t.rstrip("\n") + "\n" + extra_globals) if n == "globals"
-                        else t
+    keep_text = "".join(inject_used_glyphs(t) if n == "font" else t
                         for n, t in secs if n in KEEP)
     # scrub references to dropped UI scripts + lvgl widget actions in the base
     keep_text = re.sub(r"(?m)^[ \t]*-?[ \t]*script\.(execute|stop):.*\n", "", keep_text)
@@ -3024,63 +3032,36 @@ def assemble(layout):
     if CAM_CARDS:                                        # live camera: fullscreen page + URL readback
         pages += gen_camera_full_page()
         txt.append(gen_cam_text_sensor())
-    # Album art: one decoder per (entity, size) in use; each entity's
-    # entity_picture (HA's local media proxy — plain HTTP on the LAN) set_urls
-    # + updates ONLY that entity's decoders on track change. Two hard lessons:
-    # keying by size alone fired every size decoder back-to-back (3 concurrent
-    # decodes exhausted the heap -> boot-loop), and fetching art straight from
-    # the Spotify CDN (sp_nowplaying_image_url, https://i.scdn.co) forced a
-    # mbedTLS handshake per fetch — ~50KB of internal RAM + a multi-second
-    # main-loop block, which ALSO bad_alloc'd and boot-looped the panel while
-    # music played. The HA proxy is tokenized per state change, TLS-free, and
-    # works for every media_player (Sonos/LG too), not just SpotifyPlus.
-    # PSRAM cost: a decoder buffers s*s*2 bytes, so per-(entity,size) keying
-    # adds at most a few hundred KB.
-    art_items = ""
-    art_scripts = []
+    # Album art rides the mjpeg_stream stills channel: per entity, one
+    # entity_picture readback whose action queues
+    # id(cam_stream).fetch_still(url, widget, size, size) for each art widget
+    # bound to that entity. The fetch runs on the stream worker task — never
+    # the main loop: hand-rolled HTTP + hardware JPEG decode + PPA scale into
+    # a per-widget PSRAM buffer, presented (and the widget unhidden) from the
+    # component's loop(). The queue is latest-wins per widget, so track-skip
+    # storms self-cancel, and the single worker serializes all art + camera
+    # work. This replaced the per-(entity,size) online_image decoders +
+    # per-entity mode:restart gen_art_seq scripts + g_gen_art_busy flag:
+    # online_image downloads AND decodes on the main loop (measured blocking
+    # up to ~8s per fetch when HA's media proxy had to fetch from the Spotify
+    # CDN), which stalled LVGL, backed up the network stack, and bad_alloc'd
+    # the panel under rapid track skips. The HA proxy URL is still the right
+    # source: tokenized per state change, plain HTTP on the LAN (TLS-free),
+    # and works for every media_player (Sonos/LG too), not just SpotifyPlus.
     if ART_IMAGES:
         by_ent = {}
         for s, iid, e in ART_IMAGES:
             by_ent.setdefault(e, []).append((s, iid))
         for n_i, ent in enumerate(sorted(by_ent)):
-            es = slug(ent)
-            sizes = sorted({s for s, _ in by_ent[ent]})
-            for s in sizes:
-                ups = "".join("      - lvgl.image.update: { id: %s, src: gen_art_%s_%d }\n" % (iid, es, s)
-                              for sz, iid in by_ent[ent] if sz == s)
-                art_items += ("  - id: gen_art_%s_%d\n    url: \"http://127.0.0.1/none.jpg\"\n    format: JPEG\n    type: RGB565\n"
-                              "    resize: %dx%d\n    update_interval: never\n"
-                              "    on_download_finished:\n%s"
-                              "    on_error:\n      - logger.log: \"ART %s_%d: download error\"\n"
-                              % (es, s, s, s, ups, es, s))
-            # All art work runs inside a per-entity mode:restart script: rapid
-            # track skips CANCEL the superseded fetch instead of stacking
-            # parallel automation runs (each on_value spawns a new run — three
-            # quick skips meant 3+ concurrent downloads+decodes, which crashed
-            # the panel even over plain HTTP). The g_gen_art_busy flag
-            # additionally serializes ACROSS entities (Sonos casting updates
-            # several media_players per track); wait_until has a timeout so a
-            # cancelled run that left the flag set self-heals instead of
-            # wedging art forever.
-            steps = ""
-            for s in sizes:
-                steps += ("      - wait_until:\n          condition:\n"
-                          "            lambda: 'return !id(g_gen_art_busy);'\n"
-                          "          timeout: 8s\n"
-                          "      - lambda: 'id(g_gen_art_busy) = true;'\n"
-                          "      - online_image.set_url: { id: gen_art_%s_%d, url: !lambda 'return url;' }\n"
-                          "      - component.update: gen_art_%s_%d\n"
-                          "      - delay: 2200ms\n"
-                          "      - lambda: 'id(g_gen_art_busy) = false;'\n" % (es, s, es, s))
-            art_scripts.append("  - id: gen_art_seq_%d\n    mode: restart\n"
-                               "    parameters:\n      url: string\n    then:\n%s" % (n_i, steps))
+            fetches = "".join(
+                "              - lambda: 'id(cam_stream).fetch_still(std::string(\"$ha_base\") + x, id(%s), %d, %d);'\n"
+                % (iid, s, s)
+                for s, iid in by_ent[ent])
             # entity_picture is a relative tokenized proxy path ("/api/media_player_proxy/...").
             txt.append("  - platform: homeassistant\n    id: ha_gen_art_%d\n    entity_id: %s\n    attribute: entity_picture\n"
                        "    on_value:\n      then:\n        - if:\n            condition:\n"
-                       "              lambda: 'return x.rfind(\"/\", 0) == 0;'\n            then:\n"
-                       "              - script.execute:\n                  id: gen_art_seq_%d\n"
-                       "                  url: !lambda 'return std::string(\"$ha_base\") + x;'\n"
-                       % (n_i, ent, n_i))
+                       "              lambda: 'return x.rfind(\"/\", 0) == 0;'\n            then:\n%s"
+                       % (n_i, ent, fetches))
     # Screen-off paths that do NOT navigate would leave the camera page loaded —
     # its on_unload (cam_stream.stop()) never fires and the stream keeps decoding
     # into a dark panel. With a live camera card, show page_home right before the
@@ -3103,7 +3084,7 @@ def assemble(layout):
                "            - light.turn_off: display_backlight\n")
     # interval: list = trackpad flush + camera night-wake + screensaver cycle + clock repaint
     out = keep_text + TP_FLUSH_INTERVAL + cam_wake + SS_INTERVAL_ITEM + HEAP_LOG_INTERVAL_ITEM + clock_items(clocks)
-    out += SS_ONLINE_IMAGE + art_items + SS_SCRIPT + "".join(art_scripts) + gen_cam_stream()
+    out += SS_ONLINE_IMAGE + SS_SCRIPT + gen_cam_stream()
     if sens:
         out += "\nsensor:\n" + "".join(sens)
     out += "\ntext_sensor:\n" + "".join(txt)
