@@ -69,6 +69,7 @@ def _load_mdi():
 
 MDI_CP = _load_mdi()   # icon name -> 8-hex codepoint
 USED_ICON_CP = set()   # 8-hex codepoints referenced by the layout being built
+USED_ICONSM_CP = set()  # codepoints card emitters need in the small (18px) f_iconsm font
 
 
 def glyph_for(name, fallback=FALLBACK_GLYPH):
@@ -83,22 +84,28 @@ def glyph_for(name, fallback=FALLBACK_GLYPH):
     return "\\U" + cp
 
 
-def inject_used_glyphs(font_text):
-    """Append any used-but-not-embedded icons to the f_icon `glyphs:` list."""
-    if not USED_ICON_CP:
+def _inject_glyphs(font_text, font_id, cps):
+    """Append any of `cps` not already embedded to the `font_id` `glyphs:` list."""
+    if not cps:
         return font_text
-    i = font_text.find("id: f_icon")
+    i = font_text.find("id: " + font_id + "\n")
     g = font_text.find("glyphs:", i) if i >= 0 else -1
     if g < 0:
         return font_text
     nxt = font_text.find("\n  - ", g)          # start of the next font entry
     end = nxt if nxt != -1 else len(font_text)
     have = {m.upper() for m in re.findall(r"\\U(000[0-9A-Fa-f]{5})", font_text[g:end])}
-    add = sorted(cp for cp in USED_ICON_CP if cp.upper() not in have)
+    add = sorted(cp for cp in cps if cp.upper() not in have)
     if not add:
         return font_text
     ins = "".join('      - "\\U%s"  # auto (layout icon)\n' % cp for cp in add)
     return font_text[:end] + "\n" + ins.rstrip("\n") + font_text[end:]
+
+
+def inject_used_glyphs(font_text):
+    """Append used-but-not-embedded icons to the f_icon / f_iconsm glyph lists."""
+    font_text = _inject_glyphs(font_text, "f_icon", USED_ICON_CP)
+    return _inject_glyphs(font_text, "f_iconsm", USED_ICONSM_CP)
 
 
 def slug(s):
@@ -2142,66 +2149,70 @@ def c_speakers(card, x, y, w, h, base):
 
 
 def c_spotify_art(card, x, y, w, h, base):
-    """Album-art-forward Spotify control (handoff cards E/F): a pre-baked album-art
-    panel with a SOLID overlaid transport bar (LVGL-safe, no blur) + a green vertical
-    volume fill-strip and a mute button on the right. E = 4x3 (adds shuffle/repeat),
-    F = 3x3 compact. Art = server-fetched still via the shared online_image decoder."""
+    """Album-art Spotify control, 1:1 with the web preview (builder.html
+    `spotify_art`): the art panel fills the left column and a SOLID metadata
+    strip (LVGL-safe, no blur) overlays its bottom — title / artist / progress
+    bar / prev-play-next row, each in its own band — plus a 44px green vertical
+    volume fill-rail with live percent readout and a mute button below it on
+    the right. All geometry is anchored off (w, h) so every allowed span
+    (3x3 .. 6x5) lays out without overlap: the strip is a fixed-height content
+    band (fonts don't scale) and the art + rail absorb the rest. Art =
+    server-fetched still via the shared online_image decoder; its square edge
+    is min(art column w, h) so it fills the column under the strip."""
     e = card.get("entity", "")
-    wide = card["w"] >= 4
-    tid, aid, ppid = base + "_t", base + "_a", base + "_pp"
+    tid, aid, ppid, pgid = base + "_t", base + "_a", base + "_pp", base + "_pg"
     sld, fillid, gripid, vpid = base + "_vs", base + "_vf", base + "_vg", base + "_vp"
     GN, GN_LO = "0x1DB954", "0x0E7A37"
     prev = ha("media_player.media_previous_track", e) if e else "lvgl.page.show: page_home"
     plpz = ha("media_player.media_play_pause", e) if e else "lvgl.page.show: page_home"
     nxt = ha("media_player.media_next_track", e) if e else "lvgl.page.show: page_home"
     mute = ha("media_player.volume_mute", e, 'is_volume_muted: "true"') if e else "lvgl.page.show: page_home"
-    heart, shuf, rep = glyph_for("heart"), glyph_for("shuffle-variant"), glyph_for("repeat")
-    pad, gap = 12, 12
-    vw = 88 if wide else 72
+    # transport + volume glyphs render at the preview's ~15-19px -> small icon font
+    for cp in ("000F04AE", "000F04AD", "000F03E4", "000F040A", "000F057E", "000F075F"):
+        USED_ICONSM_CP.add(cp)
+    # Web-preview geometry (builder.html draws the 6x5 grid 1:1 at device px):
+    # card pad 14, art|rail gap 8, 44px volume rail, 30px mute button 8 below it.
+    pad, gap, vw, mut = 14, 8, 44, 30
     ax = ay = pad
-    aw = w - pad - gap - vw - pad
-    ah = h - 2 * pad
-    tp_h = 118 if wide else 104
-    tpy = ay + ah - tp_h
+    aw = w - 2 * pad - gap - vw                           # art column width
+    ah = h - 2 * pad                                      # art column height
     vx = ax + aw + gap
-    vth = ah - 12 - 44                                    # volume track height (mute btn below)
-    vol0 = 65 if wide else 80
-    real = min(aw, ah)
+    vth = ah - gap - mut                                  # volume track height (mute btn below)
+    tp_h = 105              # metadata strip: fixed-height band (web ~96 at its 13/11px text)
+    tpy = ay + ah - tp_h
+    trkw = aw - 20                                        # progress track (10px side insets)
+    vol0 = 65
+    real = min(aw, ah)      # square art edge: fills the column; the strip overlays its bottom
 
-    # --- art panel (dark bg + centered pre-baked art) + heart chip ---
-    inner = ("              - obj: { x: " + str(ax) + ", y: " + str(ay) + ", width: " + str(aw) + ", height: " + str(ah) + ", bg_color: 0x1B1E27, radius: 12, clip_corner: true, border_width: 0, pad_all: 0, scrollable: false }\n")
-    inner += lbl("\\U000F075A", ax + (aw - 40) // 2, ay + (ah - tp_h - 44) // 2, "f_icon", "0x5D6470")
+    # --- art panel (fills the left column; placeholder note centered like the web) ---
+    inner = ("              - obj: { x: " + str(ax) + ", y: " + str(ay) + ", width: " + str(aw) + ", height: " + str(ah) + ", bg_color: 0x1B1E27, radius: 10, clip_corner: true, border_width: 0, pad_all: 0, scrollable: false }\n")
+    inner += lbl("\\U000F075A", ax + (aw - 30) // 2, ay + (ah - 34) // 2, "f_icon", "0x5D6470")
     if e and ART_ENABLED:
         img_id = base + "_art"
         inner += "              - image: { id: " + img_id + ", x: " + str(ax + (aw - real) // 2) + ", y: " + str(ay + (ah - real) // 2) + ", src: gen_art_" + slug(e) + "_" + str(real) + " }\n"
         ART_IMAGES.append((real, img_id, e))
-    inner += "              - obj: { x: " + str(ax + aw - 46) + ", y: " + str(ay + 10) + ", width: 36, height: 36, bg_color: 0x000000, bg_opa: 40%, radius: 18, border_width: 0, pad_all: 0, scrollable: false, widgets: [label: { text: \"" + heart + "\", align: center, text_font: f_icon, text_color: " + GN + " }] }\n"
-    # --- solid transport panel overlaid on the art bottom ---
+    # --- solid metadata strip overlaid on the art bottom; fixed bands never overlap:
+    # title 8..28, artist 30..46, progress 52..55, transport 63..97, bottom pad 8 ---
     inner += "              - obj: { x: " + str(ax) + ", y: " + str(tpy) + ", width: " + str(aw) + ", height: " + str(tp_h) + ", bg_color: 0x0B0D11, radius: 0, border_width: 0, pad_all: 0, scrollable: false }\n"
-    inner += lbl("Nothing playing", ax + 14, tpy + 12, "f_body", "0xF3F5F8", wid=tid, width=aw - 28, long="dot", height=22)
-    inner += lbl("", ax + 14, tpy + 36, "f_small", "0xAEB4C2", wid=aid, width=aw - 28, long="dot", height=18)
-    pgy = tpy + 60
-    inner += "              - obj: { x: " + str(ax + 14) + ", y: " + str(pgy) + ", width: " + str(aw - 28) + ", height: 4, bg_color: 0x2A2D36, radius: 2, border_width: 0, pad_all: 0, scrollable: false }\n"
-    inner += "              - obj: { x: " + str(ax + 14) + ", y: " + str(pgy) + ", width: " + str(int((aw - 28) * 0.4)) + ", height: 4, bg_color: " + GN + ", radius: 2, border_width: 0, pad_all: 0, scrollable: false }\n"
-    # transport buttons (prev / play-pause / next centered; shuffle+repeat on the wide E)
-    small, big = 42, 52
-    bty = tpy + tp_h - big - 10
+    inner += lbl("Nothing playing", ax + 10, tpy + 8, "f_body", "0xF3F5F8", wid=tid, width=trkw, long="dot", height=20)
+    inner += lbl("", ax + 10, tpy + 30, "f_small", "0xAEB4C2", wid=aid, width=trkw, long="dot", height=16)
+    pgy = tpy + 52
+    inner += "              - obj: { x: " + str(ax + 10) + ", y: " + str(pgy) + ", width: " + str(trkw) + ", height: 3, bg_color: 0x2A2D36, radius: 2, border_width: 0, pad_all: 0, scrollable: false }\n"
+    inner += "              - obj: { id: " + pgid + ", x: " + str(ax + 10) + ", y: " + str(pgy) + ", width: " + str(max(1, int(trkw * 0.4))) + ", height: 3, bg_color: " + GN + ", radius: 2, border_width: 0, pad_all: 0, scrollable: false" + (", hidden: true" if e else "") + " }\n"
+    # transport row (web: 34px play circle, bare 19px prev/next icons, 14px visual gaps)
+    bty = tpy + 63
     cx = ax + aw // 2
-    yo = (big - small) // 2
-    inner += btn(cx - big // 2, bty, big, big, "\\U000F03E4", plpz, bg=GN, color="0x052E16", radius=big // 2, font="f_icon", lid=ppid)
-    inner += btn(cx - big // 2 - 18 - small, bty + yo, small, small, "\\U000F04AE", prev, bg="0x161B24", radius=small // 2, font="f_icon")
-    inner += btn(cx + big // 2 + 18, bty + yo, small, small, "\\U000F04AD", nxt, bg="0x161B24", radius=small // 2, font="f_icon")
-    if wide:
-        inner += lbl(shuf, ax + 16, bty + (big - 22) // 2, "f_icon", "0x868CA0")
-        inner += lbl(rep, ax + aw - 38, bty + (big - 22) // 2, "f_icon", "0x868CA0")
-    # --- green vertical volume fill-strip (right) ---
-    fh0 = int(vth * vol0 / 100)
+    inner += btn(cx - 57, bty, 34, 34, "\\U000F04AE", prev, bg="0x0B0D11", color="0xFFFFFF", radius=17, font="f_iconsm")
+    inner += btn(cx - 17, bty, 34, 34, "\\U000F03E4", plpz, bg=GN, color="0x052E16", radius=17, font="f_iconsm", lid=ppid)
+    inner += btn(cx + 23, bty, 34, 34, "\\U000F04AD", nxt, bg="0x0B0D11", color="0xFFFFFF", radius=17, font="f_iconsm")
+    # --- green vertical volume fill-rail (right) + mute button below ---
+    fh0 = vth * vol0 // 100
     trk = ("              - obj:\n                  x: " + str(vx) + "\n                  y: " + str(ay) + "\n                  width: " + str(vw) + "\n                  height: " + str(vth) + "\n"
-           "                  bg_color: 0x0E1014\n                  radius: 12\n                  clip_corner: true\n                  border_width: 0\n                  pad_all: 0\n                  scrollable: false\n                  widgets:\n"
+           "                  bg_color: 0x0E1014\n                  radius: 9\n                  clip_corner: true\n                  border_width: 0\n                  pad_all: 0\n                  scrollable: false\n                  widgets:\n"
            "                    - obj: { id: " + fillid + ", x: 0, y: " + str(vth - fh0) + ", width: " + str(vw) + ", height: " + str(fh0) + ", bg_color: " + GN_LO + ", bg_grad_color: " + GN + ", bg_grad_dir: VER, border_width: 0, radius: 0, pad_all: 0, scrollable: false }\n"
-           "                    - obj: { id: " + gripid + ", x: 7, y: " + str(vth - fh0 - 3) + ", width: " + str(vw - 14) + ", height: 6, bg_color: 0xFFFFFF, radius: 3, border_width: 0, pad_all: 0, scrollable: false }\n"
-           "                    - label: { text: \"\\U000F057E\", align: top_mid, y: 10, text_font: f_icon, text_color: 0xFFFFFF }\n"
-           "                    - label: { id: " + vpid + ", text: \"" + str(vol0) + "\", align: bottom_mid, y: -10, text_font: f_title, text_color: 0xFFFFFF }\n")
+           "                    - obj: { id: " + gripid + ", x: 5, y: " + str(vth - fh0 - 3) + ", width: " + str(vw - 10) + ", height: 5, bg_color: 0xFFFFFF, radius: 3, border_width: 0, pad_all: 0, scrollable: false }\n"
+           "                    - label: { text: \"\\U000F057E\", align: top_mid, y: 6, text_font: f_iconsm, text_color: 0xFFFFFF }\n"
+           "                    - label: { id: " + vpid + ", text: \"" + str(vol0) + "\", align: bottom_mid, y: -6, text_font: f_body, text_color: 0xFFFFFF }\n")
     if e:
         trk += ("                    - slider:\n                        id: " + sld + "\n                        x: 0\n                        y: 0\n                        width: " + str(vw) + "\n                        height: " + str(vth) + "\n"
                 "                        bg_opa: 0%\n                        min_value: 0\n                        max_value: 100\n                        value: " + str(vol0) + "\n                        indicator: { bg_opa: 0% }\n                        knob: { bg_opa: 0% }\n"
@@ -2213,24 +2224,36 @@ def c_spotify_art(card, x, y, w, h, base):
                 "                        on_release:\n                          - homeassistant.action:\n                              action: media_player.volume_set\n"
                 "                              data: { entity_id: " + e + ", volume_level: !lambda 'char b[8]; snprintf(b, sizeof(b), \"%.2f\", lv_slider_get_value(id(" + sld + ")) / 100.0); return std::string(b);' }\n")
     inner += trk
-    inner += "              - button: { x: " + str(vx + (vw - 44) // 2) + ", y: " + str(ay + vth + 12) + ", width: 44, height: 44, bg_color: 0x1B1E26, border_color: 0x2B2F3A, border_width: 1, radius: 22, pad_all: 0, scrollable: false, widgets: [label: { text: \"\\U000F075F\", align: center, text_font: f_icon, text_color: 0x868CA0 }], on_click: [" + mute + "] }\n"
+    inner += "              - button: { x: " + str(vx + (vw - mut) // 2) + ", y: " + str(ay + vth + gap) + ", width: " + str(mut) + ", height: " + str(mut) + ", bg_color: 0x1B1E26, border_color: 0x2B2F3A, border_width: 1, radius: " + str(mut // 2) + ", pad_all: 0, scrollable: false, widgets: [label: { text: \"\\U000F075F\", align: center, text_font: f_iconsm, text_color: 0x868CA0 }], on_click: [" + mute + "] }\n"
 
-    ts = []
+    ss, ts = [], []
     if e:
         ts.append("  - platform: homeassistant\n    id: ha_" + tid + "\n    entity_id: " + e + "\n    attribute: media_title\n    on_value:\n"
                   "      - lvgl.label.update: { id: " + tid + ", text: !lambda 'return x.empty() ? std::string(\"Nothing playing\") : x;' }\n")
         ts.append("  - platform: homeassistant\n    id: ha_" + aid + "\n    entity_id: " + e + "\n    attribute: media_artist\n    on_value:\n"
                   "      - lvgl.label.update: { id: " + aid + ", text: !lambda 'return x;' }\n")
+        # not actively playing -> honest empty state: "Nothing playing", blank
+        # artist, empty progress (title/artist attrs vanish when idle, so their
+        # readbacks never fire to clear the last-played track).
         ts.append("  - platform: homeassistant\n    id: ha_" + base + "_st\n    entity_id: " + e + "\n    on_value:\n"
                   "      - lvgl.label.update: { id: " + tid + ", text: !lambda 'return (x == \"playing\" || x == \"paused\" || x == \"buffering\") ? std::string(lv_label_get_text(id(" + tid + "))) : std::string(\"Nothing playing\");' }\n"
-                  "      - lvgl.label.update: { id: " + ppid + ", text: !lambda 'return x == \"playing\" ? std::string(\"\\U000F03E4\") : std::string(\"\\U000F040A\");' }\n")
+                  "      - lvgl.label.update: { id: " + aid + ", text: !lambda 'return (x == \"playing\" || x == \"paused\" || x == \"buffering\") ? std::string(lv_label_get_text(id(" + aid + "))) : std::string(\"\");' }\n"
+                  "      - lvgl.label.update: { id: " + ppid + ", text: !lambda 'return x == \"playing\" ? std::string(\"\\U000F03E4\") : std::string(\"\\U000F040A\");' }\n"
+                  "      - if:\n"
+                  "          condition: { lambda: 'return x == \"playing\" || x == \"paused\" || x == \"buffering\";' }\n"
+                  "          then: [lvgl.widget.show: " + pgid + "]\n"
+                  "          else: [lvgl.widget.hide: " + pgid + "]\n")
         ts.append("  - platform: homeassistant\n    id: ha_" + base + "_v\n    entity_id: " + e + "\n    attribute: volume_level\n    on_value:\n"
                   "      - lvgl.slider.update: { id: " + sld + ", value: !lambda 'return (int)(atof(x.c_str()) * 100);' }\n"
                   "      - lvgl.widget.update: { id: " + fillid + ", height: !lambda 'return (int)(atof(x.c_str()) * " + str(vth) + ");' }\n"
                   "      - lvgl.widget.update: { id: " + fillid + ", y: !lambda 'return (int)(" + str(vth) + " - atof(x.c_str()) * " + str(vth) + ");' }\n"
                   "      - lvgl.widget.update: { id: " + gripid + ", y: !lambda 'return (int)(" + str(vth) + " - atof(x.c_str()) * " + str(vth) + ") - 3;' }\n"
                   "      - lvgl.label.update: { id: " + vpid + ", text: !lambda 'return std::to_string((int)(atof(x.c_str()) * 100));' }\n")
-    return [card_obj(x, y, w, h, inner)], [], ts
+        # live progress: media_position / media_duration ratio -> green fill width
+        ss.append("  - platform: homeassistant\n    id: ha_" + base + "_dur\n    entity_id: " + e + "\n    attribute: media_duration\n")
+        ss.append("  - platform: homeassistant\n    id: ha_" + base + "_pos\n    entity_id: " + e + "\n    attribute: media_position\n    on_value:\n"
+                  "      - lvgl.widget.update: { id: " + pgid + ", width: !lambda 'float d = id(ha_" + base + "_dur).state; if (isnan(d) || d < 1.0f || isnan(x) || x < 0.0f) return 1; int px = (int)(" + str(trkw) + " * x / d); return px < 1 ? 1 : (px > " + str(trkw) + " ? " + str(trkw) + " : px);' }\n")
+    return [card_obj(x, y, w, h, inner)], ss, ts
 
 
 def c_generic(card, x, y, w, h, base):
@@ -2585,6 +2608,7 @@ def gen_pages(layout, pagemap):
 
 def build_lvgl(layout):
     USED_ICON_CP.clear()  # repopulated by glyph_for() as icons are placed
+    USED_ICONSM_CP.clear()  # repopulated by card emitters needing small icons
     EXTRA_CLOCKS.clear()  # repopulated by card emitters (e.g. weather time/date)
     ART_IMAGES.clear()    # repopulated by media/spotify_art card emitters
     CAM_CARDS.clear()     # repopulated by the first live camera card
