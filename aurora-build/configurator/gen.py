@@ -726,11 +726,17 @@ def c_action(card, x, y, w, h, base):
 
 
 # Album art plumbing: c_media registers (size, image_widget_id, entity) here; assemble()
-# emits one online_image decoder per distinct size + a sp_nowplaying_image_url readback
-# per entity that set_url+updates every used decoder. Host builds skip art (no decoders).
+# emits one online_image decoder per (entity, size) + a sp_nowplaying_image_url readback
+# per entity that set_url+updates ONLY that entity's decoders. Host builds skip art
+# (no decoders).
 ART_IMAGES = []
 ART_ENABLED = True
 EXTRA_CLOCKS = []   # (label_id, kind) live-clock bindings contributed by card emitters
+# Live camera plumbing: the FIRST camera card registers (entity, inner_w, inner_h,
+# base) here (gen_pages appends the hosting page id); assemble() emits the
+# mjpeg_stream instance + pill on_state + entity_picture readback + fullscreen page.
+# One entry max — the device supports 2 concurrent streams, we ship 1.
+CAM_CARDS = []
 
 
 def c_media(card, x, y, w, h, base):
@@ -759,7 +765,7 @@ def c_media(card, x, y, w, h, base):
             img_id = "%s_art" % base
             ix = ax + (aw - real) // 2
             iy = ay + (ah - real) // 2
-            s += ("              - image: { id: %s, x: %d, y: %d, src: gen_art_%d }\n" % (img_id, ix, iy, real))
+            s += ("              - image: { id: %s, x: %d, y: %d, src: gen_art_%s_%d }\n" % (img_id, ix, iy, slug(e), real))
             ART_IMAGES.append((real, img_id, e))
         return s
 
@@ -1142,8 +1148,37 @@ def c_wx_stats(card, x, y, w, h, base):
 
 
 def c_camera(card, x, y, w, h, base):
-    inner = ("              - obj: { x: 8, y: 8, width: %d, height: %d, bg_color: 0x10141C, "
-             "border_width: 0, radius: 12, pad_all: 0, scrollable: false }\n" % (w - 16, h - 16))
+    """Live camera card (aurora.yaml btn_cam_card pattern): a tappable black inner
+    button hosting the mjpeg_stream target-0 image + a status pill driven by the
+    stream's on_state. Tap -> generated page_camera_full. Only the FIRST camera
+    card goes live; extras and host builds (SDL has no mjpeg_stream component)
+    keep the static placeholder."""
+    e = card.get("entity", "")
+    iw, ih = w - 16, h - 16
+    if e and ART_ENABLED and not CAM_CARDS:
+        CAM_CARDS.append((e, iw, ih, base))
+        # src is a required schema key: point at ss_image (a stale screensaver
+        # photo would show through, so start hidden — the on_state LIVE branch
+        # unhides once mjpeg_stream has re-pointed the widget at a real frame).
+        inner = ("              - button:\n"
+                 "                  x: 8\n                  y: 8\n                  width: %d\n                  height: %d\n"
+                 "                  bg_color: 0x000000\n                  radius: 12\n                  clip_corner: true\n"
+                 "                  pad_all: 0\n                  scrollable: false\n"
+                 "                  widgets:\n"
+                 "                    - image: { id: %s_cam, src: ss_image, align: center, hidden: true }\n"
+                 "                    - obj: { id: %s_pill, x: 12, y: %d, width: 78, height: 24, bg_color: 0x2A2F3A, radius: 8, "
+                 "border_width: 0, pad_all: 0, scrollable: false, clickable: false, widgets: ["
+                 "label: { id: %s_pill_lbl, text: \"...\", align: center, text_font: f_micro, text_color: 0xFFFFFF } ] }\n"
+                 "                  on_click: [lvgl.page.show: page_camera_full]\n"
+                 % (iw, ih, base, base, ih - 36, base))
+        inner += lbl(card.get("name", "Camera"), 20, -14, "f_body", "0xF3F5F8", align="bottom_left")
+        return [card_obj(x, y, w, h, inner)], [], []
+    # ---- static placeholder (extra cameras / host build / no entity) ----
+    inner = ""
+    if e and ART_ENABLED and CAM_CARDS:
+        inner += "              # %s: multi-camera live view not yet supported (1 stream shipped) — static placeholder\n" % e
+    inner += ("              - obj: { x: 8, y: 8, width: %d, height: %d, bg_color: 0x10141C, "
+              "border_width: 0, radius: 12, pad_all: 0, scrollable: false }\n" % (iw, ih))
     inner += ic(card["ck"], x=20, y=20, color="0x2A3346")
     # LIVE pill (red chip + white dot) bottom-left
     inner += ("              - obj: { x: 20, y: %d, width: 58, height: 24, bg_color: 0xF2685A, radius: 8, "
@@ -2138,7 +2173,7 @@ def c_spotify_art(card, x, y, w, h, base):
     inner += lbl("\\U000F075A", ax + (aw - 40) // 2, ay + (ah - tp_h - 44) // 2, "f_icon", "0x5D6470")
     if e and ART_ENABLED:
         img_id = base + "_art"
-        inner += "              - image: { id: " + img_id + ", x: " + str(ax + (aw - real) // 2) + ", y: " + str(ay + (ah - real) // 2) + ", src: gen_art_" + str(real) + " }\n"
+        inner += "              - image: { id: " + img_id + ", x: " + str(ax + (aw - real) // 2) + ", y: " + str(ay + (ah - real) // 2) + ", src: gen_art_" + slug(e) + "_" + str(real) + " }\n"
         ART_IMAGES.append((real, img_id, e))
     inner += "              - obj: { x: " + str(ax + aw - 46) + ", y: " + str(ay + 10) + ", width: 36, height: 36, bg_color: 0x000000, bg_opa: 40%, radius: 18, border_width: 0, pad_all: 0, scrollable: false, widgets: [label: { text: \"" + heart + "\", align: center, text_font: f_icon, text_color: " + GN + " }] }\n"
     # --- solid transport panel overlaid on the art bottom ---
@@ -2507,6 +2542,7 @@ def gen_pages(layout, pagemap):
                 widgets += hdr_yaml
                 clocks += clk
             has_tv = any(c.get("ck") == "tvremote" for c in cards)
+            cam_n = len(CAM_CARDS)                        # detect a live camera card emitted on THIS sub-page
             for card in cards:
                 ws, ss, ts = emit_card(card, header_on, pagemap)
                 widgets += "".join(ws)
@@ -2532,10 +2568,15 @@ def gen_pages(layout, pagemap):
                             "            on_click: [lvgl.page.show: %s]\n" % nxt)
             active = next((slug(n.get("id", "")) for n in layout.get("nav", []) if n.get("page") == key), None)
             onload = _nav_onload(layout, active)
+            onunload = ""
+            if len(CAM_CARDS) > cam_n:                    # live camera lifecycle: stream while the page shows
+                CAM_CARDS[0] = CAM_CARDS[0][:4] + (pid,)  # remember the hosting page (fullscreen Dismiss target)
+                onload += "        - lambda: 'id(cam_stream).start(0, id(%s_cam));'\n" % CAM_CARDS[0][3]
+                onunload = "      on_unload:\n        - lambda: 'id(cam_stream).stop();'\n"
             if has_tv and tp_page is None:                # remember where the remote lives (Pad links here back)
                 tp_page = (pid, active)
             pages_yaml += (
-                "    - id: %s\n      bg_color: 0x0A0B0F\n      scrollable: false\n%s      widgets:\n%s" % (pid, onload, widgets))
+                "    - id: %s\n      bg_color: 0x0A0B0F\n      scrollable: false\n%s%s      widgets:\n%s" % (pid, onload, onunload, widgets))
     if tp_page is not None:                               # dedicated trackpad page (hand-built clone)
         pages_yaml += gen_trackpad_page(layout, tp_page[0], tp_page[1])
     pages_yaml += gen_settings_page(layout)
@@ -2545,6 +2586,8 @@ def gen_pages(layout, pagemap):
 def build_lvgl(layout):
     USED_ICON_CP.clear()  # repopulated by glyph_for() as icons are placed
     EXTRA_CLOCKS.clear()  # repopulated by card emitters (e.g. weather time/date)
+    ART_IMAGES.clear()    # repopulated by media/spotify_art card emitters
+    CAM_CARDS.clear()     # repopulated by the first live camera card
     pagemap = {key: "page_" + slug(key) for key in layout.get("pages", {})}
     nav = gen_nav(layout, pagemap)
     pages, sens, txt, clocks = gen_pages(layout, pagemap)
@@ -2557,7 +2600,9 @@ KEEP = ["substitutions", "esphome", "esp32", "psram", "esp_ldo", "esp32_hosted",
         "external_components", "i2c", "touchscreen", "display", "http_request",
         "image", "font", "globals", "number", "button", "time",
         "ov02c10_support", "esp_video_camera",   # onboard camera (HA entity + RTSP :8554)
-        "mjpeg_stream",   # front-door MJPEG viewer (defines id: cam_stream, ref'd by on_boot)
+        # NOT kept: "mjpeg_stream" — its hand-built targets are sized for the hand
+        # dashboard. assemble() ALWAYS emits its own id: cam_stream instance (the
+        # kept esphome: on_boot $cam_stream_url_override lambda references that id).
         "drv2605"]   # DRV2605L haptic driver (id: haptic)
 
 
@@ -2813,12 +2858,114 @@ def gen_screensaver_page():
     )
 
 
+def gen_camera_full_page():
+    """Fullscreen live camera (generated only when a live camera card exists):
+    black page, mjpeg_stream target 1 (800x600, 4:3) into gen_cam_full_img, the
+    shared status pill, Refresh (stream restart) + Dismiss back to the page
+    hosting the camera card. Mirrors the hand-built page_doorbell chrome."""
+    host_pid = CAM_CARDS[0][4]
+    return (
+        "    - id: page_camera_full\n      bg_color: 0x000000\n      bg_opa: 100%\n      scrollable: false\n"
+        "      on_load:\n"
+        "        - lvgl.widget.update: { id: nav_rail, hidden: true }\n"
+        "        - lambda: 'id(cam_stream).start(1, id(gen_cam_full_img));'\n"
+        "      on_unload:\n"
+        "        - lvgl.widget.update: { id: nav_rail, hidden: false }\n"
+        "        - lambda: 'id(cam_stream).stop();'\n"
+        "      widgets:\n"
+        "        - image: { id: gen_cam_full_img, src: ss_image, align: center, hidden: true }\n"
+        "        - obj: { id: gen_cam_full_pill, x: 20, y: 20, width: 78, height: 30, radius: 15, bg_color: 0x2A2F3A, "
+        "border_width: 0, pad_all: 0, scrollable: false, widgets: "
+        "[label: { id: gen_cam_full_pill_lbl, text: \"...\", align: center, text_font: f_small, text_color: 0xFFFFFF }] }\n"
+        "        - button:\n            align: bottom_right\n            x: -200\n            y: -20\n            width: 150\n            height: 56\n"
+        "            bg_color: 0x1B2230\n            radius: 14\n            pad_all: 0\n            scrollable: false\n"
+        "            widgets: [label: { text: \"Refresh\", align: center, text_font: f_body, text_color: 0xEEF0F6 }]\n"
+        "            on_click:\n              - lambda: 'id(cam_stream).restart();'\n"
+        "        - button:\n            align: bottom_right\n            x: -20\n            y: -20\n            width: 160\n            height: 56\n"
+        "            bg_color: 0x0E0F14\n            border_width: 1\n            border_color: 0x3A4150\n            radius: 14\n            pad_all: 0\n            scrollable: false\n"
+        "            widgets: [label: { text: \"Dismiss\", align: center, text_font: f_body, text_color: 0xC8CCD6 }]\n"
+        "            on_click: [lvgl.page.show: " + host_pid + "]\n"
+    )
+
+
+def gen_cam_stream():
+    """The generated mjpeg_stream instance (+ pill on_state). ALWAYS defines
+    id: cam_stream — the kept esphome: on_boot lambda applies
+    $cam_stream_url_override via id(cam_stream), so the id must exist even in
+    layouts with no camera card (always-emit chosen over scrubbing on_boot).
+    Idle cost note: setup() unconditionally allocates 2 frame buffers sized to
+    the LARGEST target + the max_jpeg_size accumulator + a 12kB-stack task, so
+    the no-camera instance (64x64 target, 64kB accumulator) still holds ~0.1MB
+    PSRAM while never started — fine on the 32MB P4."""
+    head = ("\n# Live camera stream (generated; replaces aurora.yaml's hand-sized instance).\n"
+            "mjpeg_stream:\n"
+            "  - id: cam_stream\n    max_fps: 8.0\n"
+            "    max_source_width: 2048\n    max_source_height: 1536\n")
+    tail = "    task_core: 1\n    task_priority: 4\n    read_timeout: 10s\n"
+    if not CAM_CARDS:
+        return (head
+                + "    max_jpeg_size: 64kB      # idle instance: shrink the always-allocated accumulator\n"
+                + "    targets:                 # idle placeholder — no camera card in this layout\n"
+                  "      - width: 64\n        height: 64\n" + tail)
+    _e, iw, ih, base, _pid = CAM_CARDS[0]
+
+    def pills(bg, text):
+        s = ""
+        for oid, lid in ((base + "_pill", base + "_pill_lbl"),
+                         ("gen_cam_full_pill", "gen_cam_full_pill_lbl")):
+            s += ("            - lvgl.widget.update: { id: %s, bg_color: %s }\n"
+                  "            - lvgl.label.update: { id: %s, text: \"%s\" }\n" % (oid, bg, lid, text))
+        return s
+
+    # First LIVE unhides the image widgets (they start hidden over the ss_image
+    # placeholder src) and they STAY visible on later errors — the last real
+    # frame beats a black hole.
+    unhide = ("            - lvgl.widget.update: { id: %s_cam, hidden: false }\n"
+              "            - lvgl.widget.update: { id: gen_cam_full_img, hidden: false }\n" % base)
+    cond = "      - if:\n          condition:\n            lambda: 'return %s;'\n          then:\n"
+    st = "state == esphome::mjpeg_stream::StreamState::%s"
+    return (head
+            + "    max_jpeg_size: 512kB\n"
+            + "    targets:                 # index = target_idx for start(): 0 = card, 1 = fullscreen\n"
+            + "      - width: %d\n        height: %d\n" % (iw, ih)
+            # Fullscreen target is 4:3 (pillarboxed on the 1024x600 panel):
+            # the stream scale-fills with center-crop, so a 16:9-ish target
+            # would chop the top/bottom off 4:3 doorbell frames.
+            + "      - width: 800\n        height: 600\n"
+            + tail
+            + "    on_state:                # drive the card + fullscreen pills (STOPPED = no-op)\n"
+            + cond % (st % "LIVE") + pills("0xE5484D", "LIVE") + unhide
+            + cond % (st % "CONNECTING") + pills("0x2A2F3A", "...")
+            + cond % (st % "ERROR_NET" + " || " + st % "ERROR_AUTH") + pills("0x2A2F3A", "OFFLINE"))
+
+
+def gen_cam_text_sensor():
+    """entity_picture readback (aurora.yaml ha_cam_picture pattern): build the
+    tokenized snapshot URL, derive the MJPEG stream URL from it, and stash both
+    in the kept g_cam_url / g_cam_stream_url globals (globals: is spliced
+    verbatim from aurora.yaml — a second top-level globals: key would be invalid
+    YAML, so the gen build reuses those two existing ids). Default the stream to
+    the SNAPSHOT proxy (~1fps snapshot-poll): HA's camera_proxy_stream calls the
+    camera's direct image method, which Nest never implements -> zero frames."""
+    return (
+        "  - platform: homeassistant\n    id: ha_gen_cam_0\n    entity_id: %s\n    attribute: entity_picture\n"
+        "    on_value:\n      then:\n"
+        "        - lambda: |-\n"
+        "            id(g_cam_url) = std::string(\"$ha_base\") + x;\n"
+        "            std::string sp = x;\n"
+        "            size_t p = sp.find(\"/api/camera_proxy/\");\n"
+        "            if (p != std::string::npos) sp.replace(p, 18, \"/api/camera_proxy_stream/\");\n"
+        "            id(g_cam_stream_url) = std::string(\"$ha_base\") + sp;\n"
+        "            std::string ov = \"$cam_stream_url_override\";\n"
+        "            id(cam_stream).set_url(!ov.empty() ? ov : id(g_cam_url));\n"
+        % CAM_CARDS[0][0])
+
+
 def assemble(layout):
     with open(AURORA, encoding="utf-8") as f:
         secs = split_sections(f.read())
     lvgl_text = dict(secs).get("lvgl", "")
-    ART_IMAGES.clear()
-    nav, pages, sens, txt, _, clocks = build_lvgl(layout)  # populates USED_ICON_CP
+    nav, pages, sens, txt, _, clocks = build_lvgl(layout)  # populates USED_ICON_CP + ART/CAM registries
     # keep the hardware/font/style base; embed the icons this layout uses into f_icon
     keep_text = "".join(inject_used_glyphs(t) if n == "font" else t
                         for n, t in secs if n in KEEP)
@@ -2828,34 +2975,71 @@ def assemble(layout):
     clocks += [("lbl_ss_time", "time_hm"), ("lbl_ss_date", "date_full")]   # screensaver clock
     pages += gen_screensaver_page()
     txt.append(SS_TEXT_SENSOR)
-    # album art: one decoder per art size in use; each entity's sp_nowplaying_image_url
-    # (SpotifyPlus; absolute scdn JPEG) set_urls + updates every decoder on track change.
+    if CAM_CARDS:                                        # live camera: fullscreen page + URL readback
+        pages += gen_camera_full_page()
+        txt.append(gen_cam_text_sensor())
+    # Album art: one decoder per (entity, size) in use; each entity's
+    # sp_nowplaying_image_url (SpotifyPlus; absolute scdn JPEG) set_urls + updates
+    # ONLY that entity's decoders on track change. Keying by size alone let
+    # entities sharing a size overwrite each other's art AND fired every size
+    # decoder back-to-back — 3 concurrent HTTP+JPEG decodes exhausted the heap
+    # and boot-looped the panel. PSRAM cost: a decoder buffers s*s*2 bytes, so
+    # per-(entity,size) keying adds at most a few hundred KB.
     art_items = ""
     if ART_IMAGES:
-        sizes = sorted({s for s, _, _ in ART_IMAGES})
-        for s in sizes:
-            ups = "".join("      - lvgl.image.update: { id: %s, src: gen_art_%d }\n" % (iid, s)
-                          for sz, iid, _ in ART_IMAGES if sz == s)
-            art_items += ("  - id: gen_art_%d\n    url: \"http://127.0.0.1/none.jpg\"\n    format: JPEG\n    type: RGB565\n"
-                          "    resize: %dx%d\n    update_interval: never\n"
-                          "    on_download_finished:\n%s"
-                          "    on_error:\n      - logger.log: \"ART %d: download error\"\n" % (s, s, s, ups, s))
-        for n_i, ent in enumerate(sorted({e for _, _, e in ART_IMAGES})):
-            acts = "".join("              - online_image.set_url: { id: gen_art_%d, url: !lambda 'return x;' }\n"
-                           "              - component.update: gen_art_%d\n" % (s, s) for s in sizes)
+        by_ent = {}
+        for s, iid, e in ART_IMAGES:
+            by_ent.setdefault(e, []).append((s, iid))
+        for n_i, ent in enumerate(sorted(by_ent)):
+            es = slug(ent)
+            sizes = sorted({s for s, _ in by_ent[ent]})
+            for s in sizes:
+                ups = "".join("      - lvgl.image.update: { id: %s, src: gen_art_%s_%d }\n" % (iid, es, s)
+                              for sz, iid in by_ent[ent] if sz == s)
+                art_items += ("  - id: gen_art_%s_%d\n    url: \"http://127.0.0.1/none.jpg\"\n    format: JPEG\n    type: RGB565\n"
+                              "    resize: %dx%d\n    update_interval: never\n"
+                              "    on_download_finished:\n%s"
+                              "    on_error:\n      - logger.log: \"ART %s_%d: download error\"\n"
+                              % (es, s, s, s, ups, es, s))
+            acts = ""
+            for k, s in enumerate(sizes):
+                if k:                                    # serialize multi-size downloads (heap; see above)
+                    acts += "              - delay: 1500ms\n"
+                acts += ("              - online_image.set_url: { id: gen_art_%s_%d, url: !lambda 'return x;' }\n"
+                         "              - component.update: gen_art_%s_%d\n" % (es, s, es, s))
             txt.append("  - platform: homeassistant\n    id: ha_gen_art_%d\n    entity_id: %s\n    attribute: sp_nowplaying_image_url\n"
                        "    on_value:\n      then:\n        - if:\n            condition:\n"
                        "              lambda: 'return x.rfind(\"http\", 0) == 0;'\n            then:\n%s"
                        % (n_i, ent, acts))
+    # Screen-off paths that do NOT navigate would leave the camera page loaded —
+    # its on_unload (cam_stream.stop()) never fires and the stream keeps decoding
+    # into a dark panel. With a live camera card, show page_home right before the
+    # backlight goes off (a no-op when already home); the page switch fires the
+    # camera page's on_unload. Exactly two branches turn the backlight off
+    # without a page.show: the SS_ONIDLE screensaver-off else (the screensaver-on
+    # path already navigates to page_screensaver) and CAM_WAKE_INTERVAL's
+    # night-sleep clause. Other layouts' idle behavior is unchanged.
+    ss_onidle, cam_wake = SS_ONIDLE, CAM_WAKE_INTERVAL
+    if CAM_CARDS:
+        a = "                else:\n                  - light.turn_off: display_backlight\n"
+        b = "            - lambda: 'id(g_screen_off) = true;'\n            - light.turn_off: display_backlight\n"
+        assert a in ss_onidle and b in cam_wake, "screen-off anchors moved; camera stream would leak while dark"
+        ss_onidle = ss_onidle.replace(
+            a, "                else:\n                  - lvgl.page.show: page_home\n"
+               "                  - light.turn_off: display_backlight\n")
+        cam_wake = cam_wake.replace(
+            b, "            - lambda: 'id(g_screen_off) = true;'\n"
+               "            - lvgl.page.show: page_home\n"
+               "            - light.turn_off: display_backlight\n")
     # interval: list = trackpad flush + camera night-wake + screensaver cycle + clock repaint
-    out = keep_text + TP_FLUSH_INTERVAL + CAM_WAKE_INTERVAL + SS_INTERVAL_ITEM + clock_items(clocks)
-    out += SS_ONLINE_IMAGE + art_items + SS_SCRIPT
+    out = keep_text + TP_FLUSH_INTERVAL + cam_wake + SS_INTERVAL_ITEM + clock_items(clocks)
+    out += SS_ONLINE_IMAGE + art_items + SS_SCRIPT + gen_cam_stream()
     if sens:
         out += "\nsensor:\n" + "".join(sens)
     out += "\ntext_sensor:\n" + "".join(txt)
     out += ("\nlvgl:\n"
             "  buffer_size: 25%\n"
-            + SS_ONIDLE                                   # enter screensaver on idle timeout
+            + ss_onidle                                   # enter screensaver on idle timeout
             + style_defs(lvgl_text)
             + "  top_layer:\n      widgets:\n"
             "      - obj:\n          id: nav_rail\n          x: 0\n          y: 0\n          width: 74\n          height: 600\n"
