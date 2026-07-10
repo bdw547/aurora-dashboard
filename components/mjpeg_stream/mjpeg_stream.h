@@ -175,6 +175,7 @@ class MJPEGStream : public Component {
   ppa_client_handle_t ppa_{nullptr};
   uint32_t last_present_ms_{0};
   uint32_t backoff_ms_{500};
+  uint32_t empty_closes_{0};  // consecutive connections that yielded no frames
 
   // ---- Stats -------------------------------------------------------------------
   std::atomic<uint32_t> frames_ok_{0};       // decoded + scaled + presented

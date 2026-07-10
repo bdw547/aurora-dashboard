@@ -345,7 +345,9 @@ void MJPEGStream::task_main_() {
       continue;
     }
 
-    if (status == 401 || status == 404) {
+    // 403 included: Home Assistant answers 403 (not 401) for a bad/expired
+    // stream token, and retrying can't help until a fresh URL arrives.
+    if (status == 401 || status == 403 || status == 404) {
       ESP_LOGE(TAG, "HTTP %d from %s — check the camera proxy URL/token", status, host.c_str());
       this->close_socket_();
       this->state_.store(StreamState::ERROR_AUTH);
@@ -362,9 +364,16 @@ void MJPEGStream::task_main_() {
 
     std::string boundary;
     bool net_ok;
+    uint32_t frames_before = this->frames_ok_.load();
     if (stristr_(content_type.c_str(), "multipart") != nullptr && extract_boundary_(content_type, boundary)) {
-      ESP_LOGD(TAG, "Streaming multipart, boundary '%s'", boundary.c_str());
-      net_ok = this->stream_multipart_("--" + boundary);
+      // Home Assistant declares "boundary=--frameboundary" — the parameter
+      // value already carries the leading dashes the body delimiter uses, so
+      // only prepend "--" when the value doesn't start with it (per spec).
+      std::string delim = (boundary.rfind("--", 0) == 0) ? boundary : "--" + boundary;
+      ESP_LOGI(TAG, "Streaming multipart (boundary '%s')", delim.c_str());
+      net_ok = this->stream_multipart_(delim);
+      if (!net_ok)
+        ESP_LOGW(TAG, "Multipart stream ended without a clean close (timeout or parse failure)");
     } else if (stristr_(content_type.c_str(), "image/jpeg") != nullptr) {
       // Single snapshot: whole body is one frame, then reconnect.
       net_ok = this->stream_single_jpeg_(content_length);
@@ -376,10 +385,30 @@ void MJPEGStream::task_main_() {
     this->close_socket_();
     if (!this->running_.load() || this->reconnect_req_.load())
       continue;  // stop()/restart()/set_url() — handled at the top
-    if (net_ok) {
+
+    bool got_frames = this->frames_ok_.load() != frames_before;
+    if (!got_frames) {
+      // The server accepted the request but delivered zero frames (e.g. HA's
+      // camera proxy 200s then closes when it can't fetch an image from the
+      // camera cloud). Every retry makes HA hit the upstream camera API, and
+      // cloud cameras (Nest/SDM) rate-limit image requests hard — so escalate
+      // to a slow poll instead of hammering: 5s, 10s, ... capped at 120s.
+      this->empty_closes_ = std::min<uint32_t>(this->empty_closes_ + 1, 24);
+      this->state_.store(StreamState::ERROR_NET);
+      uint32_t wait = std::min<uint32_t>(5000u * this->empty_closes_, 120000u);
+      ESP_LOGW(TAG, "Stream closed with no frames (%u in a row) — next attempt in %us",
+               (unsigned) this->empty_closes_, (unsigned) (wait / 1000));
+      uint32_t waited = 0;
+      while (this->running_.load() && !this->reconnect_req_.load() && waited < wait) {
+        vTaskDelay(pdMS_TO_TICKS(100));
+        waited += 100;
+      }
+    } else if (net_ok) {
+      this->empty_closes_ = 0;
       // Clean exit (server closed / snapshot mode) — reconnect promptly.
       vTaskDelay(pdMS_TO_TICKS(200));
     } else {
+      this->empty_closes_ = 0;
       this->state_.store(StreamState::ERROR_NET);
       this->backoff_wait_();
     }
