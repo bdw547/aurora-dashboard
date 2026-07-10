@@ -892,6 +892,10 @@ void MJPEGStream::decode_and_scale_(size_t jpeg_len, uint32_t now_ms) {
   op.rotation_angle = PPA_SRM_ROTATION_ANGLE_0;
   op.scale_x = sq;
   op.scale_y = sq;
+  // The HW JPEG decoder emits RGB565 with the opposite byte order from the
+  // panel's little-endian LVGL buffers — without this swap the image renders
+  // as rainbow noise. PPA does the swap for free during the scale pass.
+  op.byte_swap = true;
   op.mode = PPA_TRANS_MODE_BLOCKING;
   err = ppa_do_scale_rotate_mirror(this->ppa_, &op);
   if (err != ESP_OK) {
