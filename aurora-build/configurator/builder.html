@@ -556,23 +556,29 @@ function cardInner(c){ const def=C[c.ck], nm=c.name||def.label, big=c.w>=3, ctrl
       <div style="font-size:28px;font-weight:800;color:${def.color};margin:2px 0">43%</div>
       <div style="position:absolute;left:12px;right:12px;bottom:12px;top:66px;display:flex;align-items:flex-end;gap:2px">${spark}</div>`; }
   if(c.ck==='spotify_art'){ const GN='#1DB954';
+    const tb=(ic2,sz,col)=>`<div style="width:48px;height:48px;flex:0 0 auto;display:flex;align-items:center;justify-content:center"><span class="mdi mdi-${ic2}" style="color:${col};font-size:${sz}px"></span></div>`;
     return head+`<div style="display:flex;gap:8px;height:100%">
       <div style="flex:1;position:relative;border-radius:10px;overflow:hidden;background:linear-gradient(135deg,#7b2ff7,#e94057)">
         <span class="mdi mdi-music" style="position:absolute;inset:0;display:flex;align-items:center;justify-content:center;font-size:36px;color:rgba(255,255,255,.3)"></span>
-        <div style="position:absolute;left:0;right:0;bottom:0;background:#0b0d11;padding:8px 10px">
-          <div style="font-size:13px;font-weight:700;color:#fff;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${nm||'Now playing'}</div>
-          <div style="font-size:11px;color:#aeb4c2;margin-bottom:6px">Artist</div>
-          <div style="height:3px;background:#2a2d36;border-radius:2px;margin-bottom:8px"><div style="width:40%;height:100%;background:${GN};border-radius:2px"></div></div>
-          <div style="display:flex;align-items:center;justify-content:center;gap:14px"><span class="mdi mdi-skip-previous" style="color:#fff;font-size:19px"></span><div style="width:34px;height:34px;border-radius:17px;background:${GN};display:flex;align-items:center;justify-content:center"><span class="mdi mdi-pause" style="color:#052e16;font-size:17px"></span></div><span class="mdi mdi-skip-next" style="color:#fff;font-size:19px"></span></div>
+        <div style="position:absolute;left:0;right:0;bottom:0;height:148px;background:#0b0d11;padding:8px 10px 0">
+          <div style="height:20px;font-size:13px;font-weight:700;color:#fff;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${nm||'Now playing'}</div>
+          <div style="height:16px;font-size:11px;color:#aeb4c2;margin-top:2px">Artist</div>
+          <div style="height:3px;background:#2a2d36;border-radius:2px;margin-top:6px"><div style="width:40%;height:100%;background:${GN};border-radius:2px"></div></div>
+          <div style="height:72px;margin-top:9px;display:flex;align-items:center;justify-content:center;gap:20px">
+            ${tb('shuffle',26,GN)}
+            ${tb('skip-previous',28,'#fff')}
+            <div style="width:64px;height:64px;flex:0 0 auto;border-radius:32px;background:${GN};display:flex;align-items:center;justify-content:center"><span class="mdi mdi-pause" style="color:#052e16;font-size:30px"></span></div>
+            ${tb('skip-next',28,'#fff')}
+          </div>
         </div>
       </div>
-      <div style="width:44px;flex:0 0 auto;display:flex;flex-direction:column;gap:8px">
+      <div style="width:56px;flex:0 0 auto;display:flex;flex-direction:column;gap:8px">
         <div style="flex:1;position:relative;border-radius:9px;overflow:hidden;background:#0e1014">
           <div style="position:absolute;left:0;right:0;bottom:0;height:65%;background:linear-gradient(180deg,#0e7a37,${GN})"></div>
-          <div style="position:absolute;left:5px;right:5px;bottom:calc(65% - 2px);height:5px;border-radius:3px;background:#fff"></div>
+          <div style="position:absolute;left:5px;right:5px;bottom:calc(65% - 4px);height:8px;border-radius:4px;background:#fff"></div>
           <div style="position:absolute;inset:0;padding:6px;display:flex;flex-direction:column;justify-content:space-between;align-items:center"><span class="mdi mdi-volume-high" style="color:#fff;font-size:15px"></span><span style="font-size:15px;font-weight:800;color:#fff">65</span></div>
         </div>
-        <div style="display:flex;justify-content:center"><div style="width:30px;height:30px;border-radius:15px;background:#1b1e26;border:1px solid #2b2f3a;display:flex;align-items:center;justify-content:center"><span class="mdi mdi-volume-mute" style="color:#868ca0;font-size:15px"></span></div></div>
+        <div style="display:flex;justify-content:center"><div style="width:36px;height:36px;border-radius:18px;background:#1b1e26;border:1px solid #2b2f3a;display:flex;align-items:center;justify-content:center"><span class="mdi mdi-volume-mute" style="color:#868ca0;font-size:16px"></span></div></div>
       </div>
     </div>`; }
   if(c.ck&&c.ck.startsWith('wx_')){ const AM='#FFCE54', T='#EEF0F6', G='#8A8F9E', G2='#C8CCD6';
@@ -734,7 +740,7 @@ function cardInner(c){ const def=C[c.ck], nm=c.name||def.label, big=c.w>=3, ctrl
   if(ctrl==='spot_pl'){ const dd=`<div class="ddrop"><span>All playlists</span><span class="mdi mdi-chevron-down"></span></div>`;
     if(c.h===1) return head+`<div class="row" style="justify-content:space-between;align-items:center"><span class="csub" style="letter-spacing:1px;font-size:10px">PLAYLIST</span><span class="mdi mdi-refresh" style="color:#1DB954"></span></div>${dd}`;
     return head+`<div class="toprow"><span class="csub" style="letter-spacing:1px;font-size:10px">PLAYLIST</span><span class="mdi mdi-refresh" style="color:#1DB954;margin-left:auto"></span></div>${dd}<div class="csub" style="margin-top:8px;font-size:11px">Pick a playlist to load its songs</div>`; }
-  if(ctrl==='spot_tr'){ const rows=[['MakeDamnSure','Taking Back Sunday'],['Cute Without The E','Taking Back Sunday'],['Buried a Lie','Senses Fail'],['The Quiet Things','Brand New'],['Sic Transit Gloria','Brand New'],['Ohio Is For Lovers','Hawthorne Heights'],['Vindicated','Dashboard Confessional']]; const n=Math.max(3,c.h*2); let lis=''; for(let i=0;i<n;i++){ const r=rows[i%rows.length]; lis+=`<div class="trk"><span style="color:var(--tx);white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${r[0]}</span><span class="csub">${r[1]}</span></div>`; }
+  if(ctrl==='spot_tr'){ const rows=[['MakeDamnSure','Taking Back Sunday'],['Cute Without The E','Taking Back Sunday'],['Buried a Lie','Senses Fail'],['The Quiet Things','Brand New'],['Sic Transit Gloria','Brand New'],['Ohio Is For Lovers','Hawthorne Heights'],['Vindicated','Dashboard Confessional']]; const n=Math.max(3,c.h*2); let lis=''; for(let i=0;i<n;i++){ const r=rows[i%rows.length]; const np=i===2; lis+=`<div class="trk"${np?' style="background:#1B2230"':''}><span style="color:${np?'#1DB954':'var(--tx)'};white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${r[0]}</span><span class="csub">${r[1]}</span></div>`; }
     return head+`<div class="toprow">${ico}<span class="csub" style="letter-spacing:1px">TRACKS · TAP TO PLAY</span></div><div class="trklist">${lis}</div>`; }
   if(ctrl==='spot_spk'){ const rooms=['Living Room','Kitchen','Office','Dining Room','Patio','Gameroom']; const n=Math.max(3,c.h*2); let lis=''; for(let i=0;i<n;i++){ const nm=rooms[i%rooms.length]; const on=i===0; lis+=`<div class="trk" style="${on?'background:#1DB954;':''}"><span style="color:${on?'#06231D':'var(--tx)'};white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${nm}</span></div>`; }
     return head+`<div class="toprow">${ico}<span class="csub" style="letter-spacing:1px">PLAY ON · TAP A SPEAKER</span></div><div class="trklist">${lis}</div>`; }

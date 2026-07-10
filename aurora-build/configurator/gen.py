@@ -1706,12 +1706,34 @@ def _card_rows(card, default, hi, lo=4):
     return max(lo, min(hi, n))
 
 
+def _trk_hl_lines(n, np_expr):
+    """Now-playing row highlight (expects lv_obj_t* L[n]/R[n] label/row arrays in
+    scope): the visible row whose label equals the media_player's media_title —
+    exactly, or as the title prefix of the "Title — Artist" strings the HA names
+    feed builds (sep = " \\xE2\\x80\\x94 ", i.e. " — ") — gets a green title on a
+    raised 0x1B2230 row; every other row reverts to the normal palette."""
+    return [
+        "const std::string &np = %s;" % np_expr,
+        "for (int i = 0; i < %d; i++) {" % n,
+        "  if (lv_obj_has_flag(R[i], LV_OBJ_FLAG_HIDDEN)) continue;",
+        "  std::string tok = lv_label_get_text(L[i]);",
+        "  bool on = !np.empty() && (tok == np || (tok.compare(0, np.size(), np) == 0 && tok.compare(np.size(), 5, \" \\xE2\\x80\\x94 \") == 0));",
+        "  lv_obj_set_style_bg_color(R[i], lv_color_hex(on ? 0x1B2230 : 0x0F1117), 0);",
+        "  lv_obj_set_style_text_color(L[i], lv_color_hex(on ? 0x1DB954 : 0xF3F5F8), 0);",
+        "}",
+    ]
+
+
 def c_spot_tracks(card, x, y, w, h, base):
     """Spotify song list: a scrolling column of tap-to-play rows bound to
     sensor.aurora_spotify_tracks (names, one "Track — Artist" per line). Tapping
     row i plays position i within the loaded playlist (g_spot_ctx) via the
     aurora_spotify_play_track script. Rows are pre-built and shown/hidden by the
-    populate lambda; the count is the per-card 'rows' option (default/cap 50)."""
+    populate lambda; the count is the per-card 'rows' option (default/cap 50).
+    The row matching the bound media_player's media_title is highlighted live
+    (green title on a raised row) — recomputed on every title change and after
+    each repopulate."""
+    e = card.get("entity", "")
     n = _card_rows(card, SPOT_MAX_TRACKS, SPOT_MAX_TRACKS)
     inner = ic("spotify_tracks", color="0x1DB954")
     inner += lbl("TRACKS \\u00B7 TAP TO PLAY", 50, 18, "f_micro", "0x868CA0")
@@ -1772,7 +1794,17 @@ def c_spot_tracks(card, x, y, w, h, base):
           "            }\n"
           "            for (int j = idx; j < " + str(n) + "; j++) lv_obj_add_flag(R[j], LV_OBJ_FLAG_HIDDEN);\n"
           "            if (idx > 0) lv_obj_add_flag(id(" + base + "_empty), LV_OBJ_FLAG_HIDDEN);\n"
-          "            else lv_obj_clear_flag(id(" + base + "_empty), LV_OBJ_FLAG_HIDDEN);\n"]
+          "            else lv_obj_clear_flag(id(" + base + "_empty), LV_OBJ_FLAG_HIDDEN);\n"
+          + (_indent(_trk_hl_lines(n, "id(ha_" + base + "_np).state"), 12) if e else "")]
+    if e:
+        # now-playing readback: media_title drives the row highlight live (the
+        # populate lambda above re-applies it when the list itself changes)
+        ts.append("  - platform: homeassistant\n    id: ha_" + base + "_np\n    entity_id: " + e + "\n    attribute: media_title\n    on_value:\n"
+                  "      then:\n"
+                  "        - lambda: |-\n"
+                  "            lv_obj_t* L[" + str(n) + "] = { " + larr + " };\n"
+                  "            lv_obj_t* R[" + str(n) + "] = { " + rarr + " };\n"
+                  + _indent(_trk_hl_lines(n, "x"), 12))
     return [card_obj(x, y, w, h, inner)], [], ts
 
 
@@ -2157,9 +2189,10 @@ def c_spotify_art(card, x, y, w, h, base):
     """Album-art Spotify control, 1:1 with the web preview (builder.html
     `spotify_art`): the art panel fills the left column and a SOLID metadata
     strip (LVGL-safe, no blur) overlays its bottom — title / artist / progress
-    bar / prev-play-next row, each in its own band — plus a 44px green vertical
-    volume fill-rail with live percent readout and a mute button below it on
-    the right. All geometry is anchored off (w, h) so every allowed span
+    bar / touch-first transport row ([shuffle 48][prev 48][play 64][next 48],
+    20px gaps), each in its own band — plus a 56px green vertical volume
+    fill-rail with live percent readout and a mute button below it on the
+    right. All geometry is anchored off (w, h) so every allowed span
     (3x3 .. 6x5) lays out without overlap: the strip is a fixed-height content
     band (fonts don't scale) and the art + rail absorb the rest. Art = single
     JPEG still fetched + HW-decoded on the mjpeg_stream task (fetch_still);
@@ -2168,23 +2201,26 @@ def c_spotify_art(card, x, y, w, h, base):
     e = card.get("entity", "")
     tid, aid, ppid, pgid = base + "_t", base + "_a", base + "_pp", base + "_pg"
     sld, fillid, gripid, vpid = base + "_vs", base + "_vf", base + "_vg", base + "_vp"
-    GN, GN_LO = "0x1DB954", "0x0E7A37"
+    shid = base + "_sh"                                   # shuffle icon (recolored by state)
+    GN, GN_LO, SH_OFF = "0x1DB954", "0x0E7A37", "0x6E727E"
     prev = ha("media_player.media_previous_track", e) if e else "lvgl.page.show: page_home"
     plpz = ha("media_player.media_play_pause", e) if e else "lvgl.page.show: page_home"
     nxt = ha("media_player.media_next_track", e) if e else "lvgl.page.show: page_home"
     mute = ha("media_player.volume_mute", e, 'is_volume_muted: "true"') if e else "lvgl.page.show: page_home"
-    # transport + volume glyphs render at the preview's ~15-19px -> small icon font
-    for cp in ("000F04AE", "000F04AD", "000F03E4", "000F040A", "000F057E", "000F075F"):
+    # transport glyphs render at ~26-30px -> f_icon (30px); rail/mute stay small (18px)
+    for cp in ("000F04AE", "000F04AD", "000F03E4", "000F040A", "000F049D"):
+        USED_ICON_CP.add(cp)
+    for cp in ("000F057E", "000F075F"):
         USED_ICONSM_CP.add(cp)
     # Web-preview geometry (builder.html draws the 6x5 grid 1:1 at device px):
-    # card pad 14, art|rail gap 8, 44px volume rail, 30px mute button 8 below it.
-    pad, gap, vw, mut = 14, 8, 44, 30
+    # card pad 14, art|rail gap 8, 56px volume rail, 36px mute button 8 below it.
+    pad, gap, vw, mut = 14, 8, 56, 36
     ax = ay = pad
     aw = w - 2 * pad - gap - vw                           # art column width
     ah = h - 2 * pad                                      # art column height
     vx = ax + aw + gap
     vth = ah - gap - mut                                  # volume track height (mute btn below)
-    tp_h = 105              # metadata strip: fixed-height band (web ~96 at its 13/11px text)
+    tp_h = 148              # metadata strip: fixed-height band (fonts don't scale)
     tpy = ay + ah - tp_h
     trkw = aw - 20                                        # progress track (10px side insets)
     vol0 = 65
@@ -2200,25 +2236,49 @@ def c_spotify_art(card, x, y, w, h, base):
         inner += "              - image: { id: " + img_id + ", x: " + str(ax + (aw - real) // 2) + ", y: " + str(ay + (ah - real) // 2) + ", src: ss_image, hidden: true }\n"
         ART_IMAGES.append((real, img_id, e))
     # --- solid metadata strip overlaid on the art bottom; fixed bands never overlap:
-    # title 8..28, artist 30..46, progress 52..55, transport 63..97, bottom pad 8 ---
+    # title 8..28, artist 30..46, progress 52..55, transport 64..136, bottom pad 12 ---
     inner += "              - obj: { x: " + str(ax) + ", y: " + str(tpy) + ", width: " + str(aw) + ", height: " + str(tp_h) + ", bg_color: 0x0B0D11, radius: 0, border_width: 0, pad_all: 0, scrollable: false }\n"
     inner += lbl("Nothing playing", ax + 10, tpy + 8, "f_body", "0xF3F5F8", wid=tid, width=trkw, long="dot", height=20)
     inner += lbl("", ax + 10, tpy + 30, "f_small", "0xAEB4C2", wid=aid, width=trkw, long="dot", height=16)
     pgy = tpy + 52
     inner += "              - obj: { x: " + str(ax + 10) + ", y: " + str(pgy) + ", width: " + str(trkw) + ", height: 3, bg_color: 0x2A2D36, radius: 2, border_width: 0, pad_all: 0, scrollable: false }\n"
     inner += "              - obj: { id: " + pgid + ", x: " + str(ax + 10) + ", y: " + str(pgy) + ", width: " + str(max(1, int(trkw * 0.4))) + ", height: 3, bg_color: " + GN + ", radius: 2, border_width: 0, pad_all: 0, scrollable: false" + (", hidden: true" if e else "") + " }\n"
-    # transport row (web: 34px play circle, bare 19px prev/next icons, 14px visual gaps)
-    bty = tpy + 63
-    cx = ax + aw // 2
-    inner += btn(cx - 57, bty, 34, 34, "\\U000F04AE", prev, bg="0x0B0D11", color="0xFFFFFF", radius=17, font="f_iconsm")
-    inner += btn(cx - 17, bty, 34, 34, "\\U000F03E4", plpz, bg=GN, color="0x052E16", radius=17, font="f_iconsm", lid=ppid)
-    inner += btn(cx + 23, bty, 34, 34, "\\U000F04AD", nxt, bg="0x0B0D11", color="0xFFFFFF", radius=17, font="f_iconsm")
+    # transport row: 72px touch band, group [shuffle 48][prev 48][play 64][next 48]
+    # + 20px gaps = 268px, centered on the art column. Shuffle/prev/next are
+    # transparent-bg buttons so the tap target is the full 48px, not the glyph.
+    def _tbtn(bx, by, glyph, act_block, lid=None, color="0xFFFFFF"):
+        idpart = ("id: %s, " % lid) if lid else ""
+        return ("              - button:\n"
+                "                  x: %d\n                  y: %d\n                  width: 48\n                  height: 48\n"
+                "                  bg_opa: 0%%\n                  border_width: 0\n                  radius: 12\n                  pad_all: 0\n                  scrollable: false\n"
+                "                  widgets: [label: { %stext: %s, align: center, text_font: f_icon, text_color: %s }]\n"
+                "                  on_click:\n%s"
+                % (bx, by, idpart, esc(glyph), color, act_block))
+    if e:
+        # invert the live shuffle state. The icon color IS the mirrored state
+        # (the ha_<base>_sh readback below paints it green when on), so read it
+        # back off the widget — self-contained, so the host/emulator build
+        # (which drops all HA sensors) still compiles. HA's cv.boolean accepts
+        # "true"/"false" strings from the action data.
+        shuf = ("                    - homeassistant.action:\n"
+                "                        action: media_player.shuffle_set\n"
+                "                        data:\n"
+                "                          entity_id: " + e + "\n"
+                "                          shuffle: !lambda 'lv_color_t c = lv_obj_get_style_text_color(id(" + shid + "), LV_PART_MAIN); bool on = (c.red == 0x1D && c.green == 0xB9 && c.blue == 0x54); return on ? std::string(\"false\") : std::string(\"true\");'\n")
+    else:
+        shuf = "                    - lvgl.page.show: page_home\n"
+    bty = tpy + 64
+    gx = ax + (aw - 268) // 2
+    inner += _tbtn(gx, bty + 12, "\\U000F049D", shuf, lid=shid, color=SH_OFF)
+    inner += _tbtn(gx + 68, bty + 12, "\\U000F04AE", "                    - " + prev + "\n")
+    inner += btn(gx + 136, bty + 4, 64, 64, "\\U000F03E4", plpz, bg=GN, color="0x052E16", radius=32, font="f_icon", lid=ppid)
+    inner += _tbtn(gx + 220, bty + 12, "\\U000F04AD", "                    - " + nxt + "\n")
     # --- green vertical volume fill-rail (right) + mute button below ---
     fh0 = vth * vol0 // 100
     trk = ("              - obj:\n                  x: " + str(vx) + "\n                  y: " + str(ay) + "\n                  width: " + str(vw) + "\n                  height: " + str(vth) + "\n"
            "                  bg_color: 0x0E1014\n                  radius: 9\n                  clip_corner: true\n                  border_width: 0\n                  pad_all: 0\n                  scrollable: false\n                  widgets:\n"
            "                    - obj: { id: " + fillid + ", x: 0, y: " + str(vth - fh0) + ", width: " + str(vw) + ", height: " + str(fh0) + ", bg_color: " + GN_LO + ", bg_grad_color: " + GN + ", bg_grad_dir: VER, border_width: 0, radius: 0, pad_all: 0, scrollable: false }\n"
-           "                    - obj: { id: " + gripid + ", x: 5, y: " + str(vth - fh0 - 3) + ", width: " + str(vw - 10) + ", height: 5, bg_color: 0xFFFFFF, radius: 3, border_width: 0, pad_all: 0, scrollable: false }\n"
+           "                    - obj: { id: " + gripid + ", x: 5, y: " + str(vth - fh0 - 4) + ", width: " + str(vw - 10) + ", height: 8, bg_color: 0xFFFFFF, radius: 4, border_width: 0, pad_all: 0, scrollable: false }\n"
            "                    - label: { text: \"\\U000F057E\", align: top_mid, y: 6, text_font: f_iconsm, text_color: 0xFFFFFF }\n"
            "                    - label: { id: " + vpid + ", text: \"" + str(vol0) + "\", align: bottom_mid, y: -6, text_font: f_body, text_color: 0xFFFFFF }\n")
     if e:
@@ -2227,7 +2287,7 @@ def c_spotify_art(card, x, y, w, h, base):
                 "                        on_value:\n"
                 "                          - lvgl.widget.update: { id: " + fillid + ", height: !lambda 'return (int)(lv_slider_get_value(id(" + sld + ")) * " + str(vth) + " / 100.0f);' }\n"
                 "                          - lvgl.widget.update: { id: " + fillid + ", y: !lambda 'return (int)(" + str(vth) + " - lv_slider_get_value(id(" + sld + ")) * " + str(vth) + " / 100.0f);' }\n"
-                "                          - lvgl.widget.update: { id: " + gripid + ", y: !lambda 'return (int)(" + str(vth) + " - lv_slider_get_value(id(" + sld + ")) * " + str(vth) + " / 100.0f) - 3;' }\n"
+                "                          - lvgl.widget.update: { id: " + gripid + ", y: !lambda 'return (int)(" + str(vth) + " - lv_slider_get_value(id(" + sld + ")) * " + str(vth) + " / 100.0f) - 4;' }\n"
                 "                          - lvgl.label.update: { id: " + vpid + ", text: !lambda 'return std::to_string((int) lv_slider_get_value(id(" + sld + ")));' }\n"
                 "                        on_release:\n                          - homeassistant.action:\n                              action: media_player.volume_set\n"
                 "                              data: { entity_id: " + e + ", volume_level: !lambda 'char b[8]; snprintf(b, sizeof(b), \"%.2f\", lv_slider_get_value(id(" + sld + ")) / 100.0); return std::string(b);' }\n")
@@ -2251,11 +2311,15 @@ def c_spotify_art(card, x, y, w, h, base):
                   "          condition: { lambda: 'return x == \"playing\" || x == \"paused\" || x == \"buffering\";' }\n"
                   "          then: [lvgl.widget.show: " + pgid + "]\n"
                   "          else: [lvgl.widget.hide: " + pgid + "]\n")
+        # shuffle attr (HA sends bools as "on"/"off") -> icon accent green / gray;
+        # the shuffle button's on_click inverts this sensor's latest state.
+        ts.append("  - platform: homeassistant\n    id: ha_" + shid + "\n    entity_id: " + e + "\n    attribute: shuffle\n    on_value:\n"
+                  "      - lvgl.label.update: { id: " + shid + ", text_color: !lambda 'return (x == \"on\" || x == \"true\" || x == \"True\") ? lv_color_hex(" + GN + ") : lv_color_hex(" + SH_OFF + ");' }\n")
         ts.append("  - platform: homeassistant\n    id: ha_" + base + "_v\n    entity_id: " + e + "\n    attribute: volume_level\n    on_value:\n"
                   "      - lvgl.slider.update: { id: " + sld + ", value: !lambda 'return (int)(atof(x.c_str()) * 100);' }\n"
                   "      - lvgl.widget.update: { id: " + fillid + ", height: !lambda 'return (int)(atof(x.c_str()) * " + str(vth) + ");' }\n"
                   "      - lvgl.widget.update: { id: " + fillid + ", y: !lambda 'return (int)(" + str(vth) + " - atof(x.c_str()) * " + str(vth) + ");' }\n"
-                  "      - lvgl.widget.update: { id: " + gripid + ", y: !lambda 'return (int)(" + str(vth) + " - atof(x.c_str()) * " + str(vth) + ") - 3;' }\n"
+                  "      - lvgl.widget.update: { id: " + gripid + ", y: !lambda 'return (int)(" + str(vth) + " - atof(x.c_str()) * " + str(vth) + ") - 4;' }\n"
                   "      - lvgl.label.update: { id: " + vpid + ", text: !lambda 'return std::to_string((int)(atof(x.c_str()) * 100));' }\n")
         # live progress: media_position / media_duration ratio -> green fill width
         ss.append("  - platform: homeassistant\n    id: ha_" + base + "_dur\n    entity_id: " + e + "\n    attribute: media_duration\n")
