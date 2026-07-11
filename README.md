@@ -30,7 +30,7 @@ Aurora is a standalone [ESPHome](https://esphome.io) + LVGL firmware with a hand
 <table>
 <tr>
 <td width="33%" valign="top"><img src="docs/marketing/screens/controls.png" width="100%"><br><sub><b>Room controls</b> — lights, fans, switches &amp; blinds, one tap away</sub></td>
-<td width="33%" valign="top"><img src="docs/marketing/screens/climate.png" width="100%"><br><sub><b>Climate</b> — live conditions, hourly &amp; a 7-day forecast</sub></td>
+<td width="33%" valign="top"><img src="docs/marketing/screens/dashboard.png" width="100%"><br><sub><b>Home at a glance</b> — locks, sensors &amp; every light in one board</sub></td>
 <td width="33%" valign="top"><img src="docs/marketing/screens/tv-remote.png" width="100%"><br><sub><b>LG webOS remote</b> — D-pad, transport &amp; app shortcuts</sub></td>
 </tr>
 <tr>
