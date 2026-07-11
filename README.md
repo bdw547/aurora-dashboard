@@ -1,8 +1,103 @@
-# Aurora Dashboard
+<div align="center">
 
-A custom, high-end **Home Assistant touch dashboard** for the **Guition ESP32‑P4 7‑inch panel** (model **JC1060P470C**, 1024×600). Aurora is a standalone [ESPHome](https://esphome.io) + LVGL firmware with a hand-designed dark/glass UI — a clock + greeting home screen, configurable per-room controls, a full Spotify experience (now-playing with album art, room/zone selection, a browsable library), climate, security **with a live camera feed**, network status, an LG webOS TV remote, a photo screensaver, and device settings. The panel's onboard camera also drives **night-time wake-on-approach** — it lights up when you walk toward it.
+<img src="docs/marketing/hero.png" alt="Aurora — a hand-crafted Home Assistant touch dashboard for the Guition 7-inch ESP32-P4 panel" width="960">
+
+### A hand-crafted **Home Assistant** touch dashboard for the Guition **7″ ESP32-P4** panel — with a **no-code web configurator** to make it yours.
+
+[![Platform](https://img.shields.io/badge/platform-ESP32--P4-4FA8F5?style=flat-square)](https://www.espressif.com/en/products/socs/esp32-p4)
+[![Firmware](https://img.shields.io/badge/ESPHome-%2B%20LVGL%209.5-B06CFF?style=flat-square)](https://esphome.io)
+[![Display](https://img.shields.io/badge/display-1024%C3%97600%20IPS-2ED5B8?style=flat-square)](#hardware)
+[![Config](https://img.shields.io/badge/setup-no--code%20web%20UI-2ED5B8?style=flat-square)](#-design-it-your-way--no-yaml-required)
+[![License](https://img.shields.io/badge/license-PolyForm%20NC-868CA0?style=flat-square)](LICENSE)
+
+**[Quick start](#quick-start)** · **[Configurator](#-design-it-your-way--no-yaml-required)** · **[Features](#whats-inside)** · **[Hardware](#hardware)** · **[Roadmap](#status--roadmap)**
+
+</div>
+
+---
+
+Aurora is a standalone [ESPHome](https://esphome.io) + LVGL firmware with a hand-designed dark/glass UI — a clock + greeting home screen, configurable per-room controls, a full Spotify experience (now-playing with album art, room/zone selection, a browsable library), climate, security **with a live camera feed**, network status, an LG webOS TV remote, a photo screensaver, and device settings. The panel's onboard camera also drives **night-time wake-on-approach** — it lights up when you walk toward it.
 
 > **Heritage / credit:** Aurora began as a fork of [jtenniswood/espcontrol](https://github.com/jtenniswood/espcontrol) and reuses its proven hardware bring-up (display, touch, WiFi). The dashboard UI here (`devices/guition-esp32-p4-jc1060p470/aurora.yaml`) is a complete, independent rewrite and no longer uses the espcontrol button-grid engine. See `LICENSE`/`NOTICE` for upstream attribution.
+
+> **The screenshots below are real firmware** — rendered straight from the LVGL UI on ESPHome's host platform, the same layout, fonts and colors drawn on the panel.
+
+---
+
+## A tour of the panel
+
+<div align="center">
+<table>
+<tr>
+<td width="33%" valign="top"><img src="docs/marketing/screens/controls.png" width="100%"><br><sub><b>Room controls</b> — lights, fans, switches &amp; blinds, one tap away</sub></td>
+<td width="33%" valign="top"><img src="docs/marketing/screens/dashboard.png" width="100%"><br><sub><b>Home at a glance</b> — locks, sensors &amp; every light in one board</sub></td>
+<td width="33%" valign="top"><img src="docs/marketing/screens/tv-remote.png" width="100%"><br><sub><b>LG webOS remote</b> — D-pad, transport &amp; app shortcuts</sub></td>
+</tr>
+<tr>
+<td width="33%" valign="top"><img src="docs/marketing/screens/media.png" width="100%"><br><sub><b>Spotify library</b> — browse playlists → tap to play in any room</sub></td>
+<td width="33%" valign="top"><img src="docs/marketing/screens/trackpad.png" width="100%"><br><sub><b>Magic-Remote trackpad</b> — a real cursor, scroll &amp; volume</sub></td>
+<td width="33%" valign="top"><img src="docs/marketing/screens/settings.png" width="100%"><br><sub><b>On-device settings</b> — brightness, timeout &amp; wake-on-approach</sub></td>
+</tr>
+</table>
+</div>
+
+---
+
+## 🎨 Design it your way — no YAML required
+
+Aurora ships a **no-code web configurator** that runs locally on your build machine. Point it at your Home Assistant, lay out screens by drag-and-drop, and flash the panel — never touch a line of YAML.
+
+<div align="center">
+<img src="docs/marketing/configurator.png" alt="The Aurora web configurator — a card palette, a live 1024×600 device preview on a 6×5 grid, and an inspector for binding each card to a Home Assistant entity" width="960">
+</div>
+
+<table>
+<tr>
+<td width="50%" valign="top">
+
+**🧩 Drag-and-drop page builder**<br>
+Arrange cards on a 6×5 grid per page with a **live preview** that matches the panel pixel-for-pixel. Lights, climate, sensors, locks, covers, fans, media / now-playing, the Spotify playlist / track-list / **speaker-picker** cards, Sonos grouping, the TV remote (with trackpad), cameras, weather and more.
+
+**🔗 Entity-rebind wizard**<br>
+Reads the panel's entity slots, lists **your** Home Assistant entities (you supply your HA URL + a token), and lets you map each card to one of yours.
+
+</td>
+<td width="50%" valign="top">
+
+**🛋️ Rooms wizard**<br>
+Add, rename and reassign rooms and their entities — room pages, the picker and state sensors are generated for you.
+
+**⚡ One-click flash**<br>
+The **Flash** button runs the whole `layout.json → aurora-gen.yaml → build → OTA` pipeline. Your layout is saved to `layout.json`; nothing is hand-edited.
+
+</td>
+</tr>
+</table>
+
+```bash
+source ~/aurora-venv/bin/activate        # the venv with esphome installed
+python3 aurora-build/configurator/serve.py
+# then open http://localhost:8765
+```
+
+<sub>See the full walkthrough in **[Web configurator](#web-configurator)** below.</sub>
+
+---
+
+## What's inside
+
+<table>
+<tr>
+<td width="33%" valign="top"><h4>📷 Live camera + wake-on-approach</h4>The onboard OV02C10 hardware-encodes H.264 and serves RTSP to Home Assistant. The same frames feed an on-device motion detector that <b>wakes the panel when you walk up at night</b>.</td>
+<td width="33%" valign="top"><h4>🎵 Spotify, done right</h4>Now-playing with album art &amp; progress, play / pause / skip / volume, a <b>speaker picker</b> for any Spotify Connect device, and a browsable playlist → track library.</td>
+<td width="33%" valign="top"><h4>📺 LG TV remote + trackpad</h4>A full webOS remote — D-pad, power, volume, channel, media transport and app shortcuts — plus a real <b>Magic-Remote trackpad</b> with cursor, scroll and volume.</td>
+</tr>
+<tr>
+<td width="33%" valign="top"><h4>🛋️ Dynamic rooms</h4>Rooms are <b>data-driven</b> from <code>rooms.json</code> — add, rename and reassign rooms and their lights, fans and switches without editing YAML.</td>
+<td width="33%" valign="top"><h4>🖼️ Photo screensaver</h4>A photo slideshow served from Home Assistant, with a clock and outdoor-temperature overlay, gated to an evening window.</td>
+<td width="33%" valign="top"><h4>🔄 Wireless OTA</h4>One USB flash to get started; every update after that is over-the-air. WiFi is tuned (<code>fast_connect</code>, no power-save) for a responsive panel.</td>
+</tr>
+</table>
 
 ---
 
@@ -44,7 +139,7 @@ Aurora controls **your** Home Assistant entities, so you need HA running on your
 | Climate | A weather entity (default `weather.forecast_home`). |
 | Lights / Fans / Locks / Presence / NAS | Your own `light.*`, `fan.*`, `switch.*`, `lock.*`, `person.*`, `sensor.*` entities. |
 
-> **Important:** the entity IDs in `aurora.yaml` are currently **specific to the author's home** (e.g. `light.living_room_main`, `media_player.spotifyplus_ben_walton`, `lock.front_door`). To use Aurora in *your* home you can either rebind them by hand (see **[Customizing for your home](#customizing-for-your-home)**) or use the **[no-code web configurator](#web-configurator)** — a browser app that maps the panel's entity slots to yours, lets you lay out screens by drag-and-drop, and flashes the panel for you.
+> **Important:** the entity IDs in `aurora.yaml` are currently **specific to the author's home** (e.g. `light.living_room_main`, `media_player.spotifyplus_ben_walton`, `lock.front_door`). To use Aurora in *your* home you can either rebind them by hand (see **[Customizing for your home](#customizing-for-your-home)**) or use the **[no-code web configurator](#-design-it-your-way--no-yaml-required)** — a browser app that maps the panel's entity slots to yours, lets you lay out screens by drag-and-drop, and flashes the panel for you.
 
 ---
 
@@ -224,7 +319,7 @@ RTP is sent **TCP‑interleaved**, so it works through Home Assistant / ffmpeg's
 ## Status & roadmap
 
 **Recently shipped:**
-- **No-code web configurator** — entity-rebind wizard + drag-and-drop page builder (6×5 grid, per-card type/entity selection, live preview) + a `layout.json → aurora-gen.yaml` generator, so you can point Aurora at your own HA and design screens without editing YAML. See **[Web configurator](#web-configurator)**. ✅
+- **No-code web configurator** — entity-rebind wizard + drag-and-drop page builder (6×5 grid, per-card type/entity selection, live preview) + a `layout.json → aurora-gen.yaml` generator, so you can point Aurora at your own HA and design screens without editing YAML. See **[Design it your way](#-design-it-your-way--no-yaml-required)**. ✅
 - **Live camera** — OV02C10 → hardware H.264 → on-device RTSP, viewable in Home Assistant. ✅
 - **Wake-on-approach + evening-gated screen sleep** — the camera wakes the panel when you walk up at night. ✅
 - **Dynamic rooms** — room pages/picker/state sensors generated from `rooms.json`; add/rename/reassign in the configurator's Rooms wizard. ✅
