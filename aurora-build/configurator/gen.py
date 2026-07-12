@@ -144,12 +144,13 @@ def slug(s):
 
 
 def esc(s):
-    # Escape literal backslashes for YAML — but NOT a "\\U########" glyph escape,
-    # which is a pre-formed unicode escape YAML must interpret (doubling it turns
-    # every icon into the literal text "\\U000F....", which broke icons UI-wide).
-    # So escape a backslash only when it doesn't begin a \U + 8-hex glyph.
-    s = re.sub(r"\\(?!U[0-9A-Fa-f]{8})", r"\\\\", str(s))
-    return '"' + s.replace('"', '\\"') + '"'
+    # Only escape quotes. Do NOT escape backslashes: emitter text relies on
+    # YAML unicode escapes passing through verbatim — glyphs ("\U000F...."),
+    # the degree sign ("°"), the middot ("·"), etc. Doubling the
+    # backslash turns those into literal text (this broke icons AND degree/
+    # middot signs UI-wide). A literal backslash in user free-text (e.g. a
+    # "PC\HDMI" source name) is rare; sanitize it at the input if it matters.
+    return '"' + str(s).replace('"', '\\"') + '"'
 
 
 def rect(card, header):
