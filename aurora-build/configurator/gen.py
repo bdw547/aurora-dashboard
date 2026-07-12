@@ -2678,12 +2678,22 @@ def gen_pages(layout, pagemap):
                 onunload = "      on_unload:\n        - lambda: 'id(cam_stream).stop();'\n"
             if has_tv and tp_page is None:                # remember where the remote lives (Pad links here back)
                 tp_page = (pid, active)
-            swipe = ""                                    # page-level swipe -> adjacent sub-page (matches the dot targets)
+            # Page-level swipe -> adjacent sub-page (matches the dot targets).
+            # LVGL re-fires the gesture event every indev cycle while the finger
+            # is down, so an ungated handler cascades through several sub-pages
+            # (each freshly-shown page keeps receiving the same drag). Gate on a
+            # shared 500ms timestamp so one physical swipe advances exactly once.
+            def _swipe(evt, target):
+                return ("      %s:\n        - if:\n            condition:\n"
+                        "              lambda: 'return (millis() - id(g_swipe_ms)) > 500;'\n"
+                        "            then:\n              - lambda: 'id(g_swipe_ms) = millis();'\n"
+                        "              - lvgl.page.show: %s\n" % (evt, target))
+            swipe = ""
             if si < nsub - 1:
-                swipe += "      on_swipe_left:\n        - lvgl.page.show: %s_%d\n" % (pagemap[key], si + 1)
+                swipe += _swipe("on_swipe_left", "%s_%d" % (pagemap[key], si + 1))
             if si > 0:
                 sw_prev = pagemap[key] if si == 1 else "%s_%d" % (pagemap[key], si - 1)
-                swipe += "      on_swipe_right:\n        - lvgl.page.show: %s\n" % sw_prev
+                swipe += _swipe("on_swipe_right", sw_prev)
             pages_yaml += (
                 "    - id: %s\n      bg_color: 0x0A0B0F\n      scrollable: false\n%s%s%s      widgets:\n%s" % (pid, onload, onunload, swipe, widgets))
     if tp_page is not None:                               # dedicated trackpad page (hand-built clone)
@@ -3098,9 +3108,17 @@ def assemble(layout):
         secs = split_sections(f.read())
     lvgl_text = dict(secs).get("lvgl", "")
     nav, pages, sens, txt, _, clocks = build_lvgl(layout)  # populates USED_ICON_CP + ART/CAM registries
-    # keep the hardware/font/style base; embed the icons this layout uses into f_icon
-    keep_text = "".join(inject_used_glyphs(t) if n == "font" else t
-                        for n, t in secs if n in KEEP)
+    # keep the hardware/font/style base; embed the icons this layout uses into
+    # f_icon, and append g_swipe_ms to the (verbatim-spliced) globals section —
+    # a second top-level globals: key would be invalid YAML, so inject in place.
+    def _keep(n, t):
+        if n == "font":
+            return inject_used_glyphs(t)
+        if n == "globals":
+            return t.rstrip() + ("\n  - id: g_swipe_ms\n    type: uint32_t\n"
+                                 "    restore_value: no\n    initial_value: '0'\n")
+        return t
+    keep_text = "".join(_keep(n, t) for n, t in secs if n in KEEP)
     # scrub references to dropped UI scripts + lvgl widget actions in the base
     keep_text = re.sub(r"(?m)^[ \t]*-?[ \t]*script\.(execute|stop):.*\n", "", keep_text)
     keep_text = scrub_lvgl_actions(keep_text)
