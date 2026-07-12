@@ -1970,13 +1970,24 @@ def c_shortcuts(card, x, y, w, h, pagemap, base):
             glyph = glyph_for(s.get("icon", ""))
             tgt = s.get("target", "")
             act = "lvgl.page.show: page_home"
+            note = ""
             if tgt.startswith("page:"):
                 pid = pagemap.get(tgt[5:])
                 if pid:
                     act = "lvgl.page.show: %s" % pid
+            elif tgt.startswith("room:"):
+                # Room shortcuts carry the HA area *name*; room pages are keyed by
+                # its slug() (the same helper build_lvgl() uses for pagemap), so
+                # resolve on that. Missing page -> safe Home fallback + a YAML note.
+                pid = pagemap.get(slug(tgt[5:]))
+                if pid:
+                    act = "lvgl.page.show: %s" % pid
+                else:
+                    note = ("              # shortcut %s has no page (expected key '%s') -> Home\n"
+                            % (tgt, slug(tgt[5:])))
             elif tgt.startswith("special:"):
                 act = "lvgl.page.show: page_%s" % tgt.split(":")[1]
-            inner += (
+            inner += note + (
                 "              - button:\n"
                 "                  x: %d\n                  y: %d\n                  width: %d\n                  height: %d\n"
                 "                  bg_color: 0x161B24\n                  radius: 14\n                  pad_all: 0\n                  scrollable: false\n"
