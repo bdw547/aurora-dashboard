@@ -2853,15 +2853,24 @@ def _nav_onload(layout, active):
 
 
 def gen_settings_page(layout):
-    """Settings: brightness, screen timeout, motion wake + screensaver, restart."""
+    """Settings: display, selectable haptics, behavior, and photo screensaver."""
     onload = _nav_onload(layout, "settings")
     onload += ("        - lambda: |-\n"
                "            if (id(g_wake_presence)) lv_obj_add_state(id(set_motion), LV_STATE_CHECKED);\n"
                "            if (id(g_screensaver)) lv_obj_add_state(id(set_saver), LV_STATE_CHECKED);\n"
                "            if (id(g_cam_wake)) lv_obj_add_state(id(set_cwake), LV_STATE_CHECKED);\n"
-               "            { lv_obj_t* HB[5] = { id(set_hap0),id(set_hap1),id(set_hap2),id(set_hap3),id(set_hap4) };\n"
-               "              lv_obj_t* HL[5] = { id(set_hap0_l),id(set_hap1_l),id(set_hap2_l),id(set_hap3_l),id(set_hap4_l) };\n"
-               "              for (int k=0;k<5;k++){ bool on=(k==id(g_haptic_level)); lv_obj_set_style_bg_color(HB[k], lv_color_hex(on?0x2ED5B8:0x0F1117),0); lv_obj_set_style_text_color(HL[k], lv_color_hex(on?0x06231D:0xC2C7D2),0); } }\n")
+               "            { lv_obj_t* B[5] = { id(set_hap0),id(set_hap1),id(set_hap2),id(set_hap3),id(set_hap4) };\n"
+               "              lv_obj_t* L[5] = { id(set_hap0_l),id(set_hap1_l),id(set_hap2_l),id(set_hap3_l),id(set_hap4_l) };\n"
+               "              for (int k=0;k<5;k++){ bool on=(k==id(g_haptic_level)); lv_obj_set_style_bg_color(B[k],lv_color_hex(on?0x2ED5B8:0x0F1117),0); lv_obj_set_style_text_color(L[k],lv_color_hex(on?0x06231D:0xC2C7D2),0); } }\n"
+               "            { lv_obj_t* B[3] = { id(set_hstyle0),id(set_hstyle1),id(set_hstyle2) };\n"
+               "              lv_obj_t* L[3] = { id(set_hstyle0_l),id(set_hstyle1_l),id(set_hstyle2_l) };\n"
+               "              for (int k=0;k<3;k++){ bool on=(k==id(g_haptic_style)); lv_obj_set_style_bg_color(B[k],lv_color_hex(on?0x2ED5B8:0x0F1117),0); lv_obj_set_style_text_color(L[k],lv_color_hex(on?0x06231D:0xC2C7D2),0); } }\n"
+               "            { const int V[4]={15,30,60,120}; lv_obj_t* B[4]={id(set_ssint0),id(set_ssint1),id(set_ssint2),id(set_ssint3)};\n"
+               "              lv_obj_t* L[4]={id(set_ssint0_l),id(set_ssint1_l),id(set_ssint2_l),id(set_ssint3_l)};\n"
+               "              for(int k=0;k<4;k++){ bool on=(V[k]==id(g_ss_seconds)); lv_obj_set_style_bg_color(B[k],lv_color_hex(on?0x2ED5B8:0x0F1117),0); lv_obj_set_style_text_color(L[k],lv_color_hex(on?0x06231D:0xC2C7D2),0); } }\n"
+               "            { const int V[4]={0,60000,300000,900000}; lv_obj_t* B[4]={id(set_to0),id(set_to1),id(set_to2),id(set_to3)};\n"
+               "              lv_obj_t* L[4]={id(set_to0_l),id(set_to1_l),id(set_to2_l),id(set_to3_l)}; for(int k=0;k<4;k++){ bool on=(V[k]==id(g_timeout_ms)); lv_obj_set_style_bg_color(B[k],lv_color_hex(on?0x2ED5B8:0x0F1117),0); lv_obj_set_style_text_color(L[k],lv_color_hex(on?0x06231D:0xC2C7D2),0); } }\n"
+               "            { char b[24]; snprintf(b,sizeof(b),\"%d photos\",(int)id(g_ss_files).size()); lv_label_set_text(id(set_ss_count),b); }\n")
     w = "        - image: { src: img_aurora_bg, x: 0, y: 0 }\n"
     w += "        - label: { text: \"Settings\", x: 94, y: 18, text_font: f_h1, text_color: 0xF3F5F8 }\n"
     w += "        - label: { text: \"AURORA PANEL \\u00B7 10.0.0.174\", x: 94, y: 58, text_font: f_micro, text_color: 0x868CA0 }\n"
@@ -2873,51 +2882,88 @@ def gen_settings_page(layout):
             "                  indicator:\n                    bg_color: 0x2ED5B8\n                  knob:\n                    bg_color: 0x2ED5B8\n"
             "                  on_release:\n                    - light.turn_on: { id: display_backlight, brightness: !lambda 'return lv_slider_get_value(id(set_bri)) / 100.0f;' }\n")
     w += card_obj(94, 96, 448, 116, bri)
-    # --- Screen timeout card ---
+    # --- Screen timeout card (also controls when the photo screensaver starts) ---
     to = lbl("SCREEN TIMEOUT", 20, 16, "f_micro", "0x868CA0")
     opts = [("Never", 0), ("1 min", 60000), ("5 min", 300000), ("15 min", 900000)]
     tbw = (448 - 40 - 3 * 8) // 4
     for i, (lab, ms) in enumerate(opts):
-        sel = (ms == 300000)
+        body = ("id(g_timeout_ms)=%d; const int V[4]={0,60000,300000,900000};\n"
+                "                        lv_obj_t* B[4]={id(set_to0),id(set_to1),id(set_to2),id(set_to3)}; lv_obj_t* L[4]={id(set_to0_l),id(set_to1_l),id(set_to2_l),id(set_to3_l)};\n"
+                "                        for(int k=0;k<4;k++){ bool on=(V[k]==id(g_timeout_ms)); lv_obj_set_style_bg_color(B[k],lv_color_hex(on?0x2ED5B8:0x0F1117),0); lv_obj_set_style_text_color(L[k],lv_color_hex(on?0x06231D:0xC2C7D2),0); }" % ms)
         to += ("              - button:\n                  id: set_to%d\n                  x: %d\n                  y: 54\n                  width: %d\n                  height: 46\n"
-               "                  bg_color: %s\n                  radius: 10\n                  pad_all: 0\n                  scrollable: false\n"
-               "                  widgets: [label: { text: \"%s\", align: center, text_font: f_small, text_color: %s }]\n"
-               "                  on_click:\n                    - lambda: 'id(g_timeout_ms) = %d;'\n"
-               % (i, 20 + i * (tbw + 8), tbw, ("0x2ED5B8" if sel else "0x0F1117"), lab, ("0x06231D" if sel else "0xC2C7D2"), ms))
+               "                  bg_color: 0x0F1117\n                  radius: 10\n                  pad_all: 0\n                  scrollable: false\n"
+               "                  widgets: [label: { id: set_to%d_l, text: \"%s\", align: center, text_font: f_small, text_color: 0xC2C7D2 }]\n"
+               "                  on_click:\n                    - lambda: |-\n                        %s\n"
+               % (i, 20 + i * (tbw + 8), tbw, i, lab, body))
     w += card_obj(94, 224, 448, 116, to)
-    # --- Haptics card: touch-feedback strength (Off/Low/Med/High/Max) ---
+    # --- Haptics card: waveform style + strength, both preview immediately ---
+    hap = lbl("HAPTICS", 20, 12, "f_micro", "0x868CA0")
+    hap += lbl("Feel", 20, 34, "f_small", "0xC2C7D2")
+    styles = [("Crisp", 0), ("Soft", 1), ("Double", 2)]
+    sbw = (448 - 40 - 2 * 8) // 3
+    for i, (lab, sty) in enumerate(styles):
+        body = ("id(g_haptic_style)=%d; id(haptic).set_style(%d);\n"
+                "                        lv_obj_t* B[3]={id(set_hstyle0),id(set_hstyle1),id(set_hstyle2)};\n"
+                "                        lv_obj_t* L[3]={id(set_hstyle0_l),id(set_hstyle1_l),id(set_hstyle2_l)};\n"
+                "                        for(int k=0;k<3;k++){ bool on=(k==id(g_haptic_style)); lv_obj_set_style_bg_color(B[k],lv_color_hex(on?0x2ED5B8:0x0F1117),0); lv_obj_set_style_text_color(L[k],lv_color_hex(on?0x06231D:0xC2C7D2),0); }\n"
+                "                        id(haptic).click();" % (sty, sty))
+        hap += ("              - button:\n                  id: set_hstyle%d\n                  x: %d\n                  y: 58\n                  width: %d\n                  height: 40\n"
+                "                  bg_color: 0x0F1117\n                  radius: 8\n                  pad_all: 0\n                  scrollable: false\n"
+                "                  widgets: [label: { id: set_hstyle%d_l, text: \"%s\", align: center, text_font: f_small, text_color: 0xC2C7D2 }]\n"
+                "                  on_click:\n                    - lambda: |-\n                        %s\n"
+                % (i, 20 + i * (sbw + 8), sbw, i, lab, body))
+    hap += lbl("Strength", 20, 108, "f_small", "0xC2C7D2")
     hlevels = [("Off", 0), ("Low", 1), ("Med", 2), ("High", 3), ("Max", 4)]
     hbw = (448 - 40 - 4 * 8) // 5
-    hap = lbl("HAPTICS", 20, 16, "f_micro", "0x868CA0")
-    hap += lbl("Touch feedback", 20, 34, "f_title", "0xF3F5F8", height=26)
     for i, (lab, lvl) in enumerate(hlevels):
-        body = ("id(g_haptic_level) = %d; id(haptic).set_level(%d);\n"
-                "                        lv_obj_t* HB[5] = { id(set_hap0),id(set_hap1),id(set_hap2),id(set_hap3),id(set_hap4) };\n"
-                "                        lv_obj_t* HL[5] = { id(set_hap0_l),id(set_hap1_l),id(set_hap2_l),id(set_hap3_l),id(set_hap4_l) };\n"
-                "                        for (int k=0;k<5;k++){ bool on=(k==id(g_haptic_level)); lv_obj_set_style_bg_color(HB[k], lv_color_hex(on?0x2ED5B8:0x0F1117),0); lv_obj_set_style_text_color(HL[k], lv_color_hex(on?0x06231D:0xC2C7D2),0); }\n"
+        body = ("id(g_haptic_level)=%d; id(haptic).set_level(%d);\n"
+                "                        lv_obj_t* B[5]={id(set_hap0),id(set_hap1),id(set_hap2),id(set_hap3),id(set_hap4)};\n"
+                "                        lv_obj_t* L[5]={id(set_hap0_l),id(set_hap1_l),id(set_hap2_l),id(set_hap3_l),id(set_hap4_l)};\n"
+                "                        for(int k=0;k<5;k++){ bool on=(k==id(g_haptic_level)); lv_obj_set_style_bg_color(B[k],lv_color_hex(on?0x2ED5B8:0x0F1117),0); lv_obj_set_style_text_color(L[k],lv_color_hex(on?0x06231D:0xC2C7D2),0); }\n"
                 "                        id(haptic).click();" % (lvl, lvl))
-        hap += ("              - button:\n                  id: set_hap%d\n                  x: %d\n                  y: 70\n                  width: %d\n                  height: 44\n"
-                "                  bg_color: 0x0F1117\n                  radius: 10\n                  pad_all: 0\n                  scrollable: false\n"
+        hap += ("              - button:\n                  id: set_hap%d\n                  x: %d\n                  y: 132\n                  width: %d\n                  height: 40\n"
+                "                  bg_color: 0x0F1117\n                  radius: 8\n                  pad_all: 0\n                  scrollable: false\n"
                 "                  widgets: [label: { id: set_hap%d_l, text: \"%s\", align: center, text_font: f_small, text_color: 0xC2C7D2 }]\n"
                 "                  on_click:\n                    - lambda: |-\n                        %s\n"
                 % (i, 20 + i * (hbw + 8), hbw, i, lab, body))
-    w += card_obj(94, 352, 448, 116, hap)
-    # --- Behavior card: motion wake + screensaver ---
-    beh = lbl("BEHAVIOR", 20, 16, "f_micro", "0x868CA0")
-    beh += lbl("Motion wake", 20, 50, "f_body", "0xF3F5F8", height=22)
+    w += card_obj(94, 352, 448, 190, hap)
+    # --- Behavior card ---
+    beh = lbl("BEHAVIOR", 20, 14, "f_micro", "0x868CA0")
+    beh += lbl("Motion wake", 20, 52, "f_body", "0xF3F5F8", height=22)
     beh += ("              - switch:\n                  id: set_motion\n                  align: top_right\n                  x: -20\n                  y: 46\n"
             "                  on_value:\n                    - lambda: 'id(g_wake_presence) = x;'\n")
-    beh += lbl("Screensaver", 20, 104, "f_body", "0xF3F5F8", height=22)
-    beh += ("              - switch:\n                  id: set_saver\n                  align: top_right\n                  x: -20\n                  y: 100\n"
-            "                  on_value:\n                    - lambda: 'id(g_screensaver) = x;'\n")
-    beh += lbl("Approach wake (camera)", 20, 158, "f_body", "0xF3F5F8", height=22)
-    beh += ("              - switch:\n                  id: set_cwake\n                  align: top_right\n                  x: -20\n                  y: 154\n"
+    beh += lbl("Approach wake", 20, 110, "f_body", "0xF3F5F8", height=22)
+    beh += ("              - switch:\n                  id: set_cwake\n                  align: top_right\n                  x: -20\n                  y: 104\n"
             "                  on_value:\n                    - lambda: 'id(g_cam_wake) = x;'\n")
-    w += card_obj(560, 96, 370, 206, beh)
+    w += card_obj(560, 96, 370, 180, beh)
+    # --- Photo screensaver card ---
+    ss = lbl("PHOTO SCREENSAVER", 20, 12, "f_micro", "0x868CA0")
+    ss += lbl("Enabled", 20, 38, "f_body", "0xF3F5F8", height=22)
+    ss += lbl("0 photos", -78, 16, "f_small", "0x868CA0", wid="set_ss_count", align="top_right")
+    ss += ("              - switch:\n                  id: set_saver\n                  align: top_right\n                  x: -20\n                  y: 32\n"
+           "                  on_value:\n                    - lambda: 'id(g_screensaver)=x; if(x && id(g_timeout_ms)==0) id(g_timeout_ms)=300000;'\n")
+    ss += lbl("Change photo", 20, 78, "f_small", "0xC2C7D2")
+    intervals = [("15s", 15), ("30s", 30), ("1m", 60), ("2m", 120)]
+    ibw = (370 - 40 - 3 * 8) // 4
+    for i, (lab, secs) in enumerate(intervals):
+        body = ("id(g_ss_seconds)=%d; id(ss_seconds).publish_state(%d);\n"
+                "                        const int V[4]={15,30,60,120}; lv_obj_t* B[4]={id(set_ssint0),id(set_ssint1),id(set_ssint2),id(set_ssint3)};\n"
+                "                        lv_obj_t* L[4]={id(set_ssint0_l),id(set_ssint1_l),id(set_ssint2_l),id(set_ssint3_l)};\n"
+                "                        for(int k=0;k<4;k++){ bool on=(V[k]==id(g_ss_seconds)); lv_obj_set_style_bg_color(B[k],lv_color_hex(on?0x2ED5B8:0x0F1117),0); lv_obj_set_style_text_color(L[k],lv_color_hex(on?0x06231D:0xC2C7D2),0); }" % (secs, secs))
+        ss += ("              - button:\n                  id: set_ssint%d\n                  x: %d\n                  y: 102\n                  width: %d\n                  height: 38\n"
+               "                  bg_color: 0x0F1117\n                  radius: 8\n                  pad_all: 0\n                  scrollable: false\n"
+               "                  widgets: [label: { id: set_ssint%d_l, text: \"%s\", align: center, text_font: f_small, text_color: 0xC2C7D2 }]\n"
+               "                  on_click:\n                    - lambda: |-\n                        %s\n"
+               % (i, 20 + i * (ibw + 8), ibw, i, lab, body))
+    ss += ("              - button:\n                  x: 20\n                  y: 150\n                  width: 330\n                  height: 36\n"
+           "                  bg_color: 0x18243A\n                  radius: 8\n                  pad_all: 0\n                  scrollable: false\n"
+           "                  widgets: [label: { text: \"Preview Photos\", align: center, text_font: f_small, text_color: 0x8FA6FF }]\n"
+           "                  on_click: [lvgl.page.show: page_screensaver]\n")
+    w += card_obj(560, 288, 370, 198, ss)
     # --- Restart ---
-    w += ("        - button:\n            x: 560\n            y: 318\n            width: 370\n            height: 56\n"
-          "            bg_color: 0x2a1414\n            radius: 14\n            scrollable: false\n"
-          "            widgets: [label: { text: \"Restart Panel\", align: center, text_font: f_body, text_color: 0xF2685A }]\n"
+    w += ("        - button:\n            x: 560\n            y: 498\n            width: 370\n            height: 44\n"
+          "            bg_color: 0x2a1414\n            radius: 10\n            scrollable: false\n"
+          "            widgets: [label: { text: \"Restart Panel\", align: center, text_font: f_small, text_color: 0xF2685A }]\n"
           "            on_click: [button.press: btn_restart_panel]\n")
     w += "        - label: { text: \"Guition JC1060P470 \\u00B7 web UI on :80\", x: 94, y: 576, text_font: f_small, text_color: 0x5D6470 }\n"
     return "    - id: page_settings\n      bg_color: 0x0A0B0F\n      scrollable: false\n%s      widgets:\n%s" % (onload, w)
@@ -3324,7 +3370,7 @@ SS_INTERVAL_ITEM = (
     "      - if:\n          condition:\n            lambda: 'return id(g_ss_showing);'\n          then:\n"
     "            - lambda: 'id(g_ss_elapsed) += 1;'\n"
     "            - if:\n                condition:\n                  lambda: |-\n"
-    "                    int secs = (int) id(ss_seconds).state;\n                    if (secs < 5) secs = 30;\n                    return id(g_ss_elapsed) >= secs;\n"
+    "                    int secs = id(g_ss_seconds);\n                    if (secs < 5) secs = 30;\n                    return id(g_ss_elapsed) >= secs;\n"
     "                then:\n                  - lambda: 'id(g_ss_elapsed) = 0;'\n                  - script.execute: ss_next\n"
 )
 SS_ONIDLE = (
@@ -3581,6 +3627,8 @@ def host_assemble(layout):
     pages = re.sub(r"light\.turn_on: \{ id: display_backlight[^}]*\}", "logger.log: emul", pages)
     pages = pages.replace("button.press: btn_restart_panel", "logger.log: emul")
     pages = re.sub(r"id\(haptic\)\.[A-Za-z_]+\([^;]*\);", "", pages)   # strip haptic calls (settings page)
+    pages = re.sub(r"id\(ss_seconds\)\.publish_state\([^;]*\);", "", pages)
+    pages = pages.replace("lvgl.page.show: page_screensaver", "logger.log: emul")
     out = (
         "# AUTO-GENERATED host/SDL emulator build of layout.json — DO NOT EDIT.\n"
         "esphome:\n  name: aurora-emul\n\n"

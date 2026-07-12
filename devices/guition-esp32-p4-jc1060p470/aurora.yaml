@@ -77,7 +77,7 @@ esphome:
       then:
         - lvgl.display.set_rotation: 0
         - script.execute: demo_watchdog
-        - lambda: 'id(haptic).set_level(id(g_haptic_level));'   # apply saved touch-feedback strength
+        - lambda: 'id(haptic).set_level(id(g_haptic_level)); id(haptic).set_style(id(g_haptic_style));'
         # Apply the go2rtc stream override at boot so live video doesn't
         # depend on HA delivering the entity_picture attribute first.
         - lambda: |-
@@ -2465,7 +2465,11 @@ globals:
   - id: g_haptic_level
     type: int
     restore_value: true
-    initial_value: '3'
+    initial_value: '3'  # Haptic waveform: 0=crisp click, 1=soft bump, 2=short double click.
+  - id: g_haptic_style
+    type: int
+    restore_value: true
+    initial_value: '0'
   - id: g_timeout_ms
     type: int
     restore_value: true
@@ -2508,6 +2512,10 @@ globals:
     type: int
     restore_value: false
     initial_value: '0'
+  - id: g_ss_seconds
+    type: int
+    restore_value: true
+    initial_value: '30'
   - id: g_ss_url
     type: std::string
     restore_value: false
@@ -2919,6 +2927,8 @@ number:
     min_value: 5
     max_value: 600
     step: 5
+    set_action:
+      - lambda: 'id(g_ss_seconds) = (int) x;'
 
 interval:
   # NOTE: live camera video now runs off the main loop via the mjpeg_stream
@@ -3056,7 +3066,7 @@ interval:
             - if:
                 condition:
                   lambda: |-
-                    int secs = (int) id(ss_seconds).state;
+                    int secs = id(g_ss_seconds);
                     if (secs < 5) secs = 30;
                     return id(g_ss_elapsed) >= secs;
                 then:
