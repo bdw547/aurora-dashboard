@@ -2371,6 +2371,13 @@ text_sensor:
   # <<< AURORA_ROOM_STATE_TEXT
 
 globals:
+  # Sub-page swipe debounce (configurator builds use it; harmless here). Defined
+  # in the base so both device (assemble) and host (host_assemble) builds splice
+  # it verbatim — gen_pages emits on_swipe handlers that reference it.
+  - id: g_swipe_ms
+    type: uint32_t
+    restore_value: no
+    initial_value: '0'
   - id: sel_light
     type: std::string
     restore_value: false

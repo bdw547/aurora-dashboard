@@ -108,14 +108,48 @@ def inject_used_glyphs(font_text):
     return _inject_glyphs(font_text, "f_iconsm", USED_ICONSM_CP)
 
 
+def harvest_font_glyphs(full):
+    r"""Final safety net: guarantee every MDI glyph a label actually renders is
+    baked into the font it's rendered in. Emitters register glyphs into
+    USED_ICON_CP / USED_ICONSM_CP by hand, and forgetting to (or picking the
+    wrong font) has repeatedly shipped missing-icon boxes. This post-pass scans
+    the fully-assembled YAML for every `text_font: fX` label carrying a
+    "\U000F...." glyph and injects any that fX doesn't already bake — so no
+    emitter can leave an icon unbaked regardless of which set it touched."""
+    used = {}  # font id -> set(cp)
+    for line in full.splitlines():
+        fm = re.search(r"text_font:\s*(\w+)", line)
+        if not fm:
+            continue
+        cps = re.findall(r"\\U(000F[0-9A-Fa-f]{4})", line)
+        if cps:
+            used.setdefault(fm.group(1), set()).update(c.upper() for c in cps)
+    if not used:
+        return full
+    # Inject within the `font:` section only (so we don't match stray ids elsewhere).
+    fm = re.search(r"\nfont:\n", full)
+    if not fm:
+        return full
+    start = fm.end()
+    em = re.search(r"\n\S", full[start:])
+    end = start + em.start() if em else len(full)
+    section = full[start:end]
+    for fid, cps in used.items():
+        section = _inject_glyphs(section, fid, cps)
+    return full[:start] + section + full[end:]
+
+
 def slug(s):
     return re.sub(r"[^a-z0-9]+", "_", (s or "").lower()).strip("_") or "x"
 
 
 def esc(s):
-    # Backslashes must be escaped BEFORE quotes or a source/name like
-    # "PC\HDMI" emits an invalid double-quoted YAML escape and fails the build.
-    return '"' + str(s).replace("\\", "\\\\").replace('"', '\\"') + '"'
+    # Escape literal backslashes for YAML — but NOT a "\\U########" glyph escape,
+    # which is a pre-formed unicode escape YAML must interpret (doubling it turns
+    # every icon into the literal text "\\U000F....", which broke icons UI-wide).
+    # So escape a backslash only when it doesn't begin a \U + 8-hex glyph.
+    s = re.sub(r"\\(?!U[0-9A-Fa-f]{8})", r"\\\\", str(s))
+    return '"' + s.replace('"', '\\"') + '"'
 
 
 def rect(card, header):
@@ -3331,16 +3365,9 @@ def assemble(layout):
     lvgl_text = dict(secs).get("lvgl", "")
     nav, pages, sens, txt, _, clocks = build_lvgl(layout)  # populates USED_ICON_CP + ART/CAM registries
     # keep the hardware/font/style base; embed the icons this layout uses into
-    # f_icon, and append g_swipe_ms to the (verbatim-spliced) globals section —
-    # a second top-level globals: key would be invalid YAML, so inject in place.
-    def _keep(n, t):
-        if n == "font":
-            return inject_used_glyphs(t)
-        if n == "globals":
-            return t.rstrip() + ("\n  - id: g_swipe_ms\n    type: uint32_t\n"
-                                 "    restore_value: no\n    initial_value: '0'\n")
-        return t
-    keep_text = "".join(_keep(n, t) for n, t in secs if n in KEEP)
+    # f_icon. (g_swipe_ms now lives in aurora.yaml's globals, spliced verbatim.)
+    keep_text = "".join(inject_used_glyphs(t) if n == "font" else t
+                        for n, t in secs if n in KEEP)
     # scrub references to dropped UI scripts + lvgl widget actions in the base
     keep_text = re.sub(r"(?m)^[ \t]*-?[ \t]*script\.(execute|stop):.*\n", "", keep_text)
     keep_text = scrub_lvgl_actions(keep_text)
@@ -3415,7 +3442,7 @@ def assemble(layout):
             "          bg_color: 0x0C0D12\n          bg_opa: 90%\n          border_width: 0\n          radius: 0\n          pad_all: 0\n          widgets:\n"
             + nav
             + "  pages:\n" + pages)
-    return out
+    return harvest_font_glyphs(out)
 
 
 EMUL = os.path.join(os.path.dirname(AURORA), "aurora-emul.yaml")
@@ -3446,7 +3473,7 @@ def host_assemble(layout):
     pages = re.sub(r"light\.turn_on: \{ id: display_backlight[^}]*\}", "logger.log: emul", pages)
     pages = pages.replace("button.press: btn_restart_panel", "logger.log: emul")
     pages = re.sub(r"id\(haptic\)\.[A-Za-z_]+\([^;]*\);", "", pages)   # strip haptic calls (settings page)
-    return (
+    out = (
         "# AUTO-GENERATED host/SDL emulator build of layout.json — DO NOT EDIT.\n"
         "esphome:\n  name: aurora-emul\n\n"
         "host:\n\n"
@@ -3464,6 +3491,7 @@ def host_assemble(layout):
         + nav
         + "  pages:\n" + pages
     )
+    return harvest_font_glyphs(out)
 
 
 def _loader():
