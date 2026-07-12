@@ -1048,10 +1048,10 @@ WX_STATS = [("HUMIDITY", "57%", "0x4FA8F5"), ("WIND", "6 mph", "0xF3F5F8"), ("UV
             ("PRESSURE", "30.1", "0xF3F5F8"), ("SUNRISE", "6:32a", "0xF2B84B"), ("SUNSET", "8:37p", "0xF2685A")]
 
 
-def _wx_temp_readback(base, e, tid):
-    return ("  - platform: homeassistant\n    id: ha_%s_wt\n    entity_id: %s\n    attribute: temperature\n    on_value:\n"
+def _wx_temp_readback(base, e, tid, sfx="wt"):
+    return ("  - platform: homeassistant\n    id: ha_%s_%s\n    entity_id: %s\n    attribute: temperature\n    on_value:\n"
             "      - lvgl.label.update: { id: %s, text: !lambda 'char b[12]; snprintf(b, sizeof(b), \"%%.0f\\u00B0\", x); return std::string(b);' }\n"
-            % (base, e, tid))
+            % (base, sfx, e, tid))
 
 
 # HA weather condition (entity STATE) -> (f_wxicon glyph, label). Drives the hero
@@ -1074,6 +1074,62 @@ def _wx_cond_readback(base, e, hid, cid):
             "      - lvgl.label.update: { id: %s, text: !lambda '%sreturn std::string(\"\\U000F0599\");' }\n"
             "      - lvgl.label.update: { id: %s, text: !lambda '%sreturn x;' }\n"
             % (base, e, hid, gifs, cid, tifs))
+
+
+# --- Live forecast wiring (the aurora_weather.yaml package sensors) ---------
+# These are GLOBAL (one home forecast), so every weather/wx card reads the same
+# fixed sensors regardless of its own weather entity (that entity still drives
+# the current temp/condition via the readbacks above). The package \n-joins the
+# per-column values into string attributes; we split them across a card's actual
+# per-column label ids with the hand-dashboard loop.
+WX_SENSOR_HOURLY = "sensor.aurora_weather_hourly"   # attrs: h_times / h_temps / h_conds
+WX_SENSOR_DAILY = "sensor.aurora_weather_daily"     # attrs: d_names / d_high / d_low / d_cond
+
+
+def _wx_cond_icon_readback(base, e, iconid, sfx="hci"):
+    """Live CURRENT condition -> a single f_icon/f_wxicon glyph (no text label).
+    Used for the 'Now' forecast column, which shows only an icon (no condition
+    name), so we can't reuse _wx_cond_readback (that one also needs a text id)."""
+    gifs = "".join("if (x == \"%s\") return std::string(\"%s\"); " % (c, g) for c, g, _ in WX_COND)
+    return ("  - platform: homeassistant\n    id: ha_%s_%s\n    entity_id: %s\n    on_value:\n"
+            "      - lvgl.label.update: { id: %s, text: !lambda '%sreturn std::string(\"\\U000F0599\");' }\n"
+            % (base, sfx, e, iconid, gifs))
+
+
+def _wx_cond_glyph_lines():
+    """Per-token C++ (condition slug in std::string `t`) -> f_icon glyph in `g`,
+    then set L[i]. Mirrors _wx_cond_readback's if-chain, built from WX_COND, for
+    use inside the \n-split forecast loops."""
+    lines = ["std::string g;"]
+    for i, (c, g, _) in enumerate(WX_COND):
+        lines.append("%s (t==\"%s\") g=\"%s\";" % ("if" if i == 0 else "else if", c, g))
+    lines.append("else g=\"\\U000F0599\";")             # sane default (sunny)
+    lines.append("lv_label_set_text(L[i], g.c_str());")
+    return lines
+
+
+def _wx_split_ts(base, sfx, sensor, attr, ids, body_lines):
+    """homeassistant text_sensor that reads a \n-joined package attribute and
+    splits it across THIS card's per-column label `ids` (column count derived
+    from len(ids), never hardcoded). `body_lines` = per-token C++ operating on
+    the token std::string `t` and target L[i]. Mirrors the hand dashboard loop."""
+    n = len(ids)
+    arr = ", ".join("id(%s)" % i for i in ids)
+    lines = ["lv_obj_t* L[%d] = { %s };" % (n, arr),
+             "std::string s = x; size_t p = 0;",
+             "for (int i = 0; i < %d; i++) {" % n,
+             "  size_t nl = s.find('\\n', p);",
+             "  std::string t = (nl==std::string::npos)?s.substr(p):s.substr(p,nl-p);"]
+    lines += ["  " + bl for bl in body_lines]
+    lines += ["  if (nl==std::string::npos) break; p = nl+1;", "}"]
+    return ("  - platform: homeassistant\n    id: ha_%s_%s\n    entity_id: %s\n    attribute: %s\n"
+            "    on_value:\n      then:\n        - lambda: |-\n%s"
+            % (base, sfx, sensor, attr, _indent(lines, 12)))
+
+
+# per-token bodies for the split loops (token std::string `t`, target L[i])
+_WX_SET_TEXT = ["lv_label_set_text(L[i], t.c_str());"]
+_WX_SET_DEG = ["t += \"\\u00B0\"; lv_label_set_text(L[i], t.c_str());"]
 
 
 def c_weather(card, x, y, w, h, base):
@@ -1101,29 +1157,39 @@ def c_weather(card, x, y, w, h, base):
     hy, gap = pad + hh + 12, 10
     n = len(WX_HOURLY)
     tw = (w - 2 * pad - (n - 1) * gap) // n
+    hr_tm, hr_tp, hr_ic = [], [], []                     # cols 1..N-1 -> hourly package
     for i, (hl, g, tp) in enumerate(WX_HOURLY):
         hx = pad + i * (tw + gap)
         bg = "0x11201C" if i == 0 else "0x14161C"
+        tmid, tpid, icid = base + "_hr%d_tm" % i, base + "_hr%d_tp" % i, base + "_hr%d_ic" % i
         inner += ("              - obj: { x: %d, y: %d, width: %d, height: %d, bg_color: %s, border_width: 0, radius: 12, pad_all: 0, scrollable: false, widgets: ["
-                  "label: { text: %s, align: top_mid, y: 12, text_font: f_small, text_color: 0x868CA0 }, "
-                  "label: { text: \"%s\", align: center, text_font: f_icon, text_color: 0x8FA6FF }, "
-                  "label: { text: \"%s\\u00B0\", align: bottom_mid, y: -14, text_font: f_body, text_color: 0xF3F5F8 }] }\n"
-                  % (hx, hy, tw, ht, bg, esc(hl), g, tp))
+                  "label: { id: %s, text: %s, align: top_mid, y: 12, text_font: f_small, text_color: 0x868CA0 }, "
+                  "label: { id: %s, text: \"%s\", align: center, text_font: f_icon, text_color: 0x8FA6FF }, "
+                  "label: { id: %s, text: \"%s\\u00B0\", align: bottom_mid, y: -14, text_font: f_body, text_color: 0xF3F5F8 }] }\n"
+                  % (hx, hy, tw, ht, bg, tmid, esc(hl), icid, g, tpid, tp))
+        if i >= 1:
+            hr_tm.append(tmid); hr_tp.append(tpid); hr_ic.append(icid)
     dy = hy + ht + 14
     dh = h - dy - pad
     dax = int((w - 2 * pad) * 0.60) + pad                # right edge of the daily column
     rn = len(WX_DAILY)
     rh = dh // rn
+    dy_nm, dy_hi, dy_lo, dy_ic = [], [], [], []          # all cols -> daily package
     for i, (dn, g, lo, hi) in enumerate(WX_DAILY):
         ry = dy + i * rh
         ly = ry + (rh - 18) // 2
-        inner += lbl(dn, pad, ly, "f_body", "0xF3F5F8", width=58)
-        inner += "              - label: { text: \"%s\", x: %d, y: %d, text_font: f_icon, text_color: 0xF2B84B }\n" % (g, pad + 64, ry + (rh - 30) // 2)
-        inner += lbl(lo + "\\u00B0", pad + 106, ly, "f_body", "0x868CA0", width=42)
+        nmid, icid, loid, hiid = base + "_dy%d_nm" % i, base + "_dy%d_ic" % i, base + "_dy%d_lo" % i, base + "_dy%d_hi" % i
+        inner += lbl(dn, pad, ly, "f_body", "0xF3F5F8", width=58, wid=nmid)
+        inner += "              - label: { id: %s, text: \"%s\", x: %d, y: %d, text_font: f_icon, text_color: 0xF2B84B }\n" % (icid, g, pad + 64, ry + (rh - 30) // 2)
+        inner += lbl(lo + "\\u00B0", pad + 106, ly, "f_body", "0x868CA0", width=42, wid=loid)
         barx = pad + 152
         inner += "              - obj: { x: %d, y: %d, width: %d, height: 8, bg_color: 0x4FA8F5, bg_grad_color: 0xF2B84B, bg_grad_dir: HOR, border_width: 0, radius: 4, pad_all: 0, scrollable: false }\n" % (barx, ry + (rh - 8) // 2, dax - 48 - barx)
-        inner += lbl(hi + "\\u00B0", dax - 44, ly, "f_body", "0xF3F5F8", width=42)
+        inner += lbl(hi + "\\u00B0", dax - 44, ly, "f_body", "0xF3F5F8", width=42, wid=hiid)
+        dy_nm.append(nmid); dy_hi.append(hiid); dy_lo.append(loid); dy_ic.append(icid)
     inner += "              - obj: { x: %d, y: %d, width: 1, height: %d, bg_color: 0x23262F, border_width: 0, pad_all: 0, scrollable: false }\n" % (dax + 8, dy, dh - 6)
+    # Stats band stays pre-baked demo (humidity/UV/sunrise/etc.): the standalone
+    # wx_stats card wires humidity/wind/pressure live; wiring all 6 tiles here
+    # (incl. UV/sunrise/sunset, not all exposed as weather attrs) isn't trivial.
     sx0, scols, sgap, srows = dax + 24, 2, 10, 3
     sw = (w - pad - sx0 - (scols - 1) * sgap) // scols
     srh = (dh - (srows - 1) * sgap) // srows
@@ -1135,7 +1201,23 @@ def c_weather(card, x, y, w, h, base):
                   "label: { text: %s, x: 14, y: 14, text_font: f_micro, text_color: 0x868CA0 }, "
                   "label: { text: %s, x: 14, y: %d, text_font: f_title, text_color: %s }] }\n"
                   % (cx, cy, sw, srh, esc(lt), esc(val), svy, col))
-    return [card_obj(x, y, w, h, inner)], ([_wx_temp_readback(base, e, tid)] if e else []), ([_wx_cond_readback(base, e, hid, cid)] if e else [])
+    ss, ts = [], []
+    if e:
+        # hero: live current temp + condition (glyph + name)
+        ss.append(_wx_temp_readback(base, e, tid))
+        ts.append(_wx_cond_readback(base, e, hid, cid))
+        # hourly col0 = "Now": live current temp + condition icon
+        ss.append(_wx_temp_readback(base, e, base + "_hr0_tp", sfx="h0"))
+        ts.append(_wx_cond_icon_readback(base, e, base + "_hr0_ic", sfx="hci"))
+        # hourly cols 1..N-1 + all daily cols from the fixed package sensors
+        ts.append(_wx_split_ts(base, "ht", WX_SENSOR_HOURLY, "h_times", hr_tm, _WX_SET_TEXT))
+        ts.append(_wx_split_ts(base, "hp", WX_SENSOR_HOURLY, "h_temps", hr_tp, _WX_SET_DEG))
+        ts.append(_wx_split_ts(base, "hc", WX_SENSOR_HOURLY, "h_conds", hr_ic, _wx_cond_glyph_lines()))
+        ts.append(_wx_split_ts(base, "dn", WX_SENSOR_DAILY, "d_names", dy_nm, _WX_SET_TEXT))
+        ts.append(_wx_split_ts(base, "dh", WX_SENSOR_DAILY, "d_high", dy_hi, _WX_SET_DEG))
+        ts.append(_wx_split_ts(base, "dl", WX_SENSOR_DAILY, "d_low", dy_lo, _WX_SET_DEG))
+        ts.append(_wx_split_ts(base, "dc", WX_SENSOR_DAILY, "d_cond", dy_ic, _wx_cond_glyph_lines()))
+    return [card_obj(x, y, w, h, inner)], ss, ts
 
 
 # --- Weather decomposed into selectable component cards (share the weather entity;
@@ -1159,37 +1241,62 @@ def c_wx_current(card, x, y, w, h, base):
 
 
 def c_wx_hourly(card, x, y, w, h, base):
-    """Hourly forecast strip (pre-baked demo forecast)."""
+    """Hourly forecast strip. Col0 = 'Now' (live current temp/condition when the
+    card has an entity); cols 1..N-1 come from the fixed hourly package sensor.
+    No entity -> stays pre-baked demo."""
+    e = card.get("entity", "")
     pad, gap = 12, 8
     n = len(WX_HOURLY)
     tw = (w - 2 * pad - (n - 1) * gap) // n
     inner = ""
+    hr_tm, hr_tp, hr_ic = [], [], []                     # cols 1..N-1 -> hourly package
     for i, (hl, g, tp) in enumerate(WX_HOURLY):
         hx = pad + i * (tw + gap)
         bg = "0x11201C" if i == 0 else "0x161B24"
+        tmid, tpid, icid = base + "_hr%d_tm" % i, base + "_hr%d_tp" % i, base + "_hr%d_ic" % i
         inner += ("              - obj: { x: %d, y: %d, width: %d, height: %d, bg_color: %s, border_width: 0, radius: 12, pad_all: 0, scrollable: false, widgets: ["
-                  "label: { text: %s, align: top_mid, y: 10, text_font: f_small, text_color: 0x868CA0 }, "
-                  "label: { text: \"%s\", align: center, text_font: f_icon, text_color: 0x8FA6FF }, "
-                  "label: { text: \"%s\\u00B0\", align: bottom_mid, y: -10, text_font: f_body, text_color: 0xF3F5F8 }] }\n"
-                  % (hx, pad, tw, h - 2 * pad, bg, esc(hl), g, tp))
-    return [card_obj(x, y, w, h, inner)], [], []
+                  "label: { id: %s, text: %s, align: top_mid, y: 10, text_font: f_small, text_color: 0x868CA0 }, "
+                  "label: { id: %s, text: \"%s\", align: center, text_font: f_icon, text_color: 0x8FA6FF }, "
+                  "label: { id: %s, text: \"%s\\u00B0\", align: bottom_mid, y: -10, text_font: f_body, text_color: 0xF3F5F8 }] }\n"
+                  % (hx, pad, tw, h - 2 * pad, bg, tmid, esc(hl), icid, g, tpid, tp))
+        if i >= 1:
+            hr_tm.append(tmid); hr_tp.append(tpid); hr_ic.append(icid)
+    ss, ts = [], []
+    if e:
+        ss.append(_wx_temp_readback(base, e, base + "_hr0_tp", sfx="h0"))
+        ts.append(_wx_cond_icon_readback(base, e, base + "_hr0_ic", sfx="hci"))
+        ts.append(_wx_split_ts(base, "ht", WX_SENSOR_HOURLY, "h_times", hr_tm, _WX_SET_TEXT))
+        ts.append(_wx_split_ts(base, "hp", WX_SENSOR_HOURLY, "h_temps", hr_tp, _WX_SET_DEG))
+        ts.append(_wx_split_ts(base, "hc", WX_SENSOR_HOURLY, "h_conds", hr_ic, _wx_cond_glyph_lines()))
+    return [card_obj(x, y, w, h, inner)], ss, ts
 
 
 def c_wx_daily(card, x, y, w, h, base):
-    """Weekly forecast — mirrors page_weather: day / amber condition icon / high / low
-    as centered columns across the card (pre-baked demo forecast)."""
+    """Weekly forecast — day / amber condition icon / high / low as centered
+    columns. All columns come from the fixed daily package sensor when the card
+    has an entity; no entity -> stays pre-baked demo."""
+    e = card.get("entity", "")
     n = len(WX_DAILY)
     pad = 12
     pitch = (w - 2 * pad) // n
     top = pad + 4
     inner = ""
+    dy_nm, dy_hi, dy_lo, dy_ic = [], [], [], []          # all cols -> daily package
     for i, (dn, g, lo, hi) in enumerate(WX_DAILY):
         cx = pad + i * pitch
-        inner += "              - label: { text: %s, x: %d, y: %d, width: %d, text_align: center, text_font: f_body, text_color: 0xEEF0F6 }\n" % (esc(dn), cx, top, pitch)
-        inner += "              - label: { text: \"%s\", x: %d, y: %d, width: %d, text_align: center, text_font: f_icon, text_color: 0xFFCE54 }\n" % (g, cx, top + 30, pitch)
-        inner += "              - label: { text: \"%s\\u00B0\", x: %d, y: %d, width: %d, text_align: center, text_font: f_body, text_color: 0xEEF0F6 }\n" % (hi, cx, top + 70, pitch)
-        inner += "              - label: { text: \"%s\\u00B0\", x: %d, y: %d, width: %d, text_align: center, text_font: f_small, text_color: 0x8A8F9E }\n" % (lo, cx, top + 96, pitch)
-    return [card_obj(x, y, w, h, inner)], [], []
+        nmid, icid, hiid, loid = base + "_dy%d_nm" % i, base + "_dy%d_ic" % i, base + "_dy%d_hi" % i, base + "_dy%d_lo" % i
+        inner += "              - label: { id: %s, text: %s, x: %d, y: %d, width: %d, text_align: center, text_font: f_body, text_color: 0xEEF0F6 }\n" % (nmid, esc(dn), cx, top, pitch)
+        inner += "              - label: { id: %s, text: \"%s\", x: %d, y: %d, width: %d, text_align: center, text_font: f_icon, text_color: 0xFFCE54 }\n" % (icid, g, cx, top + 30, pitch)
+        inner += "              - label: { id: %s, text: \"%s\\u00B0\", x: %d, y: %d, width: %d, text_align: center, text_font: f_body, text_color: 0xEEF0F6 }\n" % (hiid, hi, cx, top + 70, pitch)
+        inner += "              - label: { id: %s, text: \"%s\\u00B0\", x: %d, y: %d, width: %d, text_align: center, text_font: f_small, text_color: 0x8A8F9E }\n" % (loid, lo, cx, top + 96, pitch)
+        dy_nm.append(nmid); dy_hi.append(hiid); dy_lo.append(loid); dy_ic.append(icid)
+    ts = []
+    if e:
+        ts.append(_wx_split_ts(base, "dn", WX_SENSOR_DAILY, "d_names", dy_nm, _WX_SET_TEXT))
+        ts.append(_wx_split_ts(base, "dh", WX_SENSOR_DAILY, "d_high", dy_hi, _WX_SET_DEG))
+        ts.append(_wx_split_ts(base, "dl", WX_SENSOR_DAILY, "d_low", dy_lo, _WX_SET_DEG))
+        ts.append(_wx_split_ts(base, "dc", WX_SENSOR_DAILY, "d_cond", dy_ic, _wx_cond_glyph_lines()))
+    return [card_obj(x, y, w, h, inner)], [], ts
 
 
 def c_wx_stats(card, x, y, w, h, base):
