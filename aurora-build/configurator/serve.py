@@ -1046,6 +1046,19 @@ def ha_area_entities(url, token, area):
         return json.loads(r.read().decode() or "[]")
 
 
+def ha_entity_attrs(url, token, entity):
+    """Attributes dict for one entity via GET /api/states/<id> (source_list
+    etc. for the builder's tv_app / tv_apps source pickers). The entity id is
+    validated to [a-z0-9_]+\\.[a-z0-9_]+ by the caller."""
+    req = urllib.request.Request(
+        url.rstrip("/") + "/api/states/" + entity,
+        headers={"Authorization": "Bearer " + token,
+                 "Content-Type": "application/json"})
+    with urllib.request.urlopen(req, timeout=15) as r:
+        s = json.load(r)
+    return s.get("attributes") or {}
+
+
 # --- page-builder layout persistence (layout.json next to this file) ---
 LAYOUT_JSON = os.path.join(HERE, "layout.json")
 BUILDER_HTML = os.path.join(HERE, "builder.html")
@@ -1366,6 +1379,19 @@ class H(BaseHTTPRequestHandler):
             except Exception as e:  # noqa: BLE001
                 return self._send(502, json.dumps({"error": "HA area query failed: " + str(e)}))
             return self._send(200, json.dumps({"area": area, "items": items}))
+        if self.path.startswith("/api/ha/entity-attrs"):
+            from urllib.parse import parse_qs, urlparse
+            ent = (parse_qs(urlparse(self.path).query).get("entity", [""])[0] or "").strip()
+            if not re.fullmatch(r"[a-z0-9_]+\.[a-z0-9_]+", ent):
+                return self._send(400, json.dumps({"error": "bad or missing entity id"}))
+            c = read_config()
+            if not c["ha_url"]:
+                return self._send(502, json.dumps({"error": "Home Assistant is not configured"}))
+            try:
+                attrs = ha_entity_attrs(c["ha_url"], c["ha_token"], ent)
+            except Exception as e:  # noqa: BLE001
+                return self._send(502, json.dumps({"error": "HA entity query failed: " + str(e)}))
+            return self._send(200, json.dumps({"entity": ent, "attrs": attrs}))
         if self.path == "/api/slots":
             return self._send(200, json.dumps(read_slots()))
         if self.path == "/api/home":

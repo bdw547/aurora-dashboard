@@ -60,11 +60,14 @@ h3.sec{font-size:11px;letter-spacing:1.4px;text-transform:uppercase;color:var(--
 #grid{position:absolute;left:94px;top:22px;width:910px;height:556px;display:grid;
   grid-template-columns:repeat(6,140px);grid-template-rows:repeat(5,100px);gap:14px}
 .gcell{border:1px dashed #1b1e27;border-radius:12px}
-.gcell.hot{border-color:var(--teal);background:rgba(46,213,184,.08)}
-.gcell.bad{border-color:var(--red);background:rgba(242,104,90,.08)}
 .pc{position:relative;border-radius:18px;background:var(--card);border:1px solid var(--bd);overflow:hidden;cursor:grab;display:flex;flex-direction:column;padding:14px;min-width:0}
 .pc.on{background:linear-gradient(180deg,#14161C,#13201d);border-color:var(--onbd)}
 .pc.sel{outline:2px solid var(--teal);outline-offset:-1px}
+.pc.rsz{z-index:20;opacity:.94}
+.pc.cutsrc{opacity:.35;filter:saturate(.4)}
+.pc .rzh{position:absolute;right:3px;bottom:3px;width:20px;height:20px;border-radius:6px;background:var(--teal);color:var(--ink);display:none;align-items:center;justify-content:center;font-size:13px;cursor:nwse-resize;z-index:9;touch-action:none}
+.pc.sel .rzh{display:flex}
+.pc .szbadge{position:absolute;right:27px;bottom:4px;background:#0B0C11;border:1px solid var(--onbd);color:var(--teal);font-family:'IBM Plex Mono',monospace;font-size:11px;font-weight:600;padding:2px 7px;border-radius:7px;z-index:9;pointer-events:none}
 .pc .toprow{display:flex;align-items:center;justify-content:space-between;gap:8px}
 .pc .ci{font-size:24px;flex:0 0 auto}
 .pc .tg{width:50px;height:28px;border-radius:14px;background:var(--teal);position:relative;flex:0 0 auto}
@@ -219,7 +222,7 @@ h3.sec{font-size:11px;letter-spacing:1.4px;text-transform:uppercase;color:var(--
 
 <div id="app">
   <div id="palette"><h3 class="sec">Card palette</h3>
-    <div style="font-size:12px;color:var(--t2);margin-bottom:6px">Click a card → pick entity → pick size → drop on the grid.</div>
+    <div style="font-size:12px;color:var(--t2);margin-bottom:6px">Click a card to add it to the page — then drag to move, and drag its corner handle to resize.</div>
     <div id="palContent"></div></div>
 
   <div id="center">
@@ -231,7 +234,7 @@ h3.sec{font-size:11px;letter-spacing:1.4px;text-transform:uppercase;color:var(--
       <div id="grid"></div>
       <div id="nextaff"><span class="mdi mdi-chevron-right"></span> Next</div>
     </div></div>
-    <div style="color:var(--t3);font-size:11px;margin-top:10px" class="mono" id="hint">6×5 grid · 1024×600 · drag a placed card to move it</div>
+    <div style="color:var(--t3);font-size:11px;margin-top:10px" class="mono" id="hint">6×5 grid · 1024×600 · drag a card to move it · drag its corner handle to resize</div>
   </div>
 
   <div id="inspector"><div id="insp"></div></div>
@@ -245,61 +248,63 @@ h3.sec{font-size:11px;letter-spacing:1.4px;text-transform:uppercase;color:var(--
 // V = vertical strips added to every 1×1-capable type
 const V=[[1,3],[1,4],[1,5]];
 const C = {
-  light:    {label:'Light', domain:'light', icon:'lightbulb', color:'var(--amber)', spans:[[2,1],[3,1],[4,1],[5,1],[6,1],[1,2],[1,3],[1,4],[1,5],[2,2],[3,2],[4,4]], def:[2,1], ctrl:'light'},
-  light_t:  {label:'Light — simple toggle', domain:'light', icon:'lightbulb-outline', color:'var(--amber)', spans:[[1,1],[1,2],[2,1],[2,2],[3,3]], def:[2,1], ctrl:'toggle'},
-  switch:   {label:'Switch / outlet', domain:'switch', icon:'toggle-switch', color:'var(--teal)', spans:[[1,1],[2,1],[2,2],...V], def:[2,1], ctrl:'toggle'},
-  lightgroup:{label:'Light group', domain:'light', icon:'lightbulb-multiple', color:'var(--amber)', spans:[[2,2],[3,2],[2,3],[3,3],[4,3],[2,4],[4,4],[2,5],[5,4],[6,4],[5,5],[6,5]], def:[3,3], ctrl:'lightgroup', multi:true},
-  outletgroup:{label:'Outlets', domain:'switch', icon:'power-socket-us', color:'var(--teal)', spans:[[1,1],[1,2],[2,1],[1,3],[3,1]], def:[1,2], ctrl:'outletgroup', multi:true},
-  fan:      {label:'Fan', domain:'fan', domains:['fan','switch'], icon:'fan', color:'var(--teal)', spans:[[1,1],[1,2],[2,1],[2,2],[3,3]], def:[1,1], ctrl:'seg'},
-  cover:    {label:'Cover / blinds', domain:'cover', icon:'blinds-horizontal', color:'var(--blue)', spans:[[1,1],[2,1],[1,2],[1,3],[2,2],[2,3]], def:[2,2], ctrl:'pos'},
-  climate:  {label:'Climate / thermostat', domain:'climate', icon:'thermostat', color:'var(--amber)', spans:[[1,1],[2,2],[3,2],[3,3],[4,4],[6,5],...V], def:[4,4], ctrl:'dial'},
-  group:    {label:'Status group', domain:'mixed', icon:'view-grid-outline', color:'var(--teal)', spans:[[2,2],[2,3],[2,4],[2,5]], def:[2,3], ctrl:'group', multi:true},
-  shortcuts:{label:'Shortcuts', domain:'page', icon:'view-grid-plus', color:'var(--teal)', spans:[[2,2],[3,2],[2,3],[4,2],[2,4],[5,2],[2,5],[6,2]], def:[2,2], ctrl:'shortcuts', multi:true},
-  speakers: {label:'Speakers (multi-room + volume)', domain:'media_player', icon:'speaker-multiple', color:'var(--teal)', spans:[[1,1],[2,2],[3,2],[2,3],[3,3],[4,4],[3,4],[5,4],[6,5]], def:[3,3], ctrl:'spk', btnIcon:'speaker', multi:true},
-  sonos_sources:{label:'Sonos sources', domain:'media_player', icon:'music-box-multiple', color:'var(--teal)', spans:[[1,1],[2,1],[3,1],[1,2],[1,3],[3,2],[2,3],[3,3],[5,4]], def:[2,3], ctrl:'btngrid', btnIcon:'music-box', multi:true},
-  sonos_library:{label:'Sonos library', domain:'media_player', icon:'bookshelf', color:'var(--teal)', spans:[[4,3],[3,4],[4,4],[3,5],[4,5],[5,5]], def:[4,4], ctrl:'songlist'},
-  sonos_fav:{label:'Sonos favorite', domain:'media_player', icon:'bookmark-music', color:'var(--teal)', spans:[[1,1],[2,1],[3,1]], def:[1,1], ctrl:'playlist', playlistField:true},
-  spotify:  {label:'Spotify player', domain:'media_player', icon:'spotify', color:'#1DB954', spans:[[1,1],[2,2],[3,2],[4,3],[6,5]], def:[3,2], ctrl:'media'},
-  spotify_art:{label:'Spotify player — art + volume', domain:'media_player', icon:'spotify', color:'#1DB954', spans:[[3,3],[4,3],[3,4],[4,4],[3,5],[4,5],[5,4],[5,5],[6,4],[6,5]], def:[4,3], ctrl:'media'},
-  spotify_playlists:{label:'Spotify playlists', domain:'media_player', icon:'playlist-play', color:'#1DB954', spans:[[2,1],[3,1],[2,2],[3,2],[2,3],[3,3]], def:[3,1], ctrl:'spot_pl'},
-  spotify_tracks:{label:'Spotify songs', domain:'media_player', icon:'playlist-music', color:'#1DB954', spans:[[2,3],[2,4],[2,5],[3,4],[3,5],[4,5]], def:[2,5], ctrl:'spot_tr'},
-  spotify_speakers:{label:'Spotify speakers (Play on)', domain:'media_player', icon:'speaker-multiple', color:'#1DB954', spans:[[2,2],[3,2],[2,3],[3,3],[2,4],[3,4]], def:[3,3], ctrl:'spot_spk'},
-  spotify_speaker:{label:'Spotify speaker — single tile', domain:'media_player', icon:'speaker', color:'#1DB954', spans:[[1,1],[2,1],[1,2],[2,2]], def:[1,1], ctrl:'spot_spk1', speakerField:true},
-  playlist: {label:'Spotify playlist — single button', domain:'media_player', icon:'playlist-play', color:'#1DB954', spans:[[1,1],[2,1],[3,1]], def:[2,1], ctrl:'playlist', playlistField:true},
-  songlist: {label:'Spotify song list', domain:'media_player', icon:'playlist-music', color:'#1DB954', spans:[[4,3],[3,4],[4,4],[3,5],[4,5],[5,5]], def:[4,4], ctrl:'songlist'},
-  sonos:    {label:'Sonos now-playing', domain:'media_player', icon:'speaker-multiple', color:'var(--teal)', spans:[[3,2],[3,3],[4,4],[6,5]], def:[4,4], ctrl:'media'},
-  media:    {label:'Media player', domain:'media_player', icon:'play-circle', color:'var(--violet)', spans:[[1,1],[2,1],[2,2],[3,2],[3,3],[4,3],[6,5]], def:[3,2], ctrl:'media'},
-  volume:   {label:'Volume', domain:'media_player', icon:'volume-high', color:'var(--teal)', spans:[[1,1],[2,1],[1,2],[2,2],[3,2]], def:[2,2], ctrl:'vol'},
-  volumes:  {label:'Volume — per-speaker list', domain:'media_player', icon:'speaker-multiple', color:'var(--teal)', spans:[[2,2],[3,2],[2,3],[3,3],[2,4],[3,4]], def:[3,3], ctrl:'vols', multi:true},
-  tvremote: {label:'TV remote', domain:'media_player', icon:'remote-tv', color:'var(--violet)', spans:[[1,1],[2,2],[3,2],[4,4],[4,5],[5,5],[6,5]], def:[4,4], ctrl:'remote'},
-  tv_dpad:  {label:'TV D-pad', domain:'media_player', icon:'gamepad-variant', color:'var(--violet)', spans:[[2,2],[3,2],[2,3],[3,3]], def:[3,3], ctrl:'tv_dpad'},
-  tv_transport:{label:'TV transport', domain:'media_player', icon:'play-circle', color:'var(--violet)', spans:[[2,1],[3,1],[4,1],[6,1],[2,2],[4,2]], def:[4,1], ctrl:'tv_transport'},
-  tv_channel:{label:'TV channel +/-', domain:'media_player', icon:'television-guide', color:'var(--violet)', spans:[[1,1],[1,2],[2,1],[2,2]], def:[1,2], ctrl:'tv_channel'},
-  tv_volume:{label:'TV volume', domain:'media_player', icon:'volume-high', color:'var(--violet)', spans:[[1,1],[1,2],[1,3],[2,1],[2,2]], def:[1,3], ctrl:'tv_volume'},
-  tv_sources:{label:'TV sources / inputs', domain:'media_player', icon:'video-input-hdmi', color:'var(--violet)', spans:[[1,2],[1,3],[3,2],[2,3],[3,3],[5,4]], def:[2,3], ctrl:'btngrid', btnIcon:'video-input-hdmi', multi:true},
-  tv_trackpad:{label:'TV trackpad', domain:'media_player', icon:'gesture-swipe', color:'var(--violet)', spans:[[3,3],[4,3],[4,4],[6,4],[6,5]], def:[4,3], ctrl:'tv_trackpad'},
-  lock:     {label:'Lock', domain:'lock', icon:'lock', color:'var(--teal)', spans:[[1,1],[2,1],[2,2],...V], def:[2,1], ctrl:'lock'},
-  camera:   {label:'Camera', domain:'camera', icon:'cctv', color:'var(--red)', spans:[[2,2],[3,3],[4,3],[6,5]], def:[3,3], ctrl:'cam'},
-  alarm:    {label:'Alarm panel', domain:'alarm_control_panel', icon:'shield-home', color:'var(--red)', spans:[[2,2],[3,2]], def:[3,2], ctrl:'val'},
-  binary:   {label:'Binary sensor', domain:'binary_sensor', icon:'motion-sensor', color:'var(--blue)', spans:[[1,1],[2,1],...V], def:[1,1], ctrl:'val'},
-  sensor:   {label:'Sensor', domain:'sensor', icon:'thermometer', color:'var(--red)', spans:[[1,1],[2,1],[3,1],[4,1],[5,1]], def:[2,1], ctrl:'val'},
-  chart:    {label:'Sensor — trend chart', domain:'sensor', icon:'chart-line', color:'var(--teal)', spans:[[2,2],[3,2],[4,2],[5,2]], def:[3,2], ctrl:'val'},
-  weather:  {label:'Weather', domain:'weather', icon:'weather-partly-cloudy', color:'var(--amber)', spans:[[6,5],[5,5],[6,4]], def:[6,5], ctrl:'wx'},
-  wx_current:{label:'Weather — current', domain:'weather', icon:'weather-partly-cloudy', color:'var(--amber)', spans:[[2,2],[3,2],[4,2],[6,2],[3,3]], def:[3,2], ctrl:'wx'},
-  wx_hourly:{label:'Weather — hourly', domain:'weather', icon:'clock-time-four-outline', color:'var(--blue)', spans:[[3,1],[4,1],[6,1],[4,2],[6,2]], def:[6,1], ctrl:'wx'},
-  wx_daily: {label:'Weather — forecast (H/L)', domain:'weather', icon:'calendar-week', color:'var(--blue)', spans:[[2,3],[3,3],[2,4],[3,4],[2,5],[3,5]], def:[3,3], ctrl:'wx'},
-  wx_stats: {label:'Weather — stats', domain:'weather', icon:'gauge', color:'var(--teal)', spans:[[2,2],[3,2],[2,3],[3,3]], def:[3,2], ctrl:'wx'},
-  person:   {label:'Presence', domain:'person', icon:'account', color:'var(--blue)', spans:[[1,1],[2,1],...V], def:[1,1], ctrl:'val'},
-  vacuum:   {label:'Vacuum', domain:'vacuum', icon:'robot-vacuum', color:'var(--blue)', spans:[[2,2]], def:[2,2], ctrl:'val'},
-  scene:    {label:'Scene', domain:'scene', icon:'palette', color:'var(--violet)', spans:[[1,1],[2,1],...V], def:[1,1], ctrl:'tile'},
-  script:   {label:'Script / button', domain:'script', icon:'gesture-tap-button', color:'var(--teal)', spans:[[1,1],[2,1],...V], def:[1,1], ctrl:'tile'},
+  light:    {label:'Light', domain:'light', icon:'lightbulb', color:'var(--amber)', spans:[[2,1],[3,1],[4,1],[5,1],[6,1],[1,2],[1,3],[1,4],[1,5],[2,2],[3,2],[4,4]], def:[2,1], min:[1,1], ctrl:'light'},
+  light_t:  {label:'Light — simple toggle', domain:'light', icon:'lightbulb-outline', color:'var(--amber)', spans:[[1,1],[1,2],[2,1],[2,2],[3,3]], def:[2,1], min:[1,1], ctrl:'toggle'},
+  switch:   {label:'Switch / outlet', domain:'switch', icon:'toggle-switch', color:'var(--teal)', spans:[[1,1],[2,1],[2,2],...V], def:[2,1], min:[1,1], ctrl:'toggle'},
+  lightgroup:{label:'Light group', domain:'light', icon:'lightbulb-multiple', color:'var(--amber)', spans:[[2,2],[3,2],[2,3],[3,3],[4,3],[2,4],[4,4],[2,5],[5,4],[6,4],[5,5],[6,5]], def:[3,3], min:[2,2], ctrl:'lightgroup', multi:true},
+  outletgroup:{label:'Outlets', domain:'switch', icon:'power-socket-us', color:'var(--teal)', spans:[[1,1],[1,2],[2,1],[1,3],[3,1]], def:[1,2], min:[1,1], ctrl:'outletgroup', multi:true},
+  fan:      {label:'Fan', domain:'fan', domains:['fan','switch'], icon:'fan', color:'var(--teal)', spans:[[1,1],[1,2],[2,1],[2,2],[3,3]], def:[1,1], min:[1,1], ctrl:'seg'},
+  cover:    {label:'Cover / blinds', domain:'cover', icon:'blinds-horizontal', color:'var(--blue)', spans:[[1,1],[2,1],[1,2],[1,3],[2,2],[2,3]], def:[2,2], min:[1,1], ctrl:'pos'},
+  climate:  {label:'Climate / thermostat', domain:'climate', icon:'thermostat', color:'var(--amber)', spans:[[1,1],[2,2],[3,2],[3,3],[4,4],[6,5],...V], def:[4,4], min:[1,1], ctrl:'dial'},
+  group:    {label:'Status group', domain:'mixed', icon:'view-grid-outline', color:'var(--teal)', spans:[[2,2],[2,3],[2,4],[2,5]], def:[2,3], min:[2,2], ctrl:'group', multi:true},
+  shortcuts:{label:'Shortcuts', domain:'page', icon:'view-grid-plus', color:'var(--teal)', spans:[[2,2],[3,2],[2,3],[4,2],[2,4],[5,2],[2,5],[6,2]], def:[2,2], min:[2,2], ctrl:'shortcuts', multi:true},
+  speakers: {label:'Speakers (multi-room + volume)', domain:'media_player', icon:'speaker-multiple', color:'var(--teal)', spans:[[1,1],[2,2],[3,2],[2,3],[3,3],[4,4],[3,4],[5,4],[6,5]], def:[3,3], min:[1,1], ctrl:'spk', btnIcon:'speaker', multi:true},
+  sonos_sources:{label:'Sonos sources', domain:'media_player', icon:'music-box-multiple', color:'var(--teal)', spans:[[1,1],[2,1],[3,1],[1,2],[1,3],[3,2],[2,3],[3,3],[5,4]], def:[2,3], min:[1,1], ctrl:'btngrid', btnIcon:'music-box', multi:true},
+  sonos_library:{label:'Sonos library', domain:'media_player', icon:'bookshelf', color:'var(--teal)', spans:[[4,3],[3,4],[4,4],[3,5],[4,5],[5,5]], def:[4,4], min:[3,3], ctrl:'songlist'},
+  sonos_fav:{label:'Sonos favorite', domain:'media_player', icon:'bookmark-music', color:'var(--teal)', spans:[[1,1],[2,1],[3,1]], def:[1,1], min:[1,1], ctrl:'playlist', playlistField:true},
+  spotify:  {label:'Spotify player', domain:'media_player', icon:'spotify', color:'#1DB954', spans:[[1,1],[2,2],[3,2],[4,3],[6,5]], def:[3,2], min:[1,1], ctrl:'media'},
+  spotify_art:{label:'Spotify player — art + volume', domain:'media_player', icon:'spotify', color:'#1DB954', spans:[[3,3],[4,3],[3,4],[4,4],[3,5],[4,5],[5,4],[5,5],[6,4],[6,5]], def:[4,3], min:[3,3], ctrl:'media'},
+  spotify_playlists:{label:'Spotify playlists', domain:'media_player', icon:'playlist-play', color:'#1DB954', spans:[[2,1],[3,1],[2,2],[3,2],[2,3],[3,3]], def:[3,1], min:[2,1], ctrl:'spot_pl'},
+  spotify_tracks:{label:'Spotify songs', domain:'media_player', icon:'playlist-music', color:'#1DB954', spans:[[2,3],[2,4],[2,5],[3,4],[3,5],[4,5]], def:[2,5], min:[2,3], ctrl:'spot_tr'},
+  spotify_speakers:{label:'Spotify speakers (Play on)', domain:'media_player', icon:'speaker-multiple', color:'#1DB954', spans:[[2,2],[3,2],[2,3],[3,3],[2,4],[3,4]], def:[3,3], min:[2,2], ctrl:'spot_spk'},
+  spotify_speaker:{label:'Spotify speaker — single tile', domain:'media_player', icon:'speaker', color:'#1DB954', spans:[[1,1],[2,1],[1,2],[2,2]], def:[1,1], min:[1,1], ctrl:'spot_spk1', speakerField:true},
+  playlist: {label:'Spotify playlist — single button', domain:'media_player', icon:'playlist-play', color:'#1DB954', spans:[[1,1],[2,1],[3,1]], def:[2,1], min:[1,1], ctrl:'playlist', playlistField:true},
+  songlist: {label:'Spotify song list', domain:'media_player', icon:'playlist-music', color:'#1DB954', spans:[[4,3],[3,4],[4,4],[3,5],[4,5],[5,5]], def:[4,4], min:[3,3], ctrl:'songlist'},
+  sonos:    {label:'Sonos now-playing', domain:'media_player', icon:'speaker-multiple', color:'var(--teal)', spans:[[3,2],[3,3],[4,4],[6,5]], def:[4,4], min:[3,2], ctrl:'media'},
+  media:    {label:'Media player', domain:'media_player', icon:'play-circle', color:'var(--violet)', spans:[[1,1],[2,1],[2,2],[3,2],[3,3],[4,3],[6,5]], def:[3,2], min:[1,1], ctrl:'media'},
+  volume:   {label:'Volume', domain:'media_player', icon:'volume-high', color:'var(--teal)', spans:[[1,1],[2,1],[1,2],[2,2],[3,2]], def:[2,2], min:[1,1], ctrl:'vol'},
+  volumes:  {label:'Volume — per-speaker list', domain:'media_player', icon:'speaker-multiple', color:'var(--teal)', spans:[[2,2],[3,2],[2,3],[3,3],[2,4],[3,4]], def:[3,3], min:[2,2], ctrl:'vols', multi:true},
+  tvremote: {label:'TV remote', domain:'media_player', icon:'remote-tv', color:'var(--violet)', spans:[[1,1],[2,2],[3,2],[4,4],[4,5],[5,5],[6,5]], def:[4,4], min:[1,1], ctrl:'remote'},
+  tv_dpad:  {label:'TV D-pad', domain:'media_player', icon:'gamepad-variant', color:'var(--violet)', spans:[[2,2],[3,2],[2,3],[3,3]], def:[3,3], min:[2,2], ctrl:'tv_dpad'},
+  tv_transport:{label:'TV transport', domain:'media_player', icon:'play-circle', color:'var(--violet)', spans:[[2,1],[3,1],[4,1],[6,1],[2,2],[4,2]], def:[4,1], min:[2,1], ctrl:'tv_transport'},
+  tv_channel:{label:'TV channel +/-', domain:'media_player', icon:'television-guide', color:'var(--violet)', spans:[[1,1],[1,2],[2,1],[2,2]], def:[1,2], min:[1,1], ctrl:'tv_channel'},
+  tv_volume:{label:'TV volume', domain:'media_player', icon:'volume-high', color:'var(--violet)', spans:[[1,1],[1,2],[1,3],[2,1],[2,2]], def:[1,3], min:[1,1], ctrl:'tv_volume'},
+  tv_sources:{label:'TV sources / inputs', domain:'media_player', icon:'video-input-hdmi', color:'var(--violet)', spans:[[1,2],[1,3],[3,2],[2,3],[3,3],[5,4]], def:[2,3], min:[1,2], ctrl:'btngrid', btnIcon:'video-input-hdmi', multi:true},
+  tv_trackpad:{label:'TV trackpad', domain:'media_player', icon:'gesture-swipe', color:'var(--violet)', spans:[[3,3],[4,3],[4,4],[6,4],[6,5]], def:[4,3], min:[3,3], ctrl:'tv_trackpad'},
+  tv_app:   {label:'TV app / input — launcher', domain:'media_player', icon:'apps', color:'var(--violet)', spans:[[1,1],[2,1],[1,2],[2,2],[3,2]], def:[1,1], min:[1,1], ctrl:'tv_app', sourceField:true},
+  tv_apps:  {label:'TV apps / inputs — grid', domain:'media_player', icon:'apps-box', color:'var(--violet)', spans:[[1,2],[2,2],[3,2],[2,3],[3,3]], def:[2,2], min:[1,2], ctrl:'tv_apps'},
+  lock:     {label:'Lock', domain:'lock', icon:'lock', color:'var(--teal)', spans:[[1,1],[2,1],[2,2],...V], def:[2,1], min:[1,1], ctrl:'lock'},
+  camera:   {label:'Camera', domain:'camera', icon:'cctv', color:'var(--red)', spans:[[2,2],[3,3],[4,3],[6,5]], def:[3,3], min:[2,2], ctrl:'cam'},
+  alarm:    {label:'Alarm panel', domain:'alarm_control_panel', icon:'shield-home', color:'var(--red)', spans:[[2,2],[3,2]], def:[3,2], min:[2,2], ctrl:'val'},
+  binary:   {label:'Binary sensor', domain:'binary_sensor', icon:'motion-sensor', color:'var(--blue)', spans:[[1,1],[2,1],...V], def:[1,1], min:[1,1], ctrl:'val'},
+  sensor:   {label:'Sensor', domain:'sensor', icon:'thermometer', color:'var(--red)', spans:[[1,1],[2,1],[3,1],[4,1],[5,1]], def:[2,1], min:[1,1], ctrl:'val'},
+  chart:    {label:'Sensor — trend chart', domain:'sensor', icon:'chart-line', color:'var(--teal)', spans:[[2,2],[3,2],[4,2],[5,2]], def:[3,2], min:[2,2], ctrl:'val'},
+  weather:  {label:'Weather', domain:'weather', icon:'weather-partly-cloudy', color:'var(--amber)', spans:[[6,5],[5,5],[6,4]], def:[6,5], min:[5,4], ctrl:'wx'},
+  wx_current:{label:'Weather — current', domain:'weather', icon:'weather-partly-cloudy', color:'var(--amber)', spans:[[2,2],[3,2],[4,2],[6,2],[3,3]], def:[3,2], min:[2,2], ctrl:'wx'},
+  wx_hourly:{label:'Weather — hourly', domain:'weather', icon:'clock-time-four-outline', color:'var(--blue)', spans:[[3,1],[4,1],[6,1],[4,2],[6,2]], def:[6,1], min:[3,1], ctrl:'wx'},
+  wx_daily: {label:'Weather — forecast (H/L)', domain:'weather', icon:'calendar-week', color:'var(--blue)', spans:[[2,3],[3,3],[2,4],[3,4],[2,5],[3,5]], def:[3,3], min:[2,3], ctrl:'wx'},
+  wx_stats: {label:'Weather — stats', domain:'weather', icon:'gauge', color:'var(--teal)', spans:[[2,2],[3,2],[2,3],[3,3]], def:[3,2], min:[2,2], ctrl:'wx'},
+  person:   {label:'Presence', domain:'person', icon:'account', color:'var(--blue)', spans:[[1,1],[2,1],...V], def:[1,1], min:[1,1], ctrl:'val'},
+  vacuum:   {label:'Vacuum', domain:'vacuum', icon:'robot-vacuum', color:'var(--blue)', spans:[[2,2]], def:[2,2], min:[2,2], ctrl:'val'},
+  scene:    {label:'Scene', domain:'scene', icon:'palette', color:'var(--violet)', spans:[[1,1],[2,1],...V], def:[1,1], min:[1,1], ctrl:'tile'},
+  script:   {label:'Script / button', domain:'script', icon:'gesture-tap-button', color:'var(--teal)', spans:[[1,1],[2,1],...V], def:[1,1], min:[1,1], ctrl:'tile'},
 };
 const CATS = [
   ['Lighting', ['light','switch','lightgroup','outletgroup']],
   ['Comfort', ['climate','fan','cover']],
   ['Spotify', ['spotify','spotify_playlists','spotify_tracks','spotify_speakers','volume']],
   ['Sonos', ['sonos','speakers','sonos_sources','sonos_library','sonos_fav','volume']],
-  ['TV', ['tvremote']],
+  ['TV', ['tvremote','tv_app','tv_apps']],
   ['Media', ['media','volume']],
   ['Groups', ['group','shortcuts']],
   ['Safety', ['lock','camera','alarm','binary']],
@@ -344,6 +349,8 @@ const DESC={
   sonos_fav:'One-tap button that plays a Sonos favorite',
   media:'Any media player — art, transport, volume',
   tvremote:'Full remote, or just one piece (D-pad, volume, sources…)',
+  tv_app:'One-tap app / input launcher (YouTube TV, Apple TV…) in the app\'s brand color',
+  tv_apps:'Grid of app / input launchers — pick the sources, tiles take each app\'s color',
   group:'Live status tiles for a mix of entities',
   shortcuts:'Quick-jump buttons to pages, rooms or the camera',
   lock:'Lock / unlock with live state',
@@ -364,10 +371,11 @@ function switchStyle(c,ck){ if(c.ck===ck) return; const prev=c.ck, d=C[ck]; c.ck
   // carry the entity across the single<->multi divide so nothing gets lost
   if(d.multi && !(c.entities&&c.entities.length) && c.entity) c.entities=[c.entity];
   if(!d.multi && !c.entity && c.entities && c.entities.length) c.entity=c.entities[0];
-  if(!d.spans.some(s=>s[0]===c.w&&s[1]===c.h)){ const [w,h]=d.def;
+  const [mw,mh]=d.min||[1,1], w=Math.max(c.w,mw), h=Math.max(c.h,mh);   // grow to the new style's minimum
+  if(w!==c.w||h!==c.h){
     if(fits(c.x,c.y,w,h,c.id)){ c.w=w; c.h=h; }
     else { const f=firstFit(w,h); if(f){ c.x=f[0]; c.y=f[1]; c.w=w; c.h=h; toast('Moved to fit the new style'); }
-           else { c.ck=prev; toast('No room for that style’s size — clear space first'); renderInspector(); return; } } }
+           else { c.ck=prev; toast('No room for that style’s minimum size — clear space first'); renderInspector(); return; } } }
   renderGrid(); renderInspector(); }
 const GICON={light:['lightbulb','var(--amber)'],switch:['toggle-switch','var(--teal)'],lock:['lock','var(--teal)'],binary_sensor:['motion-sensor','var(--blue)'],sensor:['thermometer','var(--red)'],cover:['blinds-horizontal','var(--blue)'],fan:['fan','var(--teal)'],person:['account','var(--blue)'],climate:['thermostat','var(--amber)'],media_player:['speaker','var(--teal)']};
 const GVAL={light:'On',switch:'On',lock:'Locked',binary_sensor:'Clear',sensor:'72°',cover:'Open',fan:'Med',person:'Home',climate:'72°',media_player:'Idle'};
@@ -443,9 +451,36 @@ function renderRules(c,box){ box.innerHTML=''; (c.rules||[]).forEach((r,i)=>{ co
   del.onclick=()=>{c.rules.splice(i,1);renderInspector();};
   box.appendChild(row); });
   if(!(c.rules||[]).length) box.innerHTML='<div class="csub" style="padding:2px 0;color:var(--t3)">No rules — value uses the type\'s default color.</div>'; }
-const APP_CAT = {'Netflix':'#E50914','YouTube':'#FF0000','YouTube TV':'#FF0000','Disney+':'#113CCF','Spotify':'#1DB954','Plex':'#E5A00D','Hulu':'#1CE783','Prime Video':'#00A8E1','Max':'#7B2BF9','HBO Max':'#7B2BF9','Apple TV':'#3A3A3C','Peacock':'#05AC3F','Paramount+':'#0064FF','STARZ':'#000000','ESPN':'#D50A0A'};
+const APP_CAT = {'Netflix':'#E50914','YouTube':'#FF0000','YouTube TV':'#FF0000','Disney+':'#113CCF','Spotify':'#1DB954','Plex':'#E5A00D','Hulu':'#1CE783','Prime Video':'#00A8E1','Max':'#7B2BF9','HBO Max':'#7B2BF9','Apple TV':'#3A3A3C','Peacock':'#05AC3F','Paramount+':'#0064FF','STARZ':'#000000','ESPN':'#D50A0A','Twitch':'#9146FF','Crunchyroll':'#F47521','Pandora':'#3668FF'};
 const APP_DEFAULT = ['Netflix','YouTube','YouTube TV','Disney+','Hulu'];
 const APP_MAX = 8;
+// Fuzzy brand match (mirrors gen.py app_style), longest brand checked first
+// so 'YouTube TV 4K' hits YouTube TV, not YouTube: exact normalized match,
+// whole-word brand in the name ('Max 4K' -> Max but NOT 'Cinemax'),
+// squashed-brand containment for brands >=5 chars ('youtubetv-4k'), or the
+// name as a typed prefix of a brand. Unknown -> neutral dark tile + initial.
+const APP_MARK={'YouTube TV':'TV','STARZ':'SZ','HBO Max':'M'};
+const APP_NORM=s=>(s||'').toLowerCase().replace(/[^a-z0-9+]/g,'');
+const APP_KEYS=Object.keys(APP_CAT).sort((a,b)=>APP_NORM(b).length-APP_NORM(a).length);
+function appStyle(name){ const n=APP_NORM(name);
+  if(n){ const low=(name||'').toLowerCase();
+    let hit=APP_KEYS.find(k=>APP_NORM(k)===n);
+    if(!hit) hit=APP_KEYS.find(k=>{ const kk=APP_NORM(k);
+      const re=new RegExp('(^|[^a-z0-9])'+k.toLowerCase().replace(/[.*+?^${}()|[\]\\]/g,'\\$&')+'($|[^a-z0-9])');
+      return re.test(low)||(kk.length>=5&&n.includes(kk))||(n.length>=4&&kk.startsWith(n)); });
+    if(hit) return {col:APP_CAT[hit], mark:APP_MARK[hit]||hit[0].toUpperCase(), known:true}; }
+  return {col:'#10141C', mark:((name||'').trim()[0]||'?').toUpperCase(), known:false}; }
+// Entity attributes (source_list…) fetched on demand through serve.py's HA
+// proxy; feeds the tv_app / tv_apps source <datalist> suggestions. The brand
+// map names are always offered too, and free text stays valid.
+const ATTRS_CACHE={};
+function fillSourceList(dl,eid){ if(!dl) return;
+  const draw=a=>{ const sl=Array.isArray(a&&a.source_list)?a.source_list:[];
+    const names=[...new Set([...sl,...Object.keys(APP_CAT)])];
+    dl.innerHTML=names.map(s=>`<option value="${String(s).replace(/"/g,'&quot;')}"></option>`).join(''); };
+  if(!eid||!eid.includes('.')){ draw(null); return; }
+  if(ATTRS_CACHE[eid]){ draw(ATTRS_CACHE[eid]); return; }
+  j('/api/ha/entity-attrs?entity='+encodeURIComponent(eid)).then(r=>{ ATTRS_CACHE[eid]=(r&&r.attrs)||{}; draw(ATTRS_CACHE[eid]); }).catch(()=>draw(null)); }
 // configurable top-bar status chips (right zone)
 const HEADER_ITEMS = {
   user:            {label:'User logged in', icon:'account', txt:'Ben', color:'var(--t2)'},
@@ -465,8 +500,14 @@ const HEADER_ITEMS = {
 function defHeader(on){ return {on:!!on, left:'greeting', right:['weather_current','secured']}; }
 const COLS=6; let ROWS=5;
 
-let L=null, ENTS=[], AREAS={}, sel=null, placing=null, curPage=null, curSub=0, curPageInit=null;
-function uid(){ return 'c'+Math.random().toString(36).slice(2,8); }
+let L=null, ENTS=[], AREAS={}, sel=null, curPage=null, curSub=0, curPageInit=null;
+// module clipboard for card copy/cut/paste — card is a deep clone; cut points at the source
+let CLIP=null;   // {card:<deep clone>, cut:{page,sub,id}|null} | null
+function idUsed(id){ if(!L||!L.pages) return false;
+  for(const k in L.pages) for(const sp of (L.pages[k].subpages||[])) for(const c of (sp||[])) if(c&&c.id===id) return true;
+  return false; }
+// card ids seed firmware widget ids — must be unique across ALL pages, so retry on collision
+function uid(){ let id; do{ id='c'+Math.random().toString(36).slice(2,8); }while(idUsed(id)); return id; }
 function toast(m){ const t=document.getElementById('toast'); t.textContent=m; t.style.display='block'; setTimeout(()=>t.style.display='none',2600); }
 async function j(u,o){ const r=await fetch(u,o); if(r.status===401){ location.reload(); throw new Error('auth'); } if(!r.ok) throw new Error((await r.json().catch(()=>({}))).error||r.statusText); return r.json(); }
 function rowsFor(p){ const hd=L.pages[p||curPage].header; return (hd&&hd.on)?4:5; }
@@ -480,7 +521,8 @@ function cap(c){ const k=c.ck;
   if(k==='outletgroup') return Math.max(c.w,c.h);   // 1x1=1, 1x2/2x1=2, 1x3/3x1=3
   if(k==='volumes') return Math.max(2,c.h);           // one speaker volume row per grid-row
   if(k==='speakers') return c.w>=4?8:Math.max(2,c.h+1);   // multi-room speaker list/grid
-  if(k==='sonos_sources'||k==='tv_sources'){ if(c.w===1) return 99;   // dropdown (1x1/1x2/1x3)
+  if(k==='sonos_sources'||k==='tv_sources'){
+    if(c.w===1){ const hpx=c.h*100+(c.h-1)*14; return Math.max(1,Math.floor((hpx-52-14+10)/50)); }   // 1-wide: rows that fit (device tile list)
     if(c.h===1) return c.w;                                   // single row: 2x1=2, 3x1=3
     if((c.w===2&&c.h===3)||(c.w===3&&c.h===2)) return 4;
     if(c.w===3&&c.h===3) return 6; if(c.w===5&&c.h===4) return 10;
@@ -494,7 +536,7 @@ function defaultLayout(){ const l={ install_room:'', nav:[
       {id:'media',icon:'music',label:'Media',page:'media'}],
     pages:{home:blankPage('Home'),rooms:blankPage('Rooms'),lights:blankPage('Lights'),climate:blankPage('Climate'),media:blankPage('Media')} };
   l.pages.home.header=defHeader(true); return l; }
-function mk(ck,entity,name,x,y,w,h){ const c={id:uid(),ck,entity:entity||'',name:name||C[ck].label,x,y,w,h}; if(C[ck].multi) c.entities=[]; if(ck==='shortcuts') c.shortcuts=[]; return c; }
+function mk(ck,entity,name,x,y,w,h){ const c={id:uid(),ck,entity:entity||'',name:name||C[ck].label,x,y,w,h}; if(C[ck].multi) c.entities=[]; if(ck==='shortcuts') c.shortcuts=[]; if(ck==='tv_apps') c.sources=[]; return c; }
 const TEMPLATES = {
   'Living-room home':()=>{ const l=defaultLayout(); l.install_room='Living Room'; l.pages.home.header=defHeader(true);
     l.pages.home.subpages=[[ mk('climate',null,'Main Floor',1,1,4,4), mk('light',null,'Main Lights',5,1,2,2), mk('group',null,'House status',5,3,2,2) ]]; return l; },
@@ -510,7 +552,7 @@ function occupancy(except){ const g=Array.from({length:ROWS},()=>Array(COLS).fil
   for(const c of curCards()){ if(c.id===except) continue; for(let y=c.y-1;y<c.y-1+c.h;y++) for(let x=c.x-1;x<c.x-1+c.w;x++) if(g[y]&&g[y][x]!==undefined) g[y][x]=true; } return g; }
 function fits(x,y,w,h,except){ if(x<1||y<1||x+w-1>COLS||y+h-1>ROWS) return false; const g=occupancy(except);
   for(let yy=y-1;yy<y-1+h;yy++) for(let xx=x-1;xx<x-1+w;xx++) if(g[yy][xx]) return false; return true; }
-function firstFit(w,h){ for(let y=1;y<=ROWS-h+1;y++) for(let x=1;x<=COLS-w+1;x++) if(fits(x,y,w,h,null)) return [x,y]; return null; }
+function firstFit(w,h,except){ for(let y=1;y<=ROWS-h+1;y++) for(let x=1;x<=COLS-w+1;x++) if(fits(x,y,w,h,except||null)) return [x,y]; return null; }
 
 function renderPalette(){ const el=document.getElementById('palContent'); el.innerHTML='';
   for(const [cat,keys] of CATS){ const h=document.createElement('div'); h.className='pcat'; h.textContent=cat; el.appendChild(h);
@@ -530,9 +572,17 @@ function renderTabs(){ const el=document.getElementById('tabs'); el.innerHTML=''
   const lab=document.createElement('span'); lab.style.cssText='font-size:12px;color:var(--t2);margin-right:4px'; lab.textContent=L.pages[curPage].title+' · sub-pages:'; el.appendChild(lab);
   L.pages[curPage].subpages.forEach((sp,i)=>{ const t=document.createElement('div'); t.className='tab'+(i===curSub?' on':''); t.textContent=(i+1);
     t.onclick=()=>{curSub=i; sel=null; renderAll();};
-    if(L.pages[curPage].subpages.length>1){ const x=document.createElement('span'); x.className='x mdi mdi-close'; x.onclick=(e)=>{e.stopPropagation(); L.pages[curPage].subpages.splice(i,1); curSub=0; renderAll();}; t.appendChild(x);} el.appendChild(t); });
+    if(L.pages[curPage].subpages.length>1){ const x=document.createElement('span'); x.className='x mdi mdi-close'; x.onclick=(e)=>{e.stopPropagation();
+      const n=sp.length;
+      if(!confirm('Delete sub-page '+(i+1)+'? It contains '+n+' card'+(n===1?'':'s')+'. This cannot be undone.')) return;
+      if(CLIP&&CLIP.cut&&CLIP.cut.page===curPage){ if(CLIP.cut.sub===i) CLIP.cut=null; else if(CLIP.cut.sub>i) CLIP.cut.sub--; }   // keep the cut pointer honest
+      L.pages[curPage].subpages.splice(i,1); curSub=0; sel=null; renderAll();}; t.appendChild(x);} el.appendChild(t); });
   const add=document.createElement('div'); add.className='tab'; add.textContent='+'; add.title='add sub-page';
-  add.onclick=()=>{L.pages[curPage].subpages.push([]); curSub=L.pages[curPage].subpages.length-1; renderAll();}; el.appendChild(add); }
+  add.onclick=()=>{L.pages[curPage].subpages.push([]); curSub=L.pages[curPage].subpages.length-1; renderAll();}; el.appendChild(add);
+  if(CLIP&&CLIP.card){ const nm=CLIP.card.name||(C[CLIP.card.ck]&&C[CLIP.card.ck].label)||'card';
+    const pb=document.createElement('div'); pb.className='tab'; pb.style.cssText='display:flex;align-items:center;gap:5px;color:var(--teal);border-color:var(--onbd)';
+    pb.innerHTML='<span class="mdi mdi-content-paste"></span>Paste'; pb.title='Paste “'+nm+'” onto this sub-page (Ctrl+V)';
+    pb.onclick=pasteClip; el.appendChild(pb); } }
 function renderRail(){ const r=document.getElementById('rail'); r.innerHTML='';
   L.nav.forEach(n=>{ const d=document.createElement('div'); d.className='ni'+(n.page===curPage?' on':''); d.innerHTML=`<span class="mdi mdi-${n.icon}"></span>`;
     d.onclick=()=>{ if(L.pages[n.page]){curPage=n.page;curSub=0;sel=null;renderAll();} }; r.appendChild(d); });
@@ -600,14 +650,16 @@ function cardInner(c){ const def=C[c.ck], nm=c.name||def.label, big=c.w>=3, ctrl
   if(ctrl==='toggle'){ if(c.w===1) return head+`<div style="display:flex;flex-direction:column;align-items:center;gap:10px;height:100%">${ico}<div style="font-size:12px;font-weight:600;text-align:center">${nm}</div>${tog(true)}</div>`;
     return head+`<div class="toprow">${ico}${tog(true)}</div>${nme}<div class="csub" style="color:var(--teal)">On</div>`; }
   if(ctrl==='light'){ const AM='#E6A62B';
-    // WIDE FILL STRIP (2x1..6x1): power btn left + horizontal amber fill
-    if(c.h===1) return head+`<div style="display:flex;align-items:center;gap:9px;height:100%">
+    // WIDE FILL STRIP (1x1..6x1): power btn left + horizontal amber fill.
+    // 1x1: the track is too narrow for the name — % only, smaller (gen parity)
+    if(c.h===1){ const tiny=c.w===1;
+    return head+`<div style="display:flex;align-items:center;gap:9px;height:100%">
       <div style="width:40px;height:40px;flex:0 0 auto;border-radius:20px;background:#2b2410;border:2px solid ${AM};display:flex;align-items:center;justify-content:center"><span class="mdi mdi-power" style="color:${AM};font-size:19px"></span></div>
       <div style="flex:1;position:relative;height:46px;border-radius:10px;overflow:hidden;background:#0e1014">
         <div style="position:absolute;left:0;top:0;bottom:0;width:74%;background:linear-gradient(90deg,#5c4a14,${AM})"></div>
         <div style="position:absolute;left:calc(74% - 3px);top:6px;bottom:6px;width:6px;border-radius:3px;background:#fff"></div>
-        <div style="position:absolute;inset:0;padding:0 12px;display:flex;align-items:center;justify-content:space-between"><span style="font-weight:700;color:#fff;font-size:13px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${nm}</span><span style="font-size:19px;font-weight:800;color:#fff">74%</span></div>
-      </div></div>`;
+        <div style="position:absolute;inset:0;padding:0 12px;display:flex;align-items:center;justify-content:${tiny?'flex-end':'space-between'}">${tiny?'':`<span style="font-weight:700;color:#fff;font-size:13px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${nm}</span>`}<span style="font-size:${tiny?13:19}px;font-weight:800;color:#fff">74%</span></div>
+      </div></div>`; }
     // TALL FILL STRIP (1x2..1x5): vertical amber fill + power btn below
     if(c.w===1) return head+`<div style="display:flex;flex-direction:column;gap:8px;height:100%">
       <div style="flex:1;position:relative;border-radius:10px;overflow:hidden;background:#0e1014">
@@ -622,17 +674,20 @@ function cardInner(c){ const def=C[c.ck], nm=c.name||def.label, big=c.w>=3, ctrl
     const fill=(c.h>c.w)?`<div style="position:absolute;left:0;right:0;bottom:56px;height:calc((100% - 64px)*0.74);background:rgba(46,213,184,.5);border-radius:12px"></div>`:`<div style="position:absolute;left:0;top:0;height:calc(100% - 56px);width:74%;background:rgba(46,213,184,.5);border-radius:12px"></div>`;
     return fill+head+`<div style="position:relative;display:flex;flex-direction:column;align-items:center;height:100%"><span class="mdi mdi-lightbulb-on" style="font-size:24px;color:var(--amber)"></span><div style="font-weight:600;margin-top:4px;text-align:center;max-width:100%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${nm}</div><div style="font-size:38px;font-weight:800;margin:auto 0 64px">74%</div></div>`+pwr; }
   if(ctrl==='dial'){
-    if(c.w<=2||c.h<=1) return head+`<div class="toprow">${ico}<span class="csub">${nm}</span></div><div style="font-size:32px;font-weight:800;text-align:center;margin:auto 0">71°</div>`;
+    // device parity: gen's rich thermostat needs >=3x3 (w>=448 && h>=328)
+    if(c.w<=2||c.h<=2) return head+`<div class="toprow">${ico}<span class="csub">${nm}</span></div><div style="font-size:32px;font-weight:800;text-align:center;margin:auto 0">71°</div>`;
     const sb=(lab,t,acc,bg)=>`<div style="flex:1;background:${bg};border:1px solid ${acc};border-radius:12px;display:flex;align-items:center;justify-content:space-between;padding:6px 14px"><span class="mdi mdi-minus" style="color:${acc};font-size:22px"></span><div style="text-align:center"><div style="font-size:10px;letter-spacing:1px;color:${acc}">${lab}</div><div style="font-size:24px;font-weight:800;color:${acc}">${t}</div></div><span class="mdi mdi-plus" style="color:${acc};font-size:22px"></span></div>`;
     const md=(ic2,lab,sel,acc)=>`<div style="flex:1;display:flex;align-items:center;justify-content:center;gap:6px;padding:8px;border-radius:10px;background:${sel?acc:'#10141C'};color:${sel?'#0A0B0F':'var(--t2)'};font-weight:600"><span class="mdi mdi-${ic2}"></span>${lab}</div>`;
     return head+`<div style="display:flex;align-items:center;gap:8px;min-width:0"><span class="mdi mdi-thermostat" style="color:var(--teal);font-size:22px"></span><div style="min-width:0"><div style="font-weight:700;font-size:16px">${nm}</div><div class="csub">now 71° · 41% RH</div></div></div>
     <div style="display:flex;gap:12px;flex:1;margin-top:10px"><div style="font-size:48px;font-weight:800;align-self:center">71°</div><div style="flex:1;display:flex;flex-direction:column;gap:16px;padding:8px 0">${sb('HEAT TO','68°','var(--amber)','#241C08')}${sb('COOL TO','74°','var(--blue)','#0F1A2B')}</div></div>
     <div style="display:flex;gap:8px;margin-top:10px">${md('power','Off',false,'var(--t2)')}${md('fire','Heat',true,'var(--amber)')}${md('snowflake','Cool',false,'var(--blue)')}${md('autorenew','Auto',false,'var(--teal)')}</div>`; }
-  if(ctrl==='seg'){ if(c.w*c.h<=2) return `<div style="position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:8px;background:#123f30"><span class="mdi mdi-${def.icon}" style="font-size:26px;color:var(--teal)"></span><span style="font-weight:600;color:var(--teal)">${nm}</span></div>`+head;
+  if(ctrl==='seg'){ if(c.w*c.h<=2||c.w===1) return `<div style="position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:8px;background:#123f30"><span class="mdi mdi-${def.icon}" style="font-size:26px;color:var(--teal)"></span><span style="font-weight:600;color:var(--teal)">${nm}</span></div>`+head;
     return head+`<div class="toprow">${ico}${nme}</div><div class="seg"><div>Off</div><div class="on">Med</div><div>High</div></div>`; }
   if(ctrl==='pos'){ if(c.w===1&&c.h===1) return head+`<div style="display:flex;align-items:center;justify-content:center;height:100%">${ico}</div>`;
-    const cb=(ic2,t,col)=>`<div style="display:flex;align-items:center;justify-content:center;gap:10px;background:#161B24;border-radius:12px;padding:12px;color:${col};font-weight:600"><span class="mdi mdi-${ic2}"></span>${t}</div>`;
-    return head+`<div style="display:flex;flex-direction:column;gap:8px;flex:1;justify-content:center;margin-top:6px">${cb('chevron-up','Open','var(--blue)')}${cb('stop','Stop','var(--t2)')}${cb('chevron-down','Close','var(--blue)')}</div>`; }
+    const cb=(ic2,t,col)=>`<div style="display:flex;align-items:center;justify-content:center;gap:10px;background:#161B24;border-radius:12px;padding:12px;color:${col};font-weight:600;min-width:0"><span class="mdi mdi-${ic2}"></span>${t}</div>`;
+    const btns=cb('chevron-up','Open','var(--blue)')+cb('stop','Stop','var(--t2)')+cb('chevron-down','Close','var(--blue)');
+    if(c.h===1) return head+`<div class="toprow">${ico}${nme}</div><div style="display:flex;gap:8px;flex:1;align-items:stretch;margin-top:8px">${btns.replaceAll('padding:12px','padding:6px 10px;flex:1')}</div>`;
+    return head+`<div style="display:flex;flex-direction:column;gap:8px;flex:1;justify-content:center;margin-top:6px">${btns}</div>`; }
   if(ctrl==='lock'){ if(c.w===1) return head+`<div style="display:flex;flex-direction:column;align-items:center;justify-content:center;height:100%;gap:8px">${ico}<div class="csub" style="color:var(--teal)">Locked</div></div>`;
     if(c.w>=2&&c.h>=2) return head+`<div class="toprow">${ico}<span class="row" style="gap:5px;color:var(--t2)"><span class="mdi mdi-battery" style="font-size:16px"></span><span class="mono" style="font-size:12px">87%</span></span></div><div class="ct">${nm}</div><div class="csub" style="color:var(--teal)">Locked</div><div class="row" style="gap:8px;margin-top:auto"><div style="flex:1;text-align:center;padding:11px 0;border-radius:10px;background:var(--teal);color:var(--ink);font-weight:700">Lock</div><div style="flex:1;text-align:center;padding:11px 0;border-radius:10px;background:#161B24;color:var(--t2);font-weight:600">Unlock</div></div>`;
     return head+`<div class="toprow">${ico}<span class="csub" style="color:var(--teal)">Locked</span></div>${nme}`; }
@@ -644,18 +699,24 @@ function cardInner(c){ const def=C[c.ck], nm=c.name||def.label, big=c.w>=3, ctrl
     const volR=(mt)=>`<div class="row" style="align-items:center;gap:8px;${mt||''}"><span class="mdi mdi-volume-high" style="color:var(--t2);font-size:15px"></span><div class="hbar" style="flex:1"><i style="width:55%;background:var(--teal)"></i></div></div>`;
     if(c.w===1&&c.h===1) return head+`<div class="row" style="gap:8px"><div class="art" style="width:40px;height:40px;flex:none;border-radius:10px"></div><div style="min-width:0"><div class="ct" style="margin-top:0;font-size:13px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">Midnight…</div><div class="csub">M83</div></div></div><span class="tbtn main mdi mdi-pause" style="position:absolute;right:12px;bottom:10px;width:30px;height:30px"></span>`;
     if(c.h===1) return head+`<div class="row" style="gap:10px;height:100%;align-items:center"><div class="art" style="width:56px;height:56px;flex:none;border-radius:11px"></div><div style="flex:1;min-width:0">${tblk}</div>${hasVol?`<div class="row" style="align-items:center;gap:6px;width:130px"><span class="mdi mdi-volume-high" style="color:var(--t2);font-size:14px"></span><div class="hbar" style="flex:1"><i style="width:55%;background:var(--teal)"></i></div></div>`:''}<div class="row" style="gap:8px">${prevNext}</div></div>`;
-    if(c.w===1) return head+`<div class="art" style="width:100%;height:${c.h>=3?150:110}px;flex:none;border-radius:12px"></div><div style="margin-top:8px">${tblk}</div><div class="row" style="gap:8px;justify-content:center;margin-top:10px">${prevNext}</div>${hasVol?volR('margin-top:auto'):''}`;
+    if(c.w===1) return head+`<div class="art" style="width:100%;height:${c.h>=3?112:74}px;flex:none;border-radius:12px"></div><div style="margin-top:8px">${tblk}</div><div class="row" style="gap:8px;justify-content:center;margin-top:10px">${prevNext}</div>${hasVol?volR('margin-top:auto'):''}`;
     if(!huge) return head+`<div class="row" style="gap:12px"><div class="art" style="width:58px;height:58px;flex:none;border-radius:12px"></div><div style="flex:1;min-width:0">${tblk}</div></div><div class="row" style="gap:12px;justify-content:center;margin-top:12px">${isSonos?'<span class="tbtn mdi mdi-shuffle-variant"></span>':''}${prevNext}${isSonos?'<span class="tbtn mdi mdi-repeat"></span>':''}</div>${volR('margin-top:auto')}`;
     return head+`<div class="row" style="gap:14px"><div class="art" style="width:130px;height:130px;flex:none;border-radius:12px"></div><div style="flex:1;min-width:0;padding-top:6px"><div class="csub" style="color:var(--teal);font-size:11px;letter-spacing:.5px">${isSonos?'Kitchen · Sonos':'Playlist · Late Night Drive'}</div><div class="ct" style="margin-top:4px;font-size:22px">Midnight City</div><div class="csub">M83 · Hurry Up, We're Dreaming</div></div></div><div class="hbar" style="margin-top:14px"><i style="width:42%;background:var(--teal)"></i></div><div class="row" style="justify-content:space-between;margin-top:5px"><span class="csub">1:38</span><span class="csub">-2:25</span></div><div class="row" style="gap:16px;justify-content:center;margin-top:12px"><span class="tbtn mdi mdi-shuffle-variant"></span>${prevNext}<span class="tbtn mdi mdi-repeat"></span></div>${volR('margin-top:auto')}`; }
   if(ctrl==='remote'){ const tvi=`<span class="mdi mdi-television" style="color:var(--teal);font-size:22px"></span>`;
-    if(c.w===1&&c.h===1) return head+`<div class="toprow">${tvi}<span class="csub" style="font-weight:700;color:var(--tx)">LG OLED</span></div><div class="row" style="justify-content:space-between;margin-top:auto"><span class="mdi mdi-volume-minus" style="color:var(--t2)"></span><span class="mdi mdi-power" style="color:var(--red)"></span><span class="mdi mdi-volume-plus" style="color:var(--t2)"></span></div>`;
     const pw=`<div class="pwr"><span class="mdi mdi-power"></span></div>`;
+    // 1-row strip (gen mini row): title + power/prev/play/next buttons
+    if(c.h===1){ const tr=c.w>=2?['skip-previous','play','skip-next']:['play'];
+      return head+`<div class="toprow">${tvi}<span class="csub" style="font-weight:700;color:var(--tx);overflow:hidden;text-overflow:ellipsis;white-space:nowrap">LG OLED</span></div><div class="row" style="justify-content:center;gap:8px;margin-top:auto"><span class="tbtn mdi mdi-power" style="background:#2a1414;color:var(--red);width:${c.w>=2?46:40}px;height:40px"></span>${tr.map(b=>`<span class="tbtn${b==='play'?' main':''} mdi mdi-${b}" style="width:${c.w>=2?46:40}px;height:40px"></span>`).join('')}</div>`; }
+    // 1-wide tall (gen column): power + stacked VOL/CH buttons
+    if(c.w===1){ const st=['volume-plus','volume-minus','chevron-up','chevron-down'].slice(0,c.h>=3?4:2);
+      return head+`<div class="toprow">${tvi}${pw}</div><div style="flex:1;display:flex;flex-direction:column;gap:8px;margin-top:8px">${st.map(b=>`<div class="vrow" style="flex:1;max-height:56px;justify-content:center"><span class="mdi mdi-${b}"></span></div>`).join('')}</div>`; }
     const chips=(n)=>`<div class="row" style="gap:6px;flex-wrap:wrap">${['HDMI 1','Apple TV','Roku','Cable'].slice(0,n).map((s,i)=>`<span class="srcchip${i===0?' on':''}">${s}</span>`).join('')}</div>`;
-    const volSld=`<div class="vrow" style="flex:1"><span class="mdi mdi-volume-low"></span><span style="flex:1">VOL</span><span class="mdi mdi-volume-high"></span></div>`;
-    if(c.w<=2&&c.h<=2) return head+`<div class="tvhdr">${tvi}<div style="flex:1;min-width:0"><div style="font-size:15px;font-weight:700">LG OLED · Living Rm</div></div>${pw}</div><div style="margin-top:10px">${chips(2)}</div><div class="row" style="margin-top:8px;gap:8px">${volSld}<span class="tvbtn mdi mdi-volume-mute"></span></div><div class="row" style="margin-top:8px;gap:8px"><div class="vrow" style="flex:1"><span class="mdi mdi-chevron-down"></span><span style="flex:1;text-align:center">CH</span><span class="mdi mdi-chevron-up"></span></div><span class="tvbtn mdi mdi-play" style="color:var(--teal)"></span></div>`;
+    // 2-row band (gen band): header + VOL/CH button row + transport row
+    if(c.h<=2) return head+`<div class="tvhdr">${tvi}<div style="flex:1;min-width:0"><div style="font-size:15px;font-weight:700">LG OLED</div></div>${pw}</div><div class="row" style="justify-content:center;gap:8px;margin-top:10px"><span class="tbtn mdi mdi-volume-minus"></span><span class="tbtn mdi mdi-volume-plus"></span><span class="tbtn mdi mdi-chevron-down"></span><span class="tbtn mdi mdi-chevron-up"></span></div><div class="row" style="justify-content:center;gap:8px;margin-top:auto"><span class="tbtn mdi mdi-skip-previous"></span><span class="tbtn main mdi mdi-play"></span><span class="tbtn mdi mdi-skip-next"></span></div>`;
     const dsz=Math.min(c.h*48,230), ok=Math.round(dsz*0.42);
     const dpad=`<div class="dpad" style="width:${dsz}px;height:${dsz}px"><div class="ar up mdi mdi-chevron-up"></div><div class="ar lf mdi mdi-chevron-left"></div><div class="ok" style="width:${ok}px;height:${ok}px">OK</div><div class="ar rt mdi mdi-chevron-right"></div><div class="ar dn mdi mdi-chevron-down"></div></div>`;
-    if(c.h<=2) return head+`<div class="row" style="flex:1;gap:14px;align-items:center">${dpad}<div style="flex:1;display:flex;flex-direction:column;gap:8px;justify-content:center">${chips(3)}${volSld}<div class="row" style="gap:8px"><span class="tvbtn mdi mdi-arrow-left"></span><span class="tvbtn mdi mdi-home"></span><div class="tvbtn trans" style="flex:1"><span class="mdi mdi-skip-previous"></span><span class="mdi mdi-play" style="color:var(--teal)"></span><span class="mdi mdi-skip-next"></span></div><span class="tvbtn pad mdi mdi-gesture-tap"></span></div></div></div>`;
+    // compact d-pad (gen: >=2 wide, >=3 tall, below rich): header + d-pad + 3-button transport
+    if(!(c.w>=4&&c.h>=4)) return head+`<div class="tvhdr">${tvi}<div style="flex:1;min-width:0"><div style="font-size:18px;font-weight:700">LG OLED</div></div>${pw}</div><div style="flex:1;display:flex;align-items:center;justify-content:center">${dpad}</div><div class="row" style="gap:8px"><span class="tbtn mdi mdi-skip-previous"></span><span class="tbtn main mdi mdi-play"></span><span class="tbtn mdi mdi-skip-next"></span></div>`;
     const volcol=`<div class="vcc"><span class="mdi mdi-volume-plus"></span><span class="vcl">VOL</span><span class="mdi mdi-volume-minus"></span></div>`;
     const chcol=`<div class="vcc"><span class="mdi mdi-chevron-up"></span><span class="vcl">CH</span><span class="mdi mdi-chevron-down"></span></div>`;
     const header=`<div class="tvhdr">${tvi}<div style="flex:1;min-width:0"><div style="font-size:18px;font-weight:700">LG OLED</div><div class="csub">Living Room · HDMI 1</div></div>${pw}</div>`;
@@ -663,15 +724,42 @@ function cardInner(c){ const def=C[c.ck], nm=c.name||def.label, big=c.w>=3, ctrl
     const bar=`<div class="tvbar"><div class="tvbtn mdi mdi-arrow-left"></div><div class="tvbtn mdi mdi-home"></div><div class="tvbtn pad" onclick="${tog('pad')}"><span class="mdi mdi-gesture-tap"></span> Pad</div><div class="tvbtn" onclick="${tog('whl')}"><span class="mdi mdi-swap-vertical"></span></div><div class="tvbtn trans"><span class="mdi mdi-skip-previous"></span><span class="mdi mdi-play" style="color:var(--teal)"></span><span class="mdi mdi-skip-next"></span><span class="mdi mdi-fast-forward"></span></div><div class="tvbtn mdi mdi-menu"></div><div class="tvbtn mdi mdi-volume-mute"></div></div>`;
     const ovPad=`<div class="tvov tvov-pad" onclick="event.stopPropagation();this.style.display='none'"><span class="mdi mdi-gesture-tap" style="font-size:34px;color:var(--teal)"></span><div style="font-weight:700;margin-top:4px">TRACKPAD</div><div class="csub">Tap · swipe · Back / Home / Volume</div><div class="row" style="gap:6px;margin-top:10px"><span class="tbtn mdi mdi-arrow-left"></span><span class="tbtn mdi mdi-home"></span><span class="tbtn mdi mdi-volume-minus"></span><span class="tbtn mdi mdi-volume-mute"></span><span class="tbtn mdi mdi-volume-plus"></span></div></div>`;
     const ovWhl=`<div class="tvov tvov-whl" style="border-color:#4F91FF" onclick="event.stopPropagation()"><span class="mdi mdi-chevron-up" style="font-size:32px;color:#4F91FF"></span><div class="csub" style="margin:8px 0;letter-spacing:1px">SCROLL</div><span class="mdi mdi-chevron-down" style="font-size:32px;color:#4F91FF"></span></div>`;
-    const main=`<div class="tvmain">${header}${c.h>=5?'<div style="margin-top:8px">'+chips(c.w>=5?4:3)+'</div>':''}<div style="position:relative;flex:1;display:flex"><div class="tvcenter" style="flex:1">${volcol}${dpad}${chcol}</div>${ovPad}${ovWhl}</div>${bar}</div>`;
+    const main=`<div class="tvmain">${header}<div style="margin-top:8px">${chips(c.w>=5?4:3)}</div><div style="position:relative;flex:1;display:flex"><div class="tvcenter" style="flex:1">${volcol}${dpad}${chcol}</div>${ovPad}${ovWhl}</div>${bar}</div>`;
     if(c.w>=6){ const A=(c.apps||APP_DEFAULT).slice(0,5).map(n=>[n, APP_CAT[n]||'#555']);
       const sb=`<div class="tvapps"><div class="tvapps-h">APPS · pre-baked</div>${A.map((a,i)=>`<div class="tvapp${i===0?' on':''}" style="${i===0?'background:'+a[1]+';border-color:'+a[1]:''}"><span style="width:24px;height:24px;border-radius:6px;background:${i===0?'rgba(255,255,255,.18)':a[1]};display:inline-flex;align-items:center;justify-content:center;font-size:12px;font-weight:800;color:#fff">${a[0][0]}</span>${a[0]}</div>`).join('')}</div>`;
       return head+`<div class="tvr">${sb}${main}</div>`; }
     return head+`<div class="tvr">${main}</div>`; }
+  if(ctrl==='tv_app'){ const src=(c.source||'').trim(), lab=(c.label||'').trim()||src||nm;
+    const st=appStyle(src||lab);
+    const box=st.known?`background:${st.col}`:`background:#10141C;border:1px solid var(--teal)`;
+    const mk2=(sz)=>`<span style="font-size:${sz}px;font-weight:800;color:#fff;flex:0 0 auto">${st.mark}</span>`;
+    let body;
+    if(c.h===1&&c.w===1) body=`<div style="display:flex;align-items:center;justify-content:center;height:100%">${mk2(30)}</div>`;
+    else if(c.h===1) body=`<div style="display:flex;align-items:center;gap:12px;height:100%;padding:0 18px">${mk2(28)}<span style="font-size:16px;font-weight:700;color:#fff;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${lab}</span></div>`;
+    else if(c.w===1) body=`<div style="display:flex;flex-direction:column;align-items:center;justify-content:space-between;height:100%;padding:18px 8px">${mk2(30)}<span style="font-size:12px;font-weight:600;color:#fff;max-width:100%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${lab}</span></div>`;
+    else body=`<div style="display:flex;flex-direction:column;align-items:center;justify-content:center;height:100%;gap:8px">${mk2(34)}<span style="font-size:16px;font-weight:700;color:#fff;max-width:90%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${lab}</span></div>`;
+    return `<div style="position:absolute;inset:0;border-radius:inherit;${box}">${body}</div>`+head; }
+  if(ctrl==='tv_apps'){ const list=(c.sources&&c.sources.length)?c.sources:APP_DEFAULT.map(s=>({source:s}));
+    // device parity (gen c_tv_apps): c_btngrid's clamped adaptive grid, brand-colored tiles
+    const wpx=c.w*140+(c.w-1)*14, hpx=c.h*100+(c.h-1)*14, n=list.length;
+    let cols=c.h===1?n:(n===10?5:(n===6?3:2));
+    cols=Math.max(1,Math.min(cols,n,Math.floor((wpx-28+10)/106)));
+    const maxRows=Math.max(1,Math.floor((hpx-52-14+10)/50));
+    const shown=Math.min(n,cols*maxRows);
+    const narrow=Math.floor((wpx-28-(cols-1)*10)/cols)<120;
+    let btns='';
+    for(let i=0;i<shown;i++){ const s=list[i]||{}; const src=(s.source||'').trim(); const snm=(s.label||'').trim()||src||'Source';
+      const st=appStyle(src||snm);
+      const sty=st.known?`background:${st.col};border-color:${st.col}`:`background:#10141C;border-color:var(--teal)`;
+      const badge=narrow?'':`<span style="width:24px;height:24px;flex:0 0 auto;border-radius:6px;background:${st.known?'rgba(255,255,255,.22)':'var(--teal)'};display:inline-flex;align-items:center;justify-content:center;font-size:11px;font-weight:800;color:#fff">${st.mark}</span>`;
+      btns+=`<div class="spk" style="${sty};color:#fff">${badge}${snm}</div>`; }
+    return head+`<div class="toprow">${ico}<span class="csub">${nm}</span></div><div class="spkgrid" style="grid-template-columns:repeat(${cols},1fr)">${btns}</div>`; }
   if(ctrl==='tv_dpad') return head+`<div class="toprow">${ico}<span class="csub">${nm}</span></div><div style="flex:1;display:flex;align-items:center;justify-content:center"><div style="display:grid;grid-template-columns:repeat(3,48px);grid-template-rows:repeat(3,48px);gap:7px"><div></div><div class="tbtn mdi mdi-chevron-up"></div><div></div><div class="tbtn mdi mdi-chevron-left"></div><div class="tbtn main">OK</div><div class="tbtn mdi mdi-chevron-right"></div><div></div><div class="tbtn mdi mdi-chevron-down"></div><div></div></div></div>`;
   if(ctrl==='tv_transport') return head+`<div class="toprow">${ico}<span class="csub">${nm}</span></div><div class="row" style="flex:1;justify-content:center;gap:8px;flex-wrap:wrap"><span class="tbtn mdi mdi-arrow-left"></span><span class="tbtn mdi mdi-home"></span><span class="tbtn mdi mdi-rewind"></span><span class="tbtn main mdi mdi-play-pause"></span><span class="tbtn mdi mdi-fast-forward"></span></div>`;
-  if(ctrl==='tv_channel'){ const hz=c.w>c.h; return head+`<div class="toprow">${ico}<span class="csub">${nm}</span></div><div style="flex:1;display:flex;${hz?'flex-direction:row':'flex-direction:column'};gap:8px;align-items:center;justify-content:center"><div class="tbtn" style="width:auto;padding:6px 14px;border-radius:11px;gap:4px">CH<span class="mdi mdi-chevron-up"></span></div><div class="tbtn" style="width:auto;padding:6px 14px;border-radius:11px;gap:4px">CH<span class="mdi mdi-chevron-down"></span></div></div>`; }
-  if(ctrl==='tv_volume'){ const hz=c.w>c.h; return head+`<div class="toprow">${ico}<span class="csub">${nm}</span></div><div style="flex:1;display:flex;${hz?'flex-direction:row':'flex-direction:column'};gap:8px;align-items:center;justify-content:center"><span class="tbtn mdi mdi-volume-plus"></span><span class="tbtn mdi mdi-volume-mute"></span><span class="tbtn mdi mdi-volume-minus"></span></div>`; }
+  if(ctrl==='tv_channel'){ const hz=c.h===1; return head+`<div class="toprow">${ico}<span class="csub">${nm}</span></div><div style="flex:1;display:flex;${hz?'flex-direction:row':'flex-direction:column'};gap:8px;align-items:center;justify-content:center"><div class="tbtn" style="width:auto;padding:6px 14px;border-radius:11px;gap:4px">CH<span class="mdi mdi-chevron-${hz?'down':'up'}"></span></div><div class="tbtn" style="width:auto;padding:6px 14px;border-radius:11px;gap:4px">CH<span class="mdi mdi-chevron-${hz?'up':'down'}"></span></div></div>`; }
+  if(ctrl==='tv_volume'){ const hz=c.h===1;
+    const bs=hz?(c.w>=2?['volume-minus','volume-mute','volume-plus']:['volume-minus','volume-plus']):['volume-plus','volume-mute','volume-minus'];
+    return head+`<div class="toprow">${ico}<span class="csub">${nm}</span></div><div style="flex:1;display:flex;${hz?'flex-direction:row':'flex-direction:column'};gap:8px;align-items:center;justify-content:center">${bs.map(b=>`<span class="tbtn mdi mdi-${b}"></span>`).join('')}</div>`; }
   if(ctrl==='vol') return head+`<div class="toprow">${ico}<span class="csub">${nm}</span></div><div class="hbar" style="margin-top:10px"><i style="width:40%;background:var(--teal)"></i></div><div class="row" style="justify-content:center;gap:12px;margin-top:auto"><span class="tbtn mdi mdi-volume-minus"></span><span class="tbtn mdi mdi-volume-mute"></span><span class="tbtn mdi mdi-volume-plus"></span></div>`;
   if(ctrl==='vols'){ const ents=(c.entities&&c.entities.length)?c.entities:['media_player.living_room','media_player.kitchen','media_player.bedroom']; const dv=[40,60,25,55,70,35];
     const rows=ents.map((e,i)=>`<div style="margin-bottom:12px"><div style="font-size:13px;font-weight:600;color:var(--tx);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;margin-bottom:5px">${nm2(e)}</div><div class="hbar"><i style="width:${dv[i%6]}%;background:var(--teal)"></i></div></div>`).join('');
@@ -707,9 +795,17 @@ function cardInner(c){ const def=C[c.ck], nm=c.name||def.label, big=c.w>=3, ctrl
     for(let i=0;i<n;i++){ const e=ents[i]; const on=e&&i%2===0; btns+=`<div class="lgbtn${on?' on':''}"><span class="mdi mdi-lightbulb${on?'':'-outline'}"></span><span class="lgn">${e?nm2(e):'Light'}</span></div>`; }
     return head+`<div class="toprow">${ico}<span class="csub">${nm} · ${onN} on · ${ents.length}/${n}</span></div><div class="lggrid" style="grid-template-columns:repeat(${c.w},1fr);grid-template-rows:repeat(${brows},1fr)">${btns}</div>`; }
   if(ctrl==='btngrid'){ const ents=c.entities||[]; const bi=def.btnIcon||'speaker'; const word=(c.ck==='sonos_sources'||c.ck==='tv_sources')?'source':'speaker'; const Word=word.charAt(0).toUpperCase()+word.slice(1);
-    if(c.w===1) return head+`<div class="toprow">${ico}<span class="csub">${nm}</span></div><div class="ddrop"><span>${ents[0]?nm2(ents[0]):'Choose '+word}</span><span class="mdi mdi-chevron-down"></span></div>`;
-    const n=cap(c), cols=c.h===1?n:(n===10?5:(n===6?3:2)); let btns='';
-    for(let i=0;i<n;i++){ const e=ents[i]; btns+=`<div class="spk${i===0&&e?' on':''}"><span class="mdi mdi-${bi}"></span>${e?nm2(e):Word}</div>`; }
+    // device parity (gen c_btngrid): cols clamped to >=96px tiles, count to
+    // >=40px rows; tiles narrower than 120px drop the icon
+    const wpx=c.w*140+(c.w-1)*14, hpx=c.h*100+(c.h-1)*14;
+    const n=cap(c);
+    let cols=c.h===1?n:(n===10?5:(n===6?3:2));
+    cols=Math.max(1,Math.min(cols,n,Math.floor((wpx-28+10)/106)));
+    const maxRows=Math.max(1,Math.floor((hpx-52-14+10)/50));
+    const shown=Math.min(n,cols*maxRows);
+    const narrow=Math.floor((wpx-28-(cols-1)*10)/cols)<120;
+    let btns='';
+    for(let i=0;i<shown;i++){ const e=ents[i]; btns+=`<div class="spk${i===0&&e?' on':''}">${narrow?'':`<span class="mdi mdi-${bi}"></span>`}${e?nm2(e):Word}</div>`; }
     return head+`<div class="toprow">${ico}<span class="csub">${nm}</span></div><div class="spkgrid" style="grid-template-columns:repeat(${cols},1fr)">${btns}</div>`; }
   if(ctrl==='spk'){ const ents=(c.entities&&c.entities.length)?c.entities:['media_player.living_room','media_player.kitchen','media_player.office','media_player.patio'];
     const n=ents.length, g=Math.max(1,Math.ceil(n/2)), V=[42,28,55,35,60,22,48,30], nmv=(i)=>nm2(ents[i]);
@@ -719,7 +815,7 @@ function cardInner(c){ const def=C[c.ck], nm=c.name||def.label, big=c.w>=3, ctrl
     let rows='';
     for(let i=0;i<n;i++){ const gr=i<g, tbg=gr?'#101D1C':'#14161C', tbd=gr?'var(--onbd)':'var(--bd)';
       const right=gr?`<span class="csub" style="color:var(--teal);font-weight:700;letter-spacing:1px;font-size:10px">LINKED</span>`:`<span class="mdi mdi-plus" style="color:var(--teal);font-size:18px"></span>`;
-      rows+=`<div style="background:${tbg};border:1px solid ${tbd};border-radius:12px;padding:8px 12px;margin-bottom:8px"><div class="row" style="gap:8px;align-items:center"><span class="mdi mdi-speaker" style="color:${gr?'var(--teal)':'var(--t3)'}"></span><span style="flex:1;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;color:${gr?'var(--tx)':'var(--t2)'}">${nmv(i)}</span>${right}</div><div class="hbar" style="margin-top:7px;margin-left:26px"><i style="width:${V[i%8]}%;background:var(--teal)"></i></div></div>`; }
+      rows+=`<div style="background:${tbg};border:1px solid ${tbd};border-radius:12px;padding:8px 12px;margin-bottom:8px"><div class="row" style="gap:8px;align-items:center"><span class="mdi mdi-speaker" style="color:${gr?'var(--teal)':'var(--t3)'}"></span><span style="flex:1;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;color:${gr?'var(--tx)':'var(--t2)'}">${nmv(i)}</span>${right}</div>${c.w===1?'':`<div class="hbar" style="margin-top:7px;margin-left:26px"><i style="width:${V[i%8]}%;background:var(--teal)"></i></div>`}</div>`; }
     return head+`<div class="toprow"><span class="mdi mdi-speaker-multiple" style="color:var(--teal)"></span><span class="csub" style="letter-spacing:1px">SPEAKERS · TAP TO LINK OR LEAVE</span></div><div style="margin-top:8px;overflow:hidden">${rows}</div>`; }
   if(ctrl==='shortcuts'){ const n=cap(c), sc=c.shortcuts||[]; let btns='';
     for(let i=0;i<n;i++){ const s=sc[i]; btns+=`<div class="scbtn${s?'':' empty'}">${s?`<span class="mdi mdi-${s.icon}"></span><span class="scn">${s.label}</span>`:`<span class="mdi mdi-plus"></span>`}</div>`; }
@@ -728,9 +824,10 @@ function cardInner(c){ const def=C[c.ck], nm=c.name||def.label, big=c.w>=3, ctrl
     const badge=`<span class="osq"><span class="mdi mdi-power-socket-us"></span></span>`;
     if(c.w===1&&c.h===1) return `<div style="position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:8px;background:#3a2e0a"><span class="mdi mdi-power-plug" style="font-size:26px;color:var(--amber)"></span><span style="font-weight:600;color:var(--amber)">${ents[0]?nm2(ents[0]):nm}</span></div>`+head;
     if(n===1) return head+`<div style="display:flex;flex-direction:column;align-items:center;justify-content:center;height:100%;gap:10px">${badge}<div class="opb on" style="width:62px;height:62px;font-size:30px"><span class="mdi mdi-power"></span></div><div style="text-align:center"><div style="color:var(--teal);font-weight:700">On</div><div class="csub">${ents[0]?nm2(ents[0]):nm}</div></div></div>`;
-    const ne=ents.length?Math.min(ents.length,n):1; let cells='';
+    const ne=ents.length?Math.min(ents.length,n):1; const slim=c.h===1; let cells='';
     for(let i=0;i<ne;i++){ const e=ents[i]; const on=!!e&&i%2===0;
-      cells+=`<div class="ocell2"><span class="ocl">${e?nm2(e):'S'+(i+1)}</span><div class="opb${on?' on':''}"><span class="mdi mdi-power"></span></div></div>`; }
+      cells+=`<div class="ocell2">${slim?'':`<span class="ocl">${e?nm2(e):'S'+(i+1)}</span>`}<div class="opb${on?' on':''}" style="${slim?'width:38px;height:38px;font-size:19px':''}"><span class="mdi mdi-power"></span></div></div>`; }
+    if(slim) return head+`<div class="toprow">${ico}<span class="csub" style="overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${nm}</span></div><div class="ogrid2" style="grid-template-columns:repeat(${ne},1fr);margin-top:6px">${cells}</div>`;
     return head+`<div class="ohead">${badge}<div style="font-size:14px;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:100%">${nm}</div></div><div class="ogrid2" style="${horiz?'grid-template-columns:repeat('+ne+',1fr)':'grid-template-rows:repeat('+ne+',1fr)'}">${cells}</div>`; }
   if(ctrl==='playlist'){ const isS=c.ck==='sonos_fav'; const accent=isS?'var(--teal)':'#1DB954';
     if(c.w===1) return head+`<div style="display:flex;flex-direction:column;align-items:center;justify-content:center;height:100%;gap:8px"><span class="mdi mdi-${def.icon}" style="font-size:26px;color:${accent}"></span><div style="font-size:12px;font-weight:600;text-align:center">${c.pl||nm}</div></div>`;
@@ -755,14 +852,92 @@ function renderGrid(){ ROWS=rowsFor(); const g=document.getElementById('grid');
   g.style.gridTemplateRows=`repeat(${ROWS},100px)`; g.style.top=((L.pages[curPage].header&&L.pages[curPage].header.on)?96:22)+'px'; g.style.height=(ROWS*100+(ROWS-1)*14)+'px'; g.innerHTML='';
   for(let i=0;i<COLS*ROWS;i++){ const cell=document.createElement('div'); cell.className='gcell'; cell.style.gridColumn=(i%COLS)+1; cell.style.gridRow=Math.floor(i/COLS)+1; g.appendChild(cell); }
   for(const c of curCards()){ const def=C[c.ck];
-    const d=document.createElement('div'); d.className='pc'+(sel===c.id?' sel':'')+(['light','dial','toggle'].includes(def.ctrl)?' on':'');
+    const d=document.createElement('div'); d.className='pc'+(sel===c.id?' sel':'')+(['light','dial','toggle'].includes(def.ctrl)?' on':'')+(isCutSrc(c)?' cutsrc':'');
     d.style.gridColumn=`${c.x} / span ${c.w}`; d.style.gridRow=`${c.y} / span ${c.h}`;
-    d.innerHTML=cardInner(c); d.dataset.id=c.id; d.onclick=(e)=>{e.stopPropagation(); sel=c.id; renderInspector(); markSel();}; attachDrag(d,c); g.appendChild(d); }
+    d.innerHTML=cardInner(c); d.dataset.id=c.id; d.onclick=(e)=>{e.stopPropagation(); sel=c.id; renderInspector(); markSel();}; attachDrag(d,c); attachResize(d,c); g.appendChild(d); }
   document.getElementById('nextaff').style.display=(curSub<L.pages[curPage].subpages.length-1)?'flex':'none'; }
 function markSel(){ document.querySelectorAll('.pc').forEach(p=>p.classList.toggle('sel', p.dataset.id===sel)); }
 
-function sizeButtons(c, container){ C[c.ck].spans.forEach(([w,h])=>{ const b=document.createElement('div'); b.className='szb'+(w===c.w&&h===c.h?' on':''); b.textContent=`${w}×${h}`;
-  b.onclick=()=>{ if(fits(c.x,c.y,w,h,c.id)){c.w=w;c.h=h;} else if(firstFit(w,h)){const[nx,ny]=firstFit(w,h);c.x=nx;c.y=ny;c.w=w;c.h=h;toast('Moved to fit new size');} else {toast('No room for that size');return;} renderGrid();renderInspector(); }; container.appendChild(b); }); }
+// ===== free drag-resize (bottom-right handle, shown on the selected card) =====
+// Grid renders 1:1 at device px: 140×100 cells, 14px gutters.
+const CELL_W=140, CELL_H=100, GUT=14;
+function attachResize(d,c){
+  const hnd=document.createElement('div'); hnd.className='rzh'; hnd.title='Drag to resize';
+  hnd.innerHTML='<span class="mdi mdi-resize-bottom-right"></span>'; d.appendChild(hnd);
+  hnd.addEventListener('pointerdown',(e)=>{ e.stopPropagation(); e.preventDefault();   // never let the handle start a move-drag
+    sel=c.id; markSel();
+    const [mw,mh]=(C[c.ck].min||[1,1]); const maxW=COLS-c.x+1, maxH=ROWS-c.y+1;
+    const grid=document.getElementById('grid');
+    const badge=document.createElement('div'); badge.className='szbadge';
+    const apply=()=>{ d.style.gridColumn=`${c.x} / span ${c.w}`; d.style.gridRow=`${c.y} / span ${c.h}`;
+      d.innerHTML=cardInner(c); d.appendChild(hnd); badge.textContent=c.w+'×'+c.h; d.appendChild(badge); };   // live preview re-render at the new span
+    d.setPointerCapture(e.pointerId); d.classList.add('rsz'); apply();                 // capture on the CARD so re-rendering innerHTML can't kill the drag
+    const move=(ev)=>{ const r=grid.getBoundingClientRect();
+      const px=ev.clientX-(r.left+(c.x-1)*(CELL_W+GUT)), py=ev.clientY-(r.top+(c.y-1)*(CELL_H+GUT));
+      let tw=Math.max(mw,Math.min(maxW,Math.round((px+GUT)/(CELL_W+GUT))));
+      let th=Math.max(mh,Math.min(maxH,Math.round((py+GUT)/(CELL_H+GUT))));
+      let nw=c.w, nh=c.h;                                                              // clamp growth at the first obstruction, per axis
+      if(fits(c.x,c.y,tw,th,c.id)){ nw=tw; nh=th; }
+      else if(fits(c.x,c.y,tw,c.h,c.id)) nw=tw;
+      else if(fits(c.x,c.y,c.w,th,c.id)) nh=th;
+      if(nw!==c.w||nh!==c.h){ c.w=nw; c.h=nh; apply(); } };
+    const up=(ev)=>{ try{ d.releasePointerCapture(ev.pointerId); }catch(_){}
+      d.classList.remove('rsz');
+      d.removeEventListener('pointermove',move); d.removeEventListener('pointerup',up); d.removeEventListener('pointercancel',up);
+      renderGrid(); renderInspector(); };                                              // w/h already persisted on c — full re-render
+    d.addEventListener('pointermove',move); d.addEventListener('pointerup',up); d.addEventListener('pointercancel',up); });
+}
+
+// ===== copy / cut / paste (across pages and sub-pages) =====
+function selCard(){ return sel?curCards().find(x=>x.id===sel):null; }
+function isCutSrc(c){ return !!(CLIP&&CLIP.cut&&CLIP.cut.id===c.id&&CLIP.cut.page===curPage&&CLIP.cut.sub===curSub); }
+function copySel(cut){ const c=selCard(); if(!c) return;
+  CLIP={card:JSON.parse(JSON.stringify(c)), cut:cut?{page:curPage,sub:curSub,id:c.id}:null};
+  renderGrid(); renderTabs();
+  toast((cut?'Cut':'Copied')+' “'+(c.name||C[c.ck].label)+'” — Ctrl+V pastes to the current sub-page'); }
+function pasteClip(){ if(!CLIP||!CLIP.card) return; ROWS=rowsFor();
+  const clone=JSON.parse(JSON.stringify(CLIP.card)); clone.id=uid();                   // new id — unique across ALL pages (firmware widget ids)
+  if(C[clone.ck]&&C[clone.ck].multi&&!clone.entities) clone.entities=[];
+  if(clone.ck==='shortcuts'&&!clone.shortcuts) clone.shortcuts=[];
+  if(clone.ck==='tv_apps'&&!clone.sources) clone.sources=[];
+  const [mw,mh]=(C[clone.ck]&&C[clone.ck].min)||[1,1];
+  const w=Math.max(mw,Math.min(clone.w,COLS)), h=Math.max(mh,Math.min(clone.h,ROWS));
+  let x=clone.x, y=clone.y;
+  // Pasting a CUT card onto its own sub-page: its original footprint must not
+  // count as an obstruction (it is removed on successful placement below).
+  const exc=(CLIP.cut&&CLIP.cut.page===curPage&&CLIP.cut.sub===curSub)?CLIP.cut.id:null;
+  if(!fits(x,y,w,h,exc)){ const f=firstFit(w,h,exc);
+    if(!f){ toast('No room on this sub-page — resize or move a card, or add a sub-page'); return; }   // keep CLIP; abort
+    x=f[0]; y=f[1]; }
+  clone.x=x; clone.y=y; clone.w=w; clone.h=h;
+  curCards().push(clone); sel=clone.id;
+  if(CLIP.cut){ const cc=CLIP.cut, pg=L.pages[cc.page], arr=pg&&pg.subpages&&pg.subpages[cc.sub];   // remove the original only AFTER a successful placement
+    if(arr){ const i=arr.findIndex(k=>k&&k.id===cc.id); if(i>=0) arr.splice(i,1); }
+    CLIP.cut=null; }                                                                   // a second paste acts as copy
+  renderAll(); toast('Pasted ✓'); }
+function isEditable(t){ return !!(t&&(t.tagName==='INPUT'||t.tagName==='TEXTAREA'||t.tagName==='SELECT'||t.isContentEditable)); }
+document.addEventListener('keydown',(e)=>{ if(!L) return;
+  const modalOpen=document.getElementById('modal').style.display==='flex';
+  if(e.key==='Escape'){ if(modalOpen) closeModal(); else if(sel){ sel=null; renderInspector(); markSel(); } return; }
+  if(!(e.ctrlKey||e.metaKey)||modalOpen||isEditable(document.activeElement)) return;
+  const k=(e.key||'').toLowerCase();
+  // Don't hijack Ctrl+C when the user is copying selected TEXT (e.g. inspector readouts).
+  if(k==='c'&&window.getSelection&&String(window.getSelection())) return;
+  if(k==='c'&&selCard()){ e.preventDefault(); copySel(false); }
+  else if(k==='x'&&selCard()){ e.preventDefault(); copySel(true); }
+  else if(k==='v'&&CLIP){ e.preventDefault(); pasteClip(); } });
+
+// shared inspector footer for a selected card: size/position readout + Copy/Cut/Delete
+function cardActionsHTML(c){ return `<div class="field"><label>Size &amp; position</label><div class="mono" style="font-size:12px;color:var(--t2)">${c.w}×${c.h} at col ${c.x}, row ${c.y} — drag the card to move · drag its corner handle to resize</div></div>
+    <div style="display:flex;gap:6px;margin-bottom:8px">
+      <button class="btn ghost" id="copyCard" style="flex:1"><span class="mdi mdi-content-copy"></span> Copy</button>
+      <button class="btn ghost" id="cutCard" style="flex:1"><span class="mdi mdi-content-cut"></span> Cut</button>
+    </div>
+    <button class="btn ghost" id="delCard" style="width:100%;color:var(--red);border-color:#3a2422">Delete card</button>`; }
+function wireCardActions(el,c){
+  el.querySelector('#copyCard').onclick=()=>copySel(false);
+  el.querySelector('#cutCard').onclick=()=>copySel(true);
+  el.querySelector('#delCard').onclick=()=>{ const a=curCards(), i=a.indexOf(c); if(i>=0) a.splice(i,1); sel=null; renderGrid(); renderInspector(); }; }
 
 function renderInspector(){ const el=document.getElementById('insp'); const c=sel&&curCards().find(x=>x.id===sel);
   if(!c){ const hd=L.pages[curPage].header; const on=hd.on;
@@ -790,11 +965,9 @@ function renderInspector(){ const el=document.getElementById('insp'); const c=se
   if(def.ctrl==='shortcuts'){ const n=cap(c); c.shortcuts=c.shortcuts||[];
     el.innerHTML=`<h3 class="sec">${def.label}</h3>
       <div class="field"><label>Name</label><input id="fName" value="${(c.name||'').replace(/"/g,'&quot;')}"></div>
-      <div class="field"><label>Size (span)</label><div class="szrow" id="szrow"></div></div>
       <div class="field"><label>Shortcuts (${c.shortcuts.length}/${n})</label><div id="elist2"></div>
         <button class="btn ghost" id="addSc" style="width:100%;margin-top:6px">+ Add shortcut</button></div>
-      <button class="btn ghost" id="delCard" style="width:100%;color:var(--red);border-color:#3a2422">Delete card</button>`;
-    sizeButtons(c, el.querySelector('#szrow'));
+      ${cardActionsHTML(c)}`;
     const list=el.querySelector('#elist2');
     c.shortcuts.forEach((s,i)=>{ const r=document.createElement('div'); r.className='elrow';
       r.innerHTML=`<span style="min-width:0;overflow:hidden;text-overflow:ellipsis"><span class="mdi mdi-${s.icon}" style="color:var(--teal);margin-right:6px"></span>${s.label}</span><span class="x mdi mdi-close"></span>`;
@@ -802,42 +975,56 @@ function renderInspector(){ const el=document.getElementById('insp'); const c=se
     if(!c.shortcuts.length) list.innerHTML='<div class="csub" style="padding:4px 0">No shortcuts yet — add some.</div>';
     el.querySelector('#fName').oninput=(e)=>{c.name=e.target.value; renderGrid();};
     el.querySelector('#addSc').onclick=()=>{ if(c.shortcuts.length>=n){toast('Card is full ('+n+')');return;} shortcutModal(c); };
-    el.querySelector('#delCard').onclick=()=>{ const a=curCards(); a.splice(a.indexOf(c),1); sel=null; renderGrid(); renderInspector(); };
+    wireCardActions(el,c);
     return; }
   if(def.ctrl==='remote'){ c.apps=c.apps||APP_DEFAULT.slice();
     el.innerHTML=`<h3 class="sec">${def.label}</h3>
       <div class="field"><label>Name</label><input id="fName" value="${(c.name||'').replace(/"/g,'&quot;')}"></div>
       ${styleField(c)}
-      <div class="field"><label>Size (span)</label><div class="szrow" id="szrow"></div></div>
       <div class="field"><label>Apps sidebar (pick up to 5, shown on 6-wide)</label><div id="applist"></div></div>
-      <button class="btn ghost" id="delCard" style="width:100%;color:var(--red);border-color:#3a2422">Delete card</button>`;
+      ${cardActionsHTML(c)}`;
     wireStyle(el,c);
-    sizeButtons(c, el.querySelector('#szrow'));
     const al=el.querySelector('#applist');
     Object.keys(APP_CAT).forEach(nm=>{ const on=c.apps.includes(nm); const r=document.createElement('div'); r.className='erow'+(on?' on':'');
       r.innerHTML=`<span style="min-width:0;overflow:hidden;text-overflow:ellipsis"><span style="display:inline-block;width:14px;height:14px;border-radius:4px;background:${APP_CAT[nm]};margin-right:8px;vertical-align:middle"></span>${nm}</span><span class="mdi mdi-${on?'check-circle':'plus-circle-outline'}" style="color:${on?'var(--teal)':'var(--t2)'}"></span>`;
       r.onclick=()=>{ const i=c.apps.indexOf(nm); if(i>=0) c.apps.splice(i,1); else { if(c.apps.length>=APP_MAX){toast('Up to '+APP_MAX+' apps');return;} c.apps.push(nm); } renderGrid(); renderInspector(); };
       al.appendChild(r); });
     el.querySelector('#fName').oninput=(e)=>{c.name=e.target.value; renderGrid();};
-    el.querySelector('#delCard').onclick=()=>{ const a=curCards(); a.splice(a.indexOf(c),1); sel=null; renderGrid(); renderInspector(); };
+    wireCardActions(el,c);
+    return; }
+  if(def.ctrl==='tv_apps'){ c.sources=c.sources||[];
+    el.innerHTML=`<h3 class="sec">${def.label}</h3>
+      <div class="field"><label>Name</label><input id="fName" value="${(c.name||'').replace(/"/g,'&quot;')}"></div>
+      <div class="field"><label>Entity (media_player — the TV)</label><div style="display:flex;gap:6px"><input id="fEnt" value="${c.entity||''}" placeholder="none" style="flex:1"><button class="btn ghost" id="pickEnt" style="padding:8px 10px">Pick</button></div></div>
+      <div class="field"><label>Apps / inputs (${c.sources.length})</label><div id="srcRows"></div>
+        <button class="btn ghost" id="addSrc" style="width:100%;margin-top:6px">+ Add app / input</button></div>
+      ${cardActionsHTML(c)}`;
+    const list=el.querySelector('#srcRows');
+    c.sources.forEach((s,i)=>{ const st=appStyle((s.source||s.label||'')); const r=document.createElement('div'); r.className='elrow';
+      r.innerHTML=`<span style="min-width:0;overflow:hidden;text-overflow:ellipsis"><span style="display:inline-block;width:14px;height:14px;border-radius:4px;background:${st.known?st.col:'#10141C'};border:1px solid ${st.known?st.col:'var(--teal)'};margin-right:8px;vertical-align:middle"></span>${s.label||s.source}</span><span class="x mdi mdi-close"></span>`;
+      r.querySelector('.x').onclick=()=>{ c.sources.splice(i,1); renderGrid(); renderInspector(); }; list.appendChild(r); });
+    if(!c.sources.length) list.innerHTML='<div class="csub" style="padding:4px 0">No apps yet — the preview shows examples until you add some.</div>';
+    el.querySelector('#fName').oninput=(e)=>{c.name=e.target.value; renderGrid();};
+    el.querySelector('#fEnt').onchange=(e)=>{c.entity=e.target.value; renderGrid(); renderInspector();};
+    el.querySelector('#pickEnt').onclick=()=>openEntityPicker(c.ck,c);
+    el.querySelector('#addSrc').onclick=()=>sourceModal(c);
+    wireCardActions(el,c);
     return; }
   if(def.multi){ const n=cap(c); c.entities=c.entities||[];
     el.innerHTML=`<h3 class="sec">${def.label}</h3>
       <div class="field"><label>Name</label><input id="fName" value="${(c.name||'').replace(/"/g,'&quot;')}"></div>
       ${styleField(c)}
-      <div class="field"><label>Size (span)</label><div class="szrow" id="szrow"></div></div>
       <div class="field"><label>Entities (${c.entities.length}/${n>=99?'∞':n})</label><div id="elist2"></div>
         <button class="btn ghost" id="addEnt" style="width:100%;margin-top:6px">+ Add entity</button></div>
-      <button class="btn ghost" id="delCard" style="width:100%;color:var(--red);border-color:#3a2422">Delete card</button>`;
+      ${cardActionsHTML(c)}`;
     wireStyle(el,c);
-    sizeButtons(c, el.querySelector('#szrow'));
     const list=el.querySelector('#elist2');
     c.entities.forEach((e,i)=>{ const r=document.createElement('div'); r.className='elrow'; r.innerHTML=`<span style="min-width:0;overflow:hidden;text-overflow:ellipsis">${e}</span><span class="x mdi mdi-close"></span>`;
       r.querySelector('.x').onclick=()=>{ c.entities.splice(i,1); renderGrid(); renderInspector(); }; list.appendChild(r); });
     if(!c.entities.length) list.innerHTML='<div class="csub" style="padding:4px 0">No entities yet — add some.</div>';
     el.querySelector('#fName').oninput=(e)=>{c.name=e.target.value; renderGrid();};
     el.querySelector('#addEnt').onclick=()=>addEntityPicker(c);
-    el.querySelector('#delCard').onclick=()=>{ const a=curCards(); a.splice(a.indexOf(c),1); sel=null; renderGrid(); renderInspector(); };
+    wireCardActions(el,c);
     return; }
   if((c.ck==='sensor'||c.ck==='chart'||c.ck==='binary'||c.ck==='person') && c.entity && c.device_class===undefined) applyEntityMeta(c,c.entity);
   el.innerHTML=`<h3 class="sec">${def.label}</h3>
@@ -852,11 +1039,10 @@ function renderInspector(){ const el=document.getElementById('insp'); const c=se
     ${(c.ck==='binary'||c.ck==='person')?`<div class="field"><label>Active color <span style="color:var(--t3);font-weight:400">— dims when inactive</span></label><input id="fActive" type="color" value="${hexToInput(c.activeColor||'0x2ED5B8')}" style="width:56px;height:34px;padding:2px;border:1px solid var(--bd);border-radius:8px;background:#0F1117"></div>`:''}
     ${def.playlistField?`<div class="field"><label>${c.ck==='sonos_fav'?'Favorite':'Playlist'} name (used as the button label)</label><input id="fPl" value="${(c.pl||'').replace(/"/g,'&quot;')}" placeholder="e.g. Liked Songs"></div>`:''}
     ${def.speakerField?`<div class="field"><label>Speaker name <span style="color:var(--t3);font-weight:400">— exact Spotify Connect / source name</span></label><input id="fSpk" value="${(c.speaker||'').replace(/"/g,'&quot;')}" placeholder="e.g. Kitchen"></div>`:''}
+    ${def.sourceField?`<div class="field"><label>Source / app <span style="color:var(--t3);font-weight:400">— must match the TV's source list</span></label><input id="fSrc" list="srcOpts" value="${(c.source||'').replace(/"/g,'&quot;')}" placeholder="e.g. YouTube TV"><datalist id="srcOpts"></datalist></div>
+    <div class="field"><label>Label <span style="color:var(--t3);font-weight:400">— optional, defaults to the source name</span></label><input id="fSrcLbl" value="${(c.label||'').replace(/"/g,'&quot;')}" placeholder="(auto)"></div>`:''}
     ${ROW_CFG[c.ck]?`<div class="field"><label>List rows (default ${ROW_CFG[c.ck].def}, max ${ROW_CFG[c.ck].max}) — fewer = lighter firmware</label><input id="fRows" type="number" min="4" max="${ROW_CFG[c.ck].max}" value="${cardRows(c)}"></div>`:''}
-    <div class="field"><label>Size (span)</label><div class="szrow" id="szrow"></div></div>
-    <div class="field"><label>Position</label><div class="mono" style="font-size:12px;color:var(--t2)">col ${c.x}, row ${c.y} — drag on grid to move</div></div>
-    <button class="btn ghost" id="delCard" style="width:100%;color:var(--red);border-color:#3a2422">Delete card</button>`;
-  sizeButtons(c, el.querySelector('#szrow'));
+    ${cardActionsHTML(c)}`;
   wireStyle(el,c);
   el.querySelector('#fName').oninput=(e)=>{c.name=e.target.value; renderGrid();};
   el.querySelector('#fEnt').onchange=(e)=>{c.entity=e.target.value; applyEntityMeta(c,c.entity); renderGrid(); renderInspector();};
@@ -867,8 +1053,10 @@ function renderInspector(){ const el=document.getElementById('insp'); const c=se
   { const ac=el.querySelector('#fActive'); if(ac) ac.oninput=(e)=>{c.activeColor=inputToHex(e.target.value); renderGrid();}; }
   { const pe=el.querySelector('#fPl'); if(pe) pe.oninput=(e)=>{c.pl=e.target.value; renderGrid();}; }
   { const se=el.querySelector('#fSpk'); if(se) se.oninput=(e)=>{c.speaker=e.target.value; renderGrid();}; }
+  { const sr=el.querySelector('#fSrc'); if(sr){ sr.oninput=(e)=>{c.source=e.target.value; renderGrid();}; fillSourceList(el.querySelector('#srcOpts'), c.entity); } }
+  { const sl=el.querySelector('#fSrcLbl'); if(sl) sl.oninput=(e)=>{c.label=e.target.value; renderGrid();}; }
   { const re=el.querySelector('#fRows'); if(re) re.oninput=(e)=>{ const v=parseInt(e.target.value,10); c.rows=isNaN(v)?undefined:v; renderCapacity(); }; }
-  el.querySelector('#delCard').onclick=()=>{ const a=curCards(); a.splice(a.indexOf(c),1); sel=null; renderGrid(); renderInspector(); };
+  wireCardActions(el,c);
 }
 function fillRooms(){ const s=document.getElementById('instRoom'); if(!s) return;
   Object.values(AREAS).forEach(a=>{ const o=document.createElement('option'); o.value=a.name; o.textContent=a.name; if(L.install_room===a.name)o.selected=true; s.appendChild(o); });
@@ -882,7 +1070,8 @@ const LOAD_W={ tvremote:8, chart:6, speakers:5,
   songlist:4, sonos_library:4, shortcuts:4, volumes:4, group:4, lightgroup:4,
   media:3, spotify:3, sonos:3, camera:7, climate:2, weather:2, cover:2, outletgroup:2,
   spotify_playlists:2, playlist:2, sonos_fav:2, volume:2, tv_dpad:2, tv_transport:2,
-  tv_channel:2, tv_volume:2, tv_trackpad:2, tv_sources:2, sonos_sources:2 };
+  tv_channel:2, tv_volume:2, tv_trackpad:2, tv_sources:2, sonos_sources:2,
+  tv_app:2, tv_apps:3 };
 // Cards whose pre-built row count is a per-card 'rows' option. per = load per row,
 // set so the default count matches the old fixed weight (tracks 50->8, speakers 14->5),
 // so the meter's calibration is unchanged at defaults but drops as you trim rows.
@@ -915,57 +1104,51 @@ function attachDrag(el,c){ el.addEventListener('pointerdown',(e)=>{ if(e.target.
     let nx=Math.round((ev.clientX-r.left-(colW*c.w/2))/colW)+1; nx=Math.max(1,Math.min(COLS-c.w+1,nx));
     let ny=Math.round((ev.clientY-r.top-(rowH*c.h/2))/rowH)+1; ny=Math.max(1,Math.min(ROWS-c.h+1,ny));
     if((nx!==c.x||ny!==c.y)&&fits(nx,ny,c.w,c.h,c.id)){ c.x=nx;c.y=ny; el.style.gridColumn=`${c.x} / span ${c.w}`; el.style.gridRow=`${c.y} / span ${c.h}`; } };
-  const up=(ev)=>{ el.releasePointerCapture(ev.pointerId); el.style.cursor='grab'; el.style.zIndex=''; el.style.opacity=''; el.removeEventListener('pointermove',move); el.removeEventListener('pointerup',up); };
-  el.addEventListener('pointermove',move); el.addEventListener('pointerup',up); }); }
+  const up=(ev)=>{ try{ el.releasePointerCapture(ev.pointerId); }catch(_){}
+    el.style.cursor='grab'; el.style.zIndex=''; el.style.opacity='';
+    el.removeEventListener('pointermove',move); el.removeEventListener('pointerup',up); el.removeEventListener('pointercancel',up); };
+  el.addEventListener('pointermove',move); el.addEventListener('pointerup',up); el.addEventListener('pointercancel',up); }); }
 
-function enterPlacing(ck,entity,name,w,h){ placing={ck}; sel=null;
-  document.getElementById('hint').textContent='Click a grid cell to drop the '+w+'×'+h+' card · Esc to cancel';
-  const grid=document.getElementById('grid');
-  const onMove=(ev)=>{ const r=grid.getBoundingClientRect(); const colW=r.width/COLS,rowH=r.height/ROWS;
-    let x=Math.floor((ev.clientX-r.left)/colW)+1, y=Math.floor((ev.clientY-r.top)/rowH)+1; x=Math.max(1,Math.min(COLS-w+1,x)); y=Math.max(1,Math.min(ROWS-h+1,y));
-    grid.querySelectorAll('.gcell').forEach((cell,i)=>{ const cx=(i%COLS)+1,cy=Math.floor(i/COLS)+1; const inside=cx>=x&&cx<x+w&&cy>=y&&cy<y+h;
-      cell.classList.toggle('hot',inside&&fits(x,y,w,h,null)); cell.classList.toggle('bad',inside&&!fits(x,y,w,h,null)); }); grid._drop=[x,y]; };
-  const onClick=()=>{ if(!grid._drop) return; const[x,y]=grid._drop; if(fits(x,y,w,h,null)){ const card=mk(ck,entity,name,x,y,w,h); curCards().push(card); sel=card.id; cleanup(); renderAll(); } else toast('Doesn’t fit there'); };
-  const onKey=(e)=>{ if(e.key==='Escape') cleanup(); };
-  const cleanup=()=>{ placing=null; grid.removeEventListener('pointermove',onMove); grid.removeEventListener('click',onClick); document.removeEventListener('keydown',onKey);
-    grid.querySelectorAll('.gcell').forEach(c=>c.classList.remove('hot','bad')); document.getElementById('hint').textContent='6×'+ROWS+' grid · 1024×600 · drag a placed card to move it'; };
-  grid.addEventListener('pointermove',onMove); grid.addEventListener('click',onClick); document.addEventListener('keydown',onKey); }
+// Add a card of kind `ck` directly to the current sub-page: catalog default size
+// (shrunk toward the kind's min only if that's what it takes to fit), at the first
+// free spot scanning rows left→right, top→bottom. No armed "place mode", no pending
+// state — if nothing fits we toast and do nothing.
+function addCard(ck,entity,name){ const def=C[ck]; ROWS=rowsFor();
+  const [mw,mh]=def.min||[1,1];
+  let w=Math.max(mw,Math.min(def.def[0],COLS)), h=Math.max(mh,Math.min(def.def[1],ROWS));
+  let spot=firstFit(w,h);
+  if(!spot){ const cands=[];                              // shrink toward min, biggest area first
+    for(let ww=w;ww>=mw;ww--) for(let hh=h;hh>=mh;hh--){ if(ww===w&&hh===h) continue; cands.push([ww,hh]); }
+    cands.sort((a,b)=>b[0]*b[1]-a[0]*a[1]);
+    for(const [ww,hh] of cands){ const f=firstFit(ww,hh); if(f){ w=ww; h=hh; spot=f; break; } } }
+  if(!spot){ toast('No room on this sub-page — resize or move a card, or add a sub-page'); return null; }
+  const card=mk(ck,entity,name,spot[0],spot[1],w,h);
+  curCards().push(card); sel=card.id; renderAll();
+  if(def.multi) toast('Added — add its entities in the inspector on the right');
+  return card; }
 
 function styleRow(ck){ const g=STYLE_OF[ck]; if(!g) return '';   // add-time style pills (re-renders the modal so sizes match)
   return `<div class="field"><label>${g.label}</label><div class="szrow">${g.opts.map(o=>`<div class="szb stb${o[0]===ck?' on':''}" data-ck="${o[0]}">${o[1]}</div>`).join('')}</div></div>`; }
 function wireStyleRow(mbox){ mbox.querySelectorAll('.stb').forEach(b=>{ b.onclick=()=>{ if(!b.classList.contains('on')) openEntityPicker(b.dataset.ck); }; }); }
 function openEntityPicker(ck,existing){ const def=C[ck], mbox=document.getElementById('mbox');
-  if(def.multi && !existing){  // multi: size-only modal, then place (entities added in inspector)
-    let szc=def.def;
-    mbox.innerHTML=`<h2>${def.label}</h2><p>Pick a size, drop it, then add its entities from the inspector on the right.</p>
-      ${styleRow(ck)}
-      <div class="field"><label>Card size</label><div class="szrow" id="msz"></div></div>
-      <div class="mfoot"><button class="btn ghost" id="mCancel">Cancel</button><button class="btn" id="mPlace">Place on grid</button></div>`;
-    wireStyleRow(mbox);
-    const msz=mbox.querySelector('#msz'); def.spans.forEach(([w,h])=>{ const b=document.createElement('div'); b.className='szb'+(w===szc[0]&&h===szc[1]?' on':''); b.textContent=`${w}×${h}`;
-      b.onclick=()=>{szc=[w,h]; msz.querySelectorAll('.szb').forEach(x=>x.classList.remove('on')); b.classList.add('on');}; msz.appendChild(b); });
-    document.getElementById('modal').style.display='flex'; mbox.querySelector('#mCancel').onclick=closeModal;
-    mbox.querySelector('#mPlace').onclick=()=>{ closeModal(); enterPlacing(ck,null,null,szc[0],szc[1]); }; return; }
+  if(def.multi && !existing){ closeModal(); addCard(ck,null,null); return; }   // multi: add now, entities come from the inspector
   const doms=def.domains||[def.domain]; const dom=doms.join(' / '); const list=ENTS.filter(e=>doms.includes(e.domain));
-  let chosen=existing?existing.entity:((list[0]&&list[0].entity_id)||''); let szc=existing?[existing.w,existing.h]:def.def;
+  let chosen=existing?existing.entity:((list[0]&&list[0].entity_id)||'');
   mbox.innerHTML=`<h2>${def.label}</h2><p>${list.length} ${dom} entit${list.length===1?'y':'ies'} from Home Assistant${ENTS.length?'':' — connect to load yours'}</p>
     ${existing?'':styleRow(ck)}
     <input id="esrch" placeholder="Filter…" style="width:100%;margin-bottom:8px;background:#0F1117;border:1px solid var(--bd);border-radius:9px;color:var(--tx);padding:8px 10px;font:inherit">
     <div class="field"><div class="elist" id="elist"></div></div>
-    <div class="field"><label>Card size</label><div class="szrow" id="msz"></div></div>
-    <div class="mfoot"><button class="btn ghost" id="mCancel">Cancel</button><button class="btn" id="mPlace">${existing?'Apply':'Place on grid'}</button></div>`;
+    <div class="mfoot"><button class="btn ghost" id="mCancel">Cancel</button><button class="btn" id="mPlace">${existing?'Apply':'Add to page'}</button></div>`;
   if(!existing) wireStyleRow(mbox);
   const elist=mbox.querySelector('#elist'); const draw=(flt)=>{ elist.innerHTML=''; const ll=list.filter(e=>!flt||(e.name+e.entity_id).toLowerCase().includes(flt));
     if(!ll.length){ elist.innerHTML='<div class="erow" style="color:var(--t3)">No match. You can still place and bind later.</div>'; }
     ll.forEach(e=>{ const r=document.createElement('div'); r.className='erow'+(e.entity_id===chosen?' on':''); r.innerHTML=`<span>${e.name}</span><span class="eid">${e.entity_id}</span>`;
       r.onclick=()=>{chosen=e.entity_id; elist.querySelectorAll('.erow').forEach(x=>x.classList.remove('on')); r.classList.add('on');}; elist.appendChild(r); }); };
   draw(''); mbox.querySelector('#esrch').oninput=(e)=>draw(e.target.value.toLowerCase().trim());
-  const msz=mbox.querySelector('#msz'); def.spans.forEach(([w,h])=>{ const b=document.createElement('div'); b.className='szb'+(w===szc[0]&&h===szc[1]?' on':''); b.textContent=`${w}×${h}`;
-    b.onclick=()=>{szc=[w,h]; msz.querySelectorAll('.szb').forEach(x=>x.classList.remove('on')); b.classList.add('on');}; msz.appendChild(b); });
   document.getElementById('modal').style.display='flex'; mbox.querySelector('#mCancel').onclick=closeModal;
   mbox.querySelector('#mPlace').onclick=()=>{ closeModal();
-    if(existing){ const c=existing; c.entity=chosen; applyEntityMeta(c,chosen); if(fits(c.x,c.y,szc[0],szc[1],c.id)){c.w=szc[0];c.h=szc[1];} renderGrid(); renderInspector(); }
-    else { const nm=(ENTS.find(e=>e.entity_id===chosen)||{}).name; enterPlacing(ck,chosen,nm,szc[0],szc[1]); } }; }
+    if(existing){ const c=existing; c.entity=chosen; applyEntityMeta(c,chosen); renderGrid(); renderInspector(); }
+    else { const nm=(ENTS.find(e=>e.entity_id===chosen)||{}).name; addCard(ck,chosen,nm); } }; }
 
 function addEntityPicker(card){ const def=C[card.ck], mbox=document.getElementById('mbox'); const n=cap(card);
   const doms = def.domain==='mixed' ? null : [def.domain];
@@ -1002,6 +1185,15 @@ function shortcutModal(card){ const mbox=document.getElementById('mbox');
   tsel.onchange=sync; renderIcons(); sync();
   document.getElementById('modal').style.display='flex'; mbox.querySelector('#mCancel').onclick=closeModal;
   mbox.querySelector('#mOk').onclick=()=>{ let label=lin.value.trim()||lin.placeholder; card.shortcuts.push({label,icon,target:tsel.value}); closeModal(); renderGrid(); renderInspector(); }; }
+function sourceModal(card){ const mbox=document.getElementById('mbox');
+  mbox.innerHTML=`<h2>Add app / input</h2><p>The source name must match the TV's source list exactly — pick a suggestion (loaded live from the entity) or type your own. Known apps get their brand color.</p>
+    <div class="field"><label>Source</label><input id="srcName" list="srcOpts2" placeholder="e.g. YouTube TV"><datalist id="srcOpts2"></datalist></div>
+    <div class="field"><label>Label (optional — defaults to the source name)</label><input id="srcLabel" placeholder="(auto)"></div>
+    <div class="mfoot"><button class="btn ghost" id="mCancel">Cancel</button><button class="btn" id="mOk">Add</button></div>`;
+  fillSourceList(mbox.querySelector('#srcOpts2'), card.entity);
+  document.getElementById('modal').style.display='flex'; mbox.querySelector('#mCancel').onclick=closeModal;
+  mbox.querySelector('#mOk').onclick=()=>{ const src=mbox.querySelector('#srcName').value.trim(); if(!src){toast('Enter a source name');return;}
+    const label=mbox.querySelector('#srcLabel').value.trim(); card.sources.push(label?{source:src,label}:{source:src}); closeModal(); renderGrid(); renderInspector(); }; }
 function closeModal(){ document.getElementById('modal').style.display='none'; }
 
 function addNav(){ navModal({id:uid(),icon:'star',label:'New',page:''},true); }
@@ -1033,7 +1225,7 @@ function openTemplates(){ const mbox=document.getElementById('mbox');
 function normPage(p){ if(typeof p.header!=='object'||p.header===null) p.header=defHeader(p.header===true);
   if(!Array.isArray(p.header.right)) p.header.right=['weather_current','secured']; if(!p.header.left) p.header.left='greeting';
   if(!Array.isArray(p.subpages)||!p.subpages.length) p.subpages=[[]];
-  p.subpages.forEach(sp=>sp.forEach(c=>{ if(C[c.ck]&&C[c.ck].multi&&!c.entities)c.entities=[]; if(c.ck==='shortcuts'&&!c.shortcuts)c.shortcuts=[]; }));
+  p.subpages.forEach(sp=>sp.forEach(c=>{ if(C[c.ck]&&C[c.ck].multi&&!c.entities)c.entities=[]; if(c.ck==='shortcuts'&&!c.shortcuts)c.shortcuts=[]; if(c.ck==='tv_apps'&&!c.sources)c.sources=[]; }));
   if(!p.title) p.title='Page'; return p; }
 
 // Insert an applied page template as a NEW page (+ nav item if there's room).
@@ -1260,6 +1452,7 @@ function pagesModal(){ const mbox=document.getElementById('mbox');
           if(refs.length) msg+='\n\nWarning: '+refs.length+' shortcut(s) point here (on '+[...new Set(refs)].join(', ')+') and will fall back to Home.';
           if(!confirm(msg)) return;
           delete L.pages[key];
+          if(CLIP&&CLIP.cut&&CLIP.cut.page===key) CLIP.cut=null;   // cut source page is gone — paste degrades to copy
           const i=L.nav.findIndex(x=>x.page===key); if(i>=0) L.nav.splice(i,1);
           if(curPage===key){ curPage=L.nav[0]?L.nav[0].page:Object.keys(L.pages)[0]; curSub=0; sel=null; }
           renderAll(); draw(); toast('Deleted “'+(p.title||key)+'”'); },'Delete page');
@@ -1349,7 +1542,7 @@ async function flash(){
 async function boot(){ try{ L=await j('/api/layout'); if(!L||!L.pages||!Object.keys(L.pages).length) L=defaultLayout(); }catch(e){ L=defaultLayout(); }
   Object.values(L.pages).forEach(p=>{ if(typeof p.header!=='object'||p.header===null) p.header=defHeader(p.header===true);
     if(!Array.isArray(p.header.right)) p.header.right=['weather_current','secured']; if(!p.header.left) p.header.left='greeting';
-    p.subpages.forEach(sp=>sp.forEach(c=>{ if(C[c.ck]&&C[c.ck].multi&&!c.entities)c.entities=[]; if(c.ck==='shortcuts'&&!c.shortcuts)c.shortcuts=[]; })); });
+    p.subpages.forEach(sp=>sp.forEach(c=>{ if(C[c.ck]&&C[c.ck].multi&&!c.entities)c.entities=[]; if(c.ck==='shortcuts'&&!c.shortcuts)c.shortcuts=[]; if(c.ck==='tv_apps'&&!c.sources)c.sources=[]; })); });
   curPage=L.nav[0]?L.nav[0].page:Object.keys(L.pages)[0]; curSub=0;
   let cfg={}; try{ cfg=await j('/api/config'); }catch(e){ cfg={}; }
   document.getElementById('haurl').value=cfg.ha_url||'';
@@ -1363,7 +1556,7 @@ async function boot(){ try{ L=await j('/api/layout'); if(!L||!L.pages||!Object.k
   document.getElementById('verBtn').onclick=versionsModal; document.getElementById('pagesBtn').onclick=pagesModal;
   document.getElementById('roomBtn').onclick=roomWizard;
   document.getElementById('rescanBtn').onclick=async()=>{ const has=await scanSerial(); toast(has?('USB panel found: '+SERIAL_DEV.replace('/dev/','')):'No USB panel — plug it in, then run on Windows:  usbipd attach --wsl --busid <id>'); };
-  document.getElementById('grid').addEventListener('click',(e)=>{ if(e.target.classList.contains('gcell')&&!placing){ sel=null; renderInspector(); markSel(); }});
+  document.getElementById('grid').addEventListener('click',(e)=>{ if(e.target.classList.contains('gcell')){ sel=null; renderInspector(); markSel(); }});
   if(cfg.has_token||cfg.ha_url) connect();
 }
 boot();

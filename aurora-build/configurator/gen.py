@@ -113,7 +113,9 @@ def slug(s):
 
 
 def esc(s):
-    return '"' + str(s).replace('"', '\\"') + '"'
+    # Backslashes must be escaped BEFORE quotes or a source/name like
+    # "PC\HDMI" emits an invalid double-quoted YAML escape and fails the build.
+    return '"' + str(s).replace("\\", "\\\\").replace('"', '\\"') + '"'
 
 
 def rect(card, header):
@@ -208,6 +210,7 @@ CARD_ICON = {
     # TV control cards (purple family)
     "tv_sources": "\\U000F0502", "tv_dpad": "\\U000F0297", "tv_transport": "\\U000F040A",
     "tv_channel": "\\U000F0502", "tv_volume": "\\U000F057E", "tv_trackpad": "\\U000F0297",
+    "tv_app": "\\U000F0502", "tv_apps": "\\U000F0502",
     "shortcuts": "\\U000F04CE",
 }
 
@@ -327,12 +330,15 @@ def c_light(card, x, y, w, h, base):
                "                  bg_color: " + STRIP_PWR_ON + "\n                  border_color: " + STRIP_PWR_BD_ON + "\n                  border_width: 2\n                  radius: 24\n                  pad_all: 0\n                  scrollable: false\n"
                "                  widgets: [label: { id: " + pwic + ", text: \"\\U000F0425\", align: center, text_font: f_icon, text_color: " + STRIP_PWR_BD_ON + " }]\n"
                "                  on_click: [" + tog + "]\n")
+        # narrow track (1x1): the name + big % can't fit — drop the name, small %
+        namelbl = ("                    - label: { text: " + esc(name) + ", x: 16, align: left_mid, width: " + str(max(40, tw - 96)) + ", long_mode: dot, height: 40, text_font: f_body, text_color: 0xFFFFFF }\n") if tw >= 150 else ""
+        pctfont = "f_head" if tw >= 150 else "f_body"
         trk = ("              - obj:\n                  x: " + str(tx) + "\n                  y: " + str(ty) + "\n                  width: " + str(tw) + "\n                  height: " + str(th) + "\n"
                "                  bg_color: " + STRIP_TRACK + "\n                  radius: 11\n                  clip_corner: true\n                  border_width: 0\n                  pad_all: 0\n                  scrollable: false\n                  widgets:\n"
                "                    - obj: { id: " + fillid + ", x: 0, y: 0, width: " + str(fw0) + ", height: " + str(th) + ", bg_color: " + STRIP_GRAD_LO + ", bg_grad_color: " + STRIP_GRAD_HI + ", bg_grad_dir: HOR, border_width: 0, radius: 0, pad_all: 0, scrollable: false }\n"
                "                    - obj: { id: " + gripid + ", x: " + str(fw0 - 3) + ", y: 8, width: 6, height: " + str(th - 16) + ", bg_color: 0xFFFFFF, radius: 3, border_width: 0, pad_all: 0, scrollable: false }\n"
-               "                    - label: { text: " + esc(name) + ", x: 16, align: left_mid, width: " + str(max(40, tw - 96)) + ", long_mode: dot, height: 40, text_font: f_body, text_color: 0xFFFFFF }\n"
-               "                    - label: { id: " + pct + ", text: \"" + str(bri) + "%\", x: -16, align: right_mid, text_font: f_head, text_color: 0xFFFFFF }\n")
+               + namelbl +
+               "                    - label: { id: " + pct + ", text: \"" + str(bri) + "%\", x: -16, align: right_mid, text_font: " + pctfont + ", text_color: 0xFFFFFF }\n")
         if e:
             trk += ("                    - slider:\n                        id: " + sldid + "\n                        x: 0\n                        y: 0\n                        width: " + str(tw) + "\n                        height: " + str(th) + "\n"
                     "                        bg_opa: 0%\n                        min_value: 0\n                        max_value: 100\n                        value: " + str(bri) + "\n                        indicator: { bg_opa: 0% }\n                        knob: { bg_opa: 0% }\n"
@@ -852,7 +858,9 @@ def c_media(card, x, y, w, h, base):
     # ---- w==1 tall narrow (1x2, 1x3): art on top ----
     if gw == 1:
         asz = w - 28
-        arth = min(asz, h - 118)
+        # art absorbs what the fixed text+transport band (>=140px) doesn't need,
+        # so the transport row stays inside the card even at 1x2
+        arth = min(asz, h - 140)
         inner += art(14, 14, asz, arth)
         ty0 = 14 + arth + 8
         inner += lbl(subtxt, 14, ty0, "f_small", "0x2ED5B8", width=w - 28, long="dot")
@@ -898,7 +906,7 @@ def c_media(card, x, y, w, h, base):
 def c_fan(card, x, y, w, h, base):
     e = card.get("entity", "")
     gw, gh = card["w"], card["h"]
-    if gw * gh <= 2:                                  # small: icon + centered label, card lights when on
+    if gw * gh <= 2 or gw == 1:                       # small / 1-wide: icon + centered label (4 segments can't fit a 140px card)
         act = ha("homeassistant.toggle", e) if e else "lvgl.page.show: page_home"   # works for fan.* or switch.* fans
         oid, iid, nlid, acc = base + "_c", base + "_i", base + "_n", "0x2ED5B8"
         glyph = card_glyph(card, CARD_ICON.get(card["ck"], "\\U000F0210"))
@@ -915,7 +923,7 @@ def c_fan(card, x, y, w, h, base):
                 % (base, e, oid, lit, iid, acc, nlid, acc))
         return [card_obj(x, y, w, h, inner, act, oid=oid)], [], ts
     inner = ic(card["ck"], color="0x2ED5B8")
-    inner += title(card.get("name", "Fan"), w, x=14, y=48)   # larger: Off / Low / Med / High segments
+    inner += title(card.get("name", "Fan"), w, x=50, y=16)   # larger: name beside the icon (web .toprow) + Off / Low / Med / High segments
     speeds = ["Off", "Low", "Med", "High"]
     n = len(speeds); pad = 14; sw2 = (w - pad * 2 - (n - 1) * 8) // n; sy = h - 58
     for i, s in enumerate(speeds):
@@ -938,24 +946,32 @@ def c_cover(card, x, y, w, h, base):
     rows = [("\\U000F0143", "Open", "cover.open_cover", "0xC2C7D2"),
             ("\\U000F04DB", "Stop", "cover.stop_cover", "0xC2C7D2"),
             ("\\U000F0140", "Close", "cover.close_cover", "0xC2C7D2")]
+
+    def cover_btn(bx, by, bw, bh, g, txt, svc, col):
+        act = ha(svc, e) if e else "lvgl.page.show: page_home"
+        return ("              - button:\n"
+                "                  x: %d\n                  y: %d\n                  width: %d\n                  height: %d\n"
+                "                  bg_color: 0x161B24\n                  radius: 12\n                  pad_all: 0\n                  scrollable: false\n"
+                "                  on_click: [%s]\n"
+                "                  widgets:\n"
+                "                    - obj:\n"
+                "                        align: center\n                        width: SIZE_CONTENT\n                        height: SIZE_CONTENT\n"
+                "                        bg_opa: 0\n                        border_width: 0\n                        pad_all: 0\n                        scrollable: false\n"
+                "                        layout: { type: flex, flex_flow: ROW, flex_align_cross: center, pad_column: 10 }\n"
+                "                        widgets:\n"
+                "                          - label: { text: \"%s\", text_font: f_icon, text_color: %s }\n"
+                "                          - label: { text: \"%s\", text_font: f_body, text_color: %s }\n"
+                % (bx, by, bw, bh, act, g, col, txt, col))
+
+    if h <= 110:                                          # 1-row card: Open/Stop/Close side by side
+        bw = (w - 28 - 2 * 8) // 3
+        for i, (g, txt, svc, col) in enumerate(rows):
+            inner += cover_btn(14 + i * (bw + 8), 50, bw, h - 50 - 10, g, txt, svc, col)
+        return [card_obj(x, y, w, h, inner)], [], []
     top, gap = 58, 8
     bh = (h - top - 14 - 2 * gap) // 3
     for i, (g, txt, svc, col) in enumerate(rows):
-        cy = top + i * (bh + gap)
-        act = ha(svc, e) if e else "lvgl.page.show: page_home"
-        inner += ("              - button:\n"
-                  "                  x: 14\n                  y: %d\n                  width: %d\n                  height: %d\n"
-                  "                  bg_color: 0x161B24\n                  radius: 12\n                  pad_all: 0\n                  scrollable: false\n"
-                  "                  on_click: [%s]\n"
-                  "                  widgets:\n"
-                  "                    - obj:\n"
-                  "                        align: center\n                        width: SIZE_CONTENT\n                        height: SIZE_CONTENT\n"
-                  "                        bg_opa: 0\n                        border_width: 0\n                        pad_all: 0\n                        scrollable: false\n"
-                  "                        layout: { type: flex, flex_flow: ROW, flex_align_cross: center, pad_column: 10 }\n"
-                  "                        widgets:\n"
-                  "                          - label: { text: \"%s\", text_font: f_icon, text_color: %s }\n"
-                  "                          - label: { text: \"%s\", text_font: f_body, text_color: %s }\n"
-                  % (cy, w - 28, bh, act, g, col, txt, col))
+        inner += cover_btn(14, top + i * (bh + gap), w - 28, bh, g, txt, svc, col)
     return [card_obj(x, y, w, h, inner)], [], []
 
 
@@ -1033,9 +1049,11 @@ def c_weather(card, x, y, w, h, base):
         inner += lbl("72\\u00B0", -16, 20, "f_display", "0xF3F5F8", wid=tid, align="top_right")
         inner += lbl("Sunny", 14, -12, "f_body", "0x2ED5B8", wid=cid, align="bottom_left")
         return [card_obj(x, y, w, h, inner)], ([_wx_temp_readback(base, e, tid)] if e else []), ([_wx_cond_readback(base, e, hid, cid)] if e else [])
-    # large: full forecast (hero + hourly + daily + stats), values pre-baked
+    # large: full forecast (hero + hourly + daily + stats), values pre-baked.
+    # On 4-row cards the hero + hourly bands shrink so the daily rows / stat
+    # tiles below keep readable heights (value text must fit its tile).
     pad = 14
-    hh = 128
+    hh, ht = (128, 116) if h >= 500 else (112, 96)
     inner = ("              - obj: { x: %d, y: %d, width: %d, height: %d, bg_color: 0x141F38, bg_grad_color: 0x0E1524, bg_grad_dir: VER, border_width: 0, radius: 16, pad_all: 0, scrollable: false }\n" % (pad, pad, w - 2 * pad, hh))
     inner += "              - label: { id: %s, text: \"\\U000F0599\", x: %d, y: %d, text_font: f_wxicon, text_color: 0xF2B84B }\n" % (hid, pad + 26, pad + 26)
     inner += lbl("72\\u00B0", pad + 150, pad + 10, "f_display", "0xF3F5F8", wid=tid)
@@ -1045,7 +1063,7 @@ def c_weather(card, x, y, w, h, base):
     inner += lbl("Friday \\u00B7 9:41 PM", -(pad + 4), pad + 70, "f_small", "0x868CA0", wid=wtime, align="top_right")
     EXTRA_CLOCKS.append((wtime, "dow_time"))            # live device time (fixes "stuck 9pm")
     inner += lbl("High 96\\u00B0 \\u00B7 Low 74\\u00B0", -(pad + 4), pad + 92, "f_small", "0x868CA0", align="top_right")
-    hy, ht, gap = pad + hh + 12, 116, 10
+    hy, gap = pad + hh + 12, 10
     n = len(WX_HOURLY)
     tw = (w - 2 * pad - (n - 1) * gap) // n
     for i, (hl, g, tp) in enumerate(WX_HOURLY):
@@ -1074,13 +1092,14 @@ def c_weather(card, x, y, w, h, base):
     sx0, scols, sgap, srows = dax + 24, 2, 10, 3
     sw = (w - pad - sx0 - (scols - 1) * sgap) // scols
     srh = (dh - (srows - 1) * sgap) // srows
+    svy = 32 if srh >= 58 else max(26, srh - 26)         # value stays inside short tiles
     for i, (lt, val, col) in enumerate(WX_STATS):
         cx = sx0 + (i % scols) * (sw + sgap)
         cy = dy + (i // scols) * (srh + sgap)
         inner += ("              - obj: { x: %d, y: %d, width: %d, height: %d, bg_color: 0x14161C, border_width: 0, radius: 12, pad_all: 0, scrollable: false, widgets: ["
                   "label: { text: %s, x: 14, y: 14, text_font: f_micro, text_color: 0x868CA0 }, "
-                  "label: { text: %s, x: 14, y: 32, text_font: f_title, text_color: %s }] }\n"
-                  % (cx, cy, sw, srh, esc(lt), esc(val), col))
+                  "label: { text: %s, x: 14, y: %d, text_font: f_title, text_color: %s }] }\n"
+                  % (cx, cy, sw, srh, esc(lt), esc(val), svy, col))
     return [card_obj(x, y, w, h, inner)], ([_wx_temp_readback(base, e, tid)] if e else []), ([_wx_cond_readback(base, e, hid, cid)] if e else [])
 
 
@@ -1326,12 +1345,13 @@ def c_outlet(card, x, y, w, h, base):
     inner = ic(card["ck"], color="0x2ED5B8")
     inner += title(card.get("name", "Outlets"), w)
     horiz = gw > gh
+    compact = h <= 110                                    # 1-row card: slim cells, no per-cell name
     cells = (ents if ents else [""])[:max(1, (gw if horiz else gh))]
     n = len(cells)
-    top, pad, gap = 58, 14, 10
+    top, pad, gap = (44, 14, 10) if compact else (58, 14, 10)
     if horiz:
         cw = (w - pad * 2 - (n - 1) * gap) // n
-        ch = h - top - pad
+        ch = h - top - (8 if compact else pad)
     else:
         cw = w - pad * 2
         ch = (h - top - pad - (n - 1) * gap) // n
@@ -1340,11 +1360,12 @@ def c_outlet(card, x, y, w, h, base):
         cy = top + (0 if horiz else i * (ch + gap))
         on = (i % 2 == 0)
         act = ha("homeassistant.toggle", e) if e else "lvgl.page.show: page_home"
-        ps = max(40, min(64, cw - 24, ch - 44))
+        ps = max(28, min(64, cw - 24, ch - (10 if compact else 44)))
         inner += ("              - obj: { x: %d, y: %d, width: %d, height: %d, bg_color: 0x0F1117, "
                   "border_width: 0, radius: 12, pad_all: 0, scrollable: false }\n" % (cx, cy, cw, ch))
-        inner += lbl(_ename(e, "S%d" % (i + 1)), cx, cy + 10, "f_small", "0xC2C7D2", width=cw, text_align="center", long="dot", height=18)
-        inner += btn(cx + (cw - ps) // 2, cy + (ch - ps) // 2 + 10, ps, ps, "\\U000F0425", act,
+        if not compact:
+            inner += lbl(_ename(e, "S%d" % (i + 1)), cx, cy + 10, "f_small", "0xC2C7D2", width=cw, text_align="center", long="dot", height=18)
+        inner += btn(cx + (cw - ps) // 2, cy + (ch - ps) // 2 + (0 if compact else 10), ps, ps, "\\U000F0425", act,
                      bg=("0x123F30" if on else "0x1A1F29"), color=("0x2ED5B8" if on else "0x6B7280"),
                      radius=ps // 2, font="f_icon")
     return [card_obj(x, y, w, h, inner)], [], []
@@ -1355,21 +1376,26 @@ BTN_ICON = {"speakers": "\\U000F04C3", "sonos_sources": "\\U000F075A", "tv_sourc
 
 def c_btngrid(card, x, y, w, h, base):
     """Grid of selectable tiles (icon + name), first highlighted — web .spk grid.
-    Columns follow the count (web: 1-row=n, 10=5, 6=3, else 2)."""
+    Columns follow the count (web: 1-row=n, 10=5, 6=3, else 2) but are clamped
+    to what the card WIDTH fits (>=96px tiles), and the tile count to what the
+    HEIGHT fits (>=40px rows) — narrow/short cards show fewer, usable tiles
+    instead of negative-width labels. Tiles narrower than 120px drop the icon."""
     ents = card.get("entities", [])
     inner = ic(card["ck"], color="0x2ED5B8")
-    inner += lbl(card.get("name", "Select"), 50, 16, "f_small", "0x868CA0")
+    inner += lbl(card.get("name", "Select"), 50, 16, "f_small", "0x868CA0", width=w - 64, long="dot", height=16)
     gw, gh = card["w"], card["h"]
     n = max(1, len(ents))
-    cols = n if gh == 1 else (5 if n == 10 else (3 if n == 6 else 2))
-    cols = max(1, min(cols, n))
-    rows = max(1, (n + cols - 1) // cols)
     pad, gap, top = 14, 10, 52
+    cols = n if gh == 1 else (5 if n == 10 else (3 if n == 6 else 2))
+    cols = max(1, min(cols, n, (w - 2 * pad + gap) // (96 + gap)))
+    max_rows = max(1, (h - top - pad + gap) // (40 + gap))
+    shown = min(n, cols * max_rows)
+    rows = max(1, (shown + cols - 1) // cols)
     bw = (w - pad * 2 - (cols - 1) * gap) // cols
     bh = (h - top - pad - (rows - 1) * gap) // rows
     bi = BTN_ICON.get(card["ck"], "\\U000F075A")
     src = card["ck"] in ("sonos_sources", "tv_sources")
-    for i, e in enumerate(ents[:n]):
+    for i, e in enumerate(ents[:shown]):
         nm = (e.split(".")[-1] if "." in e else e).replace("_", " ")
         cx = pad + (i % cols) * (bw + gap)
         cy = top + (i // cols) * (bh + gap)
@@ -1377,14 +1403,19 @@ def c_btngrid(card, x, y, w, h, base):
         bg = "0x2ED5B8" if sel else "0x10141C"
         fg = "0x06231D" if sel else "0xC2C7D2"
         act = (_src(e, nm) if src else ha("media_player.toggle", e)) if e else "lvgl.page.show: page_home"
+        if bw >= 120:
+            tile = ("                    - label: { text: \"%s\", x: 14, align: left_mid, text_font: f_icon, text_color: %s }\n"
+                    "                    - label: { text: %s, x: 48, align: left_mid, width: %d, long_mode: dot, text_font: f_body, text_color: %s }\n"
+                    % (bi, fg, esc(nm), bw - 56, fg))
+        else:                                             # narrow tile: label only
+            tile = ("                    - label: { text: %s, x: 10, align: left_mid, width: %d, long_mode: dot, text_font: f_body, text_color: %s }\n"
+                    % (esc(nm), bw - 20, fg))
         inner += ("              - button:\n"
                   "                  x: %d\n                  y: %d\n                  width: %d\n                  height: %d\n"
                   "                  bg_color: %s\n                  radius: 12\n                  pad_all: 0\n                  scrollable: false\n"
                   "                  on_click: [%s]\n"
-                  "                  widgets:\n"
-                  "                    - label: { text: \"%s\", x: 14, align: left_mid, text_font: f_icon, text_color: %s }\n"
-                  "                    - label: { text: %s, x: 48, align: left_mid, width: %d, long_mode: dot, text_font: f_body, text_color: %s }\n"
-                  % (cx, cy, bw, bh, bg, act, bi, fg, esc(nm), bw - 56, fg))
+                  "                  widgets:\n%s"
+                  % (cx, cy, bw, bh, bg, act, tile))
     return [card_obj(x, y, w, h, inner)], [], []
 
 
@@ -1447,9 +1478,14 @@ def c_tv_transport(card, x, y, w, h, base):
 
 def c_tv_channel(card, x, y, w, h, base):
     e = card.get("entity", "")
-    inner = ic(card["ck"], color="0xB06CFF") + lbl(card.get("name", "Channel"), 50, 16, "f_small", "0x868CA0")
+    inner = ic(card["ck"], color="0xB06CFF") + lbl(card.get("name", "Channel"), 50, 16, "f_small", "0x868CA0", width=w - 64, long="dot", height=16)
     up = ("homeassistant.action: { action: webostv.button, data: { entity_id: %s, button: CHANNELUP } }" % e) if e else "lvgl.page.show: page_home"
     dn = ("homeassistant.action: { action: webostv.button, data: { entity_id: %s, button: CHANNELDOWN } }" % e) if e else "lvgl.page.show: page_home"
+    if h <= 110:                                          # 1-row card: CH- / CH+ side by side
+        bw = (w - 28 - 8) // 2
+        inner += btn(14, h - 56, bw, 46, "CH -", dn)
+        inner += btn(14 + bw + 8, h - 56, bw, 46, "CH +", up)
+        return [card_obj(x, y, w, h, inner)], [], []
     bh = (h - 66) // 2 - 4
     inner += btn(14, 52, w - 28, bh, "CH +", up)
     inner += btn(14, 52 + bh + 8, w - 28, bh, "CH -", dn)
@@ -1458,9 +1494,17 @@ def c_tv_channel(card, x, y, w, h, base):
 
 def c_tv_volume(card, x, y, w, h, base):
     e = card.get("entity", "")
-    inner = ic(card["ck"], color="0xB06CFF") + lbl(card.get("name", "Volume"), 50, 16, "f_small", "0x868CA0")
+    inner = ic(card["ck"], color="0xB06CFF") + lbl(card.get("name", "Volume"), 50, 16, "f_small", "0x868CA0", width=w - 64, long="dot", height=16)
     rows = [("VOL +", "media_player.volume_up", ""), ("Mute", "media_player.volume_mute", 'is_volume_muted: "true"'),
             ("VOL -", "media_player.volume_down", "")]
+    if h <= 110:                                          # 1-row card: buttons side by side (Mute only when 3 fit)
+        use = [rows[2], rows[1], rows[0]] if w >= 200 else [rows[2], rows[0]]   # VOL- (,Mute), VOL+
+        nb = len(use)
+        bw = (w - 28 - (nb - 1) * 8) // nb
+        for i, (t, svc, extra) in enumerate(use):
+            act = ha(svc, e, extra) if e else "lvgl.page.show: page_home"
+            inner += btn(14 + i * (bw + 8), h - 56, bw, 46, t, act)
+        return [card_obj(x, y, w, h, inner)], [], []
     bh = (h - 66) // 3 - 4; yy = 52
     for t, svc, extra in rows:
         act = ha(svc, e, extra) if e else "lvgl.page.show: page_home"
@@ -1502,31 +1546,195 @@ APP_CATALOG = {
     "HBO Max": ("0x7B2BF9", "M"), "Apple TV": ("0x3A3A3C", "A"), "Peacock": ("0x05AC3F", "P"),
     "Paramount+": ("0x0064FF", "P"), "STARZ": ("0x000000", "SZ"),
     "ESPN": ("0xD50A0A", "E"), "Prime": ("0x00A8E1", "P"),
+    "Twitch": ("0x9146FF", "T"), "Crunchyroll": ("0xF47521", "C"),
+    "Pandora": ("0x3668FF", "P"),
 }
 TV_APPS_DEFAULT = ["Netflix", "YouTube", "YouTube TV", "Disney+", "Hulu"]
 TV_APPS_MAX = 8
 TV_SOURCES = ["HDMI 1", "Apple TV", "Roku", "Cable"]
 
 
+def _app_norm(s):
+    return re.sub(r"[^a-z0-9+]", "", (s or "").lower())
+
+
+_APP_KEYS = None      # APP_CATALOG keys, longest normalized name first (lazy)
+
+
+def app_style(name):
+    """Fuzzy source/app name -> (bg color, badge mark, known). Case- and
+    punctuation-insensitive against APP_CATALOG, longest brand checked first
+    so "YouTube TV 4K" hits YouTube TV, not YouTube: (1) exact normalized
+    match, (2) whole-word brand inside the name ("Max 4K" -> Max, but NOT
+    "Cinemax"), (3) squashed-brand containment for brands >=5 chars
+    ("youtubetv-4k"), (4) the name as a typed prefix of a brand. Unknown apps
+    get a neutral dark tile + their initial (mirrored by builder appStyle)."""
+    global _APP_KEYS
+    if _APP_KEYS is None:
+        _APP_KEYS = sorted(APP_CATALOG, key=lambda k: -len(_app_norm(k)))
+    n = _app_norm(name)
+    if n:
+        low = (name or "").lower()
+        for k in _APP_KEYS:
+            if _app_norm(k) == n:
+                return APP_CATALOG[k] + (True,)
+        for k in _APP_KEYS:
+            kk = _app_norm(k)
+            if (re.search(r"(?<![a-z0-9])" + re.escape(k.lower()) + r"(?![a-z0-9])", low)
+                    or (len(kk) >= 5 and kk in n)
+                    or (len(n) >= 4 and kk.startswith(n))):  # typed prefix, not substring
+                return APP_CATALOG[k] + (True,)
+    return ("0x10141C", ((name or "").strip()[:1] or "?").upper(), False)
+
+
+def c_tv_app(card, x, y, w, h, base):
+    """One app/input launcher: a brand-colored tile that select_source's the
+    configured source on tap. Known apps (fuzzy APP_CATALOG match) fill the
+    whole card with the brand color; unknown ones keep the glass card and get
+    a teal accent ring plus their initial letter. 1x1 shows the badge mark
+    only; larger spans add the label (row / column / centered by shape)."""
+    e = card.get("entity", "")
+    src = (card.get("source") or "").strip()
+    lab = (card.get("label") or "").strip() or src or card.get("name", "App")
+    col, mark, known = app_style(src or lab)
+    act = _src(e, src) if (e and src) else "lvgl.page.show: page_home"
+    inner = ""
+    if not known:                                        # accent ring on the neutral tile
+        inner += ("              - obj: { x: 0, y: 0, width: %d, height: %d, bg_opa: 0%%, "
+                  "border_color: 0x2ED5B8, border_width: 1, radius: 18, clickable: false, "
+                  "pad_all: 0, scrollable: false }\n" % (w, h))
+    if h <= 110:                                         # 1-row strip
+        if w <= 150:                                     # 1x1: badge mark only
+            inner += lbl(mark, 0, 0, "f_head", align="center")
+        else:                                            # mark + label side by side
+            inner += lbl(mark, 18, 0, "f_head", align="left_mid")
+            inner += lbl(lab, 66, 0, "f_title", align="left_mid", width=w - 84, long="dot", height=26)
+    elif w <= 150:                                       # 1-wide tall: mark top, label bottom
+        inner += lbl(mark, 0, 20, "f_head", align="top_mid")
+        inner += lbl(lab, 0, -16, "f_small", align="bottom_mid", width=w - 20, text_align="center", long="dot", height=16)
+    else:                                                # >=2x2: centered mark + label
+        inner += lbl(mark, 0, -20, "f_head", align="center")
+        inner += lbl(lab, 0, 26, "f_title", align="center", width=w - 32, text_align="center", long="dot", height=26)
+    return [card_obj(x, y, w, h, inner, act, bg=(col if known else None))], [], []
+
+
+def c_tv_apps(card, x, y, w, h, base):
+    """Grid of app/input launch tiles on one media_player — c_btngrid's clamped
+    adaptive grid, but each tile is brand-colored via app_style() and taps
+    media_player.select_source with the tile's source string. Unknown apps get
+    the neutral dark tile + teal accent ring. Tiles >=120px wide show a badge
+    square + name; narrower ones the name only. Unconfigured cards preview
+    TV_APPS_DEFAULT so the emulator/screenshot shows a real grid."""
+    e = card.get("entity", "")
+    srcs = [(s if isinstance(s, dict) else {"source": s})
+            for s in (card.get("sources") or [])] or [{"source": s} for s in TV_APPS_DEFAULT]
+    inner = ic(card["ck"], color="0xB06CFF")
+    inner += lbl(card.get("name", "Apps"), 50, 16, "f_small", "0x868CA0", width=w - 64, long="dot", height=16)
+    gh = card["h"]
+    n = max(1, len(srcs))
+    pad, gap, top = 14, 10, 52
+    cols = n if gh == 1 else (5 if n == 10 else (3 if n == 6 else 2))
+    cols = max(1, min(cols, n, (w - 2 * pad + gap) // (96 + gap)))
+    max_rows = max(1, (h - top - pad + gap) // (40 + gap))
+    shown = min(n, cols * max_rows)
+    rows = max(1, (shown + cols - 1) // cols)
+    bw = (w - pad * 2 - (cols - 1) * gap) // cols
+    bh = (h - top - pad - (rows - 1) * gap) // rows
+    for i, s in enumerate(srcs[:shown]):
+        src = (s.get("source") or "").strip()
+        snm = (s.get("label") or "").strip() or src or "Source"
+        col, mark, known = app_style(src or snm)
+        cx = pad + (i % cols) * (bw + gap)
+        cy = top + (i // cols) * (bh + gap)
+        act = _src(e, src) if (e and src) else "lvgl.page.show: page_home"
+        bg = col if known else "0x10141C"
+        border = "" if known else "                  border_color: 0x2ED5B8\n                  border_width: 1\n"
+        if bw >= 120:                                    # badge square + name
+            bsz = max(20, min(32, bh - 12))
+            tile = ("                    - obj: { x: 12, align: left_mid, width: %d, height: %d, bg_color: %s, "
+                    "bg_opa: %s, radius: 8, clickable: false, pad_all: 0, scrollable: false, "
+                    "widgets: [label: { text: %s, align: center, text_font: f_small, text_color: 0xFFFFFF }] }\n"
+                    "                    - label: { text: %s, x: %d, align: left_mid, width: %d, long_mode: dot, text_font: f_body, text_color: 0xFFFFFF }\n"
+                    % (bsz, bsz, ("0xFFFFFF" if known else "0x2ED5B8"), ("22%" if known else "35%"),
+                       esc(mark), esc(snm), 12 + bsz + 10, bw - bsz - 34))
+        else:                                            # narrow tile: label only
+            tile = ("                    - label: { text: %s, x: 10, align: left_mid, width: %d, long_mode: dot, text_font: f_body, text_color: 0xFFFFFF }\n"
+                    % (esc(snm), bw - 20))
+        inner += ("              - button:\n"
+                  "                  x: %d\n                  y: %d\n                  width: %d\n                  height: %d\n"
+                  "                  bg_color: %s\n%s                  radius: 12\n                  pad_all: 0\n                  scrollable: false\n"
+                  "                  on_click: [%s]\n"
+                  "                  widgets:\n%s"
+                  % (cx, cy, bw, bh, bg, border, act, tile))
+    return [card_obj(x, y, w, h, inner)], [], []
+
+
 def c_tvremote(card, x, y, w, h, base):
-    """Full LG remote, matching the web `remote` card. Wide cards (>=6 cells)
-    get the apps sidebar; large cards get source chips + VOL/d-pad/CH + the full
-    transport bar; small cards fall back to d-pad + 3 transport buttons."""
+    """Full LG remote, matching the web `remote` card, degrading by size:
+    rich (>=4x4): apps sidebar (6-wide) + source chips + VOL/d-pad/CH + full
+    transport bar; compact (>=2 wide, >=3 tall): d-pad + 3-button transport;
+    1-wide talls: stacked VOL/CH buttons; 1-row / 2-row cards: header + button
+    rows (the fixed-size d-pad can't fit)."""
     e = card.get("entity", "")
     inner = ""
     ts = []                                              # source-highlight readback (rich+sidebar)
     powA = ("homeassistant.action: { action: media_player.toggle, data: { entity_id: %s } }" % e) if e else "lvgl.page.show: page_home"
-    rich = w >= 560 and h >= 320
-    if not rich:                       # compact: icon + title + d-pad + 3 transport
+    transport = [("\\U000F04AE", "media_player.media_previous_track"),
+                 ("\\U000F040A", "media_player.media_play_pause"),
+                 ("\\U000F04AD", "media_player.media_next_track")]
+    rich = w >= 560 and h >= 400
+    if not rich and w >= 294 and h >= 300:               # compact: icon + title + d-pad + 3 transport
         inner = ic(card["ck"], color="0xB06CFF") + lbl("LG OLED", 50, 12, "f_title")
         inner += btn(w - 66, 14, 52, 46, "\\U000F0425", powA, bg="0x2a1414", color="0xF2685A", font="f_icon")
         inner = _dpad(inner, e, w, h - 30)
-        items = [("\\U000F04AE", "media_player.media_previous_track"),
-                 ("\\U000F040A", "media_player.media_play_pause"),
-                 ("\\U000F04AD", "media_player.media_next_track")]
         bw = 56
-        for i, (g, svc) in enumerate(items):
+        for i, (g, svc) in enumerate(transport):
             inner += btn(14 + i * (bw + 8), h - 66, bw, 52, g, ha(svc, e) if e else "lvgl.page.show: page_home",
+                         font="f_icon", bg=("0x2ED5B8" if i == 1 else "0x161B24"), color=("0x06231D" if i == 1 else "0xF3F5F8"))
+        return [card_obj(x, y, w, h, inner)], [], []
+    if not rich and h <= 110:                            # 1-row strip: title + power/prev/play/next
+        inner = ic(card["ck"], color="0xB06CFF") + lbl("LG OLED", 50, 12, "f_title", width=w - 64, long="dot", height=26)
+        row = [("\\U000F0425", None)] + (transport if w >= 240 else [transport[1]])
+        nb = len(row)
+        bw = min(60, (w - 28 - (nb - 1) * 8) // nb)
+        sx = (w - nb * bw - (nb - 1) * 8) // 2
+        for i, (g, svc) in enumerate(row):
+            if svc is None:
+                act, bg, col = powA, "0x2a1414", "0xF2685A"
+            else:
+                act = ha(svc, e) if e else "lvgl.page.show: page_home"
+                main = (svc == "media_player.media_play_pause")
+                bg, col = ("0x2ED5B8", "0x06231D") if main else ("0x161B24", "0xF3F5F8")
+            inner += btn(sx + i * (bw + 8), h - 56, bw, 44, g, act, font="f_icon", bg=bg, color=col)
+        return [card_obj(x, y, w, h, inner)], [], []
+    if not rich and w <= 150:                            # 1-wide tall: power + stacked VOL/CH
+        inner = ic(card["ck"], color="0xB06CFF")
+        inner += btn(w - 66, 14, 52, 46, "\\U000F0425", powA, bg="0x2a1414", color="0xF2685A", font="f_icon")
+        stack = [("\\U000F075D", "VOLUMEUP"), ("\\U000F075E", "VOLUMEDOWN"),
+                 ("\\U000F0143", "CHANNELUP"), ("\\U000F0140", "CHANNELDOWN")]
+        yy = 68
+        avail = h - yy - 14
+        nb = max(1, min(4, (avail + 8) // 52))
+        bh2 = min(56, (avail - (nb - 1) * 8) // nb)
+        for g, bname in stack[:nb]:
+            inner += btn(14, yy, w - 28, bh2, g, _wbtn(e, bname), font="f_icon")
+            yy += bh2 + 8
+        return [card_obj(x, y, w, h, inner)], [], []
+    if not rich:                                         # 2-row band: header + VOL/CH row + transport
+        inner = ic(card["ck"], color="0xB06CFF") + lbl("LG OLED", 50, 12, "f_title")
+        inner += btn(w - 66, 14, 52, 46, "\\U000F0425", powA, bg="0x2a1414", color="0xF2685A", font="f_icon")
+        by = h - 60
+        if h >= 190:
+            vc = [("\\U000F075E", "VOLUMEDOWN"), ("\\U000F075D", "VOLUMEUP"),
+                  ("\\U000F0140", "CHANNELDOWN"), ("\\U000F0143", "CHANNELUP")]
+            vbw = min(96, (w - 28 - 3 * 8) // 4)
+            vsx = (w - 4 * vbw - 3 * 8) // 2
+            for i, (g, bname) in enumerate(vc):
+                inner += btn(vsx + i * (vbw + 8), by - 54, vbw, 46, g, _wbtn(e, bname), font="f_icon")
+        tbw = min(64, (w - 28 - 2 * 8) // 3)
+        tsx = (w - 3 * tbw - 2 * 8) // 2
+        for i, (g, svc) in enumerate(transport):
+            inner += btn(tsx + i * (tbw + 8), by, tbw, 46, g, ha(svc, e) if e else "lvgl.page.show: page_home",
                          font="f_icon", bg=("0x2ED5B8" if i == 1 else "0x161B24"), color=("0x06231D" if i == 1 else "0xF3F5F8"))
         return [card_obj(x, y, w, h, inner)], [], []
 
@@ -2134,7 +2342,7 @@ def c_speakers(card, x, y, w, h, base):
     # Tap a row: grouped -> unjoin (leave); solo -> join to the card's master zone.
     master = card.get("entity") or ents[0]
     inner = lbl(sg, 14, 14, "f_icon", "0x2ED5B8")
-    inner += lbl("SPEAKERS \\u00B7 TAP TO LINK OR LEAVE", 50, 20, "f_micro", "0x868CA0")
+    inner += lbl("SPEAKERS \\u00B7 TAP TO LINK OR LEAVE", 50, 20, "f_micro", "0x868CA0", width=w - 64, long="dot", height=14)
     list_y = 48
     gap = 8
     rh = max(56, min(78, (h - list_y - 14 - (n - 1) * gap) // max(1, n)))
@@ -2165,8 +2373,10 @@ def c_speakers(card, x, y, w, h, base):
                   "                          - label: { id: %s, text: %s, x: 42, y: 9, width: %d, long_mode: dot, text_font: f_body, text_color: 0xC2C7D2 }\n"
                   "                          - label: { id: %s, text: \"\\U000F0415\", align: top_right, x: -14, y: 8, text_font: f_icon, text_color: 0x2ED5B8 }\n"
                   "                          - label: { id: %s, text: \"LINKED\", align: top_right, x: -14, y: 12, text_font: f_micro, text_color: 0x2ED5B8, hidden: true }\n"
-                  % (rowid, ry, rw, rh, tog, icid, sg, nmid, esc(nm(i)), rw - 150, plusid, lnkid))
-        if e and rh >= 56:
+                  % (rowid, ry, rw, rh, tog, icid, sg, nmid, esc(nm(i)),
+                     max(40, rw - (56 if rw < 170 else 150)), plusid, lnkid))
+        has_sld = bool(e) and rh >= 56 and rw >= 180      # inline volume only when a usable track fits
+        if has_sld:
             inner += ("                          - slider:\n                              id: %s\n                              x: 42\n                              y: %d\n                              width: %d\n                              height: 8\n"
                       "                              bg_color: 0x23262F\n                              bg_opa: 100%%\n"
                       "                              min_value: 0\n                              max_value: 100\n                              value: 30\n"
@@ -2176,10 +2386,10 @@ def c_speakers(card, x, y, w, h, base):
                       "                                    action: media_player.volume_set\n"
                       "                                    data: { entity_id: %s, volume_level: !lambda 'char b[8]; snprintf(b, sizeof(b), \"%%.2f\", lv_slider_get_value(id(%s)) / 100.0); return std::string(b);' }\n"
                       % (sldv, rh - 22, rw - 120, e, sldv))
-        if e:
-            # live volume (numeric sensor)
+            # live volume (numeric sensor) — only when the slider exists
             ss.append("  - platform: homeassistant\n    id: ha_%s\n    entity_id: %s\n    attribute: volume_level\n    on_value:\n"
                       "      - lvgl.slider.update: { id: %s, value: !lambda 'return (int)(x * 100);' }\n" % (sldv, e, sldv))
+        if e:
             # live group state (group_members list attr as text) -> restyle row in place
             ts.append("  - platform: homeassistant\n    id: ha_%s_g%d\n    entity_id: %s\n    attribute: group_members\n    on_value:\n"
                       "      then:\n"
@@ -2356,6 +2566,7 @@ CTRL = {
     "wx_current": c_wx_current, "wx_hourly": c_wx_hourly, "wx_daily": c_wx_daily, "wx_stats": c_wx_stats,
     "lightgroup": c_group, "outletgroup": c_outlet, "speakers": c_speakers,
     "sonos_sources": c_btngrid, "tv_sources": c_btngrid,
+    "tv_app": c_tv_app, "tv_apps": c_tv_apps,
     "tv_dpad": c_tv_dpad, "tv_transport": c_tv_transport, "tv_channel": c_tv_channel,
     "tv_volume": c_tv_volume, "tv_trackpad": c_tv_trackpad, "tvremote": c_tvremote,
     "playlist": c_playlist, "sonos_fav": c_playlist, "songlist": c_songlist,
