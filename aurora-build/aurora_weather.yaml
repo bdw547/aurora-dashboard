@@ -42,7 +42,7 @@ template:
           d_names: >-
             {%- set ns = namespace(s=[]) -%}
             {%- for f in fc['weather.forecast_home'].forecast[:6] -%}
-              {%- set ns.s = ns.s + [as_datetime(f.datetime) | as_local | strftime('%a')] -%}
+              {%- set ns.s = ns.s + [(as_datetime(f.datetime) | as_local).strftime('%a')] -%}
             {%- endfor -%}
             {{ ns.s | join('\n') }}
           d_high: >-
