@@ -182,7 +182,7 @@ def card_obj(x, y, w, h, inner, on_click=None, bg=None, oid=None):
     return (
         "        - obj:%s\n"
         "            x: %d\n            y: %d\n            width: %d\n            height: %d\n"
-        "            styles: st_glass\n            pad_all: 0\n            clip_corner: true%s\n            scrollable: false%s\n"
+        "            styles: st_glass\n            pad_all: 0\n            clip_corner: true%s\n            scrollable: false\n            gesture_bubble: true%s\n"
         "            widgets:\n%s" % (idline, x, y, w, h, bgline, oc, inner)
     )
 
@@ -2643,24 +2643,32 @@ def gen_pages(layout, pagemap):
                 widgets += "".join(ws)
                 sens += ss
                 txt += ts
-            # Sub-page paging affordances. These MUST be emitted as PAGE-LEVEL widgets at
-            # 8-space indent: btn() emits 14-space card-inner YAML, which would nest inside
-            # the last card's widgets and never render as a page button (the original bug).
-            # Prev starts at x=94 to clear the left nav rail; both float on the bottom strip.
-            if si > 0:                                    # Prev -> previous sub-page (sub-page 1's prev is the base page id)
-                prv = pagemap[key] if si == 1 else "%s_%d" % (pagemap[key], si - 1)
-                widgets += ("        - button:\n            x: 94\n            y: 540\n            width: 128\n            height: 46\n"
-                            "            bg_color: 0x161B24\n            border_color: 0x2ED5B8\n            border_width: 1\n            radius: 12\n"
-                            "            pad_all: 0\n            scrollable: false\n"
-                            "            widgets: [label: { text: \"Prev\", align: center, text_font: f_body, text_color: 0x2ED5B8 }]\n"
-                            "            on_click: [lvgl.page.show: %s]\n" % prv)
-            if si < len(subs) - 1:                        # Next -> following sub-page
-                nxt = "%s_%d" % (pagemap[key], si + 1)
-                widgets += ("        - button:\n            x: 802\n            y: 540\n            width: 128\n            height: 46\n"
-                            "            bg_color: 0x161B24\n            border_color: 0x2ED5B8\n            border_width: 1\n            radius: 12\n"
-                            "            pad_all: 0\n            scrollable: false\n"
-                            "            widgets: [label: { text: \"Next\", align: center, text_font: f_body, text_color: 0x2ED5B8 }]\n"
-                            "            on_click: [lvgl.page.show: %s]\n" % nxt)
+            # Sub-page navigation: swipe left/right (wired on the page below;
+            # cards set gesture_bubble so a swipe that starts on a card reaches
+            # the page) plus a slim carousel-style dot indicator centered on the
+            # bottom strip. Each dot is also a tap target that jumps straight to
+            # its sub-page — the guaranteed-discoverable path, since swipe alone
+            # isn't obvious. This replaces the old Prev/Next pills, which floated
+            # at y=540 and collided with bottom-anchored card content (the sunset
+            # readout, the transport row). Emitted as PAGE-LEVEL widgets at
+            # 8-space indent (btn()'s 14-space YAML would nest inside the last
+            # card's widgets and never render as a page control).
+            nsub = len(subs)
+            if nsub > 1:
+                tw = 34                                   # per-dot tap target
+                cx = (2 * X0 + COLS * CELLW + (COLS - 1) * GUT) // 2   # center of the usable area (past the nav rail)
+                sx = cx - nsub * tw // 2
+                widgets += ("        - obj:\n            x: %d\n            y: 557\n            width: %d\n            height: 30\n"
+                            "            bg_color: 0x0A0B0F\n            bg_opa: 60%%\n            border_width: 0\n            radius: 15\n"
+                            "            pad_all: 0\n            scrollable: false\n            clickable: false\n"
+                            % (sx - 10, nsub * tw + 20))
+                for j in range(nsub):
+                    dpid = pagemap[key] if j == 0 else "%s_%d" % (pagemap[key], j)
+                    dot = "0x2ED5B8" if j == si else "0x3A4150"
+                    widgets += ("        - button:\n            x: %d\n            y: 554\n            width: %d\n            height: 34\n"
+                                "            bg_opa: 0%%\n            border_width: 0\n            radius: 0\n            pad_all: 0\n            scrollable: false\n"
+                                "            widgets: [obj: { align: center, width: 10, height: 10, radius: 5, bg_color: %s, border_width: 0, pad_all: 0, scrollable: false, clickable: false }]\n"
+                                "            on_click: [lvgl.page.show: %s]\n" % (sx + j * tw, tw, dot, dpid))
             active = next((slug(n.get("id", "")) for n in layout.get("nav", []) if n.get("page") == key), None)
             onload = _nav_onload(layout, active)
             onunload = ""
@@ -2670,8 +2678,14 @@ def gen_pages(layout, pagemap):
                 onunload = "      on_unload:\n        - lambda: 'id(cam_stream).stop();'\n"
             if has_tv and tp_page is None:                # remember where the remote lives (Pad links here back)
                 tp_page = (pid, active)
+            swipe = ""                                    # page-level swipe -> adjacent sub-page (matches the dot targets)
+            if si < nsub - 1:
+                swipe += "      on_swipe_left:\n        - lvgl.page.show: %s_%d\n" % (pagemap[key], si + 1)
+            if si > 0:
+                sw_prev = pagemap[key] if si == 1 else "%s_%d" % (pagemap[key], si - 1)
+                swipe += "      on_swipe_right:\n        - lvgl.page.show: %s\n" % sw_prev
             pages_yaml += (
-                "    - id: %s\n      bg_color: 0x0A0B0F\n      scrollable: false\n%s%s      widgets:\n%s" % (pid, onload, onunload, widgets))
+                "    - id: %s\n      bg_color: 0x0A0B0F\n      scrollable: false\n%s%s%s      widgets:\n%s" % (pid, onload, onunload, swipe, widgets))
     if tp_page is not None:                               # dedicated trackpad page (hand-built clone)
         pages_yaml += gen_trackpad_page(layout, tp_page[0], tp_page[1])
     pages_yaml += gen_settings_page(layout)
