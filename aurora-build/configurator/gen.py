@@ -3218,15 +3218,13 @@ def gen_pages(layout, pagemap):
                 tw = 34                                   # per-dot tap target
                 cx = (2 * X0 + COLS * CELLW + (COLS - 1) * GUT) // 2   # center of the usable area (past the nav rail)
                 sx = cx - nsub * tw // 2
-                widgets += ("        - obj:\n            x: %d\n            y: 557\n            width: %d\n            height: 30\n"
-                            "            bg_color: 0x0A0B0F\n            bg_opa: 60%%\n            border_width: 0\n            radius: 15\n"
-                            "            pad_all: 0\n            scrollable: false\n            clickable: false\n"
-                            % (sx - 10, nsub * tw + 20))
+
                 for j in range(nsub):
                     dpid = pagemap[key] if j == 0 else "%s_%d" % (pagemap[key], j)
                     dot = "0x2ED5B8" if j == si else "0x3A4150"
-                    widgets += ("        - button:\n            x: %d\n            y: 554\n            width: %d\n            height: 34\n"
-                                "            bg_opa: 0%%\n            border_width: 0\n            radius: 0\n            pad_all: 0\n            scrollable: false\n"
+                    widgets += ("        - obj:\n            x: %d\n            y: 554\n            width: %d\n            height: 34\n"
+                                "            bg_opa: 0%%\n            border_width: 0\n            outline_width: 0\n            shadow_width: 0\n"
+                                "            radius: 0\n            pad_all: 0\n            scrollable: false\n            clickable: true\n"
                                 "            widgets: [obj: { align: center, width: 10, height: 10, radius: 5, bg_color: %s, border_width: 0, pad_all: 0, scrollable: false, clickable: false }]\n"
                                 "            on_click: [lvgl.page.show: %s]\n" % (sx + j * tw, tw, dot, dpid))
             onload = _nav_onload(layout, active)
