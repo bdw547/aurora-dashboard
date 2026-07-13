@@ -1350,8 +1350,6 @@ class H(BaseHTTPRequestHandler):
         if self.path in ("/", "/builder"):
             if not self._authed():
                 return self._send(200, LOGIN_PAGE, "text/html")
-            if self.path == "/":
-                return self._send(200, PAGE, "text/html")
             try:
                 with open(BUILDER_HTML, "rb") as f:
                     return self._send(200, f.read(), "text/html")
