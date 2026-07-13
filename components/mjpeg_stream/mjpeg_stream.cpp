@@ -1090,8 +1090,10 @@ void MJPEGStream::process_still_(const StillReq &req) {
     this->rx_len_ = saved_live;
     this->rx_pos_ = 0;
   }
-  if (ok)
+  if (ok) {
     this->stills_ok_++;
+    ESP_LOGI(TAG, "still: ready %ux%u for widget %p", (unsigned) req.w, (unsigned) req.h, (void *) req.widget);
+  }
   else
     this->stills_failed_++;  // no retries: art is cosmetic, next track change re-requests
 }

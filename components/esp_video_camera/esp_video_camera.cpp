@@ -700,6 +700,24 @@ bool ESPVideoCamera::start_direct_capture_() {
   return true;
 }
 
+bool ESPVideoCamera::start_motion_pipeline_() {
+  this->capture_fd_ = open(ESP_VIDEO_MIPI_CSI_DEVICE_NAME, O_RDWR | O_NONBLOCK);
+  if (this->capture_fd_ < 0) {
+    ESP_LOGE(TAG, "motion open(%s) failed: %s", ESP_VIDEO_MIPI_CSI_DEVICE_NAME, strerror(errno));
+    return false;
+  }
+  if (!this->configure_capture_format_(V4L2_PIX_FMT_YUV420))
+    return false;
+  if (!this->setup_capture_buffers_())
+    return false;
+  this->apply_image_tuning_();
+  int type = V4L2_BUF_TYPE_VIDEO_CAPTURE;
+  if (ioctl(this->capture_fd_, VIDIOC_STREAMON, &type) < 0) {
+    ESP_LOGE(TAG, "motion STREAMON failed: %s", strerror(errno));
+    return false;
+  }
+  return true;
+}
 bool ESPVideoCamera::start_jpeg_pipeline_() {
   bool h264 = (this->codec_ == "h264");
   // Stage 1: sensor/ISP (MIPI-CSI) capture device. JPEG path captures RGB565;
@@ -947,6 +965,30 @@ bool ESPVideoCamera::capture_h264_(const uint8_t **nal, size_t *len) {
   return ok;
 }
 
+// While RTSP is idle, dequeue one raw YUV420 frame, sample its luma plane, and
+// return it immediately. This keeps approach detection alive without paying the
+// cost of H.264 encoding when nobody is watching the stream.
+bool ESPVideoCamera::capture_motion_() {
+  if (this->capture_fd_ < 0)
+    return false;
+  struct v4l2_buffer cap_buf;
+  memset(&cap_buf, 0, sizeof(cap_buf));
+  cap_buf.type = V4L2_BUF_TYPE_VIDEO_CAPTURE;
+  cap_buf.memory = V4L2_MEMORY_MMAP;
+  if (ioctl(this->capture_fd_, VIDIOC_DQBUF, &cap_buf) < 0)
+    return false;
+
+  bool ok = false;
+  if (cap_buf.index < (uint32_t) this->num_capture_buffers_ &&
+      cap_buf.bytesused >= (size_t) this->capture_width_ * this->capture_height_) {
+    this->compute_motion_((const uint8_t *) this->capture_buffers_[cap_buf.index].start,
+                          this->capture_width_, this->capture_height_);
+    ok = true;
+  }
+  if (ioctl(this->capture_fd_, VIDIOC_QBUF, &cap_buf) < 0)
+    ESP_LOGW(TAG, "motion QBUF failed: %s", strerror(errno));
+  return ok;
+}
 // Cheap frame-difference motion detector for night wake-on-approach. Downsamples
 // the luma (Y) plane into an MOTION_GW x MOTION_GH grid (each cell = the mean of
 // a strided sample of its block), then counts cells whose mean changed beyond a
@@ -1179,68 +1221,79 @@ void ESPVideoCamera::rtp_send_access_unit_(const uint8_t *au, size_t au_len, uin
 
 void ESPVideoCamera::rtsp_stream_task_(void *arg) {
   auto *self = (ESPVideoCamera *) arg;
-  // The camera is shared with the HA snapshot path, which owns it by default.
-  // This task takes SOLE ownership of the V4L2 capture + H.264 encoder only
-  // while an RTSP client is connected, and releases it on disconnect. The
-  // rtsp_owns_pipeline_ flag is raised BEFORE tearing the snapshot pipeline
-  // down so start_capture_() can't restart it (or stomp our fd) mid-takeover.
-  // A failed acquisition attempt must stop_capture_() before retrying —
-  // start_jpeg_pipeline_() re-opens the device every call, and retrying
-  // without cleanup leaks the fd + mmap'd buffers until open() dies with
-  // "Not enough space".
-  while (true) {
-    // Idle until a client connects; the snapshot path owns the camera here.
-    while (self->rtsp_client_fd_ < 0)
-      vTaskDelay(pdMS_TO_TICKS(200));
+  self->rtsp_owns_pipeline_ = true;
 
-    self->rtsp_owns_pipeline_ = true;
+  while (true) {
+    // Keep DMA-capable RAM available for WiFi image downloads. RTSP viewers can
+    // still take over while idle motion capture is paused.
+    while (!self->motion_capture_enabled_ && self->rtsp_client_fd_ < 0)
+      vTaskDelay(pdMS_TO_TICKS(50));
+
+    bool motion_ready = self->rtsp_client_fd_ >= 0;
+    while (!motion_ready) {
+      self->stop_capture_();
+      motion_ready = self->start_motion_pipeline_();
+      if (!motion_ready) {
+        self->stop_capture_();
+        ESP_LOGW(TAG, "motion: raw capture not ready yet, retrying...");
+        vTaskDelay(pdMS_TO_TICKS(1000));
+      }
+    }
+    if (self->rtsp_client_fd_ < 0)
+      ESP_LOGI(TAG, "motion: raw capture active; waiting for RTSP viewer");
+    while (self->rtsp_client_fd_ < 0 && self->motion_capture_enabled_) {
+      self->capture_motion_();
+      vTaskDelay(pdMS_TO_TICKS(40));
+    }
+    if (self->rtsp_client_fd_ < 0) {
+      self->stop_capture_();
+      ESP_LOGI(TAG, "motion: paused for network transfer");
+      continue;
+    }
+
+    // A viewer connected. Release raw-only mode and attempt the normal H.264
+    // pipeline. If encoder memory is unavailable, refuse this viewer and return
+    // to motion mode instead of repeatedly starving the rest of the firmware.
+    self->stop_capture_();
     bool acquired = false;
-    for (int attempt = 0; attempt < 15 && self->rtsp_client_fd_ >= 0; attempt++) {
-      self->stop_capture_();  // release the snapshot pipeline / a previous failed attempt
+    for (int attempt = 0; attempt < 3 && self->rtsp_client_fd_ >= 0; attempt++) {
       if (self->start_jpeg_pipeline_()) {
         acquired = true;
         break;
       }
       self->stop_capture_();
-      ESP_LOGW(TAG, "RTSP: camera capture not ready yet, retrying...");
-      vTaskDelay(pdMS_TO_TICKS(1000));
+      ESP_LOGW(TAG, "RTSP: H.264 pipeline not ready, retrying...");
+      vTaskDelay(pdMS_TO_TICKS(500));
     }
 
     if (acquired) {
       if (self->rtp_fd_ < 0)
         self->rtp_fd_ = socket(AF_INET, SOCK_DGRAM, 0);
-      ESP_LOGI(TAG, "RTSP: capture pipeline open; stream task ready");
+      ESP_LOGI(TAG, "RTSP: H.264 capture active");
       while (self->rtsp_client_fd_ >= 0) {
         const uint8_t *nal;
         size_t len;
         if (self->capture_h264_(&nal, &len)) {
-          // Cache SPS/PPS from the very first frames so DESCRIBE can build the SDP.
           if (!self->params_ready_)
             self->extract_params_(nal, len);
-          // Only emit RTP while a client is playing; otherwise just drain the
-          // encoder (keeps the pipeline warm without churning the V4L2 device).
           if (self->rtsp_playing_) {
-            uint32_t ts = (uint32_t) ((esp_timer_get_time() * 9) / 100);  // us -> 90 kHz
+            uint32_t ts = (uint32_t) ((esp_timer_get_time() * 9) / 100);
             self->rtp_send_access_unit_(nal, len, ts);
           }
         } else {
           vTaskDelay(pdMS_TO_TICKS(5));
         }
       }
-    } else if (self->rtsp_client_fd_ >= 0) {
-      ESP_LOGE(TAG, "RTSP: could not acquire the camera; refusing this client");
+    } else {
+      ESP_LOGE(TAG, "RTSP: H.264 pipeline unavailable; returning to motion mode");
       while (self->rtsp_client_fd_ >= 0)
-        vTaskDelay(pdMS_TO_TICKS(200));
+        vTaskDelay(pdMS_TO_TICKS(100));
     }
 
-    // Client gone: hand the camera back to the snapshot path. SPS/PPS stay
-    // cached (same sensor/encoder config), so the next DESCRIBE is instant.
     self->stop_capture_();
-    self->rtsp_owns_pipeline_ = false;
-    ESP_LOGI(TAG, "RTSP: released the camera (client disconnected)");
+    ESP_LOGI(TAG, "RTSP: viewer disconnected; restoring motion capture");
   }
 }
-
 // Set one ISP integer control to a target derived from its queried range. frac
 // picks a point in [min,max]; when use_default is set the control is left at its
 // neutral default instead (used for hue, whose neutral point is the default, not

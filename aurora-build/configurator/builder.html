@@ -597,6 +597,13 @@ function renderHeader(){ const h=document.getElementById('phead'); const hd=L.pa
   const chips=(hd.right||[]).slice(0,4).map(t=>{ const it=HEADER_ITEMS[t]; return it?`<div class="chip"><span class="mdi mdi-${it.icon}" style="color:${it.color||'var(--t2)'}"></span>${it.txt}</div>`:''; }).join('');
   h.innerHTML=`<div>${left}</div><div style="display:flex;gap:10px;align-items:center">${chips}</div>`; }
 
+function adaptiveGrid(n,maxCols,maxRows,w,h,target=1.45){
+  if(n<=0)return [1,1]; let best=null;
+  for(let cols=1;cols<=Math.min(maxCols,n);cols++){ const rows=Math.ceil(n/cols); if(rows>maxRows)continue;
+    const bw=(w-(cols-1)*8)/cols,bh=(h-(rows-1)*8)/rows,score=Math.abs(bw/bh-target)+(cols*rows-n)*.12;
+    if(!best||score<best[0])best=[score,cols,rows]; }
+  return best?[best[1],best[2]]:[maxCols,maxRows];
+}
 function cardInner(c){ const def=C[c.ck], nm=c.name||def.label, big=c.w>=3, ctrl=def.ctrl;
   const head=`<span class="cbadge mono">${c.w}×${c.h}</span>`;
   const ico=`<span class="ci mdi mdi-${def.icon}" style="color:${def.color}"></span>`;
@@ -612,7 +619,7 @@ function cardInner(c){ const def=C[c.ck], nm=c.name||def.label, big=c.w>=3, ctrl
     return head+`<div style="display:flex;gap:8px;height:100%">
       <div style="flex:1;position:relative;border-radius:10px;overflow:hidden;background:linear-gradient(135deg,#7b2ff7,#e94057)">
         <span class="mdi mdi-music" style="position:absolute;inset:0;display:flex;align-items:center;justify-content:center;font-size:36px;color:rgba(255,255,255,.3)"></span>
-        <div style="position:absolute;left:0;right:0;bottom:0;height:148px;background:#0b0d11;padding:8px 10px 0">
+        <div style="position:absolute;left:0;right:0;bottom:0;height:148px;background:rgba(0,0,0,.5);padding:8px 10px 0">
           <div style="height:20px;font-size:13px;font-weight:700;color:#fff;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${nm||'Now playing'}</div>
           <div style="height:16px;font-size:11px;color:#aeb4c2;margin-top:2px">Artist</div>
           <div style="height:3px;background:#2a2d36;border-radius:2px;margin-top:6px"><div style="width:40%;height:100%;background:${GN};border-radius:2px"></div></div>
@@ -650,6 +657,7 @@ function cardInner(c){ const def=C[c.ck], nm=c.name||def.label, big=c.w>=3, ctrl
   if(ctrl==='toggle'){ if(c.w===1) return head+`<div style="display:flex;flex-direction:column;align-items:center;gap:10px;height:100%">${ico}<div style="font-size:12px;font-weight:600;text-align:center">${nm}</div>${tog(true)}</div>`;
     return head+`<div class="toprow">${ico}${tog(true)}</div>${nme}<div class="csub" style="color:var(--teal)">On</div>`; }
   if(ctrl==='light'){ const AM='#E6A62B';
+    const rgbBtn=c.rgb?`<div title="RGB palette" style="position:absolute;right:8px;top:8px;width:34px;height:34px;border-radius:17px;background:#3b82f6;border:1px solid #fff;display:flex;align-items:center;justify-content:center;z-index:3"><span class="mdi mdi-palette" style="color:#fff;font-size:17px"></span></div>`:'';
     // WIDE FILL STRIP (1x1..6x1): power btn left + horizontal amber fill.
     // 1x1: the track is too narrow for the name — % only, smaller (gen parity)
     if(c.h===1){ const tiny=c.w===1;
@@ -659,7 +667,7 @@ function cardInner(c){ const def=C[c.ck], nm=c.name||def.label, big=c.w>=3, ctrl
         <div style="position:absolute;left:0;top:0;bottom:0;width:74%;background:linear-gradient(90deg,#5c4a14,${AM})"></div>
         <div style="position:absolute;left:calc(74% - 3px);top:6px;bottom:6px;width:6px;border-radius:3px;background:#fff"></div>
         <div style="position:absolute;inset:0;padding:0 12px;display:flex;align-items:center;justify-content:${tiny?'flex-end':'space-between'}">${tiny?'':`<span style="font-weight:700;color:#fff;font-size:13px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${nm}</span>`}<span style="font-size:${tiny?13:19}px;font-weight:800;color:#fff">74%</span></div>
-      </div></div>`; }
+      </div></div>`+rgbBtn; }
     // TALL FILL STRIP (1x2..1x5): vertical amber fill + power btn below
     if(c.w===1) return head+`<div style="display:flex;flex-direction:column;gap:8px;height:100%">
       <div style="flex:1;position:relative;border-radius:10px;overflow:hidden;background:#0e1014">
@@ -668,11 +676,11 @@ function cardInner(c){ const def=C[c.ck], nm=c.name||def.label, big=c.w>=3, ctrl
         <div style="position:absolute;inset:0;padding:8px;display:flex;flex-direction:column;justify-content:space-between"><span class="mdi mdi-lightbulb" style="color:#fff;font-size:18px"></span><div><div style="font-size:11px;color:#fff;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${nm}</div><div style="font-size:19px;font-weight:800;color:#fff">60%</div></div></div>
       </div>
       <div style="display:flex;justify-content:center"><div style="width:36px;height:36px;border-radius:18px;background:#2b2410;border:2px solid ${AM};display:flex;align-items:center;justify-content:center"><span class="mdi mdi-power" style="color:${AM};font-size:17px"></span></div></div>
-    </div>`;
+    </div>`+rgbBtn;
     // whole-card dimmer (2x2, 3x2, 4x4)
     const pwr=`<div style="position:absolute;left:10px;right:10px;bottom:8px;height:40px;background:#161B24;border:1px solid var(--bd);border-radius:12px;display:flex;align-items:center;justify-content:center"><span class="mdi mdi-power" style="color:var(--amber);font-size:22px"></span></div>`;
     const fill=(c.h>c.w)?`<div style="position:absolute;left:0;right:0;bottom:56px;height:calc((100% - 64px)*0.74);background:rgba(46,213,184,.5);border-radius:12px"></div>`:`<div style="position:absolute;left:0;top:0;height:calc(100% - 56px);width:74%;background:rgba(46,213,184,.5);border-radius:12px"></div>`;
-    return fill+head+`<div style="position:relative;display:flex;flex-direction:column;align-items:center;height:100%"><span class="mdi mdi-lightbulb-on" style="font-size:24px;color:var(--amber)"></span><div style="font-weight:600;margin-top:4px;text-align:center;max-width:100%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${nm}</div><div style="font-size:38px;font-weight:800;margin:auto 0 64px">74%</div></div>`+pwr; }
+    return fill+head+`<div style="position:relative;display:flex;flex-direction:column;align-items:center;height:100%"><span class="mdi mdi-lightbulb-on" style="font-size:24px;color:var(--amber)"></span><div style="font-weight:600;margin-top:4px;text-align:center;max-width:100%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${nm}</div><div style="font-size:38px;font-weight:800;margin:auto 0 64px">74%</div></div>`+pwr+rgbBtn; }
   if(ctrl==='dial'){
     // device parity: gen's rich thermostat needs >=3x3 (w>=448 && h>=328)
     if(c.w<=2||c.h<=2) return head+`<div class="toprow">${ico}<span class="csub">${nm}</span></div><div style="font-size:32px;font-weight:800;text-align:center;margin:auto 0">71°</div>`;
@@ -786,14 +794,13 @@ function cardInner(c){ const def=C[c.ck], nm=c.name||def.label, big=c.w>=3, ctrl
     </div>`;
   }
   if(ctrl==='tile') return head+`<div style="display:flex;flex-direction:column;align-items:center;justify-content:center;height:100%;gap:6px">${ico}<div style="font-size:13px;font-weight:600;text-align:center">${nm}</div></div>`;
-  if(ctrl==='group'){ const n=cap(c), ents=c.entities||[]; let cells='';
-    for(let i=0;i<n;i++){ const e=ents[i]; if(e){ const dm=e.split('.')[0], gi=GICON[dm]||['help-circle','var(--t2)'];
-        cells+=`<div class="gslot"><span class="mdi mdi-${gi[0]}" style="color:${gi[1]}"></span><div style="min-width:0"><div class="gv">${GVAL[dm]||'On'}</div><div class="gl">${nm2(e)}</div></div></div>`; }
-      else cells+=`<div class="gslot empty">+</div>`; }
-    return head+`<div class="toprow">${ico}<span class="csub">${nm} · ${ents.length}/${n}</span></div><div class="ggrid" style="grid-template-rows:repeat(${c.h},1fr)">${cells}</div>`; }
-  if(ctrl==='lightgroup'){ const n=cap(c), ents=c.entities||[], brows=Math.max(2,c.h-1), onN=ents.filter((e,i)=>i%2===0).length; let btns='';
-    for(let i=0;i<n;i++){ const e=ents[i]; const on=e&&i%2===0; btns+=`<div class="lgbtn${on?' on':''}"><span class="mdi mdi-lightbulb${on?'':'-outline'}"></span><span class="lgn">${e?nm2(e):'Light'}</span></div>`; }
-    return head+`<div class="toprow">${ico}<span class="csub">${nm} · ${onN} on · ${ents.length}/${n}</span></div><div class="lggrid" style="grid-template-columns:repeat(${c.w},1fr);grid-template-rows:repeat(${brows},1fr)">${btns}</div>`; }
+  if(ctrl==='group'){ const n=cap(c), ents=(c.entities||[]).slice(0,n), shown=Math.max(1,ents.length), dims=adaptiveGrid(shown,2,c.h,c.w*140,c.h*100-56,2); let cells='';
+    if(ents.length) ents.forEach(e=>{ const dm=e.split('.')[0],gi=GICON[dm]||['help-circle','var(--t2)']; cells+=`<div class="gslot"><span class="mdi mdi-${gi[0]}" style="color:${gi[1]}"></span><div style="min-width:0"><div class="gv">${GVAL[dm]||'On'}</div><div class="gl">${nm2(e)}</div></div></div>`; });
+    else cells='<div class="gslot empty">+</div>';
+    return head+`<div class="toprow">${ico}<span class="csub">${nm} · ${ents.length}/${n}</span></div><div class="ggrid" style="grid-template-columns:repeat(${dims[0]},1fr);grid-template-rows:repeat(${dims[1]},1fr)">${cells}</div>`; }
+  if(ctrl==='lightgroup'){ const n=cap(c), ents=(c.entities||[]).slice(0,n), maxRows=Math.max(2,c.h-1), shown=Math.max(1,ents.length), dims=adaptiveGrid(shown,c.w,maxRows,c.w*140,c.h*100-58,1.15), onN=ents.filter((e,i)=>i%2===0).length; let btns='';
+    if(ents.length) ents.forEach((e,i)=>{const on=i%2===0;btns+=`<div class="lgbtn${on?' on':''}"><span class="mdi mdi-lightbulb${on?'':'-outline'}"></span><span class="lgn">${nm2(e)}</span></div>`;}); else btns='<div class="lgbtn"><span class="mdi mdi-plus"></span><span class="lgn">Add light</span></div>';
+    return head+`<div class="toprow">${ico}<span class="csub">${nm} · ${onN} on · ${ents.length}/${n}</span></div><div class="lggrid" style="grid-template-columns:repeat(${dims[0]},1fr);grid-template-rows:repeat(${dims[1]},1fr)">${btns}</div>`; }
   if(ctrl==='btngrid'){ const ents=c.entities||[]; const bi=def.btnIcon||'speaker'; const word=(c.ck==='sonos_sources'||c.ck==='tv_sources')?'source':'speaker'; const Word=word.charAt(0).toUpperCase()+word.slice(1);
     // device parity (gen c_btngrid): cols clamped to >=96px tiles, count to
     // >=40px rows; tiles narrower than 120px drop the icon
@@ -817,9 +824,9 @@ function cardInner(c){ const def=C[c.ck], nm=c.name||def.label, big=c.w>=3, ctrl
       const right=gr?`<span class="csub" style="color:var(--teal);font-weight:700;letter-spacing:1px;font-size:10px">LINKED</span>`:`<span class="mdi mdi-plus" style="color:var(--teal);font-size:18px"></span>`;
       rows+=`<div style="background:${tbg};border:1px solid ${tbd};border-radius:12px;padding:8px 12px;margin-bottom:8px"><div class="row" style="gap:8px;align-items:center"><span class="mdi mdi-speaker" style="color:${gr?'var(--teal)':'var(--t3)'}"></span><span style="flex:1;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;color:${gr?'var(--tx)':'var(--t2)'}">${nmv(i)}</span>${right}</div>${c.w===1?'':`<div class="hbar" style="margin-top:7px;margin-left:26px"><i style="width:${V[i%8]}%;background:var(--teal)"></i></div>`}</div>`; }
     return head+`<div class="toprow"><span class="mdi mdi-speaker-multiple" style="color:var(--teal)"></span><span class="csub" style="letter-spacing:1px">SPEAKERS · TAP TO LINK OR LEAVE</span></div><div style="margin-top:8px;overflow:hidden">${rows}</div>`; }
-  if(ctrl==='shortcuts'){ const n=cap(c), sc=c.shortcuts||[]; let btns='';
-    for(let i=0;i<n;i++){ const s=sc[i]; btns+=`<div class="scbtn${s?'':' empty'}">${s?`<span class="mdi mdi-${s.icon}"></span><span class="scn">${s.label}</span>`:`<span class="mdi mdi-plus"></span>`}</div>`; }
-    return head+`<div class="toprow">${ico}<span class="csub">${nm} · ${sc.length}/${n}</span></div><div class="scgrid" style="grid-template-columns:repeat(${c.w},1fr);grid-template-rows:repeat(${c.h},1fr)">${btns}</div>`; }
+  if(ctrl==='shortcuts'){ const n=cap(c), sc=(c.shortcuts||[]).slice(0,n), shown=Math.max(1,sc.length), dims=adaptiveGrid(shown,c.w,c.h,c.w*140,c.h*100-48,1.45); let btns='';
+    if(sc.length) sc.forEach(it=>{btns+=`<div class="scbtn"><span class="mdi mdi-${it.icon}"></span><span class="scn">${it.label}</span></div>`;}); else btns='<div class="scbtn empty"><span class="mdi mdi-plus"></span></div>';
+    return head+`<div class="toprow">${ico}<span class="csub">${nm} · ${sc.length}/${n}</span></div><div class="scgrid" style="grid-template-columns:repeat(${dims[0]},1fr);grid-template-rows:repeat(${dims[1]},1fr)">${btns}</div>`; }
   if(ctrl==='outletgroup'){ const n=cap(c), ents=c.entities||[], horiz=c.w>c.h;
     const badge=`<span class="osq"><span class="mdi mdi-power-socket-us"></span></span>`;
     if(c.w===1&&c.h===1) return `<div style="position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:8px;background:#3a2e0a"><span class="mdi mdi-power-plug" style="font-size:26px;color:var(--amber)"></span><span style="font-weight:600;color:var(--amber)">${ents[0]?nm2(ents[0]):nm}</span></div>`+head;
@@ -938,6 +945,15 @@ function wireCardActions(el,c){
   el.querySelector('#copyCard').onclick=()=>copySel(false);
   el.querySelector('#cutCard').onclick=()=>copySel(true);
   el.querySelector('#delCard').onclick=()=>{ const a=curCards(), i=a.indexOf(c); if(i>=0) a.splice(i,1); sel=null; renderGrid(); renderInspector(); }; }
+function dragHandleHTML(){ return '<span class="dragHandle mdi mdi-drag-vertical" title="Drag to reorder" style="cursor:grab;color:var(--t2);font-size:20px;touch-action:none"></span>'; }
+function wireSortableRow(row,a,i,refresh){
+  const handle=row.querySelector('.dragHandle'); row.dataset.orderIndex=i; row.draggable=false;
+  handle.onmousedown=()=>{row.draggable=true;}; handle.onmouseup=()=>{row.draggable=false;};
+  row.ondragstart=(e)=>{ if(!row.draggable){e.preventDefault();return;} e.dataTransfer.effectAllowed='move'; e.dataTransfer.setData('text/plain',String(i)); row.style.opacity='.5'; };
+  row.ondragend=()=>{row.style.opacity='';row.draggable=false;};
+  row.ondragover=(e)=>{e.preventDefault();e.dataTransfer.dropEffect='move';};
+  row.ondrop=(e)=>{e.preventDefault(); const from=Number(e.dataTransfer.getData('text/plain')),to=i; if(!Number.isInteger(from)||from===to||from<0||from>=a.length)return; const [item]=a.splice(from,1); a.splice(to,0,item); refresh();};
+}
 
 function renderInspector(){ const el=document.getElementById('insp'); const c=sel&&curCards().find(x=>x.id===sel);
   if(!c){ const hd=L.pages[curPage].header; const on=hd.on;
@@ -954,7 +970,8 @@ function renderInspector(){ const el=document.getElementById('insp'); const c=se
     el.querySelector('#hdrTgl').onclick=()=>{ if(!on){ if(curCards().some(c=>c.y+c.h-1>4)){ toast('Move cards out of the bottom row first (top bar uses 4 rows)'); return; } } hd.on=!on; renderAll(); };
     if(on){ el.querySelector('#hLeft').onchange=(e)=>{hd.left=e.target.value; renderHeader();};
       const ch=el.querySelector('#hchips'); hd.right.forEach((t,i)=>{ const it=HEADER_ITEMS[t]||{label:t,icon:'circle'}; const r=document.createElement('div'); r.className='elrow';
-        r.innerHTML=`<span style="min-width:0;overflow:hidden;text-overflow:ellipsis"><span class="mdi mdi-${it.icon}" style="color:var(--teal);margin-right:6px"></span>${it.label}</span><span class="x mdi mdi-close"></span>`;
+        r.innerHTML=`${dragHandleHTML()}<span style="min-width:0;overflow:hidden;text-overflow:ellipsis"><span class="mdi mdi-${it.icon}" style="color:var(--teal);margin-right:6px"></span>${it.label}</span><span class="x mdi mdi-close"></span>`;
+        wireSortableRow(r,hd.right,i,()=>{renderHeader();renderInspector();});
         r.querySelector('.x').onclick=()=>{ hd.right.splice(i,1); renderHeader(); renderInspector(); }; ch.appendChild(r); });
       if(!hd.right.length) ch.innerHTML='<div class="csub" style="padding:4px 0">No status chips yet.</div>';
       el.querySelector('#addChip').onclick=()=>{ if(hd.right.length>=4){toast('Up to 4 chips');return;} headerItemPicker(); }; }
@@ -970,7 +987,8 @@ function renderInspector(){ const el=document.getElementById('insp'); const c=se
       ${cardActionsHTML(c)}`;
     const list=el.querySelector('#elist2');
     c.shortcuts.forEach((s,i)=>{ const r=document.createElement('div'); r.className='elrow';
-      r.innerHTML=`<span style="min-width:0;overflow:hidden;text-overflow:ellipsis"><span class="mdi mdi-${s.icon}" style="color:var(--teal);margin-right:6px"></span>${s.label}</span><span class="x mdi mdi-close"></span>`;
+      r.innerHTML=`${dragHandleHTML()}<span style="min-width:0;overflow:hidden;text-overflow:ellipsis"><span class="mdi mdi-${s.icon}" style="color:var(--teal);margin-right:6px"></span>${s.label}</span><span class="x mdi mdi-close"></span>`;
+      wireSortableRow(r,c.shortcuts,i,()=>{renderGrid();renderInspector();});
       r.querySelector('.x').onclick=()=>{ c.shortcuts.splice(i,1); renderGrid(); renderInspector(); }; list.appendChild(r); });
     if(!c.shortcuts.length) list.innerHTML='<div class="csub" style="padding:4px 0">No shortcuts yet — add some.</div>';
     el.querySelector('#fName').oninput=(e)=>{c.name=e.target.value; renderGrid();};
@@ -1001,7 +1019,8 @@ function renderInspector(){ const el=document.getElementById('insp'); const c=se
       ${cardActionsHTML(c)}`;
     const list=el.querySelector('#srcRows');
     c.sources.forEach((s,i)=>{ const st=appStyle((s.source||s.label||'')); const r=document.createElement('div'); r.className='elrow';
-      r.innerHTML=`<span style="min-width:0;overflow:hidden;text-overflow:ellipsis"><span style="display:inline-block;width:14px;height:14px;border-radius:4px;background:${st.known?st.col:'#10141C'};border:1px solid ${st.known?st.col:'var(--teal)'};margin-right:8px;vertical-align:middle"></span>${s.label||s.source}</span><span class="x mdi mdi-close"></span>`;
+      r.innerHTML=`${dragHandleHTML()}<span style="min-width:0;overflow:hidden;text-overflow:ellipsis"><span style="display:inline-block;width:14px;height:14px;border-radius:4px;background:${st.known?st.col:'#10141C'};border:1px solid ${st.known?st.col:'var(--teal)'};margin-right:8px;vertical-align:middle"></span>${s.label||s.source}</span><span class="x mdi mdi-close"></span>`;
+      wireSortableRow(r,c.sources,i,()=>{renderGrid();renderInspector();});
       r.querySelector('.x').onclick=()=>{ c.sources.splice(i,1); renderGrid(); renderInspector(); }; list.appendChild(r); });
     if(!c.sources.length) list.innerHTML='<div class="csub" style="padding:4px 0">No apps yet — the preview shows examples until you add some.</div>';
     el.querySelector('#fName').oninput=(e)=>{c.name=e.target.value; renderGrid();};
@@ -1019,7 +1038,8 @@ function renderInspector(){ const el=document.getElementById('insp'); const c=se
       ${cardActionsHTML(c)}`;
     wireStyle(el,c);
     const list=el.querySelector('#elist2');
-    c.entities.forEach((e,i)=>{ const r=document.createElement('div'); r.className='elrow'; r.innerHTML=`<span style="min-width:0;overflow:hidden;text-overflow:ellipsis">${e}</span><span class="x mdi mdi-close"></span>`;
+    c.entities.forEach((e,i)=>{ const r=document.createElement('div'); r.className='elrow'; r.innerHTML=`${dragHandleHTML()}<span style="min-width:0;overflow:hidden;text-overflow:ellipsis">${e}</span><span class="x mdi mdi-close"></span>`;
+      wireSortableRow(r,c.entities,i,()=>{renderGrid();renderInspector();});
       r.querySelector('.x').onclick=()=>{ c.entities.splice(i,1); renderGrid(); renderInspector(); }; list.appendChild(r); });
     if(!c.entities.length) list.innerHTML='<div class="csub" style="padding:4px 0">No entities yet — add some.</div>';
     el.querySelector('#fName').oninput=(e)=>{c.name=e.target.value; renderGrid();};
@@ -1030,6 +1050,7 @@ function renderInspector(){ const el=document.getElementById('insp'); const c=se
   el.innerHTML=`<h3 class="sec">${def.label}</h3>
     <div class="field"><label>Name</label><input id="fName" value="${(c.name||'').replace(/"/g,'&quot;')}"></div>
     ${styleField(c)}
+    ${c.ck==='light'?`<div class="field"><label style="display:flex;align-items:center;gap:10px"><input id="fRgb" type="checkbox" ${c.rgb?'checked':''} style="width:18px;height:18px;accent-color:var(--teal)"> RGB light</label></div>`:''}
     <div class="field"><label>Entity (${def.domain})</label><div style="display:flex;gap:6px"><input id="fEnt" value="${c.entity||''}" placeholder="none" style="flex:1"><button class="btn ghost" id="pickEnt" style="padding:8px 10px">Pick</button></div></div>
     ${ICON_CARDS.has(c.ck)?`<div class="field"><label>Icon</label><div id="cIcon"></div></div>`:''}
     ${(c.ck==='sensor'||c.ck==='chart')?`<div class="field"><label>Sensor type</label><select id="fStype">${SENSOR_TYPE_OPTS.map(o=>`<option value="${o[0]}" ${(c.stype||'')===o[0]?'selected':''}>${o[1]}</option>`).join('')}</select></div>`:''}
@@ -1048,6 +1069,7 @@ function renderInspector(){ const el=document.getElementById('insp'); const c=se
   el.querySelector('#fEnt').onchange=(e)=>{c.entity=e.target.value; applyEntityMeta(c,c.entity); renderGrid(); renderInspector();};
   el.querySelector('#pickEnt').onclick=()=>openEntityPicker(c.ck,c);
   { const box=el.querySelector('#cIcon'); if(box) mountIconPicker(box, c.icon||def.icon, v=>{c.icon=v; renderGrid();}); }
+  { const rg=el.querySelector('#fRgb'); if(rg) rg.onchange=(e)=>{c.rgb=e.target.checked; renderGrid();}; }
   { const st=el.querySelector('#fStype'); if(st) st.onchange=(e)=>{c.stype=e.target.value||undefined; renderGrid();}; }
   { const rl=el.querySelector('#ruleList'); if(rl){ renderRules(c,rl); el.querySelector('#addRule').onclick=()=>{ c.rules=c.rules||[]; c.rules.push({op:'>=',val:0,color:RULE_COLORS[Math.min(c.rules.length,RULE_COLORS.length-1)]}); renderInspector(); }; } }
   { const ac=el.querySelector('#fActive'); if(ac) ac.oninput=(e)=>{c.activeColor=inputToHex(e.target.value); renderGrid();}; }
@@ -1556,7 +1578,7 @@ async function boot(){ try{ L=await j('/api/layout'); if(!L||!L.pages||!Object.k
   document.getElementById('verBtn').onclick=versionsModal; document.getElementById('pagesBtn').onclick=pagesModal;
   document.getElementById('roomBtn').onclick=roomWizard;
   document.getElementById('rescanBtn').onclick=async()=>{ const has=await scanSerial(); toast(has?('USB panel found: '+SERIAL_DEV.replace('/dev/','')):'No USB panel — plug it in, then run on Windows:  usbipd attach --wsl --busid <id>'); };
-  document.getElementById('grid').addEventListener('click',(e)=>{ if(e.target.classList.contains('gcell')){ sel=null; renderInspector(); markSel(); }});
+  document.getElementById('grid').addEventListener('click',()=>{ sel=null; renderInspector(); markSel(); });
   if(cfg.has_token||cfg.ha_url) connect();
 }
 boot();

@@ -101,6 +101,13 @@ class ESPVideoCamera : public camera::Camera {
   int get_motion_level() const { return this->motion_level_; }
   // Largest per-cell luma delta last frame — diagnostic for tuning the threshold.
   int get_motion_maxdelta() const { return this->motion_maxdelta_; }
+  void set_motion_capture_enabled(bool enabled) {
+    this->motion_capture_enabled_ = enabled;
+    if (!enabled) {
+      this->motion_level_ = 0;
+      this->motion_maxdelta_ = 0;
+    }
+  }
 
  protected:
   bool init_pipeline_();
@@ -118,6 +125,7 @@ class ESPVideoCamera : public camera::Camera {
   bool setup_capture_buffers_();
   // Hardware-JPEG path: capture RGB565 (sensor/ISP) -> esp_driver_jpeg encoder.
   bool start_jpeg_pipeline_();
+  bool start_motion_pipeline_();  // raw YUV420 capture without an encoder
   void loop_jpeg_pipeline_();
   // Lazily create the HW JPEG encoder engine + DMA in/out buffers for w*h.
   bool ensure_hw_jpeg_encoder_(uint32_t width, uint32_t height);
@@ -208,6 +216,7 @@ class ESPVideoCamera : public camera::Camera {
   // path must not start (or tear down) the pipeline — capture_fd_ is shared
   // state, and a losing start_capture_() would close the stream task's fd.
   volatile bool rtsp_owns_pipeline_{false};
+  volatile bool motion_capture_enabled_{false};
   uint32_t rtp_client_ip_{0};        // network byte order
   uint16_t rtp_client_port_{0};      // host order (client RTP port from SETUP)
   uint16_t rtp_seq_{0};
@@ -230,6 +239,7 @@ class ESPVideoCamera : public camera::Camera {
   bool ensure_params_();             // wait for the stream task to publish sps_/pps_
   void extract_params_(const uint8_t *au, size_t len);  // pull SPS/PPS from an access unit
   bool capture_h264_(const uint8_t **nal, size_t *len);  // one encoded frame (Annex-B)
+  bool capture_motion_();  // dequeue one raw frame for the idle wake detector
   void rtp_send_access_unit_(const uint8_t *annexb, size_t len, uint32_t ts);
   void rtp_send_nal_(const uint8_t *nal, size_t len, uint32_t ts, bool marker);
   void send_rtp_packet_(const uint8_t *pkt, size_t len);  // one RTP pkt: UDP or TCP-interleaved

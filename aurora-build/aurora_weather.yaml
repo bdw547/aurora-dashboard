@@ -39,6 +39,25 @@ template:
         attributes:
           today_high: "{{ fc['weather.forecast_home'].forecast[0].temperature | round }}"
           today_low: "{{ fc['weather.forecast_home'].forecast[0].templow | round }}"
+          stat_humidity: >-
+            {{ (state_attr('weather.forecast_home', 'humidity') | default('—', true)) ~ '%' }}
+          stat_wind: >-
+            {%- set speed = state_attr('weather.forecast_home', 'wind_speed') -%}
+            {%- set unit = state_attr('weather.forecast_home', 'wind_speed_unit') or '' -%}
+            {{ (speed | round(1) | string) ~ ' ' ~ unit if speed is not none else '—' }}
+          stat_uv: >-
+            {%- set uv = fc['weather.forecast_home'].forecast[0].uv_index | default(state_attr('weather.forecast_home', 'uv_index'), true) -%}
+            {{ uv | round(1) if uv is not none else '—' }}
+          stat_pressure: >-
+            {%- set pressure = state_attr('weather.forecast_home', 'pressure') -%}
+            {%- set unit = state_attr('weather.forecast_home', 'pressure_unit') or '' -%}
+            {{ (pressure | round(2) | string) ~ ' ' ~ unit if pressure is not none else '—' }}
+          stat_sunrise: >-
+            {%- set value = state_attr('sun.sun', 'next_rising') -%}
+            {{ (value | as_datetime | as_local).strftime('%-I:%M%p').lower() if value else '—' }}
+          stat_sunset: >-
+            {%- set value = state_attr('sun.sun', 'next_setting') -%}
+            {{ (value | as_datetime | as_local).strftime('%-I:%M%p').lower() if value else '—' }}
           d_names: >-
             {%- set ns = namespace(s=[]) -%}
             {%- for f in fc['weather.forecast_home'].forecast[:6] -%}

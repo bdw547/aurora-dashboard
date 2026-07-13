@@ -83,6 +83,9 @@ esphome:
         - lambda: |-
             std::string ov = "$cam_stream_url_override";
             if (!ov.empty()) id(cam_stream).set_url(ov);
+        # Keep DMA memory free through WiFi/API startup; HA photo preload normally
+        # enables motion sooner from its completion callback.
+        - delay: 90s
 
 esp32:
   variant: esp32p4
@@ -178,6 +181,9 @@ api:
             - lvgl.label.update: { id: lbl_boot_status, text: "Loading dashboard..." }
             - delay: 2s
             - lvgl.page.show: page_home
+            # Preload the first gallery image so the screensaver never opens blank.
+            - delay: 3s
+            - script.execute: ss_next
 ota:
   - platform: esphome
     on_begin:
@@ -458,7 +464,7 @@ display:
 # --- Assets ---
 http_request:
   verify_ssl: false
-  timeout: 15s
+  timeout: 60s
 
 online_image:
   - id: art_image
@@ -506,9 +512,14 @@ online_image:
     resize: 1024x600
     update_interval: never
     on_download_finished:
+      - logger.log:
+          format: "SS: photo ready: %s"
+          args: ["id(g_ss_url).c_str()"]
       - lvgl.image.update: { id: ss_photo, src: ss_image }
     on_error:
-      - logger.log: "SS: photo download error"
+      - logger.log:
+          format: "SS: photo download error: %s"
+          args: ["id(g_ss_url).c_str()"]
   # Second screensaver decoder for PNG photos (runtime_image has no auto-detect,
   # and one online_image is locked to a single format). ss_next picks jpg vs png
   # by file extension and updates ss_photo from whichever finishes.
@@ -519,9 +530,14 @@ online_image:
     resize: 1024x600
     update_interval: never
     on_download_finished:
+      - logger.log:
+          format: "SS: png ready: %s"
+          args: ["id(g_ss_url).c_str()"]
       - lvgl.image.update: { id: ss_photo, src: ss_image_png }
     on_error:
-      - logger.log: "SS: png download error"
+      - logger.log:
+          format: "SS: png download error: %s"
+          args: ["id(g_ss_url).c_str()"]
   - id: cam_big
     url: "http://127.0.0.1/none.jpg"
     format: JPEG
@@ -1473,7 +1489,8 @@ text_sensor:
             }
             if (!cur.empty()) id(g_ss_files).push_back(cur);
             id(g_ss_i) = 0;
-            ESP_LOGI("aurora", "screensaver: %d photos", (int) id(g_ss_files).size());
+            ESP_LOGI("aurora", "screensaver: %d photos; preloading first image", (int) id(g_ss_files).size());
+        - script.execute: ss_next
   # ---- Thermostat hvac_action (Main Floor / Master / Upstairs) ----
   - platform: homeassistant
     id: ha_mf_action
@@ -2482,16 +2499,32 @@ globals:
     type: bool
     restore_value: true
     initial_value: 'false'
-  # Night mode (9pm-6am): auto-sleep after a short idle + wake when the panel's
-  # own camera sees someone approach. Default on (the user asked for it).
+  # Quiet-hours approach mode: schedule and wake behavior are configurable.
   - id: g_cam_wake
     type: bool
     restore_value: true
     initial_value: 'true'
+  - id: g_quiet_start
+    type: int
+    restore_value: true
+    initial_value: '21'
+  - id: g_quiet_end
+    type: int
+    restore_value: true
+    initial_value: '6'
+  # Camera motion wake destination: 0=dashboard, 1=photo gallery.
+  - id: g_cam_wake_target
+    type: int
+    restore_value: true
+    initial_value: '0'
   - id: g_screen_off
     type: bool
     restore_value: false
     initial_value: 'false'
+  - id: g_cam_sleep_ms
+    type: uint32_t
+    restore_value: false
+    initial_value: '0'
   - id: ss_idx
     type: int
     restore_value: false
@@ -2761,6 +2794,8 @@ script:
   - id: ss_next
     mode: restart
     then:
+      - lambda: 'id(aurora_cam).set_motion_capture_enabled(false);'
+      - delay: 250ms
       - lambda: |-
           // Choose the next photo. Prefer the HA-published file list (any
           // filename); fall back to legacy 1.jpg..$ss_count.jpg if it's absent.
@@ -2790,10 +2825,9 @@ script:
             lambda: 'return id(g_ss_is_png);'
           then:
             - online_image.set_url: { id: ss_image_png, url: !lambda 'return id(g_ss_url);' }
-            - component.update: ss_image_png
           else:
-            - online_image.set_url: { id: ss_image, url: !lambda 'return id(g_ss_url);' }
-            - component.update: ss_image
+            - lambda: 'id(cam_stream).fetch_still(id(g_ss_url), id(ss_photo), 1024, 600);'
+            - delay: 10s
   - id: cam_snap_once
     mode: restart
     then:
@@ -2959,54 +2993,50 @@ interval:
                 data:
                   dy: !lambda 'return std::to_string(id(g_tp_scroll) / 10);'
             - lambda: 'id(g_tp_scroll) = id(g_tp_scroll) % 10;'
-  # Night wake-on-approach (9pm-6am): while the screen is asleep and the night
-  # toggle is on, the panel's own camera watches for motion (frame-diff on the
-  # captured luma). Enough motion -> wake to the home page. Touch + presence
-  # remain as backup wake sources.
+  # Camera wake-on-approach: while the screen is asleep, the onboard camera's
+  # frame-difference signal wakes it at any hour. Motion also keeps an awake
+  # panel active. Night mode retains its independent 60-second sleep behavior.
   - interval: 500ms
     then:
-      # Asleep at night + camera sees someone approach -> wake. lv_display_trigger_activity
-      # resets LVGL's idle clock so on_idle re-arms and auto-sleeps ~1 min later if
-      # they walk away (a non-touch wake otherwise leaves the screen lit forever).
       - if:
           condition:
             lambda: |-
               if (!id(g_cam_wake) || !id(g_screen_off)) return false;
-              auto t = id(ha_time).now();
-              if (!t.is_valid()) return false;
-              if (!(t.hour >= 21 || t.hour < 6)) return false;
+              if (millis() - id(g_cam_sleep_ms) < 1500) return false;
               return id(aurora_cam).get_motion_level() >= (int) id(motion_threshold).state;
           then:
             - lambda: 'id(g_screen_off) = false; lv_display_trigger_activity(lv_display_get_default());'
             - light.turn_on:
                 id: display_backlight
                 brightness: !lambda 'return id(g_bri) / 100.0f;'
-            - lvgl.page.show: page_home
-      # Already awake at night + motion continues -> keep it alive (so it doesn't
-      # sleep while you're standing in front of it).
+            - if:
+                condition:
+                  lambda: 'return id(g_cam_wake_target) == 1;'
+                then:
+                  - lvgl.page.show: page_screensaver
+                else:
+                  - lvgl.page.show: page_home
       - if:
           condition:
             lambda: |-
               if (!id(g_cam_wake) || id(g_screen_off)) return false;
-              auto t = id(ha_time).now();
-              if (!t.is_valid()) return false;
-              if (!(t.hour >= 21 || t.hour < 6)) return false;
               return id(aurora_cam).get_motion_level() >= (int) id(motion_threshold).state;
           then:
             - lambda: 'lv_display_trigger_activity(lv_display_get_default());'
-      # Awake at night + no touch/motion for 60s -> go dark. Self-contained here
-      # rather than relying on the LVGL on_idle trigger, which never fired in
-      # testing. Uses the same LVGL inactivity counter (resets on touch).
+      # Night mode owns its fixed one-minute sleep cadence. Daytime sleep remains
+      # controlled by the selected Screen Timeout through LVGL on_idle.
       - if:
           condition:
             lambda: |-
               if (!id(g_cam_wake) || id(g_screen_off)) return false;
               auto t = id(ha_time).now();
               if (!t.is_valid()) return false;
-              if (!(t.hour >= 21 || t.hour < 6)) return false;
+              int start=id(g_quiet_start), end=id(g_quiet_end);
+              bool quiet = start < end ? (t.hour >= start && t.hour < end) : start > end ? (t.hour >= start || t.hour < end) : false;
+              if (!quiet) return false;
               return lv_display_get_inactive_time(lv_display_get_default()) > 60000;
           then:
-            - lambda: 'id(g_screen_off) = true;'
+            - lambda: 'id(g_screen_off) = true; id(g_cam_sleep_ms) = millis();'
             - light.turn_off: display_backlight
   - interval: 10s
     then:
@@ -3091,16 +3121,18 @@ lvgl:
             lambda: |-
               if (id(g_timeout_ms) <= 0) return false;
               auto t = id(ha_time).now();
-              bool night = t.is_valid() && (t.hour >= 21 || t.hour < 6);
-              return !night;
+              if (!t.is_valid()) return true;
+              int start=id(g_quiet_start), end=id(g_quiet_end);
+              bool quiet = start < end ? (t.hour >= start && t.hour < end) : start > end ? (t.hour >= start || t.hour < end) : false;
+              return !quiet;
           then:
-            - lambda: 'id(g_screen_off) = true;'
             - if:
                 condition:
                   lambda: 'return id(g_screensaver);'
                 then:
                   - lvgl.page.show: page_screensaver
                 else:
+                  - lambda: 'id(g_screen_off) = true; id(g_cam_sleep_ms) = millis();'
                   - light.turn_off: display_backlight
 
   style_definitions:
@@ -7297,7 +7329,7 @@ lvgl:
         - lvgl.widget.update: { id: nav_rail, hidden: true }
         - lvgl.widget.update: { id: lbl_ssid, hidden: true }
         - lvgl.widget.update: { id: lbl_ip, hidden: true }
-        - lambda: 'id(g_ss_showing) = true; id(g_ss_elapsed) = 0; id(g_ss_i) = 0;'
+        - lambda: 'id(g_ss_showing) = true; id(g_ss_elapsed) = 0;'
         - script.execute: ss_next
       on_unload:
         - lambda: 'id(g_ss_showing) = false;'

@@ -1,5 +1,5 @@
 {
-  "install_room": "Kitchen",
+  "install_room": "Office",
   "nav": [
     {
       "id": "home",
@@ -91,7 +91,8 @@
             "y": 2,
             "w": 1,
             "h": 3,
-            "icon": "desk-lamp"
+            "icon": "desk-lamp",
+            "rgb": true
           },
           {
             "id": "c2nx8a7",
@@ -206,28 +207,13 @@
             "x": 1,
             "y": 1,
             "w": 6,
-            "h": 2,
+            "h": 5,
             "entities": [],
             "shortcuts": [
-              {
-                "label": "Living Room",
-                "icon": "sofa",
-                "target": "room:Living Room"
-              },
-              {
-                "label": "Kitchen",
-                "icon": "silverware-fork-knife",
-                "target": "room:Kitchen"
-              },
               {
                 "label": "Office",
                 "icon": "chair-rolling",
                 "target": "room:Office"
-              },
-              {
-                "label": "Dining Room",
-                "icon": "table-chair",
-                "target": "room:Dining Room"
               },
               {
                 "label": "Gameroom",
@@ -268,92 +254,22 @@
                 "label": "Half Bath",
                 "icon": "toilet",
                 "target": "room:Half Bath"
+              },
+              {
+                "label": "Living Room",
+                "icon": "sofa",
+                "target": "page:living_room"
+              },
+              {
+                "label": "Kitchen",
+                "icon": "sofa",
+                "target": "page:kitchen"
+              },
+              {
+                "label": "Dining Room",
+                "icon": "sofa",
+                "target": "page:dining_room"
               }
-            ]
-          }
-        ],
-        [
-          {
-            "id": "cnt6xaf",
-            "ck": "light",
-            "entity": "light.living_room_main",
-            "name": "Living Room Main",
-            "x": 1,
-            "y": 3,
-            "w": 1,
-            "h": 3
-          },
-          {
-            "id": "cb8lw1d",
-            "ck": "fan",
-            "entity": "switch.living_room_pendant",
-            "name": "Ceiling Fan",
-            "x": 1,
-            "y": 1,
-            "w": 1,
-            "h": 2
-          },
-          {
-            "id": "c8lu1vo",
-            "ck": "tvremote",
-            "entity": "media_player.lg_g3_living_room_2",
-            "name": "LG G3 Living Room",
-            "x": 2,
-            "y": 1,
-            "w": 5,
-            "h": 5,
-            "apps": [
-              "Netflix",
-              "YouTube",
-              "YouTube TV",
-              "Disney+",
-              "Hulu"
-            ]
-          }
-        ],
-        [
-          {
-            "id": "csq1h3f",
-            "ck": "light",
-            "entity": "light.kitchen_kitchen",
-            "name": "Main Lights",
-            "x": 1,
-            "y": 3,
-            "w": 1,
-            "h": 3
-          },
-          {
-            "id": "ci4w0o9",
-            "ck": "light",
-            "entity": "light.kitchen_breakfast",
-            "name": "Kitchen Breakfast",
-            "x": 2,
-            "y": 3,
-            "w": 1,
-            "h": 3
-          },
-          {
-            "id": "cnnhipq",
-            "ck": "sonos",
-            "entity": "media_player.kitchen",
-            "name": "Kitchen - Sonos",
-            "x": 3,
-            "y": 1,
-            "w": 4,
-            "h": 4
-          },
-          {
-            "id": "cprejpl",
-            "ck": "speakers",
-            "entity": "",
-            "name": "Speakers (multi-room + volume)",
-            "x": 1,
-            "y": 1,
-            "w": 2,
-            "h": 2,
-            "entities": [
-              "media_player.kitchen",
-              "media_player.living_room"
             ]
           }
         ]
@@ -773,6 +689,176 @@
             "y": 1,
             "w": 6,
             "h": 5
+          }
+        ]
+      ]
+    },
+    "living_room": {
+      "title": "Living Room",
+      "type": "custom",
+      "header": {
+        "on": false,
+        "left": "greeting",
+        "right": [
+          "weather_current",
+          "secured"
+        ]
+      },
+      "subpages": [
+        [
+          {
+            "id": "crqftgk",
+            "ck": "light",
+            "entity": "light.living_room_main",
+            "name": "Living Room Main",
+            "x": 1,
+            "y": 2,
+            "w": 1,
+            "h": 4
+          },
+          {
+            "id": "cdqtd5k",
+            "ck": "fan",
+            "entity": "fan.living_room_pendant",
+            "name": "Ceiling Fan",
+            "x": 1,
+            "y": 1,
+            "w": 1,
+            "h": 1
+          },
+          {
+            "id": "cssjxe0",
+            "ck": "tvremote",
+            "entity": "media_player.lg_g3_living_room_2",
+            "name": "LG G3 Living Room",
+            "x": 2,
+            "y": 1,
+            "w": 5,
+            "h": 5,
+            "apps": [
+              "YouTube",
+              "YouTube TV",
+              "Disney+",
+              "Hulu"
+            ]
+          }
+        ]
+      ]
+    },
+    "kitchen": {
+      "title": "Kitchen",
+      "type": "custom",
+      "header": {
+        "on": false,
+        "left": "greeting",
+        "right": [
+          "weather_current",
+          "secured"
+        ]
+      },
+      "subpages": [
+        [
+          {
+            "id": "cidttc9",
+            "ck": "light",
+            "entity": "light.kitchen_kitchen",
+            "name": "Main Lights",
+            "x": 1,
+            "y": 1,
+            "w": 1,
+            "h": 5
+          },
+          {
+            "id": "clyit5c",
+            "ck": "light",
+            "entity": "light.kitchen_breakfast",
+            "name": "Breakfast",
+            "x": 2,
+            "y": 1,
+            "w": 1,
+            "h": 5
+          },
+          {
+            "id": "cqs5gka",
+            "ck": "light",
+            "entity": "light.kitchen_stair_lights",
+            "name": "Stair Lights",
+            "x": 3,
+            "y": 1,
+            "w": 1,
+            "h": 5
+          },
+          {
+            "id": "c2fn3tl",
+            "ck": "speakers",
+            "entity": "",
+            "name": "Speakers (multi-room + volume)",
+            "x": 4,
+            "y": 4,
+            "w": 3,
+            "h": 2,
+            "entities": [
+              "media_player.living_room",
+              "media_player.kitchen"
+            ]
+          },
+          {
+            "id": "cqmsjf1",
+            "ck": "sonos",
+            "entity": "media_player.kitchen",
+            "name": "Kitchen - Sonos",
+            "x": 4,
+            "y": 1,
+            "w": 3,
+            "h": 3
+          }
+        ]
+      ]
+    },
+    "dining_room": {
+      "title": "Dining Room",
+      "type": "custom",
+      "header": {
+        "on": true,
+        "left": "greeting",
+        "right": [
+          "weather_current",
+          "secured"
+        ]
+      },
+      "subpages": [
+        [
+          {
+            "id": "c3x5kh5",
+            "ck": "light",
+            "entity": "light.dining_room_chandelier",
+            "name": "Dining Room Chandelier",
+            "x": 1,
+            "y": 2,
+            "w": 1,
+            "h": 3,
+            "icon": "chandelier"
+          },
+          {
+            "id": "c08f9q5",
+            "ck": "spotify_art",
+            "entity": "media_player.spotifyplus_ben_walton",
+            "name": "SpotifyPlus Ben Walton",
+            "x": 2,
+            "y": 1,
+            "w": 5,
+            "h": 4
+          },
+          {
+            "id": "c5vo3up",
+            "ck": "spotify_speaker",
+            "entity": "media_player.spotifyplus_ben_walton",
+            "name": "Dining Room",
+            "x": 1,
+            "y": 1,
+            "w": 1,
+            "h": 1,
+            "speaker": "Dining Room"
           }
         ]
       ]
