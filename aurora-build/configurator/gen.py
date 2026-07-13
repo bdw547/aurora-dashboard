@@ -3249,12 +3249,20 @@ def _header_live_bindings(lights):
     if HEADER_WIFI:
         bars = [glyph_for("wifi-strength-1", True), glyph_for("wifi-strength-2", True),
                 glyph_for("wifi-strength-3", True), glyph_for("wifi-strength-4", True)]
-        USED_ICONSM_CP.update(bar[2:].upper() for bar in bars)
-        lines = ["char b[16]; snprintf(b, sizeof(b), \"%d dBm\", (int)x);",
-                 "const char* g = x > -55 ? \"%s\" : x > -65 ? \"%s\" : x > -75 ? \"%s\" : \"%s\";" % (bars[3], bars[2], bars[1], bars[0])]
+        offline = glyph_for("wifi-strength-off-outline", True)
+        USED_ICONSM_CP.update(bar[2:].upper() for bar in bars + [offline])
+        offline_updates, online_updates = "", ""
         for icon_id, text_id in HEADER_WIFI:
-            lines += ["lv_label_set_text(id(%s), g);" % icon_id, "lv_label_set_text(id(%s), b);" % text_id]
-        sens.append("  - platform: wifi_signal\n    id: aurora_header_wifi\n    update_interval: 10s\n    on_value:\n      then:\n        - lambda: |-\n%s" % _indent(lines, 12))
+            offline_updates += "                - lvgl.label.update: { id: %s, text: \"%s\" }\n" % (icon_id, offline)
+            offline_updates += "                - lvgl.label.update: { id: %s, text: \"Offline\" }\n" % text_id
+            online_updates += "                - lvgl.label.update: { id: %s, text: \"%s\" }\n" % (icon_id, bars[3])
+            online_updates += "                - lvgl.label.update: { id: %s, text: \"Online\" }\n" % text_id
+        # wifi_signal calls esp_wifi_sta_get_ap_info() synchronously. On this P4+C6
+        # hosted-WiFi panel a missed RPC blocks the main loop for five seconds and
+        # repeated polls freeze LVGL/API. wifi_info uses cached connection state.
+        txt.append("  - platform: wifi_info\n    ip_address:\n      id: aurora_header_wifi\n      on_value:\n        then:\n"
+                   "          - if:\n              condition:\n                lambda: 'return x.empty();'\n"
+                   "              then:\n%s              else:\n%s" % (offline_updates, online_updates))
     if lights and HEADER_LIGHTS:
         state_ids = ["ha_header_light_%d" % i for i in range(len(lights))]
         count_labels = [x[0] for x in HEADER_LIGHTS] + [x[1] + "_count" for x in HEADER_LIGHTS]
