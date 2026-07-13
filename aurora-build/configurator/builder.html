@@ -166,7 +166,10 @@ h3.sec{font-size:11px;letter-spacing:1.4px;text-transform:uppercase;color:var(--
 .pc .orow .mdi{font-size:18px}
 .pc .trklist{flex:1;display:flex;flex-direction:column;gap:5px;margin-top:8px;overflow:hidden}
 .pc .trk{background:#0f1117;border-radius:8px;padding:6px 10px;display:flex;justify-content:space-between;gap:8px;font-size:12px}
-#nextaff{position:absolute;right:30px;bottom:22px;background:#12141b;border:1px solid var(--bd);border-radius:11px;padding:8px 14px;font-size:13px;color:var(--tx);display:none;align-items:center;gap:6px;z-index:5}
+#pageDots{position:absolute;left:94px;bottom:12px;width:910px;height:34px;display:none;align-items:center;justify-content:center;z-index:5}
+#pageDots .page-dot-target{width:34px;height:34px;display:flex;align-items:center;justify-content:center;background:transparent;color:#3A4150;padding:0;border:0}
+#pageDots .page-dot-target::before{content:'';width:10px;height:10px;border-radius:50%;background:currentColor}
+#pageDots .page-dot-target.on{color:var(--teal)}
 .field{margin-bottom:14px}.field label{display:block;font-size:11px;color:var(--t2);margin-bottom:5px}
 .field input,.field select{width:100%;background:#0F1117;border:1px solid var(--bd);border-radius:9px;color:var(--tx);padding:9px 10px;font:inherit;font-size:13px}
 .szrow{display:flex;flex-wrap:wrap;gap:6px}
@@ -271,7 +274,7 @@ h3.sec{font-size:11px;letter-spacing:1.4px;text-transform:uppercase;color:var(--
       <div id="rail"></div>
       <div id="phead"></div>
       <div id="grid"></div>
-      <div id="nextaff"><span class="mdi mdi-chevron-right"></span> Next</div>
+      <div id="pageDots" aria-label="Sub-page navigation"></div>
     </div></div>
     <div style="color:var(--t3);font-size:11px;margin-top:10px" class="mono" id="hint">6×5 grid · 1024×600 · drag a card to move it · drag its corner handle to resize</div>
   </div>
@@ -915,7 +918,11 @@ function renderGrid(){ ROWS=rowsFor(); const g=document.getElementById('grid');
     const d=document.createElement('div'); d.className='pc'+(sel===c.id?' sel':'')+(['light','dial','toggle'].includes(def.ctrl)?' on':'')+(isCutSrc(c)?' cutsrc':'');
     d.style.gridColumn=`${c.x} / span ${c.w}`; d.style.gridRow=`${c.y} / span ${c.h}`;
     d.innerHTML=cardInner(c); d.dataset.id=c.id; d.onclick=(e)=>{e.stopPropagation(); sel=c.id; renderInspector(); markSel();}; attachDrag(d,c); attachResize(d,c); g.appendChild(d); }
-  document.getElementById('nextaff').style.display=(curSub<L.pages[curPage].subpages.length-1)?'flex':'none'; }
+  const dots=document.getElementById('pageDots'), nsub=L.pages[curPage].subpages.length; dots.innerHTML='';
+  if(nsub>1){ dots.style.display='flex';
+    for(let i=0;i<nsub;i++){ const dot=document.createElement('button'); dot.className='page-dot-target'+(i===curSub?' on':''); dot.type='button'; dot.title='Sub-page '+(i+1); dot.setAttribute('aria-label','Show sub-page '+(i+1));
+      dot.onclick=(e)=>{ e.stopPropagation(); curSub=i; sel=null; renderAll(); }; dots.appendChild(dot); }
+  } else dots.style.display='none'; }
 function markSel(){ document.querySelectorAll('.pc').forEach(p=>p.classList.toggle('sel', p.dataset.id===sel)); }
 
 // ===== free drag-resize (bottom-right handle, shown on the selected card) =====
