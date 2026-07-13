@@ -181,9 +181,6 @@ api:
             - lvgl.label.update: { id: lbl_boot_status, text: "Loading dashboard..." }
             - delay: 2s
             - lvgl.page.show: page_home
-            # Preload the first gallery image so the screensaver never opens blank.
-            - delay: 3s
-            - script.execute: ss_next
 ota:
   - platform: esphome
     on_begin:
@@ -1490,7 +1487,6 @@ text_sensor:
             if (!cur.empty()) id(g_ss_files).push_back(cur);
             id(g_ss_i) = 0;
             ESP_LOGI("aurora", "screensaver: %d photos; preloading first image", (int) id(g_ss_files).size());
-        - script.execute: ss_next
   # ---- Thermostat hvac_action (Main Floor / Master / Upstairs) ----
   - platform: homeassistant
     id: ha_mf_action
@@ -2827,7 +2823,6 @@ script:
             - online_image.set_url: { id: ss_image_png, url: !lambda 'return id(g_ss_url);' }
           else:
             - lambda: 'id(cam_stream).fetch_still(id(g_ss_url), id(ss_photo), 1024, 600);'
-            - delay: 10s
   - id: cam_snap_once
     mode: restart
     then:

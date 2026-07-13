@@ -3362,6 +3362,7 @@ SS_SCRIPT = (
     "          id(g_ss_is_png) = (lo.size() >= 4 && lo.compare(lo.size() - 4, 4, \".png\") == 0);\n"
     "      - if:\n          condition:\n            lambda: 'return id(g_ss_is_png);'\n          then:\n"
     "            - online_image.set_url: { id: ss_image_png, url: !lambda 'return id(g_ss_url);' }\n"
+    "          else:\n            - lambda: 'id(cam_stream).fetch_still(id(g_ss_url), id(ss_photo), 1024, 600);'\n"
 )
 SS_TEXT_SENSOR = (
     "  - platform: homeassistant\n    id: ha_ss_list\n    entity_id: sensor.aurora_screensaver\n    attribute: list\n    on_value:\n      then:\n"
@@ -3376,7 +3377,6 @@ SS_TEXT_SENSOR = (
     "            id(g_ss_i) = 0;\n"
     "            { char b[24]; snprintf(b, sizeof(b), \"%d photos\", (int) id(g_ss_files).size()); lv_label_set_text(id(set_ss_count), b); }\n"
     "            ESP_LOGI(\"aurora\", \"screensaver: received %d photos; preloading\", (int) id(g_ss_files).size());\n"
-    "        - script.execute: ss_next\n"
 )
 SS_INTERVAL_ITEM = (
     "  - interval: 1s\n    then:\n"
@@ -3401,8 +3401,7 @@ def gen_screensaver_page():
         "      on_load:\n"
         "        - lvgl.widget.update: { id: nav_rail, hidden: true }\n"
         "        - lambda: 'id(g_ss_showing) = true; id(g_ss_elapsed) = 0;'\n"
-        "        - script.execute: ss_next\n"
-        "      on_unload:\n"
+            "      on_unload:\n"
         "        - lvgl.widget.update: { id: nav_rail, hidden: false }\n"
         "        - lambda: 'id(g_ss_showing) = false;'\n"
         "      widgets:\n"
@@ -3511,21 +3510,15 @@ def assemble(layout):
         secs = split_sections(f.read())
     lvgl_text = dict(secs).get("lvgl", "")
     nav, pages, sens, txt, _, clocks = build_lvgl(layout)  # populates USED_ICON_CP + ART/CAM registries
-    sens.append(CAM_WAKE_SENSORS)
     sens.append(_wx_temp_readback("screensaver", "$ent_weather", "lbl_ss_temp"))
     txt.append(_wx_cond_icon_readback("screensaver", "$ent_weather", "lbl_ss_wx_icon", sfx="cond"))
     # keep the hardware/font/style base; embed the icons this layout uses into
     # f_icon. (g_swipe_ms now lives in aurora.yaml's globals, spliced verbatim.)
     keep_text = "".join(inject_used_glyphs(t) if n == "font" else t
-                        for n, t in secs if n in KEEP)
+                        for n, t in secs if n in KEEP and n != "esp_video_camera")
     # scrub references to dropped UI scripts + lvgl widget actions in the base
     keep_text = re.sub(r"(?m)^[ \t]*-?[ \t]*script\.(execute|stop):.*\n", "", keep_text)
     keep_text = scrub_lvgl_actions(keep_text)
-    # ss_next is emitted below for the generated dashboard, so restore only its
-    # boot preload after the broad hand-built-script scrub above.
-    preload_anchor = "            # Preload the first gallery image so the screensaver never opens blank.\n            - delay: 3s\n"
-    assert preload_anchor in keep_text, "screensaver preload anchor moved"
-    keep_text = keep_text.replace(preload_anchor, preload_anchor + "            - script.execute: ss_next\n", 1)
     clocks += [("lbl_ss_time", "time_hm"), ("lbl_ss_date", "date_full")]   # screensaver clock
     pages += gen_screensaver_page()
     txt.append(SS_TEXT_SENSOR)
@@ -3570,19 +3563,16 @@ def assemble(layout):
     # without a page.show: the SS_ONIDLE screensaver-off else (the screensaver-on
     # path already navigates to page_screensaver) and CAM_WAKE_INTERVAL's
     # night-sleep clause. Other layouts' idle behavior is unchanged.
-    ss_onidle, cam_wake = SS_ONIDLE, CAM_WAKE_INTERVAL
+    # Raw onboard motion capture leaves too little internal RAM for hosted Wi-Fi.
+    # Keep it out of the generated dashboard until capture buffers move to PSRAM.
+    ss_onidle, cam_wake = SS_ONIDLE, ""
     if CAM_CARDS:
         a = "                else:\n                  - lambda: 'id(g_screen_off) = true; id(g_cam_sleep_ms) = millis();'\n                  - light.turn_off: display_backlight\n"
-        b = "            - lambda: 'id(g_screen_off) = true; id(g_cam_sleep_ms) = millis();'\n            - light.turn_off: display_backlight\n"
-        assert a in ss_onidle and b in cam_wake, "screen-off anchors moved; camera stream would leak while dark"
+        assert a in ss_onidle, "screen-off anchor moved; camera stream would leak while dark"
         ss_onidle = ss_onidle.replace(
             a, "                else:\n                  - lambda: 'id(g_screen_off) = true; id(g_cam_sleep_ms) = millis();'\n"
                "                  - lvgl.page.show: page_home\n"
                "                  - light.turn_off: display_backlight\n")
-        cam_wake = cam_wake.replace(
-            b, "            - lambda: 'id(g_screen_off) = true; id(g_cam_sleep_ms) = millis();'\n"
-               "            - lvgl.page.show: page_home\n"
-               "            - light.turn_off: display_backlight\n")
     # interval: list = trackpad flush + camera night-wake + screensaver cycle + clock repaint
     out = keep_text + TP_FLUSH_INTERVAL + cam_wake + SS_INTERVAL_ITEM + HEAP_LOG_INTERVAL_ITEM + clock_items(clocks)
     out += SS_ONLINE_IMAGE + SS_SCRIPT + gen_cam_stream()
