@@ -177,17 +177,25 @@ script:
   aurora_spotify_refresh_favorite:
     alias: Aurora Spotify - Refresh Favorite
     sequence:
+      - variables:
+          current_uri: "{{ state_attr('media_player.spotifyplus_ben_walton', 'media_content_id') | default('', true) }}"
+          current_id: "{{ current_uri.split(':')[-1] if current_uri.startswith('spotify:track:') else '' }}"
       - action: spotifyplus.check_track_favorites
         data:
           entity_id: media_player.spotifyplus_ben_walton
+          ids: "{{ current_id }}"
         response_variable: favorite_response
         continue_on_error: true
       - variables:
-          current_id: "{{ state_attr('media_player.spotifyplus_ben_walton', 'media_content_id') | default('', true) }}"
           favorite_items: "{{ favorite_response.result | default([], true) }}"
           is_favorite: >-
             {% if favorite_items is mapping %}
-              {{ favorite_items.get('is_favorite', favorite_items.get('is_saved', false)) | bool }}
+              {% set keyed_value = favorite_items.get(current_uri, favorite_items.get(current_id)) %}
+              {% if keyed_value is not none %}
+                {{ keyed_value | bool }}
+              {% else %}
+                {{ favorite_items.get('is_favorite', favorite_items.get('is_saved', false)) | bool }}
+              {% endif %}
             {% elif favorite_items is sequence and favorite_items | count > 0 %}
               {% set first = favorite_items[0] %}
               {{ first.get('is_favorite', first.get('is_saved', false)) | bool if first is mapping else first | bool }}
@@ -197,23 +205,29 @@ script:
       - event: aurora_spotify_favorite_updated
         event_data:
           is_favorite: "{{ is_favorite }}"
-          track_id: "{{ current_id }}"
+          track_id: "{{ current_uri }}"
 
   aurora_spotify_toggle_favorite:
     alias: Aurora Spotify - Toggle Favorite
     sequence:
       - variables:
           is_favorite: "{{ state_attr('sensor.aurora_spotify_favorite', 'is_favorite') | bool }}"
+          current_uri: "{{ state_attr('media_player.spotifyplus_ben_walton', 'media_content_id') | default('', true) }}"
+          current_id: "{{ current_uri.split(':')[-1] if current_uri.startswith('spotify:track:') else '' }}"
+      - condition: template
+        value_template: "{{ current_id | length > 0 }}"
       - choose:
           - conditions: "{{ is_favorite }}"
             sequence:
               - action: spotifyplus.remove_track_favorites
                 data:
                   entity_id: media_player.spotifyplus_ben_walton
+                  ids: "{{ current_id }}"
         default:
           - action: spotifyplus.save_track_favorites
             data:
               entity_id: media_player.spotifyplus_ben_walton
+              ids: "{{ current_id }}"
       - delay:
           milliseconds: 350
       - action: script.aurora_spotify_refresh_favorite
