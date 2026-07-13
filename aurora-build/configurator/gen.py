@@ -2917,7 +2917,12 @@ def gen_header(key, page, layout, pid):
             clocks.append((did, "date"))
         out += sub
     # status chips as bordered pills (design: #14161C bg, #23262F border, radius 12)
-    for i, item in enumerate((hdr.get("right") or [])[:4]):
+    right_items = (hdr.get("right") or [])[:4]
+    if any(item.startswith("weather_") for item in right_items):
+        # Live condition lambdas can select any WX_COND glyph, not just the
+        # placeholder visible in static YAML. Bake the full set into f_iconsm.
+        USED_ICONSM_CP.update(glyph[2:].upper() for _, glyph, _ in WX_COND)
+    for i, item in enumerate(right_items):
         g, t, col = HCHIP.get(item, ("", item, "0x868CA0"))
         base_x = -(20 + i * 126)
         chipbase = "hchip_%s_%d" % (pid, i)
