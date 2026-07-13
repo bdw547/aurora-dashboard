@@ -1139,7 +1139,7 @@ def _wx_sun_time(base, sfx, attr, label_id):
     code = ("if (x.size() < 19) return std::string(\"--\"); "
             "std::string iso=x.substr(0,19); iso[10]=0x20; esphome::ESPTime utc; "
             "if (!esphome::ESPTime::strptime(iso, utc)) return std::string(\"--\"); "
-            "utc.recalc_timestamp_utc(); auto local=esphome::ESPTime::from_epoch_local(utc.timestamp); "
+            "utc.recalc_timestamp_utc(false); auto local=esphome::ESPTime::from_epoch_local(utc.timestamp); "
             "int hour=local.hour%12; if(hour==0) hour=12; char b[16]; "
             "snprintf(b,sizeof(b),\"%d:%02d%s\",hour,local.minute,local.hour>=12?\"pm\":\"am\"); return std::string(b);")
     return ("  - platform: homeassistant\n    id: ha_%s_%s\n    entity_id: sun.sun\n    attribute: %s\n"
