@@ -3042,9 +3042,12 @@ def gen_trackpad_page(layout, back_pid, active, trackpad_pid="page_trackpad"):
 def _configured_light_entities(layout):
     """All HA lights known at save time, falling back to placed Aurora cards."""
     out = []
+    def include(entity):
+        return (isinstance(entity, str) and entity.startswith("light.")
+                and not (entity.startswith("light.espcontrol_") and entity.endswith("_display_backlight")))
     for value in layout.get("home_lights", []):
         entity = value.get("entity", value.get("entity_id", "")) if isinstance(value, dict) else value
-        if isinstance(entity, str) and entity.startswith("light.") and entity not in out:
+        if include(entity) and entity not in out:
             out.append(entity)
     if out:
         return out
@@ -3058,7 +3061,7 @@ def _configured_light_entities(layout):
                     vals = card.get("entities") or []
                 for value in vals:
                     entity = value.get("entity", value.get("entity_id", "")) if isinstance(value, dict) else value
-                    if isinstance(entity, str) and entity.startswith("light.") and entity not in out:
+                    if include(entity) and entity not in out:
                         out.append(entity)
     return out
 
@@ -3084,9 +3087,9 @@ def _lights_on_page(layout, target, back_pid, key, lights):
         tile_id = target + "_tile_%d" % i
         w += ("              - button:\n                  id: %s\n                  width: %d\n                  height: %d\n"
               "                  bg_color: 0x161B24\n                  border_color: 0x4A3510\n                  border_width: 1\n                  radius: 10\n                  pad_all: 0\n                  scrollable: false\n                  hidden: true\n"
-              "                  widgets:\n                    - label: { text: \"\U000F0335\", x: 16, align: left_mid, text_font: f_iconsm, text_color: 0xF2B84B }\n"
+              "                  widgets:\n                    - label: { text: \"\\U000F0335\", x: 16, align: left_mid, text_font: f_iconsm, text_color: 0xF2B84B }\n"
               "                    - label: { text: %s, x: 52, align: left_mid, width: %d, long_mode: dot, text_font: f_body, text_color: 0xF3F5F8 }\n"
-              "                    - label: { text: \"\U000F0156\", x: -14, align: right_mid, text_font: f_iconsm, text_color: 0x868CA0 }\n"
+              "                    - label: { text: \"\\U000F0156\", x: -14, align: right_mid, text_font: f_iconsm, text_color: 0x868CA0 }\n"
               "                  on_click: [homeassistant.action: { action: light.turn_off, data: { entity_id: %s } }]\n"
               % (tile_id, tw, th, esc(name), tw - 92, entity))
     if not lights:
@@ -3099,6 +3102,7 @@ def _header_live_bindings(lights):
     if HEADER_WIFI:
         bars = [glyph_for("wifi-strength-1", True), glyph_for("wifi-strength-2", True),
                 glyph_for("wifi-strength-3", True), glyph_for("wifi-strength-4", True)]
+        USED_ICONSM_CP.update(bar[2:].upper() for bar in bars)
         lines = ["char b[16]; snprintf(b, sizeof(b), \"%d dBm\", (int)x);",
                  "const char* g = x > -55 ? \"%s\" : x > -65 ? \"%s\" : x > -75 ? \"%s\" : \"%s\";" % (bars[3], bars[2], bars[1], bars[0])]
         for icon_id, text_id in HEADER_WIFI:
@@ -3141,11 +3145,14 @@ def _rgb_editor_page(layout, target, back_pid, key, entity, name):
            "float r=0,g=0,b=0; int q=((int)h/60)%%6; if(q==0){r=c;g=x2;}else if(q==1){r=x2;g=c;}else if(q==2){g=c;b=x2;}"
            "else if(q==3){g=x2;b=c;}else if(q==4){r=x2;b=c;}else{r=c;b=x2;} "
            "return lv_color_hex(((int)(r*255)<<16)|((int)(g*255)<<8)|(int)(b*255));" % hue_id)
+    paint_knob = hsv.replace("return lv_color_hex", "lv_obj_set_style_bg_color(id(%s), lv_color_hex" % hue_id)
+    paint_knob = paint_knob[:-1] + ", LV_PART_KNOB);"
     w += ("        - slider:\n            id: %s\n            x: 96\n            y: 220\n            width: 908\n            height: 68\n"
           "            min_value: 0\n            max_value: 359\n            value: 30\n            bg_opa: 0%%\n            indicator: { bg_opa: 0%% }\n"
-          "            knob: { width: 22, height: 64, bg_color: 0xFFFFFF, border_color: 0x0A0B0F, border_width: 2, radius: 6 }\n"
+          "            knob: { width: 22, height: 64, bg_color: 0xFF8000, border_color: 0x0A0B0F, border_width: 2, radius: 6 }\n"
           "            on_value:\n              - lvgl.widget.update: { id: %s, bg_color: !lambda '%s' }\n"
-          % (hue_id, preview_id, hsv))
+          "              - lambda: '%s'\n"
+          % (hue_id, preview_id, hsv, paint_knob))
     w += "        - label: { text: \"WHITE\", x: 96, y: 320, text_font: f_micro, text_color: 0x868CA0 }\n"
     presets = [("Warm", 2700, "0xFFD7A3"), ("Bright", 4000, "0xFFF4E5"), ("Cool", 6500, "0xDDEBFF")]
     for i, (label, kelvin, color) in enumerate(presets):

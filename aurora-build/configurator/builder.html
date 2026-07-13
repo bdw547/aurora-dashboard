@@ -1542,7 +1542,7 @@ async function connect(){ const url=document.getElementById('haurl').value.trim(
     renderPalette(); renderInspector(); toast('Connected to Home Assistant');
   }catch(e){ document.getElementById('cdot').className='dot'; document.getElementById('cstat').textContent='not connected'; toast('Connect failed: '+e.message); } }
 async function save(){ try{
-  if(ENTS.length) L.home_lights=ENTS.filter(e=>e.domain==='light').map(e=>e.entity_id);
+  if(ENTS.length) L.home_lights=ENTS.filter(e=>e.domain==='light'&&!(e.entity_id.startsWith('light.espcontrol_')&&e.entity_id.endsWith('_display_backlight'))).map(e=>e.entity_id);
   await j('/api/layout',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(L)}); toast('Layout saved ✓');
 }catch(e){ toast('Save failed: '+e.message); } }
 let SERIAL_DEV='';
