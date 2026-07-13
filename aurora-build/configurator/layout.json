@@ -1,5 +1,5 @@
 {
-  "install_room": "",
+  "install_room": "Office",
   "nav": [
     {
       "id": "home",
@@ -12,12 +12,6 @@
       "icon": "sofa",
       "label": "Rooms",
       "page": "rooms"
-    },
-    {
-      "id": "lights",
-      "icon": "lightbulb",
-      "label": "Lights",
-      "page": "lights"
     },
     {
       "id": "spot",
@@ -42,6 +36,12 @@
       "icon": "weather-partly-cloudy",
       "label": "Weather",
       "page": "weather"
+    },
+    {
+      "id": "crze8qh",
+      "icon": "cctv",
+      "label": "Cameras",
+      "page": "cameras"
     }
   ],
   "pages": {
@@ -61,16 +61,6 @@
       "subpages": [
         [
           {
-            "id": "c1",
-            "ck": "climate",
-            "entity": "climate.main_floor",
-            "name": "Main Floor",
-            "x": 1,
-            "y": 1,
-            "w": 1,
-            "h": 1
-          },
-          {
             "id": "c2",
             "ck": "light",
             "entity": "light.office_main_lights",
@@ -78,7 +68,8 @@
             "x": 1,
             "y": 2,
             "w": 1,
-            "h": 3
+            "h": 3,
+            "icon": "light-recessed"
           },
           {
             "id": "c4hug50",
@@ -88,7 +79,8 @@
             "x": 2,
             "y": 2,
             "w": 1,
-            "h": 3
+            "h": 3,
+            "icon": "library-shelves"
           },
           {
             "id": "ckhwkya",
@@ -98,51 +90,31 @@
             "x": 3,
             "y": 2,
             "w": 1,
-            "h": 3
+            "h": 3,
+            "icon": "desk-lamp",
+            "rgb": true
           },
           {
-            "id": "c1n28dn",
-            "ck": "volumes",
-            "entity": "",
-            "name": "Speaker volumes (per-speaker)",
-            "x": 4,
-            "y": 3,
-            "w": 3,
-            "h": 2,
-            "entities": [
-              "media_player.living_room_juke_audio_office_zone",
-              "media_player.spotifyplus_ben_walton"
-            ]
-          },
-          {
-            "id": "c7njgp7",
-            "ck": "lock",
-            "entity": "lock.front_door",
-            "name": "Front Door",
-            "x": 2,
-            "y": 1,
-            "w": 1,
-            "h": 1
-          },
-          {
-            "id": "cfn22de",
-            "ck": "binary",
-            "entity": "binary_sensor.motion_sensor_c",
-            "name": "Motion Sensor C",
-            "x": 3,
-            "y": 1,
-            "w": 1,
-            "h": 1
-          },
-          {
-            "id": "cfmm20w",
-            "ck": "spotify",
+            "id": "c2nx8a7",
+            "ck": "spotify_art",
             "entity": "media_player.spotifyplus_ben_walton",
-            "name": "SpotifyPlus Ben Walton",
+            "name": "Office",
             "x": 4,
             "y": 1,
             "w": 3,
-            "h": 2
+            "h": 4,
+            "device_class": "",
+            "unit": ""
+          },
+          {
+            "id": "ccz4stp",
+            "ck": "wx_hourly",
+            "entity": "weather.forecast_home",
+            "name": "Forecast Home",
+            "x": 1,
+            "y": 1,
+            "w": 3,
+            "h": 1
           }
         ],
         [
@@ -230,48 +202,76 @@
       "subpages": [
         [
           {
-            "id": "g1",
-            "ck": "group",
-            "name": "House status",
+            "id": "cas3ins",
+            "ck": "shortcuts",
+            "entity": "",
+            "name": "Main Areas",
             "x": 1,
             "y": 1,
-            "w": 2,
+            "w": 6,
             "h": 5,
-            "entities": [
-              "light.kitchen_kitchen",
-              "lock.front_door",
-              "binary_sensor.front_motion",
-              "sensor.living_temp",
-              "cover.living_blinds",
-              "fan.office_ceiling_fan",
-              "light.office_main_lights",
-              "person.ben",
-              "light.living_room_main",
-              "lock.back_door"
-            ]
-          },
-          {
-            "id": "c60tp5y",
-            "ck": "lightgroup",
-            "entity": "",
-            "name": "Common Area Lights",
-            "x": 3,
-            "y": 1,
-            "w": 4,
-            "h": 4,
-            "entities": [
-              "light.dining_room_chandelier",
-              "light.family_room_main",
-              "light.front_foyer_stairwell_upstairs",
-              "light.front_foyer_stair_chandelier",
-              "light.front_foyer_door_chandelier",
-              "light.garage_entry_hall_and_closet_lights",
-              "light.kitchen_kitchen",
-              "light.kitchen_stair_lights",
-              "light.living_room_main",
-              "light.half_bath_hallway_hall_light",
-              "light.kitchen_breakfast",
-              "light.master_bedroom_hallway"
+            "entities": [],
+            "shortcuts": [
+              {
+                "label": "Office",
+                "icon": "chair-rolling",
+                "target": "room:Office"
+              },
+              {
+                "label": "Gameroom",
+                "icon": "controller",
+                "target": "room:Gameroom"
+              },
+              {
+                "label": "Outdoor Patio",
+                "icon": "forest",
+                "target": "room:Outdoor Patio"
+              },
+              {
+                "label": "Garage",
+                "icon": "garage",
+                "target": "room:Garage"
+              },
+              {
+                "label": "Front Porch",
+                "icon": "door",
+                "target": "room:Front Porch"
+              },
+              {
+                "label": "Family Room",
+                "icon": "sofa",
+                "target": "room:Family Room"
+              },
+              {
+                "label": "Laundry Room",
+                "icon": "washing-machine",
+                "target": "room:Laundry Room"
+              },
+              {
+                "label": "Front Foyer",
+                "icon": "chandelier",
+                "target": "room:Front Foyer"
+              },
+              {
+                "label": "Half Bath",
+                "icon": "toilet",
+                "target": "room:Half Bath"
+              },
+              {
+                "label": "Living Room",
+                "icon": "sofa",
+                "target": "page:living_room"
+              },
+              {
+                "label": "Kitchen",
+                "icon": "sofa",
+                "target": "page:kitchen"
+              },
+              {
+                "label": "Dining Room",
+                "icon": "sofa",
+                "target": "page:dining_room"
+              }
             ]
           }
         ]
@@ -363,16 +363,6 @@
       "subpages": [
         [
           {
-            "id": "n1",
-            "ck": "spotify",
-            "entity": "media_player.spotifyplus_ben_walton",
-            "name": "Now Playing",
-            "x": 1,
-            "y": 1,
-            "w": 3,
-            "h": 2
-          },
-          {
             "id": "cdf8v1m",
             "ck": "spotify_playlists",
             "entity": "media_player.spotifyplus_ben_walton",
@@ -393,16 +383,83 @@
             "h": 4
           },
           {
-            "id": "ci5bzcq",
-            "ck": "spotify_speakers",
+            "id": "c0swwwc",
+            "ck": "spotify_art",
             "entity": "media_player.spotifyplus_ben_walton",
             "name": "SpotifyPlus Ben Walton",
             "x": 1,
-            "y": 3,
+            "y": 1,
             "w": 3,
             "h": 3
+          },
+          {
+            "id": "cqhhlze",
+            "ck": "spotify_speaker",
+            "entity": "media_player.spotifyplus_ben_walton",
+            "name": "Office",
+            "x": 1,
+            "y": 4,
+            "w": 1,
+            "h": 1,
+            "speaker": "Office"
+          },
+          {
+            "id": "cethfhw",
+            "ck": "spotify_speaker",
+            "entity": "media_player.spotifyplus_ben_walton",
+            "name": "Dining Room",
+            "x": 2,
+            "y": 4,
+            "w": 1,
+            "h": 1,
+            "speaker": "Dining Room"
+          },
+          {
+            "id": "cy8sgcb",
+            "ck": "spotify_speaker",
+            "entity": "media_player.spotifyplus_ben_walton",
+            "name": "Kitchen",
+            "x": 3,
+            "y": 4,
+            "w": 1,
+            "h": 1,
+            "speaker": "Kitchen"
+          },
+          {
+            "id": "cyx9z0f",
+            "ck": "spotify_speaker",
+            "entity": "media_player.spotifyplus_ben_walton",
+            "name": "Patio",
+            "x": 1,
+            "y": 5,
+            "w": 1,
+            "h": 1,
+            "speaker": "Patio"
+          },
+          {
+            "id": "cbxdccw",
+            "ck": "spotify_speaker",
+            "entity": "media_player.spotifyplus_ben_walton",
+            "name": "Living Room",
+            "x": 2,
+            "y": 5,
+            "w": 1,
+            "h": 1,
+            "speaker": "Living Room Ceiling"
+          },
+          {
+            "id": "cgm77kn",
+            "ck": "spotify_speaker",
+            "entity": "media_player.spotifyplus_ben_walton",
+            "name": "Computer",
+            "x": 3,
+            "y": 5,
+            "w": 1,
+            "h": 1,
+            "speaker": "JOHN-WICK"
           }
-        ]
+        ],
+        []
       ]
     },
     "sonos": {
@@ -436,45 +493,6 @@
             "h": 3
           },
           {
-            "id": "ct6d88c",
-            "ck": "sonos_sources",
-            "entity": "",
-            "name": "Sonos sources",
-            "x": 4,
-            "y": 5,
-            "w": 3,
-            "h": 1,
-            "entities": [
-              "media_player.kitchen"
-            ]
-          },
-          {
-            "id": "cb0dsiu",
-            "ck": "sonos_sources",
-            "entity": "",
-            "name": "Sonos sources",
-            "x": 4,
-            "y": 4,
-            "w": 1,
-            "h": 1,
-            "entities": [
-              "media_player.kitchen"
-            ]
-          },
-          {
-            "id": "cxq8x78",
-            "ck": "sonos_sources",
-            "entity": "",
-            "name": "Sonos sources",
-            "x": 5,
-            "y": 4,
-            "w": 1,
-            "h": 1,
-            "entities": [
-              "media_player.living_room"
-            ]
-          },
-          {
             "id": "cupb5kv",
             "ck": "speakers",
             "entity": "",
@@ -491,58 +509,14 @@
         ],
         [
           {
-            "id": "sr1",
-            "ck": "speakers",
-            "name": "Rooms",
+            "id": "cpmu8na",
+            "ck": "sonos_library",
+            "entity": "media_player.kitchen",
+            "name": "Kitchen - Sonos",
             "x": 1,
             "y": 1,
-            "w": 3,
-            "h": 1,
-            "entities": [
-              "media_player.living_room",
-              "media_player.kitchen",
-              "media_player.office"
-            ]
-          },
-          {
-            "id": "sr2",
-            "ck": "sonos_sources",
-            "name": "Source",
-            "x": 4,
-            "y": 1,
-            "w": 2,
-            "h": 1,
-            "entities": [
-              "media_player.spotify",
-              "media_player.radio"
-            ]
-          },
-          {
-            "id": "sr3",
-            "ck": "speakers",
-            "name": "Pick",
-            "x": 6,
-            "y": 1,
-            "w": 1,
-            "h": 1,
-            "entities": [
-              "media_player.living_room"
-            ]
-          },
-          {
-            "id": "vols_demo1",
-            "ck": "volumes",
-            "entity": "",
-            "name": "Speaker Volumes",
-            "x": 1,
-            "y": 2,
-            "w": 3,
-            "h": 3,
-            "entities": [
-              "media_player.living_room",
-              "media_player.kitchen",
-              "media_player.bedroom"
-            ]
+            "w": 5,
+            "h": 5
           }
         ]
       ]
@@ -659,6 +633,234 @@
             "y": 1,
             "w": 6,
             "h": 5
+          }
+        ],
+        [
+          {
+            "id": "cjltohj",
+            "ck": "wx_hourly",
+            "entity": "weather.forecast_home",
+            "name": "Forecast Home",
+            "x": 1,
+            "y": 4,
+            "w": 6,
+            "h": 1
+          },
+          {
+            "id": "cy2ruoo",
+            "ck": "wx_current",
+            "entity": "weather.forecast_home",
+            "name": "Forecast Home",
+            "x": 1,
+            "y": 1,
+            "w": 3,
+            "h": 3
+          },
+          {
+            "id": "cldouf4",
+            "ck": "wx_daily",
+            "entity": "weather.forecast_home",
+            "name": "Forecast Home",
+            "x": 4,
+            "y": 1,
+            "w": 3,
+            "h": 3
+          }
+        ]
+      ]
+    },
+    "cameras": {
+      "title": "Cameras",
+      "type": "custom",
+      "header": {
+        "on": false,
+        "left": "greeting",
+        "right": [
+          "weather_current",
+          "secured"
+        ]
+      },
+      "subpages": [
+        [
+          {
+            "id": "clbd73f",
+            "ck": "camera",
+            "entity": "camera.front_door",
+            "name": "Front Door",
+            "x": 1,
+            "y": 1,
+            "w": 6,
+            "h": 5
+          }
+        ]
+      ]
+    },
+    "living_room": {
+      "title": "Living Room",
+      "type": "custom",
+      "header": {
+        "on": false,
+        "left": "greeting",
+        "right": [
+          "weather_current",
+          "secured"
+        ]
+      },
+      "subpages": [
+        [
+          {
+            "id": "crqftgk",
+            "ck": "light",
+            "entity": "light.living_room_main",
+            "name": "Living Room Main",
+            "x": 1,
+            "y": 2,
+            "w": 1,
+            "h": 4
+          },
+          {
+            "id": "cdqtd5k",
+            "ck": "fan",
+            "entity": "fan.living_room_pendant",
+            "name": "Ceiling Fan",
+            "x": 1,
+            "y": 1,
+            "w": 1,
+            "h": 1
+          },
+          {
+            "id": "cssjxe0",
+            "ck": "tvremote",
+            "entity": "media_player.lg_g3_living_room_2",
+            "name": "LG G3 Living Room",
+            "x": 2,
+            "y": 1,
+            "w": 5,
+            "h": 5,
+            "apps": [
+              "YouTube",
+              "YouTube TV",
+              "Disney+",
+              "Hulu"
+            ]
+          }
+        ]
+      ]
+    },
+    "kitchen": {
+      "title": "Kitchen",
+      "type": "custom",
+      "header": {
+        "on": false,
+        "left": "greeting",
+        "right": [
+          "weather_current",
+          "secured"
+        ]
+      },
+      "subpages": [
+        [
+          {
+            "id": "cidttc9",
+            "ck": "light",
+            "entity": "light.kitchen_kitchen",
+            "name": "Main Lights",
+            "x": 1,
+            "y": 1,
+            "w": 1,
+            "h": 5
+          },
+          {
+            "id": "clyit5c",
+            "ck": "light",
+            "entity": "light.kitchen_breakfast",
+            "name": "Breakfast",
+            "x": 2,
+            "y": 1,
+            "w": 1,
+            "h": 5
+          },
+          {
+            "id": "cqs5gka",
+            "ck": "light",
+            "entity": "light.kitchen_stair_lights",
+            "name": "Stair Lights",
+            "x": 3,
+            "y": 1,
+            "w": 1,
+            "h": 5
+          },
+          {
+            "id": "c2fn3tl",
+            "ck": "speakers",
+            "entity": "",
+            "name": "Speakers (multi-room + volume)",
+            "x": 4,
+            "y": 4,
+            "w": 3,
+            "h": 2,
+            "entities": [
+              "media_player.living_room",
+              "media_player.kitchen"
+            ]
+          },
+          {
+            "id": "cqmsjf1",
+            "ck": "sonos",
+            "entity": "media_player.kitchen",
+            "name": "Kitchen - Sonos",
+            "x": 4,
+            "y": 1,
+            "w": 3,
+            "h": 3
+          }
+        ]
+      ]
+    },
+    "dining_room": {
+      "title": "Dining Room",
+      "type": "custom",
+      "header": {
+        "on": true,
+        "left": "greeting",
+        "right": [
+          "weather_current",
+          "secured"
+        ]
+      },
+      "subpages": [
+        [
+          {
+            "id": "c3x5kh5",
+            "ck": "light",
+            "entity": "light.dining_room_chandelier",
+            "name": "Dining Room Chandelier",
+            "x": 1,
+            "y": 2,
+            "w": 1,
+            "h": 3,
+            "icon": "chandelier"
+          },
+          {
+            "id": "c08f9q5",
+            "ck": "spotify_art",
+            "entity": "media_player.spotifyplus_ben_walton",
+            "name": "SpotifyPlus Ben Walton",
+            "x": 2,
+            "y": 1,
+            "w": 5,
+            "h": 4
+          },
+          {
+            "id": "c5vo3up",
+            "ck": "spotify_speaker",
+            "entity": "media_player.spotifyplus_ben_walton",
+            "name": "Dining Room",
+            "x": 1,
+            "y": 1,
+            "w": 1,
+            "h": 1,
+            "speaker": "Dining Room"
           }
         ]
       ]

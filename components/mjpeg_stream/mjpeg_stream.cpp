@@ -139,6 +139,10 @@ void MJPEGStream::setup() {
   }
   this->max_jpeg_cap_ = got;
 
+  // Stills queue: reserve up front so fetch_still() never grows it on the
+  // main loop (pushes stay allocation-free apart from the url string copy).
+  this->still_queue_.reserve(STILL_QUEUE_CAP);
+
   // One task for the life of the component; it idles while !running_.
   BaseType_t ok = xTaskCreatePinnedToCore(MJPEGStream::stream_task_, "mjpeg_cam", 12288, this, this->task_priority_,
                                           nullptr, this->task_core_);
@@ -171,6 +175,28 @@ void MJPEGStream::loop() {
     }
   }
 
+  // Apply finished stills (album art) — the other place LVGL is touched.
+  // The task filled buf[1 - front] and set pending; consuming it here flips
+  // front, points the widget at the fresh half, unhides it (art widgets start
+  // hidden over a placeholder src) and clears pending — only then may the task
+  // write the now-offscreen half again. No allocation: a fixed 8-slot scan.
+  for (auto &s : this->still_slots_) {
+    if (!s.pending.load())
+      continue;
+    s.front = 1 - s.front;  // safe: the task reads front only while !pending
+    s.dsc.header.magic = LV_IMAGE_HEADER_MAGIC;
+    s.dsc.header.cf = LV_COLOR_FORMAT_RGB565;
+    s.dsc.header.w = s.w;
+    s.dsc.header.h = s.h;
+    s.dsc.header.stride = (uint32_t) s.w * 2;
+    s.dsc.data = s.buf[s.front];
+    s.dsc.data_size = (uint32_t) s.w * s.h * 2;
+    lv_image_set_src(s.widget, &s.dsc);
+    lv_obj_remove_flag(s.widget, LV_OBJ_FLAG_HIDDEN);
+    lv_obj_invalidate(s.widget);
+    s.pending.store(false);
+  }
+
   // Latch state changes onto the main loop so YAML on_state runs here.
   StreamState s = this->state_.load();
   if (s != this->published_state_) {
@@ -178,16 +204,20 @@ void MJPEGStream::loop() {
     this->state_callbacks_.call(s);
   }
 
-  // Periodic stats.
+  // Periodic stats. Stream stats log while running; stills activity alone
+  // (art-only layouts where the stream never starts) also earns a line.
   uint32_t now = millis();
-  if (this->running_.load() && (now - this->last_stats_ms_) >= 10000) {
+  uint32_t stills_total = this->stills_ok_.load() + this->stills_failed_.load();
+  bool stills_active = stills_total != this->stats_last_stills_;
+  if ((this->running_.load() || stills_active) && (now - this->last_stats_ms_) >= 10000) {
     if (this->last_stats_ms_ != 0) {
       float dt = (now - this->last_stats_ms_) / 1000.0f;
       uint32_t ok = this->frames_ok_.load();
       uint32_t net = this->frames_net_.load();
-      ESP_LOGI(TAG, "stats: %.1f fps shown, %.1f fps net, %u dropped, %u connects, %u KB PSRAM free",
+      ESP_LOGI(TAG, "stats: %.1f fps shown, %.1f fps net, %u dropped, %u connects, %u stills (%u failed), %u KB PSRAM free",
                (ok - this->stats_last_ok_) / dt, (net - this->stats_last_net_) / dt,
                (unsigned) this->frames_dropped_.load(), (unsigned) this->connects_.load(),
+               (unsigned) this->stills_ok_.load(), (unsigned) this->stills_failed_.load(),
                (unsigned) (heap_caps_get_free_size(MALLOC_CAP_SPIRAM) / 1024));
       this->stats_last_ok_ = ok;
       this->stats_last_net_ = net;
@@ -195,6 +225,7 @@ void MJPEGStream::loop() {
       this->stats_last_ok_ = this->frames_ok_.load();
       this->stats_last_net_ = this->frames_net_.load();
     }
+    this->stats_last_stills_ = stills_total;
     this->last_stats_ms_ = now;
   }
 }
@@ -217,6 +248,8 @@ void MJPEGStream::dump_config() {
   ESP_LOGCONFIG(TAG, "  Frames ok/net/dropped: %u/%u/%u, connects: %u", (unsigned) this->frames_ok_.load(),
                 (unsigned) this->frames_net_.load(), (unsigned) this->frames_dropped_.load(),
                 (unsigned) this->connects_.load());
+  ESP_LOGCONFIG(TAG, "  Stills ok/failed: %u/%u", (unsigned) this->stills_ok_.load(),
+                (unsigned) this->stills_failed_.load());
   if (this->is_failed())
     ESP_LOGCONFIG(TAG, "  State: FAILED (buffer allocation)");
 }
@@ -256,6 +289,27 @@ void MJPEGStream::stop() {
 
 void MJPEGStream::restart() { this->reconnect_req_.store(true); }
 
+void MJPEGStream::fetch_still(const std::string &url, lv_obj_t *widget, uint16_t w, uint16_t h) {
+  if (this->is_failed() || widget == nullptr || url.empty() || w == 0 || h == 0)
+    return;
+  std::lock_guard<std::mutex> lk(this->still_mutex_);
+  // Latest-wins per widget: replace a queued-but-not-started request in place,
+  // so rapid track skips collapse to the newest art instead of stacking.
+  for (auto &r : this->still_queue_) {
+    if (r.widget == widget) {
+      r.url = url;
+      r.w = w;
+      r.h = h;
+      return;
+    }
+  }
+  if (this->still_queue_.size() >= STILL_QUEUE_CAP) {
+    ESP_LOGD(TAG, "Still queue full (%u), dropping oldest", (unsigned) STILL_QUEUE_CAP);
+    this->still_queue_.erase(this->still_queue_.begin());
+  }
+  this->still_queue_.push_back(StillReq{url, widget, w, h});
+}
+
 // ===========================================================================
 // Worker task — owns socket + multipart parser + JPEG decoder + PPA.
 // Never touches LVGL.
@@ -269,9 +323,17 @@ void MJPEGStream::task_main_() {
       this->close_socket_();
       if (this->state_.load() != StreamState::STOPPED)
         this->state_.store(StreamState::STOPPED);
+      // Stills safe point A: stream idle, socket closed, accumulator unused.
+      this->service_stills_(true);
       vTaskDelay(pdMS_TO_TICKS(100));
       continue;
     }
+
+    // Stills safe point B: between connection cycles — every path back to the
+    // top of the running branch has closed the socket (or never opened one)
+    // and the accumulator holds no un-decoded frame. Covers snapshot mode
+    // (which reconnects per frame) and every stream reconnect.
+    this->service_stills_(true);
 
     bool fresh = this->reconnect_req_.exchange(false);  // explicit restart()/set_url()
     std::string url;
@@ -345,7 +407,9 @@ void MJPEGStream::task_main_() {
       continue;
     }
 
-    if (status == 401 || status == 404) {
+    // 403 included: Home Assistant answers 403 (not 401) for a bad/expired
+    // stream token, and retrying can't help until a fresh URL arrives.
+    if (status == 401 || status == 403 || status == 404) {
       ESP_LOGE(TAG, "HTTP %d from %s — check the camera proxy URL/token", status, host.c_str());
       this->close_socket_();
       this->state_.store(StreamState::ERROR_AUTH);
@@ -362,9 +426,19 @@ void MJPEGStream::task_main_() {
 
     std::string boundary;
     bool net_ok;
+    // Empty-close detection counts frames RECEIVED (net), not presented: a
+    // connection that delivered bytes isn't the "server has nothing" case
+    // even if every frame was dropped (oversize, decode failure, fps gate).
+    uint32_t frames_before = this->frames_net_.load();
     if (stristr_(content_type.c_str(), "multipart") != nullptr && extract_boundary_(content_type, boundary)) {
-      ESP_LOGD(TAG, "Streaming multipart, boundary '%s'", boundary.c_str());
-      net_ok = this->stream_multipart_("--" + boundary);
+      // Home Assistant declares "boundary=--frameboundary" — the parameter
+      // value already carries the leading dashes the body delimiter uses, so
+      // only prepend "--" when the value doesn't start with it (per spec).
+      std::string delim = (boundary.rfind("--", 0) == 0) ? boundary : "--" + boundary;
+      ESP_LOGI(TAG, "Streaming multipart (boundary '%s')", delim.c_str());
+      net_ok = this->stream_multipart_(delim);
+      if (!net_ok)
+        ESP_LOGW(TAG, "Multipart stream ended without a clean close (timeout or parse failure)");
     } else if (stristr_(content_type.c_str(), "image/jpeg") != nullptr) {
       // Single snapshot: whole body is one frame, then reconnect.
       net_ok = this->stream_single_jpeg_(content_length);
@@ -376,10 +450,33 @@ void MJPEGStream::task_main_() {
     this->close_socket_();
     if (!this->running_.load() || this->reconnect_req_.load())
       continue;  // stop()/restart()/set_url() — handled at the top
-    if (net_ok) {
+
+    bool got_frames = this->frames_ok_.load() != frames_before;
+    if (!got_frames) {
+      // The server accepted the request but delivered zero frames (e.g. HA's
+      // camera proxy 200s then closes when it can't fetch an image from the
+      // camera cloud). Every retry makes HA hit the upstream camera API, and
+      // cloud cameras (Nest/SDM) rate-limit image requests hard — so escalate
+      // to a slow poll instead of hammering: 5s, 10s, ... capped at 120s.
+      this->empty_closes_ = std::min<uint32_t>(this->empty_closes_ + 1, 24);
+      this->state_.store(StreamState::ERROR_NET);
+      uint32_t wait = std::min<uint32_t>(5000u * this->empty_closes_, 120000u);
+      ESP_LOGW(TAG, "Stream closed with no frames (%u in a row) — next attempt in %us",
+               (unsigned) this->empty_closes_, (unsigned) (wait / 1000));
+      uint32_t waited = 0;
+      while (this->running_.load() && !this->reconnect_req_.load() && waited < wait) {
+        // Stills safe point D: socket closed for the whole wait (up to 120s —
+        // don't starve album art while a cloud camera is rate-limiting us).
+        this->service_stills_(true);
+        vTaskDelay(pdMS_TO_TICKS(100));
+        waited += 100;
+      }
+    } else if (net_ok) {
+      this->empty_closes_ = 0;
       // Clean exit (server closed / snapshot mode) — reconnect promptly.
       vTaskDelay(pdMS_TO_TICKS(200));
     } else {
+      this->empty_closes_ = 0;
       this->state_.store(StreamState::ERROR_NET);
       this->backoff_wait_();
     }
@@ -389,14 +486,19 @@ void MJPEGStream::task_main_() {
 void MJPEGStream::park_until_url_change_(uint32_t gen) {
   this->auth_parked_.store(true);
   this->close_socket_();
-  while (this->running_.load() && !this->reconnect_req_.load() && this->url_gen_.load() == gen)
+  while (this->running_.load() && !this->reconnect_req_.load() && this->url_gen_.load() == gen) {
+    // Stills safe point D: parked with the socket closed (possibly for hours).
+    this->service_stills_(true);
     vTaskDelay(pdMS_TO_TICKS(250));
+  }
   this->auth_parked_.store(false);
 }
 
 void MJPEGStream::backoff_wait_() {
   uint32_t waited = 0;
   while (this->running_.load() && !this->reconnect_req_.load() && waited < this->backoff_ms_) {
+    // Stills safe point D: every backoff_wait_ call site closed the socket first.
+    this->service_stills_(true);
     vTaskDelay(pdMS_TO_TICKS(100));
     waited += 100;
   }
@@ -667,6 +769,14 @@ bool MJPEGStream::stream_multipart_(const std::string &delim) {
       }
     }
     this->handle_frame_(jpeg_len);
+    // Stills safe point C: the accumulated frame was fully consumed by
+    // handle_frame_ (decoded + scaled, or dropped) and the boundary scan for
+    // the next frame has not started, so the accumulator is reusable. ONE
+    // still per frame bounds the stream stall; process_still_ parks the live
+    // stream socket + its buffered rx bytes and restores them afterwards, so
+    // the multipart parse resumes byte-exact (TCP flow control simply holds
+    // the server's frames back during the fetch).
+    this->service_stills_(false);
   }
   return true;
 }
@@ -729,19 +839,20 @@ void MJPEGStream::handle_frame_(size_t len) {
   this->decode_and_scale_(len, now);
 }
 
-void MJPEGStream::decode_and_scale_(size_t jpeg_len, uint32_t now_ms) {
-  jpeg_decode_picture_info_t info = {};
-  esp_err_t err = jpeg_decoder_get_info(this->jpeg_buf_, (uint32_t) jpeg_len, &info);
+// Decode jpeg_buf_[0..jpeg_len) into dec_buf_ with the HW JPEG codec, filling
+// *info with the source dimensions. Shared by the stream frame path and the
+// stills channel — both run on the worker task, never concurrently, and both
+// treat dec_buf_ as scratch consumed by the PPA pass that follows.
+bool MJPEGStream::decode_jpeg_(size_t jpeg_len, jpeg_decode_picture_info_t *info) {
+  esp_err_t err = jpeg_decoder_get_info(this->jpeg_buf_, (uint32_t) jpeg_len, info);
   if (err != ESP_OK) {
     ESP_LOGW(TAG, "jpeg_decoder_get_info failed: %d", (int) err);
-    this->frames_dropped_++;
-    return;
+    return false;
   }
-  if (info.width > this->max_source_width_ || info.height > this->max_source_height_) {
-    ESP_LOGW(TAG, "Source %ux%u exceeds max %ux%u, dropped", (unsigned) info.width, (unsigned) info.height,
+  if (info->width > this->max_source_width_ || info->height > this->max_source_height_) {
+    ESP_LOGW(TAG, "Source %ux%u exceeds max %ux%u, dropped", (unsigned) info->width, (unsigned) info->height,
              this->max_source_width_, this->max_source_height_);
-    this->frames_dropped_++;
-    return;
+    return false;
   }
 
   // Lazy init: decoder engine once, decode buffer on first frame / dim change.
@@ -753,17 +864,15 @@ void MJPEGStream::decode_and_scale_(size_t jpeg_len, uint32_t now_ms) {
     if (err != ESP_OK) {
       ESP_LOGE(TAG, "jpeg_new_decoder_engine failed: %d", (int) err);
       this->jpeg_dec_ = nullptr;
-      this->frames_dropped_++;
-      return;
+      return false;
     }
   }
 
   // The HW decoder emits whole MCU blocks: the output picture is padded up to
   // 16-pixel alignment, so that is both the buffer size and the PPA stride.
-  uint32_t aw = ALIGN_UP_(info.width, 16);
-  uint32_t ah = ALIGN_UP_(info.height, 16);
+  uint32_t aw = ALIGN_UP_(info->width, 16);
+  uint32_t ah = ALIGN_UP_(info->height, 16);
   size_t need = (size_t) aw * ah * 2;  // RGB565
-  uint32_t dims = (aw << 16) | ah;
   if (this->dec_buf_ == nullptr || this->dec_buf_cap_ < need) {
     if (this->dec_buf_ != nullptr)
       heap_caps_free(this->dec_buf_);
@@ -778,14 +887,13 @@ void MJPEGStream::decode_and_scale_(size_t jpeg_len, uint32_t now_ms) {
     if (this->dec_buf_ == nullptr) {
       ESP_LOGE(TAG, "Decode buffer alloc (%u bytes) failed", (unsigned) need);
       this->dec_buf_cap_ = 0;
-      this->frames_dropped_++;
-      return;
+      return false;
     }
     this->dec_buf_cap_ = got;
-    ESP_LOGI(TAG, "Decode buffer %u bytes for %ux%u source", (unsigned) got, (unsigned) info.width,
-             (unsigned) info.height);
+    ESP_LOGI(TAG, "Decode buffer %u bytes for %ux%u source", (unsigned) got, (unsigned) info->width,
+             (unsigned) info->height);
   }
-  this->dec_dims_ = dims;
+  this->dec_dims_ = (aw << 16) | ah;
 
   jpeg_decode_cfg_t dec_cfg = {};
   dec_cfg.output_format = JPEG_DECODE_OUT_FORMAT_RGB565;
@@ -796,10 +904,17 @@ void MJPEGStream::decode_and_scale_(size_t jpeg_len, uint32_t now_ms) {
                              (uint32_t) this->dec_buf_cap_, &out_len);
   if (err != ESP_OK) {
     ESP_LOGW(TAG, "jpeg_decoder_process failed: %d", (int) err);
-    this->frames_dropped_++;
-    return;
+    return false;
   }
+  return true;
+}
 
+// PPA cover-scale + center-crop + byte_swap dec_buf_ (dims from the preceding
+// decode_jpeg_, via *info) into `out` (RGB565, tw x th, 64-byte aligned,
+// out_size 64-aligned and >= tw*th*2). Shared by streams and stills.
+bool MJPEGStream::ppa_scale_into_(const jpeg_decode_picture_info_t &info, uint8_t *out, size_t out_size, uint16_t tw,
+                                  uint16_t th) {
+  esp_err_t err;
   if (this->ppa_ == nullptr) {
     ppa_client_config_t ppa_cfg = {};
     ppa_cfg.oper_type = PPA_OPERATION_SRM;
@@ -807,39 +922,27 @@ void MJPEGStream::decode_and_scale_(size_t jpeg_len, uint32_t now_ms) {
     if (err != ESP_OK) {
       ESP_LOGE(TAG, "ppa_register_client failed: %d", (int) err);
       this->ppa_ = nullptr;
-      this->frames_dropped_++;
-      return;
+      return false;
     }
   }
 
-  uint8_t tidx = this->active_target_.load();
-  if (tidx >= this->targets_.size())
-    tidx = (uint8_t) (this->targets_.size() - 1);
-  uint32_t tw = this->targets_[tidx].w;
-  uint32_t th = this->targets_[tidx].h;
+  uint32_t aw = ALIGN_UP_(info.width, 16);
+  uint32_t ah = ALIGN_UP_(info.height, 16);
 
   // Uniform "fill" scale (cover), quantized UP to the PPA's 1/16 steps, then
   // center-crop the input so the output is (up to a floor-rounding pixel)
-  // exactly tw x th. Buffers were zeroed at setup, so a rounding edge is black.
+  // exactly tw x th. Output buffers are zeroed at alloc, so a rounding edge
+  // is black.
   float s = std::max((float) tw / info.width, (float) th / info.height);
   int n16 = (int) ceilf(s * 16.0f);
   n16 = std::min(std::max(n16, 1), 256);  // PPA SRM supports 1/16x .. 16x
   float sq = n16 / 16.0f;
-  uint32_t bw = std::min<uint32_t>((tw * 16) / (uint32_t) n16, info.width);
-  uint32_t bh = std::min<uint32_t>((th * 16) / (uint32_t) n16, info.height);
+  uint32_t bw = std::min<uint32_t>(((uint32_t) tw * 16) / (uint32_t) n16, info.width);
+  uint32_t bh = std::min<uint32_t>(((uint32_t) th * 16) / (uint32_t) n16, info.height);
   bw = std::max<uint32_t>(bw, 1);
   bh = std::max<uint32_t>(bh, 1);
   uint32_t ox = (info.width - bw) / 2;
   uint32_t oy = (info.height - bh) / 2;
-
-  // Scale into the buffer NOT currently displayed. front_idx_ can only change
-  // when loop() consumes ready_idx_, which is -1 until we publish below — so
-  // `back` stays valid for the whole PPA operation.
-  int back;
-  {
-    std::lock_guard<std::mutex> lk(this->swap_mutex_);
-    back = (this->front_idx_ == 0) ? 1 : 0;
-  }
 
   ppa_srm_oper_config_t op = {};
   op.in.buffer = this->dec_buf_;
@@ -850,8 +953,8 @@ void MJPEGStream::decode_and_scale_(size_t jpeg_len, uint32_t now_ms) {
   op.in.block_offset_x = ox;
   op.in.block_offset_y = oy;
   op.in.srm_cm = PPA_SRM_COLOR_MODE_RGB565;
-  op.out.buffer = this->scaled_buf_[back];
-  op.out.buffer_size = this->scaled_buf_size_;
+  op.out.buffer = out;
+  op.out.buffer_size = out_size;
   op.out.pic_w = tw;
   op.out.pic_h = th;
   op.out.block_offset_x = 0;
@@ -860,24 +963,292 @@ void MJPEGStream::decode_and_scale_(size_t jpeg_len, uint32_t now_ms) {
   op.rotation_angle = PPA_SRM_ROTATION_ANGLE_0;
   op.scale_x = sq;
   op.scale_y = sq;
+  // The HW JPEG decoder emits RGB565 with the opposite byte order from the
+  // panel's little-endian LVGL buffers — without this swap the image renders
+  // as rainbow noise. PPA does the swap for free during the scale pass.
+  op.byte_swap = true;
   op.mode = PPA_TRANS_MODE_BLOCKING;
   err = ppa_do_scale_rotate_mirror(this->ppa_, &op);
   if (err != ESP_OK) {
     ESP_LOGW(TAG, "ppa_do_scale_rotate_mirror failed: %d (src %ux%u crop %ux%u+%u+%u scale %.3f -> %ux%u)", (int) err,
              (unsigned) info.width, (unsigned) info.height, (unsigned) bw, (unsigned) bh, (unsigned) ox, (unsigned) oy,
              sq, (unsigned) tw, (unsigned) th);
+    return false;
+  }
+  return true;
+}
+
+void MJPEGStream::decode_and_scale_(size_t jpeg_len, uint32_t now_ms) {
+  jpeg_decode_picture_info_t info = {};
+  if (!this->decode_jpeg_(jpeg_len, &info)) {
     this->frames_dropped_++;
     return;
   }
 
-  this->buf_w_[back] = (uint16_t) tw;
-  this->buf_h_[back] = (uint16_t) th;
+  uint8_t tidx = this->active_target_.load();
+  if (tidx >= this->targets_.size())
+    tidx = (uint8_t) (this->targets_.size() - 1);
+  uint16_t tw = this->targets_[tidx].w;
+  uint16_t th = this->targets_[tidx].h;
+
+  // Scale into the buffer NOT currently displayed. front_idx_ can only change
+  // when loop() consumes ready_idx_, which is -1 until we publish below — so
+  // `back` stays valid for the whole PPA operation.
+  int back;
+  {
+    std::lock_guard<std::mutex> lk(this->swap_mutex_);
+    back = (this->front_idx_ == 0) ? 1 : 0;
+  }
+
+  if (!this->ppa_scale_into_(info, this->scaled_buf_[back], this->scaled_buf_size_, tw, th)) {
+    this->frames_dropped_++;
+    return;
+  }
+
+  this->buf_w_[back] = tw;
+  this->buf_h_[back] = th;
   this->ready_idx_.store(back);  // publish to loop()
   this->last_present_ms_ = now_ms;
   this->frames_ok_++;
   this->backoff_ms_ = 500;  // reset after the first successful frame
   if (this->state_.load() != StreamState::LIVE)
     this->state_.store(StreamState::LIVE);
+}
+
+// ===========================================================================
+// Stills channel (task context) — one-shot JPEG fetches (album art) sharing
+// the task's socket plumbing, JPEG accumulator, HW decoder and PPA.
+//
+// Safe points (the ONLY places service_stills_ is called): the accumulator is
+// shared with the stream, so stills must never run between a stream frame's
+// accumulate and its decode. All four call sites guarantee jpeg_buf_ holds no
+// un-decoded frame:
+//   A. task_main_ idle branch (!running_): socket closed, stream inactive.
+//   B. task_main_ top of a running connection cycle: every path back there
+//      has closed the socket; the previous frame was consumed or dropped.
+//   C. stream_multipart_ immediately after handle_frame_(): the frame was
+//      decoded+scaled (or dropped) and the next boundary scan hasn't begun.
+//      The stream socket stays open — process_still_ parks it (fd + buffered
+//      rx bytes) and restores it so the parse resumes byte-exact.
+//   D. the wait loops (park_until_url_change_, backoff_wait_, the empty-close
+//      poll): socket closed for the whole wait, which can last minutes.
+// ===========================================================================
+
+bool MJPEGStream::pop_still_(StillReq &out) {
+  std::lock_guard<std::mutex> lk(this->still_mutex_);
+  if (this->still_queue_.empty())
+    return false;
+  out = std::move(this->still_queue_.front());
+  this->still_queue_.erase(this->still_queue_.begin());
+  return true;
+}
+
+void MJPEGStream::service_stills_(bool drain) {
+  StillReq req;
+  while (this->pop_still_(req)) {
+    this->process_still_(req);
+    if (!drain)
+      break;  // safe point C: one still per stream frame bounds the stall
+  }
+}
+
+void MJPEGStream::process_still_(const StillReq &req) {
+  // Mid-stream service (safe point C): park the live stream socket and its
+  // buffered-but-unconsumed rx bytes so the still fetch gets exclusive use of
+  // sock_ + rx state (and, by the safe-point contract, jpeg_buf_ + dec_buf_ +
+  // decoder + PPA). Restored below; TCP flow control holds the stream's
+  // frames back on the server side in the meantime.
+  int saved_sock = -1;
+  size_t saved_live = 0;
+  bool swapped = false;
+  if (this->sock_ >= 0) {
+    if (this->still_save_buf_ == nullptr) {
+      this->still_save_buf_ = (uint8_t *) heap_caps_malloc(sizeof(this->rx_buf_), MALLOC_CAP_SPIRAM | MALLOC_CAP_8BIT);
+      if (this->still_save_buf_ == nullptr) {
+        ESP_LOGW(TAG, "still: save-buffer alloc failed, request dropped");
+        this->stills_failed_++;
+        return;
+      }
+    }
+    saved_live = this->rx_len_ - this->rx_pos_;
+    if (saved_live > 0)
+      memcpy(this->still_save_buf_, this->rx_buf_ + this->rx_pos_, saved_live);
+    saved_sock = this->sock_;
+    this->sock_ = -1;
+    this->rx_len_ = 0;
+    this->rx_pos_ = 0;
+    swapped = true;
+  }
+
+  bool ok = this->fetch_and_present_still_(req);
+  this->close_socket_();  // closes the STILL socket (if open) + resets rx state
+
+  if (swapped) {
+    this->sock_ = saved_sock;
+    if (saved_live > 0)
+      memcpy(this->rx_buf_, this->still_save_buf_, saved_live);
+    this->rx_len_ = saved_live;
+    this->rx_pos_ = 0;
+  }
+  if (ok) {
+    this->stills_ok_++;
+    ESP_LOGI(TAG, "still: ready %ux%u for widget %p", (unsigned) req.w, (unsigned) req.h, (void *) req.widget);
+  }
+  else
+    this->stills_failed_++;  // no retries: art is cosmetic, next track change re-requests
+}
+
+bool MJPEGStream::fetch_and_present_still_(const StillReq &req) {
+  // Same TLS posture as the stream: plain http only (HA's media proxy is
+  // LAN-local http; TLS would cost ~50KB internal RAM per handshake).
+  if (strncasecmp(req.url.c_str(), "https://", 8) == 0) {
+    ESP_LOGW(TAG, "still: https:// URLs are not supported (no TLS): %s", redact_url_(req.url).c_str());
+    return false;
+  }
+  std::string host, path;
+  uint16_t port = 80;
+  if (!parse_http_url_(req.url, host, port, path)) {
+    ESP_LOGW(TAG, "still: invalid URL: %s", redact_url_(req.url).c_str());
+    return false;
+  }
+  this->sock_ = this->connect_(host, port);
+  if (this->sock_ < 0) {
+    ESP_LOGW(TAG, "still: connect to %s:%u failed: %s", host.c_str(), port, strerror(errno));
+    return false;
+  }
+  std::string get = "GET " + path + " HTTP/1.0\r\nHost: " + host +
+                    "\r\nConnection: close\r\nUser-Agent: aurora-mjpeg\r\n\r\n";
+  if (send(this->sock_, get.data(), get.size(), 0) != (int) get.size()) {
+    ESP_LOGW(TAG, "still: request send failed: %s", strerror(errno));
+    return false;
+  }
+  int status = 0;
+  std::string content_type;
+  long content_length = -1;
+  if (!this->read_http_headers_(status, content_type, content_length)) {
+    ESP_LOGW(TAG, "still: failed to read HTTP response headers");
+    return false;
+  }
+  if (status != 200) {
+    ESP_LOGW(TAG, "still: HTTP %d from %s", status, host.c_str());
+    return false;
+  }
+  size_t jpeg_len = 0;
+  if (!this->read_still_body_(content_length, &jpeg_len))
+    return false;
+  if (jpeg_len < 4 || this->jpeg_buf_[0] != 0xFF || this->jpeg_buf_[1] != 0xD8) {
+    ESP_LOGW(TAG, "still: body is not a JPEG (%u bytes, Content-Type '%s')", (unsigned) jpeg_len,
+             content_type.c_str());
+    return false;
+  }
+
+  jpeg_decode_picture_info_t info = {};
+  if (!this->decode_jpeg_(jpeg_len, &info))
+    return false;
+
+  StillSlot *slot = this->claim_still_slot_(req);
+  if (slot == nullptr)
+    return false;
+
+  // Invariant: the task writes a slot's buffers only while !pending — loop()
+  // flips slot->front as it consumes the flag, and the task must never touch
+  // the half LVGL displays. A still-pending publish here means loop() hasn't
+  // run since the last still for this widget (near-impossible: latest-wins
+  // queueing leaves at most one request per widget, and loop() applies within
+  // milliseconds while a fetch takes far longer) — wait briefly, then drop.
+  for (int i = 0; i < 10 && slot->pending.load(); i++)
+    vTaskDelay(pdMS_TO_TICKS(10));
+  if (slot->pending.load()) {
+    ESP_LOGW(TAG, "still: previous frame for widget %p never applied, dropped", (void *) req.widget);
+    return false;
+  }
+  int back = 1 - slot->front;  // stable: only loop() writes front, and only while pending
+  if (!this->ppa_scale_into_(info, slot->buf[back], slot->buf_size, req.w, req.h))
+    return false;
+  slot->w = req.w;
+  slot->h = req.h;
+  slot->pending.store(true);  // publish: loop() applies, unhides the widget, clears the flag
+  return true;
+}
+
+// Read a still body into jpeg_buf_: per Content-Length when given, else to
+// EOF (HTTP/1.0 "Connection: close" semantics, like stream_single_jpeg_).
+bool MJPEGStream::read_still_body_(long content_length, size_t *out_len) {
+  size_t acc = 0;
+  if (content_length >= 0) {
+    if ((size_t) content_length > this->max_jpeg_cap_) {
+      ESP_LOGW(TAG, "still: %ld bytes exceeds max_jpeg_size (%u), dropped", content_length,
+               (unsigned) this->max_jpeg_size_);
+      return false;
+    }
+    if (!this->read_bytes_(this->jpeg_buf_, (size_t) content_length))
+      return false;
+    acc = (size_t) content_length;
+  } else {
+    while (true) {
+      if (this->rx_pos_ >= this->rx_len_) {
+        int n = recv(this->sock_, this->rx_buf_, sizeof(this->rx_buf_), 0);
+        if (n == 0)
+          break;  // clean EOF — body complete
+        if (n < 0)
+          return false;
+        this->rx_len_ = (size_t) n;
+        this->rx_pos_ = 0;
+      }
+      size_t avail = this->rx_len_ - this->rx_pos_;
+      if (acc + avail > this->max_jpeg_cap_) {
+        ESP_LOGW(TAG, "still: body exceeds max_jpeg_size (%u), dropped", (unsigned) this->max_jpeg_size_);
+        return false;
+      }
+      memcpy(this->jpeg_buf_ + acc, this->rx_buf_ + this->rx_pos_, avail);
+      acc += avail;
+      this->rx_pos_ = this->rx_len_;
+    }
+  }
+  *out_len = acc;
+  return true;
+}
+
+// Find (or allocate) the per-widget output slot. Buffers are sized on first
+// use for that widget and reused — art card sizes are fixed per widget by the
+// generator, so a larger later request signals a codegen bug and is dropped
+// (never realloc a buffer LVGL may reference).
+MJPEGStream::StillSlot *MJPEGStream::claim_still_slot_(const StillReq &req) {
+  size_t need = (size_t) req.w * req.h * 2;
+  StillSlot *free_slot = nullptr;
+  for (auto &s : this->still_slots_) {
+    if (s.widget == req.widget) {
+      if (need > s.buf_size) {
+        ESP_LOGW(TAG, "still: %ux%u exceeds widget %p buffer (%u B), dropped", req.w, req.h, (void *) req.widget,
+                 (unsigned) s.buf_size);
+        return nullptr;
+      }
+      return &s;
+    }
+    if (s.widget == nullptr && free_slot == nullptr)
+      free_slot = &s;
+  }
+  if (free_slot == nullptr) {
+    ESP_LOGW(TAG, "still: widget registry full (%u), request dropped", (unsigned) STILL_SLOT_CAP);
+    return nullptr;
+  }
+  size_t half = ALIGN_UP_((uint32_t) need, 64);  // PPA wants cache-aligned out size
+  for (int i = 0; i < 2; i++) {
+    free_slot->buf[i] = (uint8_t *) heap_caps_aligned_alloc(64, half, MALLOC_CAP_SPIRAM | MALLOC_CAP_8BIT);
+    if (free_slot->buf[i] == nullptr) {
+      ESP_LOGW(TAG, "still: PSRAM alloc (%u B) for widget %p failed", (unsigned) half, (void *) req.widget);
+      if (i == 1) {
+        heap_caps_free(free_slot->buf[0]);
+        free_slot->buf[0] = nullptr;
+      }
+      return nullptr;
+    }
+    memset(free_slot->buf[i], 0, half);
+  }
+  free_slot->buf_size = half;
+  free_slot->front = 0;
+  free_slot->widget = req.widget;  // claim last: the slot is complete before it is discoverable
+  return free_slot;
 }
 
 }  // namespace esphome::mjpeg_stream

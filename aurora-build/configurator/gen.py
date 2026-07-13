@@ -1,17 +1,5 @@
 #!/usr/bin/env python3
-"""Aurora Phase 2 — layout.json -> on-device LVGL firmware generator.
-
-Reads the page-builder's layout.json and emits the device UI: a dynamic nav
-rail, one LVGL page per layout page (+ sub-pages), grid-positioned cards wired
-to Home Assistant via homeassistant.action, and per-card state sensors.
-
-It reuses the hand-built hardware/font/style base from aurora.yaml (everything
-except the UI), splicing in the generated `lvgl:` + state `sensor:`/`text_sensor:`
-blocks, and writes a self-contained devices/.../aurora-gen.yaml.
-
-    python3 gen.py            # assemble aurora-gen.yaml from layout.json
-    python3 gen.py --check    # generate + structurally validate (no write)
-"""
+"""Aurora Phase 2 — layout.json -> on-device LVGL firmware generator.\n\nReads the page-builder's layout.json and emits the device UI: a dynamic nav\nrail, one LVGL page per layout page (+ sub-pages), grid-positioned cards wired\nto Home Assistant via homeassistant.action, and per-card state sensors.\n\nIt reuses the hand-built hardware/font/style base from aurora.yaml (everything\nexcept the UI), splicing in the generated `lvgl:` + state `sensor:`/`text_sensor:`\nblocks, and writes a self-contained devices/.../aurora-gen.yaml.\n\n    python3 gen.py            # assemble aurora-gen.yaml from layout.json\n    python3 gen.py --check    # generate + structurally validate (no write)\n"""
 import json
 import os
 import re
@@ -69,6 +57,7 @@ def _load_mdi():
 
 MDI_CP = _load_mdi()   # icon name -> 8-hex codepoint
 USED_ICON_CP = set()   # 8-hex codepoints referenced by the layout being built
+USED_ICONSM_CP = set()  # codepoints card emitters need in the small (18px) f_iconsm font
 
 
 def glyph_for(name, fallback=FALLBACK_GLYPH):
@@ -83,22 +72,53 @@ def glyph_for(name, fallback=FALLBACK_GLYPH):
     return "\\U" + cp
 
 
-def inject_used_glyphs(font_text):
-    """Append any used-but-not-embedded icons to the f_icon `glyphs:` list."""
-    if not USED_ICON_CP:
+def _inject_glyphs(font_text, font_id, cps):
+    """Append any of `cps` not already embedded to the `font_id` `glyphs:` list."""
+    if not cps:
         return font_text
-    i = font_text.find("id: f_icon")
+    i = font_text.find("id: " + font_id + "\n")
     g = font_text.find("glyphs:", i) if i >= 0 else -1
     if g < 0:
         return font_text
     nxt = font_text.find("\n  - ", g)          # start of the next font entry
     end = nxt if nxt != -1 else len(font_text)
     have = {m.upper() for m in re.findall(r"\\U(000[0-9A-Fa-f]{5})", font_text[g:end])}
-    add = sorted(cp for cp in USED_ICON_CP if cp.upper() not in have)
+    add = sorted(cp for cp in cps if cp.upper() not in have)
     if not add:
         return font_text
     ins = "".join('      - "\\U%s"  # auto (layout icon)\n' % cp for cp in add)
     return font_text[:end] + "\n" + ins.rstrip("\n") + font_text[end:]
+
+
+def inject_used_glyphs(font_text):
+    """Append used-but-not-embedded icons to the f_icon / f_iconsm glyph lists."""
+    font_text = _inject_glyphs(font_text, "f_icon", USED_ICON_CP)
+    return _inject_glyphs(font_text, "f_iconsm", USED_ICONSM_CP)
+
+
+def harvest_font_glyphs(full):
+    r"""Final safety net: guarantee every MDI glyph a label actually renders is\n    baked into the font it's rendered in. Emitters register glyphs into\n    USED_ICON_CP / USED_ICONSM_CP by hand, and forgetting to (or picking the\n    wrong font) has repeatedly shipped missing-icon boxes. This post-pass scans\n    the fully-assembled YAML for every `text_font: fX` label carrying a\n    "\U000F...." glyph and injects any that fX doesn't already bake — so no\n    emitter can leave an icon unbaked regardless of which set it touched."""
+    used = {}  # font id -> set(cp)
+    for line in full.splitlines():
+        fm = re.search(r"text_font:\s*(\w+)", line)
+        if not fm:
+            continue
+        cps = re.findall(r"\\U(000F[0-9A-Fa-f]{4})", line)
+        if cps:
+            used.setdefault(fm.group(1), set()).update(c.upper() for c in cps)
+    if not used:
+        return full
+    # Inject within the `font:` section only (so we don't match stray ids elsewhere).
+    fm = re.search(r"\nfont:\n", full)
+    if not fm:
+        return full
+    start = fm.end()
+    em = re.search(r"\n\S", full[start:])
+    end = start + em.start() if em else len(full)
+    section = full[start:end]
+    for fid, cps in used.items():
+        section = _inject_glyphs(section, fid, cps)
+    return full[:start] + section + full[end:]
 
 
 def slug(s):
@@ -106,6 +126,12 @@ def slug(s):
 
 
 def esc(s):
+    # Only escape quotes. Do NOT escape backslashes: emitter text relies on
+    # YAML unicode escapes passing through verbatim — glyphs ("\U000F...."),
+    # the degree sign ("°"), the middot ("·"), etc. Doubling the
+    # backslash turns those into literal text (this broke icons AND degree/
+    # middot signs UI-wide). A literal backslash in user free-text (e.g. a
+    # "PC\HDMI" source name) is rare; sanitize it at the input if it matters.
     return '"' + str(s).replace('"', '\\"') + '"'
 
 
@@ -143,9 +169,7 @@ def lbl(text, x, y, font="f_body", color="0xF3F5F8", wid=None, align=None, width
 
 
 def title(name, w, x=50, y=16):
-    """Card title (web .ct parity): the web uses a fixed ~15px title with a
-    one-line ellipsis. Use f_body on narrow (1-wide) cards and f_title on wider
-    ones, set a one-line height, and ellipsize rather than wrap/overflow."""
+    """Card title (web .ct parity): the web uses a fixed ~15px title with a\n    one-line ellipsis. Use f_body on narrow (1-wide) cards and f_title on wider\n    ones, set a one-line height, and ellipsize rather than wrap/overflow."""
     wide = w >= 280
     f = "f_title" if wide else "f_body"
     return lbl(name, x, y, f, width=w - x - 14, long="dot", height=36 if wide else 22)
@@ -175,7 +199,7 @@ def card_obj(x, y, w, h, inner, on_click=None, bg=None, oid=None):
     return (
         "        - obj:%s\n"
         "            x: %d\n            y: %d\n            width: %d\n            height: %d\n"
-        "            styles: st_glass\n            pad_all: 0\n            clip_corner: true%s\n            scrollable: false%s\n"
+        "            styles: st_glass\n            pad_all: 0\n            clip_corner: true%s\n            scrollable: false\n            gesture_bubble: true%s\n"
         "            widgets:\n%s" % (idline, x, y, w, h, bgline, oc, inner)
     )
 
@@ -197,10 +221,11 @@ CARD_ICON = {
     "playlist": "\\U000F075A", "sonos_fav": "\\U000F04CE", "songlist": "\\U000F075A",
     "sonos_library": "\\U000F125F",
     "spotify_playlists": "\\U000F075A", "spotify_tracks": "\\U000F075A",
-    "spotify_speakers": "\\U000F04C4",
+    "spotify_speakers": "\\U000F04C4", "spotify_speaker": "\\U000F04C3",
     # TV control cards (purple family)
     "tv_sources": "\\U000F0502", "tv_dpad": "\\U000F0297", "tv_transport": "\\U000F040A",
     "tv_channel": "\\U000F0502", "tv_volume": "\\U000F057E", "tv_trackpad": "\\U000F0297",
+    "tv_app": "\\U000F0502", "tv_apps": "\\U000F0502",
     "shortcuts": "\\U000F04CE",
 }
 
@@ -300,6 +325,22 @@ def _strip_readbacks(base, e, sldid, fillid, gripid, pct, pwrid, pwic, axis, ext
     return s, t
 
 
+def _rgb_palette(base, entity, w, h, bx, by, size=40):
+    """Compact card button opening a full-screen contextual RGB editor."""
+    bid = base + "_rgb"
+    target = "page_rgb_" + base
+    button = ("              - button:\n                  id: " + bid + "\n                  x: " + str(bx) + "\n                  y: " + str(by) + "\n"
+              "                  width: " + str(size) + "\n                  height: " + str(size) + "\n                  bg_color: 0x302510\n"
+              "                  border_color: 0xE6A62B\n                  border_width: 1\n                  radius: " + str(size // 2) + "\n"
+              "                  pad_all: 0\n                  scrollable: false\n"
+              "                  widgets: [label: { text: \"\\U000F03D8\", align: center, text_font: f_iconsm, text_color: 0xFFFFFF }]\n"
+              "                  on_click: [lvgl.page.show: " + target + "]\n")
+    ts = []
+    if entity:
+        ts.append("  - platform: homeassistant\n    id: ha_" + base + "_rgb\n    entity_id: " + entity + "\n    attribute: rgb_color\n    on_value:\n"
+                  "      - lvgl.widget.update: { id: " + bid + ", bg_color: !lambda 'std::string v=x; for(char &c:v) if(c==\"[\"[0]||c==\"]\"[0]||c==\",\"[0]) c=\" \"[0]; int r=230,g=166,b=43; sscanf(v.c_str(), \"%d %d %d\", &r,&g,&b); return lv_color_hex(((r&255)<<16)|((g&255)<<8)|(b&255));' }\n")
+    return button, "", ts
+
 def c_light(card, x, y, w, h, base):
     e = card.get("entity", "")
     gw, gh = card["w"], card["h"]
@@ -308,24 +349,43 @@ def c_light(card, x, y, w, h, base):
     sldid, pct, fillid, pwrid = base + "_sld", base + "_pct", base + "_fill", base + "_pwr"
     gripid, pwic = base + "_grip", base + "_pi"
     bri = 74
+    rgb = bool(card.get("rgb", False))
     tog = ("homeassistant.action: { action: light.toggle, data: { entity_id: " + e + " } }") if e else "lvgl.page.show: page_home"
 
+    if rgb and gw == 1 and gh == 1:                      # compact RGB: power + palette
+        pbs, pby = 44, (h - 44) // 2
+        pbx = 16
+        rgb_btn, rgb_panel, rgb_ts = _rgb_palette(base, e, w, h, w - 16 - pbs, pby, pbs)
+        pwr = ("              - button:\n                  id: " + pwrid + "\n                  x: " + str(pbx) + "\n                  y: " + str(pby) + "\n                  width: 44\n                  height: 44\n"
+               "                  bg_color: " + STRIP_PWR_ON + "\n                  border_color: " + STRIP_PWR_BD_ON + "\n                  border_width: 2\n                  radius: 22\n                  pad_all: 0\n                  scrollable: false\n"
+               "                  widgets: [label: { id: " + pwic + ", text: \"\\U000F0425\", align: center, text_font: f_icon, text_color: " + STRIP_PWR_BD_ON + " }]\n"
+               "                  on_click: [" + tog + "]\n")
+        ts = list(rgb_ts)
+        if e:
+            ts.append("  - platform: homeassistant\n    id: ha_" + base + "_s\n    entity_id: " + e + "\n    on_value:\n"
+                      "      - lvgl.widget.update: { id: " + pwrid + ", bg_color: !lambda 'return x == \"on\" ? lv_color_hex(" + STRIP_PWR_ON + ") : lv_color_hex(" + STRIP_PWR_OFF + ");', border_color: !lambda 'return x == \"on\" ? lv_color_hex(" + STRIP_PWR_BD_ON + ") : lv_color_hex(" + STRIP_PWR_BD_OFF + ");' }\n"
+                      "      - lvgl.label.update: { id: " + pwic + ", text_color: !lambda 'return x == \"on\" ? lv_color_hex(" + STRIP_PWR_BD_ON + ") : lv_color_hex(" + STRIP_PWR_IC_OFF + ");' }\n")
+        return [_strip_card(x, y, w, h, 14, pwr + rgb_btn + rgb_panel)], [], ts
     if gh == 1:                                           # WIDE FILL STRIP (2x1..6x1)
         pbs, th = 48, 60
         pbx, pby = 12, (h - pbs) // 2
         tx, ty = 12 + pbs + 12, (h - th) // 2
-        tw = w - tx - 12
+        tw = w - tx - 12 - (48 if rgb else 0)
+        rgb_btn, rgb_panel, rgb_ts = _rgb_palette(base, e, w, h, w - 52, (h - 40) // 2) if rgb else ("", "", [])
         fw0 = int(tw * bri / 100)
         pwr = ("              - button:\n                  id: " + pwrid + "\n                  x: " + str(pbx) + "\n                  y: " + str(pby) + "\n                  width: 48\n                  height: 48\n"
                "                  bg_color: " + STRIP_PWR_ON + "\n                  border_color: " + STRIP_PWR_BD_ON + "\n                  border_width: 2\n                  radius: 24\n                  pad_all: 0\n                  scrollable: false\n"
                "                  widgets: [label: { id: " + pwic + ", text: \"\\U000F0425\", align: center, text_font: f_icon, text_color: " + STRIP_PWR_BD_ON + " }]\n"
                "                  on_click: [" + tog + "]\n")
+        # narrow track (1x1): the name + big % can't fit — drop the name, small %
+        namelbl = ("                    - label: { text: " + esc(name) + ", x: 16, align: left_mid, width: " + str(max(40, tw - 96)) + ", long_mode: dot, height: 40, text_font: f_body, text_color: 0xFFFFFF }\n") if tw >= 150 else ""
+        pctfont = "f_head" if tw >= 150 else "f_body"
         trk = ("              - obj:\n                  x: " + str(tx) + "\n                  y: " + str(ty) + "\n                  width: " + str(tw) + "\n                  height: " + str(th) + "\n"
                "                  bg_color: " + STRIP_TRACK + "\n                  radius: 11\n                  clip_corner: true\n                  border_width: 0\n                  pad_all: 0\n                  scrollable: false\n                  widgets:\n"
                "                    - obj: { id: " + fillid + ", x: 0, y: 0, width: " + str(fw0) + ", height: " + str(th) + ", bg_color: " + STRIP_GRAD_LO + ", bg_grad_color: " + STRIP_GRAD_HI + ", bg_grad_dir: HOR, border_width: 0, radius: 0, pad_all: 0, scrollable: false }\n"
                "                    - obj: { id: " + gripid + ", x: " + str(fw0 - 3) + ", y: 8, width: 6, height: " + str(th - 16) + ", bg_color: 0xFFFFFF, radius: 3, border_width: 0, pad_all: 0, scrollable: false }\n"
-               "                    - label: { text: " + esc(name) + ", x: 16, align: left_mid, width: " + str(max(40, tw - 96)) + ", long_mode: dot, height: 40, text_font: f_body, text_color: 0xFFFFFF }\n"
-               "                    - label: { id: " + pct + ", text: \"" + str(bri) + "%\", x: -16, align: right_mid, text_font: f_head, text_color: 0xFFFFFF }\n")
+               + namelbl +
+               "                    - label: { id: " + pct + ", text: \"" + str(bri) + "%\", x: -16, align: right_mid, text_font: " + pctfont + ", text_color: 0xFFFFFF }\n")
         if e:
             trk += ("                    - slider:\n                        id: " + sldid + "\n                        x: 0\n                        y: 0\n                        width: " + str(tw) + "\n                        height: " + str(th) + "\n"
                     "                        bg_opa: 0%\n                        min_value: 0\n                        max_value: 100\n                        value: " + str(bri) + "\n                        indicator: { bg_opa: 0% }\n                        knob: { bg_opa: 0% }\n"
@@ -335,11 +395,13 @@ def c_light(card, x, y, w, h, base):
                     "                          - lvgl.label.update: { id: " + pct + ", text: !lambda 'return std::to_string((int) lv_slider_get_value(id(" + sldid + "))) + \"%\";' }\n"
                     "                        on_release:\n                          - homeassistant.action: { action: light.turn_on, data: { entity_id: " + e + ", brightness_pct: !lambda 'return (int) lv_slider_get_value(id(" + sldid + "));' } }\n")
         s, t = _strip_readbacks(base, e, sldid, fillid, gripid, pct, pwrid, pwic, "h", tw) if e else ([], [])
-        return [_strip_card(x, y, w, h, 14, pwr + trk)], s, t
+        t += rgb_ts
+        return [_strip_card(x, y, w, h, 14, pwr + trk + rgb_btn + rgb_panel)], s, t
 
     if gw == 1 and gh >= 2:                               # TALL FILL STRIP (1x2..1x5)
         pbs = 44
-        pbx, pby = (w - pbs) // 2, h - 12 - pbs
+        pbx, pby = (12 if rgb else (w - pbs) // 2), h - 12 - pbs
+        rgb_btn, rgb_panel, rgb_ts = _rgb_palette(base, e, w, h, w - 12 - pbs, pby, pbs) if rgb else ("", "", [])
         tx, ty, tw = 12, 12, w - 24
         th = pby - 12 - 12
         fh0 = int(th * bri / 100)
@@ -364,7 +426,8 @@ def c_light(card, x, y, w, h, base):
                "                  widgets: [label: { id: " + pwic + ", text: \"\\U000F0425\", align: center, text_font: f_icon, text_color: " + STRIP_PWR_BD_ON + " }]\n"
                "                  on_click: [" + tog + "]\n")
         s, t = _strip_readbacks(base, e, sldid, fillid, gripid, pct, pwrid, pwic, "v", th) if e else ([], [])
-        return [_strip_card(x, y, w, h, 16, trk + pwr)], s, t
+        t += rgb_ts
+        return [_strip_card(x, y, w, h, 16, trk + pwr + rgb_btn + rgb_panel)], s, t
 
     # Whole-card dimmer (drag to dim; vertical fill for portrait, horizontal otherwise)
     # + an on/off button at the bottom. Transparent slider owns the drag region above it.
@@ -394,10 +457,12 @@ def c_light(card, x, y, w, h, base):
     if e:
         sld += "                  on_release:\n                    - homeassistant.action: { action: light.turn_on, data: { entity_id: " + e + ", brightness_pct: !lambda 'return (int) lv_slider_get_value(id(" + sldid + "));' } }\n"
     inner += sld
-    inner += ("              - button:\n                  id: " + pwrid + "\n                  x: 10\n                  y: " + str(h - btnh - 8) + "\n                  width: " + str(w - 20) + "\n                  height: " + str(btnh) + "\n"
+    rgb_btn, rgb_panel, rgb_ts = _rgb_palette(base, e, w, h, w - 52, h - btnh - 5) if rgb else ("", "", [])
+    inner += ("              - button:\n                  id: " + pwrid + "\n                  x: 10\n                  y: " + str(h - btnh - 8) + "\n                  width: " + str(w - 20 - (50 if rgb else 0)) + "\n                  height: " + str(btnh) + "\n"
               "                  bg_color: 0x161B24\n                  border_color: 0x23262F\n                  border_width: 1\n                  radius: 12\n                  pad_all: 0\n                  scrollable: false\n"
               "                  widgets: [label: { text: \"\\U000F0425\", align: center, text_font: f_icon, text_color: 0xF2B84B }]\n"
               "                  on_click: [" + tog + "]\n")
+    inner += rgb_btn + rgb_panel
     s, t = [], []
     if e:
         rb = ("  - platform: homeassistant\n    id: ha_" + base + "_b\n    entity_id: " + e + "\n    attribute: brightness\n    on_value:\n"
@@ -412,6 +477,7 @@ def c_light(card, x, y, w, h, base):
         # on/off state is a TEXT value -> text_sensor (not the numeric sensor list)
         t.append("  - platform: homeassistant\n    id: ha_" + base + "_s\n    entity_id: " + e + "\n    on_value:\n"
                  "      - lvgl.widget.update: { id: " + pwrid + ", bg_color: !lambda 'return x == \"on\" ? lv_color_hex(0x241C08) : lv_color_hex(0x161B24);' }\n")
+    t += rgb_ts
     return [card_obj(x, y, w, h, inner)], s, t
 
 
@@ -575,9 +641,7 @@ BAR_TMPL = (
 
 
 def c_chart(card, x, y, w, h, base):
-    """Live trend chart: N vertical bars the panel samples from the sensor over time
-    (a scrolling column sparkline). ESPHome's LVGL has no `chart`/`line` widget, so
-    we build it from `bar`s (LV_USE_BAR) + a static ring buffer, updated on_value."""
+    """Live trend chart: N vertical bars the panel samples from the sensor over time\n    (a scrolling column sparkline). ESPHome's LVGL has no `chart`/`line` widget, so\n    we build it from `bar`s (LV_USE_BAR) + a static ring buffer, updated on_value."""
     e = card.get("entity", "")
     st = _stype(card)
     icon_name, unit, dec, defcol = SENSOR_TYPES.get(st, SENSOR_TYPES["generic"])
@@ -625,9 +689,7 @@ def c_chart(card, x, y, w, h, base):
 
 
 def _setbox(bx, by, bw, bh, label, temp, accent, bg, vid, e, heat_vid, cool_vid):
-    """A HEAT TO / COOL TO setpoint box with working +/- (climate.set_temperature).
-    vid = this box's value label id; heat_vid/cool_vid = both setpoint label ids
-    (sent together as target_temp_low/high)."""
+    """A HEAT TO / COOL TO setpoint box with working +/- (climate.set_temperature).\n    vid = this box's value label id; heat_vid/cool_vid = both setpoint label ids\n    (sent together as target_temp_low/high)."""
     s = ("              - obj: { x: %d, y: %d, width: %d, height: %d, bg_color: %s, "
          "border_color: %s, border_width: 1, radius: 12, pad_all: 0, scrollable: false }\n"
          % (bx, by, bw, bh, bg, accent))
@@ -654,8 +716,7 @@ CLIMATE_MODES = [("\\U000F0425", "Off", "off", "0x868CA0"),
 
 
 def c_climate(card, x, y, w, h, base):
-    """Thermostat card (image): header + mode badge, big current temp, HEAT/COOL
-    setpoint boxes, and a Cool/Heat/Auto/Off mode row."""
+    """Thermostat card (image): header + mode badge, big current temp, HEAT/COOL\n    setpoint boxes, and a Cool/Heat/Auto/Off mode row."""
     e = card.get("entity", "")
     tid = base + "_t"
     sel_mode = "heat"                                    # demo (no HA state feed)
@@ -725,12 +786,23 @@ def c_action(card, x, y, w, h, base):
     return [card_obj(x, y, w, h, inner, on)], [], []
 
 
-# Album art plumbing: c_media registers (size, image_widget_id, entity) here; assemble()
-# emits one online_image decoder per distinct size + a sp_nowplaying_image_url readback
-# per entity that set_url+updates every used decoder. Host builds skip art (no decoders).
+# Album art plumbing: c_media/c_spotify_art register (size, image_widget_id, entity)
+# here; assemble() emits one entity_picture readback per entity whose action queues
+# id(cam_stream).fetch_still(url, widget, size, size) for each of that entity's art
+# widgets — download + HW JPEG decode + PPA scale run on the mjpeg_stream worker
+# task (never the main loop), latest-wins per widget. Art image widgets start
+# hidden over the ss_image placeholder src; the component unhides each one when
+# its first still is applied. Host builds skip art (no mjpeg_stream component).
 ART_IMAGES = []
 ART_ENABLED = True
 EXTRA_CLOCKS = []   # (label_id, kind) live-clock bindings contributed by card emitters
+# Live camera plumbing: the FIRST camera card registers (entity, inner_w, inner_h,
+# base) here (gen_pages appends the hosting page id); assemble() emits the
+# mjpeg_stream instance + pill on_state + entity_picture readback + fullscreen page.
+# One entry max — the device supports 2 concurrent streams, we ship 1.
+CAM_CARDS = []
+HEADER_WIFI = []       # (icon_label_id, text_label_id)
+HEADER_LIGHTS = []     # (count_label_id, generated_page_id, back_page_id, page_key)
 
 
 def c_media(card, x, y, w, h, base):
@@ -759,7 +831,9 @@ def c_media(card, x, y, w, h, base):
             img_id = "%s_art" % base
             ix = ax + (aw - real) // 2
             iy = ay + (ah - real) // 2
-            s += ("              - image: { id: %s, x: %d, y: %d, src: gen_art_%d }\n" % (img_id, ix, iy, real))
+            # src is a required schema key: point at ss_image and start hidden
+            # (camera-widget pattern) — the stills channel unhides on first art.
+            s += ("              - image: { id: %s, x: %d, y: %d, src: ss_image, hidden: true }\n" % (img_id, ix, iy))
             ART_IMAGES.append((real, img_id, e))
         return s
 
@@ -834,7 +908,9 @@ def c_media(card, x, y, w, h, base):
     # ---- w==1 tall narrow (1x2, 1x3): art on top ----
     if gw == 1:
         asz = w - 28
-        arth = min(asz, h - 118)
+        # art absorbs what the fixed text+transport band (>=140px) doesn't need,
+        # so the transport row stays inside the card even at 1x2
+        arth = min(asz, h - 140)
         inner += art(14, 14, asz, arth)
         ty0 = 14 + arth + 8
         inner += lbl(subtxt, 14, ty0, "f_small", "0x2ED5B8", width=w - 28, long="dot")
@@ -880,7 +956,7 @@ def c_media(card, x, y, w, h, base):
 def c_fan(card, x, y, w, h, base):
     e = card.get("entity", "")
     gw, gh = card["w"], card["h"]
-    if gw * gh <= 2:                                  # small: icon + centered label, card lights when on
+    if gw * gh <= 2 or gw == 1:                       # small / 1-wide: icon + centered label (4 segments can't fit a 140px card)
         act = ha("homeassistant.toggle", e) if e else "lvgl.page.show: page_home"   # works for fan.* or switch.* fans
         oid, iid, nlid, acc = base + "_c", base + "_i", base + "_n", "0x2ED5B8"
         glyph = card_glyph(card, CARD_ICON.get(card["ck"], "\\U000F0210"))
@@ -897,7 +973,7 @@ def c_fan(card, x, y, w, h, base):
                 % (base, e, oid, lit, iid, acc, nlid, acc))
         return [card_obj(x, y, w, h, inner, act, oid=oid)], [], ts
     inner = ic(card["ck"], color="0x2ED5B8")
-    inner += title(card.get("name", "Fan"), w, x=14, y=48)   # larger: Off / Low / Med / High segments
+    inner += title(card.get("name", "Fan"), w, x=50, y=16)   # larger: name beside the icon (web .toprow) + Off / Low / Med / High segments
     speeds = ["Off", "Low", "Med", "High"]
     n = len(speeds); pad = 14; sw2 = (w - pad * 2 - (n - 1) * 8) // n; sy = h - 58
     for i, s in enumerate(speeds):
@@ -920,24 +996,32 @@ def c_cover(card, x, y, w, h, base):
     rows = [("\\U000F0143", "Open", "cover.open_cover", "0xC2C7D2"),
             ("\\U000F04DB", "Stop", "cover.stop_cover", "0xC2C7D2"),
             ("\\U000F0140", "Close", "cover.close_cover", "0xC2C7D2")]
+
+    def cover_btn(bx, by, bw, bh, g, txt, svc, col):
+        act = ha(svc, e) if e else "lvgl.page.show: page_home"
+        return ("              - button:\n"
+                "                  x: %d\n                  y: %d\n                  width: %d\n                  height: %d\n"
+                "                  bg_color: 0x161B24\n                  radius: 12\n                  pad_all: 0\n                  scrollable: false\n"
+                "                  on_click: [%s]\n"
+                "                  widgets:\n"
+                "                    - obj:\n"
+                "                        align: center\n                        width: SIZE_CONTENT\n                        height: SIZE_CONTENT\n"
+                "                        bg_opa: 0\n                        border_width: 0\n                        pad_all: 0\n                        scrollable: false\n"
+                "                        layout: { type: flex, flex_flow: ROW, flex_align_cross: center, pad_column: 10 }\n"
+                "                        widgets:\n"
+                "                          - label: { text: \"%s\", text_font: f_icon, text_color: %s }\n"
+                "                          - label: { text: \"%s\", text_font: f_body, text_color: %s }\n"
+                % (bx, by, bw, bh, act, g, col, txt, col))
+
+    if h <= 110:                                          # 1-row card: Open/Stop/Close side by side
+        bw = (w - 28 - 2 * 8) // 3
+        for i, (g, txt, svc, col) in enumerate(rows):
+            inner += cover_btn(14 + i * (bw + 8), 50, bw, h - 50 - 10, g, txt, svc, col)
+        return [card_obj(x, y, w, h, inner)], [], []
     top, gap = 58, 8
     bh = (h - top - 14 - 2 * gap) // 3
     for i, (g, txt, svc, col) in enumerate(rows):
-        cy = top + i * (bh + gap)
-        act = ha(svc, e) if e else "lvgl.page.show: page_home"
-        inner += ("              - button:\n"
-                  "                  x: 14\n                  y: %d\n                  width: %d\n                  height: %d\n"
-                  "                  bg_color: 0x161B24\n                  radius: 12\n                  pad_all: 0\n                  scrollable: false\n"
-                  "                  on_click: [%s]\n"
-                  "                  widgets:\n"
-                  "                    - obj:\n"
-                  "                        align: center\n                        width: SIZE_CONTENT\n                        height: SIZE_CONTENT\n"
-                  "                        bg_opa: 0\n                        border_width: 0\n                        pad_all: 0\n                        scrollable: false\n"
-                  "                        layout: { type: flex, flex_flow: ROW, flex_align_cross: center, pad_column: 10 }\n"
-                  "                        widgets:\n"
-                  "                          - label: { text: \"%s\", text_font: f_icon, text_color: %s }\n"
-                  "                          - label: { text: \"%s\", text_font: f_body, text_color: %s }\n"
-                  % (cy, w - 28, bh, act, g, col, txt, col))
+        inner += cover_btn(14, top + i * (bh + gap), w - 28, bh, g, txt, svc, col)
     return [card_obj(x, y, w, h, inner)], [], []
 
 
@@ -975,14 +1059,15 @@ WX_HOURLY = [("Now", "\\U000F0594", "72"), ("10P", "\\U000F0594", "71"), ("11P",
              ("12A", "\\U000F0590", "70"), ("1A", "\\U000F0594", "69"), ("2A", "\\U000F0594", "69"), ("3A", "\\U000F0594", "68")]
 WX_DAILY = [("Today", "\\U000F0599", "74", "96"), ("Sat", "\\U000F0590", "75", "95"), ("Sun", "\\U000F0599", "76", "97"),
             ("Mon", "\\U000F0597", "72", "88"), ("Tue", "\\U000F0596", "71", "85"), ("Wed", "\\U000F0599", "73", "93")]
-WX_STATS = [("HUMIDITY", "57%", "0x4FA8F5"), ("WIND", "6 mph", "0xF3F5F8"), ("UV INDEX", "0 Low", "0xF3F5F8"),
-            ("PRESSURE", "30.1", "0xF3F5F8"), ("SUNRISE", "6:32a", "0xF2B84B"), ("SUNSET", "8:37p", "0xF2685A")]
+WX_STATS = [("HUMIDITY", "57%", "0x4FA8F5", "stat_humidity"), ("WIND", "6 mph", "0xF3F5F8", "stat_wind"),
+            ("UV INDEX", "0", "0xF3F5F8", "stat_uv"), ("PRESSURE", "30.1 inHg", "0xF3F5F8", "stat_pressure"),
+            ("SUNRISE", "6:32am", "0xF2B84B", "stat_sunrise"), ("SUNSET", "8:37pm", "0xF2685A", "stat_sunset")]
 
 
-def _wx_temp_readback(base, e, tid):
-    return ("  - platform: homeassistant\n    id: ha_%s_wt\n    entity_id: %s\n    attribute: temperature\n    on_value:\n"
+def _wx_temp_readback(base, e, tid, sfx="wt"):
+    return ("  - platform: homeassistant\n    id: ha_%s_%s\n    entity_id: %s\n    attribute: temperature\n    on_value:\n"
             "      - lvgl.label.update: { id: %s, text: !lambda 'char b[12]; snprintf(b, sizeof(b), \"%%.0f\\u00B0\", x); return std::string(b);' }\n"
-            % (base, e, tid))
+            % (base, sfx, e, tid))
 
 
 # HA weather condition (entity STATE) -> (f_wxicon glyph, label). Drives the hero
@@ -1007,6 +1092,103 @@ def _wx_cond_readback(base, e, hid, cid):
             % (base, e, hid, gifs, cid, tifs))
 
 
+# --- Live forecast wiring (the aurora_weather.yaml package sensors) ---------
+# These are GLOBAL (one home forecast), so every weather/wx card reads the same
+# fixed sensors regardless of its own weather entity (that entity still drives
+# the current temp/condition via the readbacks above). The package \n-joins the
+# per-column values into string attributes; we split them across a card's actual
+# per-column label ids with the hand-dashboard loop.
+WX_SENSOR_HOURLY = "sensor.aurora_weather_hourly"   # attrs: h_times / h_temps / h_conds
+WX_SENSOR_DAILY = "sensor.aurora_weather_daily"     # attrs: d_names / d_high / d_low / d_cond
+
+
+def _wx_cond_icon_readback(base, e, iconid, sfx="hci"):
+    """Live CURRENT condition -> a single f_icon/f_wxicon glyph (no text label).\n    Used for the 'Now' forecast column, which shows only an icon (no condition\n    name), so we can't reuse _wx_cond_readback (that one also needs a text id)."""
+    gifs = "".join("if (x == \"%s\") return std::string(\"%s\"); " % (c, g) for c, g, _ in WX_COND)
+    return ("  - platform: homeassistant\n    id: ha_%s_%s\n    entity_id: %s\n    on_value:\n"
+            "      - lvgl.label.update: { id: %s, text: !lambda '%sreturn std::string(\"\\U000F0599\");' }\n"
+            % (base, sfx, e, iconid, gifs))
+
+
+def _wx_cond_glyph_lines():
+    """Per-token C++ (condition slug in std::string `t`) -> f_icon glyph in `g`,\n    then set L[i]. Mirrors _wx_cond_readback's if-chain, built from WX_COND, for\n    use inside the \n-split forecast loops."""
+    lines = ["std::string g;"]
+    for i, (c, g, _) in enumerate(WX_COND):
+        lines.append("%s (t==\"%s\") g=\"%s\";" % ("if" if i == 0 else "else if", c, g))
+    lines.append("else g=\"\\U000F0599\";")             # sane default (sunny)
+    lines.append("lv_label_set_text(L[i], g.c_str());")
+    return lines
+
+
+def _wx_attr_ts(base, sfx, sensor, attr, label_id):
+    """Mirror one formatted Home Assistant text attribute into an LVGL label."""
+    return ("  - platform: homeassistant\n    id: ha_%s_%s\n    entity_id: %s\n    attribute: %s\n"
+            "    on_value:\n      - lvgl.label.update: { id: %s, text: !lambda 'return x;' }\n"
+            % (base, sfx, sensor, attr, label_id))
+
+
+def _wx_num_stat(base, sfx, entity, attr, label_id, fmt):
+    """Format a numeric attribute directly from the selected HA weather entity."""
+    return ("  - platform: homeassistant\n    id: ha_%s_%s\n    entity_id: %s\n    attribute: %s\n"
+            "    on_value:\n      - lvgl.label.update: { id: %s, text: !lambda 'char b[24]; snprintf(b, sizeof(b), \"%s\", x); return std::string(b);' }\n"
+            % (base, sfx, entity, attr, label_id, fmt))
+
+
+def _wx_sun_time(base, sfx, attr, label_id):
+    """Convert sun.sun's UTC ISO timestamp to the panel's configured local time."""
+    code = ("if (x.size() < 19) return std::string(\"--\"); "
+            "std::string iso=x.substr(0,19); iso[10]=0x20; esphome::ESPTime utc; "
+            "if (!esphome::ESPTime::strptime(iso, utc)) return std::string(\"--\"); "
+            "utc.recalc_timestamp_utc(false); auto local=esphome::ESPTime::from_epoch_local(utc.timestamp); "
+            "int hour=local.hour%12; if(hour==0) hour=12; char b[16]; "
+            "snprintf(b,sizeof(b),\"%d:%02d%s\",hour,local.minute,local.hour>=12?\"pm\":\"am\"); return std::string(b);")
+    return ("  - platform: homeassistant\n    id: ha_%s_%s\n    entity_id: sun.sun\n    attribute: %s\n"
+            "    on_value:\n      - lvgl.label.update: { id: %s, text: !lambda '%s' }\n"
+            % (base, sfx, attr, label_id, code))
+
+
+def _wx_stat_bindings(base, weather_entity, ids):
+    """Live detail bindings shared by the full weather and Weather Stats cards."""
+    numeric = {
+        "stat_humidity": ("humidity", "%.0f%%"),
+        "stat_wind": ("wind_speed", "%.1f mph"),
+        "stat_uv": ("uv_index", "%.1f"),
+        "stat_pressure": ("pressure", "%.2f inHg"),
+    }
+    sun = {
+        "stat_sunrise": "next_rising",
+        "stat_sunset": "next_setting",
+    }
+    sensors, text_sensors = [], []
+    for i, (label_id, key) in enumerate(ids):
+        if key in numeric:
+            attr, fmt = numeric[key]
+            sensors.append(_wx_num_stat(base, "st%d" % i, weather_entity, attr, label_id, fmt))
+        elif key in sun:
+            text_sensors.append(_wx_sun_time(base, "st%d" % i, sun[key], label_id))
+    return sensors, text_sensors
+
+def _wx_split_ts(base, sfx, sensor, attr, ids, body_lines):
+    """homeassistant text_sensor that reads a \n-joined package attribute and\n    splits it across THIS card's per-column label `ids` (column count derived\n    from len(ids), never hardcoded). `body_lines` = per-token C++ operating on\n    the token std::string `t` and target L[i]. Mirrors the hand dashboard loop."""
+    n = len(ids)
+    arr = ", ".join("id(%s)" % i for i in ids)
+    lines = ["lv_obj_t* L[%d] = { %s };" % (n, arr),
+             "std::string s = x; size_t p = 0;",
+             "for (int i = 0; i < %d; i++) {" % n,
+             "  size_t nl = s.find('\\n', p);",
+             "  std::string t = (nl==std::string::npos)?s.substr(p):s.substr(p,nl-p);"]
+    lines += ["  " + bl for bl in body_lines]
+    lines += ["  if (nl==std::string::npos) break; p = nl+1;", "}"]
+    return ("  - platform: homeassistant\n    id: ha_%s_%s\n    entity_id: %s\n    attribute: %s\n"
+            "    on_value:\n      then:\n        - lambda: |-\n%s"
+            % (base, sfx, sensor, attr, _indent(lines, 12)))
+
+
+# per-token bodies for the split loops (token std::string `t`, target L[i])
+_WX_SET_TEXT = ["lv_label_set_text(L[i], t.c_str());"]
+_WX_SET_DEG = ["t += \"\\u00B0\"; lv_label_set_text(L[i], t.c_str());"]
+
+
 def c_weather(card, x, y, w, h, base):
     e = card.get("entity", "")
     tid, cid, hid = base + "_t", base + "_c", base + "_h"
@@ -1015,9 +1197,11 @@ def c_weather(card, x, y, w, h, base):
         inner += lbl("72\\u00B0", -16, 20, "f_display", "0xF3F5F8", wid=tid, align="top_right")
         inner += lbl("Sunny", 14, -12, "f_body", "0x2ED5B8", wid=cid, align="bottom_left")
         return [card_obj(x, y, w, h, inner)], ([_wx_temp_readback(base, e, tid)] if e else []), ([_wx_cond_readback(base, e, hid, cid)] if e else [])
-    # large: full forecast (hero + hourly + daily + stats), values pre-baked
+    # large: full forecast (hero + hourly + daily + stats), values pre-baked.
+    # On 4-row cards the hero + hourly bands shrink so the daily rows / stat
+    # tiles below keep readable heights (value text must fit its tile).
     pad = 14
-    hh = 128
+    hh, ht = (128, 116) if h >= 500 else (112, 96)
     inner = ("              - obj: { x: %d, y: %d, width: %d, height: %d, bg_color: 0x141F38, bg_grad_color: 0x0E1524, bg_grad_dir: VER, border_width: 0, radius: 16, pad_all: 0, scrollable: false }\n" % (pad, pad, w - 2 * pad, hh))
     inner += "              - label: { id: %s, text: \"\\U000F0599\", x: %d, y: %d, text_font: f_wxicon, text_color: 0xF2B84B }\n" % (hid, pad + 26, pad + 26)
     inner += lbl("72\\u00B0", pad + 150, pad + 10, "f_display", "0xF3F5F8", wid=tid)
@@ -1027,51 +1211,80 @@ def c_weather(card, x, y, w, h, base):
     inner += lbl("Friday \\u00B7 9:41 PM", -(pad + 4), pad + 70, "f_small", "0x868CA0", wid=wtime, align="top_right")
     EXTRA_CLOCKS.append((wtime, "dow_time"))            # live device time (fixes "stuck 9pm")
     inner += lbl("High 96\\u00B0 \\u00B7 Low 74\\u00B0", -(pad + 4), pad + 92, "f_small", "0x868CA0", align="top_right")
-    hy, ht, gap = pad + hh + 12, 116, 10
+    hy, gap = pad + hh + 12, 10
     n = len(WX_HOURLY)
     tw = (w - 2 * pad - (n - 1) * gap) // n
+    hr_tm, hr_tp, hr_ic = [], [], []                     # cols 1..N-1 -> hourly package
     for i, (hl, g, tp) in enumerate(WX_HOURLY):
         hx = pad + i * (tw + gap)
         bg = "0x11201C" if i == 0 else "0x14161C"
+        tmid, tpid, icid = base + "_hr%d_tm" % i, base + "_hr%d_tp" % i, base + "_hr%d_ic" % i
         inner += ("              - obj: { x: %d, y: %d, width: %d, height: %d, bg_color: %s, border_width: 0, radius: 12, pad_all: 0, scrollable: false, widgets: ["
-                  "label: { text: %s, align: top_mid, y: 12, text_font: f_small, text_color: 0x868CA0 }, "
-                  "label: { text: \"%s\", align: center, text_font: f_icon, text_color: 0x8FA6FF }, "
-                  "label: { text: \"%s\\u00B0\", align: bottom_mid, y: -14, text_font: f_body, text_color: 0xF3F5F8 }] }\n"
-                  % (hx, hy, tw, ht, bg, esc(hl), g, tp))
+                  "label: { id: %s, text: %s, align: top_mid, y: 12, text_font: f_small, text_color: 0x868CA0 }, "
+                  "label: { id: %s, text: \"%s\", align: center, text_font: f_icon, text_color: 0x8FA6FF }, "
+                  "label: { id: %s, text: \"%s\\u00B0\", align: bottom_mid, y: -14, text_font: f_body, text_color: 0xF3F5F8 }] }\n"
+                  % (hx, hy, tw, ht, bg, tmid, esc(hl), icid, g, tpid, tp))
+        if i >= 1:
+            hr_tm.append(tmid); hr_tp.append(tpid); hr_ic.append(icid)
     dy = hy + ht + 14
     dh = h - dy - pad
     dax = int((w - 2 * pad) * 0.60) + pad                # right edge of the daily column
     rn = len(WX_DAILY)
     rh = dh // rn
+    dy_nm, dy_hi, dy_lo, dy_ic = [], [], [], []          # all cols -> daily package
     for i, (dn, g, lo, hi) in enumerate(WX_DAILY):
         ry = dy + i * rh
         ly = ry + (rh - 18) // 2
-        inner += lbl(dn, pad, ly, "f_body", "0xF3F5F8", width=58)
-        inner += "              - label: { text: \"%s\", x: %d, y: %d, text_font: f_icon, text_color: 0xF2B84B }\n" % (g, pad + 64, ry + (rh - 30) // 2)
-        inner += lbl(lo + "\\u00B0", pad + 106, ly, "f_body", "0x868CA0", width=42)
+        nmid, icid, loid, hiid = base + "_dy%d_nm" % i, base + "_dy%d_ic" % i, base + "_dy%d_lo" % i, base + "_dy%d_hi" % i
+        inner += lbl(dn, pad, ly, "f_body", "0xF3F5F8", width=58, wid=nmid)
+        inner += "              - label: { id: %s, text: \"%s\", x: %d, y: %d, text_font: f_icon, text_color: 0xF2B84B }\n" % (icid, g, pad + 64, ry + (rh - 30) // 2)
+        inner += lbl(lo + "\\u00B0", pad + 106, ly, "f_body", "0x868CA0", width=42, wid=loid)
         barx = pad + 152
         inner += "              - obj: { x: %d, y: %d, width: %d, height: 8, bg_color: 0x4FA8F5, bg_grad_color: 0xF2B84B, bg_grad_dir: HOR, border_width: 0, radius: 4, pad_all: 0, scrollable: false }\n" % (barx, ry + (rh - 8) // 2, dax - 48 - barx)
-        inner += lbl(hi + "\\u00B0", dax - 44, ly, "f_body", "0xF3F5F8", width=42)
+        inner += lbl(hi + "\\u00B0", dax - 44, ly, "f_body", "0xF3F5F8", width=42, wid=hiid)
+        dy_nm.append(nmid); dy_hi.append(hiid); dy_lo.append(loid); dy_ic.append(icid)
     inner += "              - obj: { x: %d, y: %d, width: 1, height: %d, bg_color: 0x23262F, border_width: 0, pad_all: 0, scrollable: false }\n" % (dax + 8, dy, dh - 6)
+    # The same six formatted package attributes drive this band and wx_stats.
     sx0, scols, sgap, srows = dax + 24, 2, 10, 3
     sw = (w - pad - sx0 - (scols - 1) * sgap) // scols
     srh = (dh - (srows - 1) * sgap) // srows
-    for i, (lt, val, col) in enumerate(WX_STATS):
+    svy = 32 if srh >= 58 else max(26, srh - 26)         # value stays inside short tiles
+    stat_ids = []
+    for i, (lt, val, col, attr) in enumerate(WX_STATS):
         cx = sx0 + (i % scols) * (sw + sgap)
         cy = dy + (i // scols) * (srh + sgap)
         inner += ("              - obj: { x: %d, y: %d, width: %d, height: %d, bg_color: 0x14161C, border_width: 0, radius: 12, pad_all: 0, scrollable: false, widgets: ["
                   "label: { text: %s, x: 14, y: 14, text_font: f_micro, text_color: 0x868CA0 }, "
-                  "label: { text: %s, x: 14, y: 32, text_font: f_title, text_color: %s }] }\n"
-                  % (cx, cy, sw, srh, esc(lt), esc(val), col))
-    return [card_obj(x, y, w, h, inner)], ([_wx_temp_readback(base, e, tid)] if e else []), ([_wx_cond_readback(base, e, hid, cid)] if e else [])
+                  "label: { text: %s, x: 14, y: %d, text_font: f_title, text_color: %s }] }\n"
+                  % (cx, cy, sw, srh, esc(lt), esc(val), svy, col)).replace("label: { text: %s, x: 14, y: %d" % (esc(val), svy),
+                                                                                 "label: { id: %s, text: %s, x: 14, y: %d" % (base + "_st%d" % i, esc(val), svy))
+        stat_ids.append((base + "_st%d" % i, attr))
+    ss, ts = [], []
+    if e:
+        # hero: live current temp + condition (glyph + name)
+        ss.append(_wx_temp_readback(base, e, tid))
+        ts.append(_wx_cond_readback(base, e, hid, cid))
+        # hourly col0 = "Now": live current temp + condition icon
+        ss.append(_wx_temp_readback(base, e, base + "_hr0_tp", sfx="h0"))
+        ts.append(_wx_cond_icon_readback(base, e, base + "_hr0_ic", sfx="hci"))
+        # hourly cols 1..N-1 + all daily cols from the fixed package sensors
+        ts.append(_wx_split_ts(base, "ht", WX_SENSOR_HOURLY, "h_times", hr_tm, _WX_SET_TEXT))
+        ts.append(_wx_split_ts(base, "hp", WX_SENSOR_HOURLY, "h_temps", hr_tp, _WX_SET_DEG))
+        ts.append(_wx_split_ts(base, "hc", WX_SENSOR_HOURLY, "h_conds", hr_ic, _wx_cond_glyph_lines()))
+        ts.append(_wx_split_ts(base, "dn", WX_SENSOR_DAILY, "d_names", dy_nm, _WX_SET_TEXT))
+        ts.append(_wx_split_ts(base, "dh", WX_SENSOR_DAILY, "d_high", dy_hi, _WX_SET_DEG))
+        ts.append(_wx_split_ts(base, "dl", WX_SENSOR_DAILY, "d_low", dy_lo, _WX_SET_DEG))
+        ts.append(_wx_split_ts(base, "dc", WX_SENSOR_DAILY, "d_cond", dy_ic, _wx_cond_glyph_lines()))
+        stat_sens, stat_ts = _wx_stat_bindings(base, e, stat_ids)
+        ss += stat_sens
+        ts += stat_ts
+    return [card_obj(x, y, w, h, inner)], ss, ts
 
 
 # --- Weather decomposed into selectable component cards (share the weather entity;
 # current temp + condition are live, forecast/stats are pre-baked demo like the 6x5) ---
 def c_wx_current(card, x, y, w, h, base):
-    """Current conditions — mirrors page_weather: amber condition icon (left), the
-    condition as the big title + 'Outdoor conditions', and the temp with H/L on the
-    right. Temp + condition bind live to the weather entity."""
+    """Current conditions — mirrors page_weather: amber condition icon (left), the\n    condition as the big title + 'Outdoor conditions', and the temp with H/L on the\n    right. Temp + condition bind live to the weather entity."""
     e = card.get("entity", "")
     tid, cid, hid = base + "_t", base + "_c", base + "_h"
     cy = h // 2
@@ -1087,63 +1300,106 @@ def c_wx_current(card, x, y, w, h, base):
 
 
 def c_wx_hourly(card, x, y, w, h, base):
-    """Hourly forecast strip (pre-baked demo forecast)."""
+    """Hourly forecast strip. Col0 = 'Now' (live current temp/condition when the\n    card has an entity); cols 1..N-1 come from the fixed hourly package sensor.\n    No entity -> stays pre-baked demo."""
+    e = card.get("entity", "")
     pad, gap = 12, 8
     n = len(WX_HOURLY)
     tw = (w - 2 * pad - (n - 1) * gap) // n
     inner = ""
+    hr_tm, hr_tp, hr_ic = [], [], []                     # cols 1..N-1 -> hourly package
     for i, (hl, g, tp) in enumerate(WX_HOURLY):
         hx = pad + i * (tw + gap)
         bg = "0x11201C" if i == 0 else "0x161B24"
+        tmid, tpid, icid = base + "_hr%d_tm" % i, base + "_hr%d_tp" % i, base + "_hr%d_ic" % i
         inner += ("              - obj: { x: %d, y: %d, width: %d, height: %d, bg_color: %s, border_width: 0, radius: 12, pad_all: 0, scrollable: false, widgets: ["
-                  "label: { text: %s, align: top_mid, y: 10, text_font: f_small, text_color: 0x868CA0 }, "
-                  "label: { text: \"%s\", align: center, text_font: f_icon, text_color: 0x8FA6FF }, "
-                  "label: { text: \"%s\\u00B0\", align: bottom_mid, y: -10, text_font: f_body, text_color: 0xF3F5F8 }] }\n"
-                  % (hx, pad, tw, h - 2 * pad, bg, esc(hl), g, tp))
-    return [card_obj(x, y, w, h, inner)], [], []
+                  "label: { id: %s, text: %s, align: top_mid, y: 10, text_font: f_small, text_color: 0x868CA0 }, "
+                  "label: { id: %s, text: \"%s\", align: center, text_font: f_icon, text_color: 0x8FA6FF }, "
+                  "label: { id: %s, text: \"%s\\u00B0\", align: bottom_mid, y: -10, text_font: f_body, text_color: 0xF3F5F8 }] }\n"
+                  % (hx, pad, tw, h - 2 * pad, bg, tmid, esc(hl), icid, g, tpid, tp))
+        if i >= 1:
+            hr_tm.append(tmid); hr_tp.append(tpid); hr_ic.append(icid)
+    ss, ts = [], []
+    if e:
+        ss.append(_wx_temp_readback(base, e, base + "_hr0_tp", sfx="h0"))
+        ts.append(_wx_cond_icon_readback(base, e, base + "_hr0_ic", sfx="hci"))
+        ts.append(_wx_split_ts(base, "ht", WX_SENSOR_HOURLY, "h_times", hr_tm, _WX_SET_TEXT))
+        ts.append(_wx_split_ts(base, "hp", WX_SENSOR_HOURLY, "h_temps", hr_tp, _WX_SET_DEG))
+        ts.append(_wx_split_ts(base, "hc", WX_SENSOR_HOURLY, "h_conds", hr_ic, _wx_cond_glyph_lines()))
+    return [card_obj(x, y, w, h, inner)], ss, ts
 
 
 def c_wx_daily(card, x, y, w, h, base):
-    """Weekly forecast — mirrors page_weather: day / amber condition icon / high / low
-    as centered columns across the card (pre-baked demo forecast)."""
+    """Weekly forecast — day / amber condition icon / high / low as centered\n    columns. All columns come from the fixed daily package sensor when the card\n    has an entity; no entity -> stays pre-baked demo."""
+    e = card.get("entity", "")
     n = len(WX_DAILY)
     pad = 12
     pitch = (w - 2 * pad) // n
     top = pad + 4
     inner = ""
+    dy_nm, dy_hi, dy_lo, dy_ic = [], [], [], []          # all cols -> daily package
     for i, (dn, g, lo, hi) in enumerate(WX_DAILY):
         cx = pad + i * pitch
-        inner += "              - label: { text: %s, x: %d, y: %d, width: %d, text_align: center, text_font: f_body, text_color: 0xEEF0F6 }\n" % (esc(dn), cx, top, pitch)
-        inner += "              - label: { text: \"%s\", x: %d, y: %d, width: %d, text_align: center, text_font: f_icon, text_color: 0xFFCE54 }\n" % (g, cx, top + 30, pitch)
-        inner += "              - label: { text: \"%s\\u00B0\", x: %d, y: %d, width: %d, text_align: center, text_font: f_body, text_color: 0xEEF0F6 }\n" % (hi, cx, top + 70, pitch)
-        inner += "              - label: { text: \"%s\\u00B0\", x: %d, y: %d, width: %d, text_align: center, text_font: f_small, text_color: 0x8A8F9E }\n" % (lo, cx, top + 96, pitch)
-    return [card_obj(x, y, w, h, inner)], [], []
+        nmid, icid, hiid, loid = base + "_dy%d_nm" % i, base + "_dy%d_ic" % i, base + "_dy%d_hi" % i, base + "_dy%d_lo" % i
+        inner += "              - label: { id: %s, text: %s, x: %d, y: %d, width: %d, text_align: center, text_font: f_body, text_color: 0xEEF0F6 }\n" % (nmid, esc(dn), cx, top, pitch)
+        inner += "              - label: { id: %s, text: \"%s\", x: %d, y: %d, width: %d, text_align: center, text_font: f_icon, text_color: 0xFFCE54 }\n" % (icid, g, cx, top + 30, pitch)
+        inner += "              - label: { id: %s, text: \"%s\\u00B0\", x: %d, y: %d, width: %d, text_align: center, text_font: f_body, text_color: 0xEEF0F6 }\n" % (hiid, hi, cx, top + 70, pitch)
+        inner += "              - label: { id: %s, text: \"%s\\u00B0\", x: %d, y: %d, width: %d, text_align: center, text_font: f_small, text_color: 0x8A8F9E }\n" % (loid, lo, cx, top + 96, pitch)
+        dy_nm.append(nmid); dy_hi.append(hiid); dy_lo.append(loid); dy_ic.append(icid)
+    ts = []
+    if e:
+        ts.append(_wx_split_ts(base, "dn", WX_SENSOR_DAILY, "d_names", dy_nm, _WX_SET_TEXT))
+        ts.append(_wx_split_ts(base, "dh", WX_SENSOR_DAILY, "d_high", dy_hi, _WX_SET_DEG))
+        ts.append(_wx_split_ts(base, "dl", WX_SENSOR_DAILY, "d_low", dy_lo, _WX_SET_DEG))
+        ts.append(_wx_split_ts(base, "dc", WX_SENSOR_DAILY, "d_cond", dy_ic, _wx_cond_glyph_lines()))
+    return [card_obj(x, y, w, h, inner)], [], ts
 
 
 def c_wx_stats(card, x, y, w, h, base):
-    """Weather stats — mirrors page_weather: Air pressure / Humidity / Wind speed rows
-    (label left, value right). Values bind live to the weather entity."""
+    """Six live weather details shared with the full weather card."""
     e = card.get("entity", "")
-    pid, huid, wiid = base + "_pr", base + "_hu", base + "_wi"
-    rows = [("Air pressure", "30.05 inHg", pid), ("Humidity", "44%", huid), ("Wind speed", "7 mph NW", wiid)]
     pad = 14
-    rh = (h - 2 * pad) // len(rows)
-    inner = ""
-    for i, (lab, val, vid) in enumerate(rows):
-        ry = pad + i * rh + (rh - 20) // 2
-        inner += lbl(lab, 14, ry, "f_body", "0xC8CCD6")
+    rh = (h - 2 * pad) // len(WX_STATS)
+    inner, ids = "", []
+    for i, (lab, val, _col, attr) in enumerate(WX_STATS):
+        vid = base + "_st%d" % i
+        ry = pad + i * rh + max(0, (rh - 20) // 2)
+        inner += lbl(lab.title(), 14, ry, "f_body", "0xC8CCD6")
         inner += lbl(val, -14, ry, "f_body", "0xEEF0F6", wid=vid, align="top_right")
-    ss = []
+        ids.append((vid, attr))
+    sensors, text_sensors = ([], [])
     if e:
-        ss.append("  - platform: homeassistant\n    id: ha_%s_pr\n    entity_id: %s\n    attribute: pressure\n    on_value:\n      - lvgl.label.update: { id: %s, text: !lambda 'char b[20]; snprintf(b, sizeof(b), \"%%.2f inHg\", x); return std::string(b);' }\n" % (base, e, pid))
-        ss.append("  - platform: homeassistant\n    id: ha_%s_hu\n    entity_id: %s\n    attribute: humidity\n    on_value:\n      - lvgl.label.update: { id: %s, text: !lambda 'char b[8]; snprintf(b, sizeof(b), \"%%.0f%%%%\", x); return std::string(b);' }\n" % (base, e, huid))
-        ss.append("  - platform: homeassistant\n    id: ha_%s_wi\n    entity_id: %s\n    attribute: wind_speed\n    on_value:\n      - lvgl.label.update: { id: %s, text: !lambda 'char b[16]; snprintf(b, sizeof(b), \"%%.0f mph\", x); return std::string(b);' }\n" % (base, e, wiid))
-    return [card_obj(x, y, w, h, inner)], ss, []
+        sensors, text_sensors = _wx_stat_bindings(base, e, ids)
+    return [card_obj(x, y, w, h, inner)], sensors, text_sensors
 
 
 def c_camera(card, x, y, w, h, base):
-    inner = ("              - obj: { x: 8, y: 8, width: %d, height: %d, bg_color: 0x10141C, "
-             "border_width: 0, radius: 12, pad_all: 0, scrollable: false }\n" % (w - 16, h - 16))
+    """Live camera card (aurora.yaml btn_cam_card pattern): a tappable black inner\n    button hosting the mjpeg_stream target-0 image + a status pill driven by the\n    stream's on_state. Tap -> generated page_camera_full. Only the FIRST camera\n    card goes live; extras and host builds (SDL has no mjpeg_stream component)\n    keep the static placeholder."""
+    e = card.get("entity", "")
+    iw, ih = w - 16, h - 16
+    if e and ART_ENABLED and not CAM_CARDS:
+        CAM_CARDS.append((e, iw, ih, base))
+        # src is a required schema key: point at ss_image (a stale screensaver
+        # photo would show through, so start hidden — the on_state LIVE branch
+        # unhides once mjpeg_stream has re-pointed the widget at a real frame).
+        inner = ("              - button:\n"
+                 "                  x: 8\n                  y: 8\n                  width: %d\n                  height: %d\n"
+                 "                  bg_color: 0x000000\n                  radius: 12\n                  clip_corner: true\n"
+                 "                  pad_all: 0\n                  scrollable: false\n"
+                 "                  widgets:\n"
+                 "                    - image: { id: %s_cam, src: ss_image, align: center, hidden: true }\n"
+                 "                    - obj: { id: %s_pill, x: 12, y: %d, width: 78, height: 24, bg_color: 0x2A2F3A, radius: 8, "
+                 "border_width: 0, pad_all: 0, scrollable: false, clickable: false, widgets: ["
+                 "label: { id: %s_pill_lbl, text: \"...\", align: center, text_font: f_micro, text_color: 0xFFFFFF } ] }\n"
+                 "                  on_click: [lvgl.page.show: page_camera_full]\n"
+                 % (iw, ih, base, base, ih - 36, base))
+        inner += lbl(card.get("name", "Camera"), 20, -14, "f_body", "0xF3F5F8", align="bottom_left")
+        return [card_obj(x, y, w, h, inner)], [], []
+    # ---- static placeholder (extra cameras / host build / no entity) ----
+    inner = ""
+    if e and ART_ENABLED and CAM_CARDS:
+        inner += "              # %s: multi-camera live view not yet supported (1 stream shipped) — static placeholder\n" % e
+    inner += ("              - obj: { x: 8, y: 8, width: %d, height: %d, bg_color: 0x10141C, "
+              "border_width: 0, radius: 12, pad_all: 0, scrollable: false }\n" % (iw, ih))
     inner += ic(card["ck"], x=20, y=20, color="0x2A3346")
     # LIVE pill (red chip + white dot) bottom-left
     inner += ("              - obj: { x: 20, y: %d, width: 58, height: 24, bg_color: 0xF2685A, radius: 8, "
@@ -1186,16 +1442,35 @@ GROUP_VAL = {
 }
 
 
+def _adaptive_grid(n, max_cols, max_rows, avail_w, avail_h, gap, target_ratio=1.45):
+    """Choose a balanced grid for the populated items within the card capacity."""
+    if n <= 0:
+        return 1, 1
+    best = None
+    for cols in range(1, min(max_cols, n) + 1):
+        rows = (n + cols - 1) // cols
+        if rows > max_rows:
+            continue
+        bw = (avail_w - (cols - 1) * gap) / cols
+        bh = (avail_h - (rows - 1) * gap) / rows
+        if bw <= 0 or bh <= 0:
+            continue
+        score = abs((bw / bh) - target_ratio) + (cols * rows - n) * 0.12
+        if best is None or score < best[0]:
+            best = (score, cols, rows)
+    return (best[1], best[2]) if best else (max_cols, max_rows)
+
+
 def c_group(card, x, y, w, h, base):
-    """lightgroup: big lightbulb tiles in a w x max(2,h-1) grid (web .lggrid).
-    group: status tiles with domain icon + value + name (web .ggrid / image)."""
+    """lightgroup: big lightbulb tiles in a w x max(2,h-1) grid (web .lggrid).\n    group: status tiles with domain icon + value + name (web .ggrid / image)."""
     ents = card.get("entities", [])
     gw, gh = card["w"], card["h"]
     if card["ck"] == "lightgroup":
-        cols = max(1, gw)
-        rows = max(2, gh - 1)
-        cap = cols * rows
-        on_n = sum(1 for i in range(min(len(ents), cap)) if i % 2 == 0)
+        max_cols, max_rows = max(1, gw), max(2, gh - 1)
+        cap = max_cols * max_rows
+        shown = min(len(ents), cap)
+        cols, rows = _adaptive_grid(shown, max_cols, max_rows, w - 28, h - 72, 12, 1.15)
+        on_n = sum(1 for i in range(shown) if i % 2 == 0)
         inner = ic(card["ck"], color="0xF2B84B")
         inner += lbl("%s \\u00B7 %d on \\u00B7 %d/%d" % (card.get("name", "Lights"), on_n, len(ents), cap),
                      50, 22, "f_body", "0x868CA0", width=w - 64, long="dot", height=24)
@@ -1203,9 +1478,9 @@ def c_group(card, x, y, w, h, base):
         bw = (w - pad * 2 - (cols - 1) * gap) // cols
         bh = (h - top - pad - (rows - 1) * gap) // rows
         ts = []
-        for i in range(cap):
-            e = ents[i] if i < len(ents) else None
-            on = (e is not None) and (i % 2 == 0)
+        for i in range(shown):
+            e = ents[i]
+            on = i % 2 == 0
             cx = pad + (i % cols) * (bw + gap)
             cy = top + (i // cols) * (bh + gap)
             gcol = "0xF2B84B" if on else "0x6B7280"
@@ -1224,10 +1499,11 @@ def c_group(card, x, y, w, h, base):
                           % (iconid, e, tileid, iconid))
         return [card_obj(x, y, w, h, inner)], [], ts
     # group (status): domain icon (left) + value + name tiles
-    cols = 2
-    rows = max(1, card["h"])
-    cap = cols * rows
+    max_cols, max_rows = 2, max(1, card["h"])
+    cap = max_cols * max_rows
+    shown = min(len(ents), cap)
     pad, gap, top = 14, 10, 56
+    cols, rows = _adaptive_grid(shown, max_cols, max_rows, w - 2 * pad, h - top - pad, gap, 2.0)
     bw = (w - pad * 2 - (cols - 1) * gap) // cols
     bh = (h - top - pad - (rows - 1) * gap) // rows
     vfont = "f_title" if bw >= 150 else "f_body"        # big value on wide tiles, fit on narrow
@@ -1236,8 +1512,8 @@ def c_group(card, x, y, w, h, base):
     inner += lbl("%s \\u00B7 %d/%d" % (card.get("name", "Group"), len(ents), cap),
                  50, 22, "f_body", "0x868CA0", width=w - 64, long="dot", height=24)
     ts = []
-    for i in range(cap):
-        e = ents[i] if i < len(ents) else None
+    for i in range(shown):
+        e = ents[i]
         cx = pad + (i % cols) * (bw + gap)
         cy = top + (i // cols) * (bh + gap)
         if e:
@@ -1255,17 +1531,11 @@ def c_group(card, x, y, w, h, base):
                       "      - lvgl.label.update: { id: %s, text: !lambda 'return %s;' }\n"
                       "      - lvgl.label.update: { id: %s, text_color: !lambda 'return (%s) ? lv_color_hex(%s) : lv_color_hex(0xEEF0F6);' }\n"
                       % (base, i, e, valid, texpr, valid, actp, acol))
-        else:
-            inner += ("              - obj: { x: %d, y: %d, width: %d, height: %d, bg_color: 0x0F1117, "
-                      "border_color: 0x2A2E38, border_width: 1, radius: 12, pad_all: 0, scrollable: false, widgets: ["
-                      "label: { text: \"+\", align: center, text_font: f_head, text_color: 0x4A5160 }] }\n"
-                      % (cx, cy, bw, bh))
     return [card_obj(x, y, w, h, inner)], [], ts
 
 
 def c_outlet(card, x, y, w, h, base):
-    """Outlet cells (web .ocell2): a label + a circular power button per outlet,
-    laid out in columns (wide card) or rows (tall card)."""
+    """Outlet cells (web .ocell2): a label + a circular power button per outlet,\n    laid out in columns (wide card) or rows (tall card)."""
     ents = card.get("entities", [])
     gw, gh = card["w"], card["h"]
     if gw == 1 and gh == 1:                      # single outlet: icon + centered label, card colored when on
@@ -1279,12 +1549,13 @@ def c_outlet(card, x, y, w, h, base):
     inner = ic(card["ck"], color="0x2ED5B8")
     inner += title(card.get("name", "Outlets"), w)
     horiz = gw > gh
+    compact = h <= 110                                    # 1-row card: slim cells, no per-cell name
     cells = (ents if ents else [""])[:max(1, (gw if horiz else gh))]
     n = len(cells)
-    top, pad, gap = 58, 14, 10
+    top, pad, gap = (44, 14, 10) if compact else (58, 14, 10)
     if horiz:
         cw = (w - pad * 2 - (n - 1) * gap) // n
-        ch = h - top - pad
+        ch = h - top - (8 if compact else pad)
     else:
         cw = w - pad * 2
         ch = (h - top - pad - (n - 1) * gap) // n
@@ -1293,11 +1564,12 @@ def c_outlet(card, x, y, w, h, base):
         cy = top + (0 if horiz else i * (ch + gap))
         on = (i % 2 == 0)
         act = ha("homeassistant.toggle", e) if e else "lvgl.page.show: page_home"
-        ps = max(40, min(64, cw - 24, ch - 44))
+        ps = max(28, min(64, cw - 24, ch - (10 if compact else 44)))
         inner += ("              - obj: { x: %d, y: %d, width: %d, height: %d, bg_color: 0x0F1117, "
                   "border_width: 0, radius: 12, pad_all: 0, scrollable: false }\n" % (cx, cy, cw, ch))
-        inner += lbl(_ename(e, "S%d" % (i + 1)), cx, cy + 10, "f_small", "0xC2C7D2", width=cw, text_align="center", long="dot", height=18)
-        inner += btn(cx + (cw - ps) // 2, cy + (ch - ps) // 2 + 10, ps, ps, "\\U000F0425", act,
+        if not compact:
+            inner += lbl(_ename(e, "S%d" % (i + 1)), cx, cy + 10, "f_small", "0xC2C7D2", width=cw, text_align="center", long="dot", height=18)
+        inner += btn(cx + (cw - ps) // 2, cy + (ch - ps) // 2 + (0 if compact else 10), ps, ps, "\\U000F0425", act,
                      bg=("0x123F30" if on else "0x1A1F29"), color=("0x2ED5B8" if on else "0x6B7280"),
                      radius=ps // 2, font="f_icon")
     return [card_obj(x, y, w, h, inner)], [], []
@@ -1307,22 +1579,23 @@ BTN_ICON = {"speakers": "\\U000F04C3", "sonos_sources": "\\U000F075A", "tv_sourc
 
 
 def c_btngrid(card, x, y, w, h, base):
-    """Grid of selectable tiles (icon + name), first highlighted — web .spk grid.
-    Columns follow the count (web: 1-row=n, 10=5, 6=3, else 2)."""
+    """Grid of selectable tiles (icon + name), first highlighted — web .spk grid.\n    Columns follow the count (web: 1-row=n, 10=5, 6=3, else 2) but are clamped\n    to what the card WIDTH fits (>=96px tiles), and the tile count to what the\n    HEIGHT fits (>=40px rows) — narrow/short cards show fewer, usable tiles\n    instead of negative-width labels. Tiles narrower than 120px drop the icon."""
     ents = card.get("entities", [])
     inner = ic(card["ck"], color="0x2ED5B8")
-    inner += lbl(card.get("name", "Select"), 50, 16, "f_small", "0x868CA0")
+    inner += lbl(card.get("name", "Select"), 50, 16, "f_small", "0x868CA0", width=w - 64, long="dot", height=16)
     gw, gh = card["w"], card["h"]
     n = max(1, len(ents))
-    cols = n if gh == 1 else (5 if n == 10 else (3 if n == 6 else 2))
-    cols = max(1, min(cols, n))
-    rows = max(1, (n + cols - 1) // cols)
     pad, gap, top = 14, 10, 52
+    cols = n if gh == 1 else (5 if n == 10 else (3 if n == 6 else 2))
+    cols = max(1, min(cols, n, (w - 2 * pad + gap) // (96 + gap)))
+    max_rows = max(1, (h - top - pad + gap) // (40 + gap))
+    shown = min(n, cols * max_rows)
+    rows = max(1, (shown + cols - 1) // cols)
     bw = (w - pad * 2 - (cols - 1) * gap) // cols
     bh = (h - top - pad - (rows - 1) * gap) // rows
     bi = BTN_ICON.get(card["ck"], "\\U000F075A")
     src = card["ck"] in ("sonos_sources", "tv_sources")
-    for i, e in enumerate(ents[:n]):
+    for i, e in enumerate(ents[:shown]):
         nm = (e.split(".")[-1] if "." in e else e).replace("_", " ")
         cx = pad + (i % cols) * (bw + gap)
         cy = top + (i // cols) * (bh + gap)
@@ -1330,14 +1603,19 @@ def c_btngrid(card, x, y, w, h, base):
         bg = "0x2ED5B8" if sel else "0x10141C"
         fg = "0x06231D" if sel else "0xC2C7D2"
         act = (_src(e, nm) if src else ha("media_player.toggle", e)) if e else "lvgl.page.show: page_home"
+        if bw >= 120:
+            tile = ("                    - label: { text: \"%s\", x: 14, align: left_mid, text_font: f_icon, text_color: %s }\n"
+                    "                    - label: { text: %s, x: 48, align: left_mid, width: %d, long_mode: dot, text_font: f_body, text_color: %s }\n"
+                    % (bi, fg, esc(nm), bw - 56, fg))
+        else:                                             # narrow tile: label only
+            tile = ("                    - label: { text: %s, x: 10, align: left_mid, width: %d, long_mode: dot, text_font: f_body, text_color: %s }\n"
+                    % (esc(nm), bw - 20, fg))
         inner += ("              - button:\n"
                   "                  x: %d\n                  y: %d\n                  width: %d\n                  height: %d\n"
                   "                  bg_color: %s\n                  radius: 12\n                  pad_all: 0\n                  scrollable: false\n"
                   "                  on_click: [%s]\n"
-                  "                  widgets:\n"
-                  "                    - label: { text: \"%s\", x: 14, align: left_mid, text_font: f_icon, text_color: %s }\n"
-                  "                    - label: { text: %s, x: 48, align: left_mid, width: %d, long_mode: dot, text_font: f_body, text_color: %s }\n"
-                  % (cx, cy, bw, bh, bg, act, bi, fg, esc(nm), bw - 56, fg))
+                  "                  widgets:\n%s"
+                  % (cx, cy, bw, bh, bg, act, tile))
     return [card_obj(x, y, w, h, inner)], [], []
 
 
@@ -1400,9 +1678,14 @@ def c_tv_transport(card, x, y, w, h, base):
 
 def c_tv_channel(card, x, y, w, h, base):
     e = card.get("entity", "")
-    inner = ic(card["ck"], color="0xB06CFF") + lbl(card.get("name", "Channel"), 50, 16, "f_small", "0x868CA0")
+    inner = ic(card["ck"], color="0xB06CFF") + lbl(card.get("name", "Channel"), 50, 16, "f_small", "0x868CA0", width=w - 64, long="dot", height=16)
     up = ("homeassistant.action: { action: webostv.button, data: { entity_id: %s, button: CHANNELUP } }" % e) if e else "lvgl.page.show: page_home"
     dn = ("homeassistant.action: { action: webostv.button, data: { entity_id: %s, button: CHANNELDOWN } }" % e) if e else "lvgl.page.show: page_home"
+    if h <= 110:                                          # 1-row card: CH- / CH+ side by side
+        bw = (w - 28 - 8) // 2
+        inner += btn(14, h - 56, bw, 46, "CH -", dn)
+        inner += btn(14 + bw + 8, h - 56, bw, 46, "CH +", up)
+        return [card_obj(x, y, w, h, inner)], [], []
     bh = (h - 66) // 2 - 4
     inner += btn(14, 52, w - 28, bh, "CH +", up)
     inner += btn(14, 52 + bh + 8, w - 28, bh, "CH -", dn)
@@ -1411,9 +1694,17 @@ def c_tv_channel(card, x, y, w, h, base):
 
 def c_tv_volume(card, x, y, w, h, base):
     e = card.get("entity", "")
-    inner = ic(card["ck"], color="0xB06CFF") + lbl(card.get("name", "Volume"), 50, 16, "f_small", "0x868CA0")
+    inner = ic(card["ck"], color="0xB06CFF") + lbl(card.get("name", "Volume"), 50, 16, "f_small", "0x868CA0", width=w - 64, long="dot", height=16)
     rows = [("VOL +", "media_player.volume_up", ""), ("Mute", "media_player.volume_mute", 'is_volume_muted: "true"'),
             ("VOL -", "media_player.volume_down", "")]
+    if h <= 110:                                          # 1-row card: buttons side by side (Mute only when 3 fit)
+        use = [rows[2], rows[1], rows[0]] if w >= 200 else [rows[2], rows[0]]   # VOL- (,Mute), VOL+
+        nb = len(use)
+        bw = (w - 28 - (nb - 1) * 8) // nb
+        for i, (t, svc, extra) in enumerate(use):
+            act = ha(svc, e, extra) if e else "lvgl.page.show: page_home"
+            inner += btn(14 + i * (bw + 8), h - 56, bw, 46, t, act)
+        return [card_obj(x, y, w, h, inner)], [], []
     bh = (h - 66) // 3 - 4; yy = 52
     for t, svc, extra in rows:
         act = ha(svc, e, extra) if e else "lvgl.page.show: page_home"
@@ -1455,31 +1746,176 @@ APP_CATALOG = {
     "HBO Max": ("0x7B2BF9", "M"), "Apple TV": ("0x3A3A3C", "A"), "Peacock": ("0x05AC3F", "P"),
     "Paramount+": ("0x0064FF", "P"), "STARZ": ("0x000000", "SZ"),
     "ESPN": ("0xD50A0A", "E"), "Prime": ("0x00A8E1", "P"),
+    "Twitch": ("0x9146FF", "T"), "Crunchyroll": ("0xF47521", "C"),
+    "Pandora": ("0x3668FF", "P"),
 }
 TV_APPS_DEFAULT = ["Netflix", "YouTube", "YouTube TV", "Disney+", "Hulu"]
 TV_APPS_MAX = 8
 TV_SOURCES = ["HDMI 1", "Apple TV", "Roku", "Cable"]
 
 
+def _app_norm(s):
+    return re.sub(r"[^a-z0-9+]", "", (s or "").lower())
+
+
+_APP_KEYS = None      # APP_CATALOG keys, longest normalized name first (lazy)
+
+
+def app_style(name):
+    """Fuzzy source/app name -> (bg color, badge mark, known). Case- and\n    punctuation-insensitive against APP_CATALOG, longest brand checked first\n    so "YouTube TV 4K" hits YouTube TV, not YouTube: (1) exact normalized\n    match, (2) whole-word brand inside the name ("Max 4K" -> Max, but NOT\n    "Cinemax"), (3) squashed-brand containment for brands >=5 chars\n    ("youtubetv-4k"), (4) the name as a typed prefix of a brand. Unknown apps\n    get a neutral dark tile + their initial (mirrored by builder appStyle)."""
+    global _APP_KEYS
+    if _APP_KEYS is None:
+        _APP_KEYS = sorted(APP_CATALOG, key=lambda k: -len(_app_norm(k)))
+    n = _app_norm(name)
+    if n:
+        low = (name or "").lower()
+        for k in _APP_KEYS:
+            if _app_norm(k) == n:
+                return APP_CATALOG[k] + (True,)
+        for k in _APP_KEYS:
+            kk = _app_norm(k)
+            if (re.search(r"(?<![a-z0-9])" + re.escape(k.lower()) + r"(?![a-z0-9])", low)
+                    or (len(kk) >= 5 and kk in n)
+                    or (len(n) >= 4 and kk.startswith(n))):  # typed prefix, not substring
+                return APP_CATALOG[k] + (True,)
+    return ("0x10141C", ((name or "").strip()[:1] or "?").upper(), False)
+
+
+def c_tv_app(card, x, y, w, h, base):
+    """One app/input launcher: a brand-colored tile that select_source's the\n    configured source on tap. Known apps (fuzzy APP_CATALOG match) fill the\n    whole card with the brand color; unknown ones keep the glass card and get\n    a teal accent ring plus their initial letter. 1x1 shows the badge mark\n    only; larger spans add the label (row / column / centered by shape)."""
+    e = card.get("entity", "")
+    src = (card.get("source") or "").strip()
+    lab = (card.get("label") or "").strip() or src or card.get("name", "App")
+    col, mark, known = app_style(src or lab)
+    act = _src(e, src) if (e and src) else "lvgl.page.show: page_home"
+    inner = ""
+    if not known:                                        # accent ring on the neutral tile
+        inner += ("              - obj: { x: 0, y: 0, width: %d, height: %d, bg_opa: 0%%, "
+                  "border_color: 0x2ED5B8, border_width: 1, radius: 18, clickable: false, "
+                  "pad_all: 0, scrollable: false }\n" % (w, h))
+    if h <= 110:                                         # 1-row strip
+        if w <= 150:                                     # 1x1: badge mark only
+            inner += lbl(mark, 0, 0, "f_head", align="center")
+        else:                                            # mark + label side by side
+            inner += lbl(mark, 18, 0, "f_head", align="left_mid")
+            inner += lbl(lab, 66, 0, "f_title", align="left_mid", width=w - 84, long="dot", height=26)
+    elif w <= 150:                                       # 1-wide tall: mark top, label bottom
+        inner += lbl(mark, 0, 20, "f_head", align="top_mid")
+        inner += lbl(lab, 0, -16, "f_small", align="bottom_mid", width=w - 20, text_align="center", long="dot", height=16)
+    else:                                                # >=2x2: centered mark + label
+        inner += lbl(mark, 0, -20, "f_head", align="center")
+        inner += lbl(lab, 0, 26, "f_title", align="center", width=w - 32, text_align="center", long="dot", height=26)
+    return [card_obj(x, y, w, h, inner, act, bg=(col if known else None))], [], []
+
+
+def c_tv_apps(card, x, y, w, h, base):
+    """Grid of app/input launch tiles on one media_player — c_btngrid's clamped\n    adaptive grid, but each tile is brand-colored via app_style() and taps\n    media_player.select_source with the tile's source string. Unknown apps get\n    the neutral dark tile + teal accent ring. Tiles >=120px wide show a badge\n    square + name; narrower ones the name only. Unconfigured cards preview\n    TV_APPS_DEFAULT so the emulator/screenshot shows a real grid."""
+    e = card.get("entity", "")
+    srcs = [(s if isinstance(s, dict) else {"source": s})
+            for s in (card.get("sources") or [])] or [{"source": s} for s in TV_APPS_DEFAULT]
+    inner = ic(card["ck"], color="0xB06CFF")
+    inner += lbl(card.get("name", "Apps"), 50, 16, "f_small", "0x868CA0", width=w - 64, long="dot", height=16)
+    gh = card["h"]
+    n = max(1, len(srcs))
+    pad, gap, top = 14, 10, 52
+    cols = n if gh == 1 else (5 if n == 10 else (3 if n == 6 else 2))
+    cols = max(1, min(cols, n, (w - 2 * pad + gap) // (96 + gap)))
+    max_rows = max(1, (h - top - pad + gap) // (40 + gap))
+    shown = min(n, cols * max_rows)
+    rows = max(1, (shown + cols - 1) // cols)
+    bw = (w - pad * 2 - (cols - 1) * gap) // cols
+    bh = (h - top - pad - (rows - 1) * gap) // rows
+    for i, s in enumerate(srcs[:shown]):
+        src = (s.get("source") or "").strip()
+        snm = (s.get("label") or "").strip() or src or "Source"
+        col, mark, known = app_style(src or snm)
+        cx = pad + (i % cols) * (bw + gap)
+        cy = top + (i // cols) * (bh + gap)
+        act = _src(e, src) if (e and src) else "lvgl.page.show: page_home"
+        bg = col if known else "0x10141C"
+        border = "" if known else "                  border_color: 0x2ED5B8\n                  border_width: 1\n"
+        if bw >= 120:                                    # badge square + name
+            bsz = max(20, min(32, bh - 12))
+            tile = ("                    - obj: { x: 12, align: left_mid, width: %d, height: %d, bg_color: %s, "
+                    "bg_opa: %s, radius: 8, clickable: false, pad_all: 0, scrollable: false, "
+                    "widgets: [label: { text: %s, align: center, text_font: f_small, text_color: 0xFFFFFF }] }\n"
+                    "                    - label: { text: %s, x: %d, align: left_mid, width: %d, long_mode: dot, text_font: f_body, text_color: 0xFFFFFF }\n"
+                    % (bsz, bsz, ("0xFFFFFF" if known else "0x2ED5B8"), ("22%" if known else "35%"),
+                       esc(mark), esc(snm), 12 + bsz + 10, bw - bsz - 34))
+        else:                                            # narrow tile: label only
+            tile = ("                    - label: { text: %s, x: 10, align: left_mid, width: %d, long_mode: dot, text_font: f_body, text_color: 0xFFFFFF }\n"
+                    % (esc(snm), bw - 20))
+        inner += ("              - button:\n"
+                  "                  x: %d\n                  y: %d\n                  width: %d\n                  height: %d\n"
+                  "                  bg_color: %s\n%s                  radius: 12\n                  pad_all: 0\n                  scrollable: false\n"
+                  "                  on_click: [%s]\n"
+                  "                  widgets:\n%s"
+                  % (cx, cy, bw, bh, bg, border, act, tile))
+    return [card_obj(x, y, w, h, inner)], [], []
+
+
 def c_tvremote(card, x, y, w, h, base):
-    """Full LG remote, matching the web `remote` card. Wide cards (>=6 cells)
-    get the apps sidebar; large cards get source chips + VOL/d-pad/CH + the full
-    transport bar; small cards fall back to d-pad + 3 transport buttons."""
+    """Full LG remote, matching the web `remote` card, degrading by size:\n    rich (>=4x4): apps sidebar (6-wide) + source chips + VOL/d-pad/CH + full\n    transport bar; compact (>=2 wide, >=3 tall): d-pad + 3-button transport;\n    1-wide talls: stacked VOL/CH buttons; 1-row / 2-row cards: header + button\n    rows (the fixed-size d-pad can't fit)."""
     e = card.get("entity", "")
     inner = ""
     ts = []                                              # source-highlight readback (rich+sidebar)
     powA = ("homeassistant.action: { action: media_player.toggle, data: { entity_id: %s } }" % e) if e else "lvgl.page.show: page_home"
-    rich = w >= 560 and h >= 320
-    if not rich:                       # compact: icon + title + d-pad + 3 transport
+    transport = [("\\U000F04AE", "media_player.media_previous_track"),
+                 ("\\U000F040A", "media_player.media_play_pause"),
+                 ("\\U000F04AD", "media_player.media_next_track")]
+    rich = w >= 560 and h >= 400
+    if not rich and w >= 294 and h >= 300:               # compact: icon + title + d-pad + 3 transport
         inner = ic(card["ck"], color="0xB06CFF") + lbl("LG OLED", 50, 12, "f_title")
         inner += btn(w - 66, 14, 52, 46, "\\U000F0425", powA, bg="0x2a1414", color="0xF2685A", font="f_icon")
         inner = _dpad(inner, e, w, h - 30)
-        items = [("\\U000F04AE", "media_player.media_previous_track"),
-                 ("\\U000F040A", "media_player.media_play_pause"),
-                 ("\\U000F04AD", "media_player.media_next_track")]
         bw = 56
-        for i, (g, svc) in enumerate(items):
+        for i, (g, svc) in enumerate(transport):
             inner += btn(14 + i * (bw + 8), h - 66, bw, 52, g, ha(svc, e) if e else "lvgl.page.show: page_home",
+                         font="f_icon", bg=("0x2ED5B8" if i == 1 else "0x161B24"), color=("0x06231D" if i == 1 else "0xF3F5F8"))
+        return [card_obj(x, y, w, h, inner)], [], []
+    if not rich and h <= 110:                            # 1-row strip: title + power/prev/play/next
+        inner = ic(card["ck"], color="0xB06CFF") + lbl("LG OLED", 50, 12, "f_title", width=w - 64, long="dot", height=26)
+        row = [("\\U000F0425", None)] + (transport if w >= 240 else [transport[1]])
+        nb = len(row)
+        bw = min(60, (w - 28 - (nb - 1) * 8) // nb)
+        sx = (w - nb * bw - (nb - 1) * 8) // 2
+        for i, (g, svc) in enumerate(row):
+            if svc is None:
+                act, bg, col = powA, "0x2a1414", "0xF2685A"
+            else:
+                act = ha(svc, e) if e else "lvgl.page.show: page_home"
+                main = (svc == "media_player.media_play_pause")
+                bg, col = ("0x2ED5B8", "0x06231D") if main else ("0x161B24", "0xF3F5F8")
+            inner += btn(sx + i * (bw + 8), h - 56, bw, 44, g, act, font="f_icon", bg=bg, color=col)
+        return [card_obj(x, y, w, h, inner)], [], []
+    if not rich and w <= 150:                            # 1-wide tall: power + stacked VOL/CH
+        inner = ic(card["ck"], color="0xB06CFF")
+        inner += btn(w - 66, 14, 52, 46, "\\U000F0425", powA, bg="0x2a1414", color="0xF2685A", font="f_icon")
+        stack = [("\\U000F075D", "VOLUMEUP"), ("\\U000F075E", "VOLUMEDOWN"),
+                 ("\\U000F0143", "CHANNELUP"), ("\\U000F0140", "CHANNELDOWN")]
+        yy = 68
+        avail = h - yy - 14
+        nb = max(1, min(4, (avail + 8) // 52))
+        bh2 = min(56, (avail - (nb - 1) * 8) // nb)
+        for g, bname in stack[:nb]:
+            inner += btn(14, yy, w - 28, bh2, g, _wbtn(e, bname), font="f_icon")
+            yy += bh2 + 8
+        return [card_obj(x, y, w, h, inner)], [], []
+    if not rich:                                         # 2-row band: header + VOL/CH row + transport
+        inner = ic(card["ck"], color="0xB06CFF") + lbl("LG OLED", 50, 12, "f_title")
+        inner += btn(w - 66, 14, 52, 46, "\\U000F0425", powA, bg="0x2a1414", color="0xF2685A", font="f_icon")
+        by = h - 60
+        if h >= 190:
+            vc = [("\\U000F075E", "VOLUMEDOWN"), ("\\U000F075D", "VOLUMEUP"),
+                  ("\\U000F0140", "CHANNELDOWN"), ("\\U000F0143", "CHANNELUP")]
+            vbw = min(96, (w - 28 - 3 * 8) // 4)
+            vsx = (w - 4 * vbw - 3 * 8) // 2
+            for i, (g, bname) in enumerate(vc):
+                inner += btn(vsx + i * (vbw + 8), by - 54, vbw, 46, g, _wbtn(e, bname), font="f_icon")
+        tbw = min(64, (w - 28 - 2 * 8) // 3)
+        tsx = (w - 3 * tbw - 2 * 8) // 2
+        for i, (g, svc) in enumerate(transport):
+            inner += btn(tsx + i * (tbw + 8), by, tbw, 46, g, ha(svc, e) if e else "lvgl.page.show: page_home",
                          font="f_icon", bg=("0x2ED5B8" if i == 1 else "0x161B24"), color=("0x06231D" if i == 1 else "0xF3F5F8"))
         return [card_obj(x, y, w, h, inner)], [], []
 
@@ -1561,7 +1997,7 @@ def c_tvremote(card, x, y, w, h, base):
     for i, (g, key) in enumerate(bar):
         bx = mx + i * (bw + 8)
         if key == "pad":                              # open the dedicated trackpad page (the proven gesture path)
-            inner += btn(bx, by, bw, 62, g, "lvgl.page.show: page_trackpad",
+            inner += btn(bx, by, bw, 62, g, "lvgl.page.show: " + card.get("_trackpad_page", "page_trackpad"),
                          font="f_icon", bg="0x161B24", color="0x2ED5B8")
             continue
         if key in media_acts:
@@ -1603,12 +2039,7 @@ def c_songlist(card, x, y, w, h, base):
 
 
 def c_spot_playlists(card, x, y, w, h, base):
-    """Spotify playlist dropdown, bound to sensor.aurora_spotify_playlists (names +
-    uris). Reuses aurora.yaml's g_pl_uris (uris string) + g_spot_ctx (selected uri).
-    Picking a playlist stores its URI in g_spot_ctx and loads its tracks via the
-    aurora_spotify_load_playlist script (which repopulates the songs card). Refresh
-    re-pulls the playlists sensor. Compact 2x1/3x1 = micro-label + dropdown row.
-    NB: LVGL C calls need the widget's ->obj (id(x) is the ESPHome wrapper)."""
+    """Spotify playlist dropdown, bound to sensor.aurora_spotify_playlists (names +\n    uris). Reuses aurora.yaml's g_pl_uris (uris string) + g_spot_ctx (selected uri).\n    Picking a playlist stores its URI in g_spot_ctx and loads its tracks via the\n    aurora_spotify_load_playlist script (which repopulates the songs card). Refresh\n    re-pulls the playlists sensor. Compact 2x1/3x1 = micro-label + dropdown row.\n    NB: LVGL C calls need the widget's ->obj (id(x) is the ESPHome wrapper)."""
     ddid = base + "_dd"
     compact = h <= 110
     # pick i -> uris[i]: split g_pl_uris on newline (char 10), stash in g_spot_ctx
@@ -1630,12 +2061,11 @@ def c_spot_playlists(card, x, y, w, h, base):
                 "                        then:\n"
                 "                          - homeassistant.action:\n                              action: script.aurora_spotify_load_playlist\n                              data:\n"
                 "                                playlist_uri: !lambda 'return id(g_spot_ctx);'\n")
-    glyph_for("reload")   # record F0450 so it's embedded in f_icon (reload button)
     inner = lbl("PLAYLIST", 14, 16, "f_micro", "0x868CA0")
     inner += ("              - button:\n                  x: %d\n                  y: 10\n                  width: 40\n                  height: 30\n"
               "                  bg_color: 0x161B24\n                  radius: 10\n                  pad_all: 0\n                  scrollable: false\n"
-              "                  widgets: [label: { text: \"\\U000F0450\", align: center, text_font: f_icon, text_color: 0x1DB954 }]\n"
-              "                  on_click: [homeassistant.action: { action: script.aurora_spotify_refresh_playlists }]\n" % (w - 54))
+              "                  widgets: [label: { text: \"%s\", align: center, text_font: f_icon, text_color: 0x1DB954 }]\n"
+              "                  on_click: [homeassistant.action: { action: script.aurora_spotify_refresh_playlists }]\n" % (w - 54, glyph_for("reload")))
     inner += dropdown
     if not compact:
         inner += lbl("Pick a playlist to load its songs", 14, dd_y + 56, "f_small", "0x5D6470", width=w - 28, long="dot")
@@ -1650,9 +2080,7 @@ SPOT_MAX_TRACKS = 50
 
 
 def _card_rows(card, default, hi, lo=4):
-    """Per-card pre-built row count (builder 'rows' option), clamped. Fewer rows =
-    lighter generated firmware (see the builder capacity meter); more rows = longer
-    lists. lo floor keeps a usable list; hi caps it (tracks: SpotifyPlus fetch = 50)."""
+    """Per-card pre-built row count (builder 'rows' option), clamped. Fewer rows =\n    lighter generated firmware (see the builder capacity meter); more rows = longer\n    lists. lo floor keeps a usable list; hi caps it (tracks: SpotifyPlus fetch = 50)."""
     try:
         n = int(card.get("rows"))
     except (TypeError, ValueError):
@@ -1660,12 +2088,23 @@ def _card_rows(card, default, hi, lo=4):
     return max(lo, min(hi, n))
 
 
+def _trk_hl_lines(n, np_expr):
+    """Now-playing row highlight (expects lv_obj_t* L[n]/R[n] label/row arrays in\n    scope): the visible row whose label equals the media_player's media_title —\n    exactly, or as the title prefix of the "Title — Artist" strings the HA names\n    feed builds (sep = " \\xE2\\x80\\x94 ", i.e. " — ") — gets a green title on a\n    raised 0x1B2230 row; every other row reverts to the normal palette."""
+    return [
+        "const std::string &np = %s;" % np_expr,
+        "for (int i = 0; i < %d; i++) {" % n,
+        "  if (lv_obj_has_flag(R[i], LV_OBJ_FLAG_HIDDEN)) continue;",
+        "  std::string tok = lv_label_get_text(L[i]);",
+        "  bool on = !np.empty() && (tok == np || (tok.compare(0, np.size(), np) == 0 && tok.compare(np.size(), 5, \" \\xE2\\x80\\x94 \") == 0));",
+        "  lv_obj_set_style_bg_color(R[i], lv_color_hex(on ? 0x1B2230 : 0x0F1117), 0);",
+        "  lv_obj_set_style_text_color(L[i], lv_color_hex(on ? 0x1DB954 : 0xF3F5F8), 0);",
+        "}",
+    ]
+
+
 def c_spot_tracks(card, x, y, w, h, base):
-    """Spotify song list: a scrolling column of tap-to-play rows bound to
-    sensor.aurora_spotify_tracks (names, one "Track — Artist" per line). Tapping
-    row i plays position i within the loaded playlist (g_spot_ctx) via the
-    aurora_spotify_play_track script. Rows are pre-built and shown/hidden by the
-    populate lambda; the count is the per-card 'rows' option (default/cap 50)."""
+    """Spotify song list: a scrolling column of tap-to-play rows bound to\n    sensor.aurora_spotify_tracks (names, one "Track — Artist" per line). Tapping\n    row i plays position i within the loaded playlist (g_spot_ctx) via the\n    aurora_spotify_play_track script. Rows are pre-built and shown/hidden by the\n    populate lambda; the count is the per-card 'rows' option (default/cap 50).\n    The row matching the bound media_player's media_title is highlighted live\n    (green title on a raised row) — recomputed on every title change and after\n    each repopulate."""
+    e = card.get("entity", "")
     n = _card_rows(card, SPOT_MAX_TRACKS, SPOT_MAX_TRACKS)
     inner = ic("spotify_tracks", color="0x1DB954")
     inner += lbl("TRACKS \\u00B7 TAP TO PLAY", 50, 18, "f_micro", "0x868CA0")
@@ -1705,6 +2144,13 @@ def c_spot_tracks(card, x, y, w, h, base):
           "            const std::string &str = x;\n"
           "            lv_obj_t* L[" + str(n) + "] = { " + larr + " };\n"
           "            lv_obj_t* R[" + str(n) + "] = { " + rarr + " };\n"
+          # only populate once a playlist has been chosen this session; ignore the
+          # stale track list HA replays on connect (design: list stays empty until pick)
+          "            if (id(g_spot_ctx).empty()) {\n"
+          "              for (int j = 0; j < " + str(n) + "; j++) lv_obj_add_flag(R[j], LV_OBJ_FLAG_HIDDEN);\n"
+          "              lv_obj_clear_flag(id(" + base + "_empty), LV_OBJ_FLAG_HIDDEN);\n"
+          "              return;\n"
+          "            }\n"
           "            int idx = 0; size_t st = 0;\n"
           "            for (size_t i = 0; i <= str.size() && idx < " + str(n) + "; i++) {\n"
           "              if (i == str.size() || str[i] == '\\n') {\n"
@@ -1719,7 +2165,17 @@ def c_spot_tracks(card, x, y, w, h, base):
           "            }\n"
           "            for (int j = idx; j < " + str(n) + "; j++) lv_obj_add_flag(R[j], LV_OBJ_FLAG_HIDDEN);\n"
           "            if (idx > 0) lv_obj_add_flag(id(" + base + "_empty), LV_OBJ_FLAG_HIDDEN);\n"
-          "            else lv_obj_clear_flag(id(" + base + "_empty), LV_OBJ_FLAG_HIDDEN);\n"]
+          "            else lv_obj_clear_flag(id(" + base + "_empty), LV_OBJ_FLAG_HIDDEN);\n"
+          + (_indent(_trk_hl_lines(n, "id(ha_" + base + "_np).state"), 12) if e else "")]
+    if e:
+        # now-playing readback: media_title drives the row highlight live (the
+        # populate lambda above re-applies it when the list itself changes)
+        ts.append("  - platform: homeassistant\n    id: ha_" + base + "_np\n    entity_id: " + e + "\n    attribute: media_title\n    on_value:\n"
+                  "      then:\n"
+                  "        - lambda: |-\n"
+                  "            lv_obj_t* L[" + str(n) + "] = { " + larr + " };\n"
+                  "            lv_obj_t* R[" + str(n) + "] = { " + rarr + " };\n"
+                  + _indent(_trk_hl_lines(n, "x"), 12))
     return [card_obj(x, y, w, h, inner)], [], ts
 
 
@@ -1738,8 +2194,7 @@ def _indent(lines, spaces):
 
 
 def _spk_hl_lines(base, n):
-    """Recolor each visible speaker row: the one whose name == g_spot_dev is the
-    picked target (Spotify green), the rest dark."""
+    """Recolor each visible speaker row: the one whose name == g_spot_dev is the\n    picked target (Spotify green), the rest dark."""
     L, B = _spk_arrays(base, n)
     return [
         "lv_obj_t* HL[%d] = { %s };" % (n, L),
@@ -1755,24 +2210,16 @@ def _spk_hl_lines(base, n):
 
 
 def c_spot_speakers(card, x, y, w, h, base):
-    """Spotify Connect speaker picker. Loads the available speakers straight from
-    the SpotifyPlus media_player's `source_list` attribute (no HA-side helper
-    needed) and renders one tap-to-select row per speaker. Tapping a row stores
-    its name in g_spot_dev (the target the song list plays onto via play_track's
-    `device`) and transfers any current playback there via select_source. The
-    picked row is highlighted; g_spot_dev defaults to the active `source`.
-    source_list arrives as a quoted list string ("['Kitchen', 'Office', ...]"),
-    so rows are parsed by pulling each quoted token (single- or double-quoted)."""
+    """Spotify Connect speaker picker. Loads the available speakers straight from\n    the SpotifyPlus media_player's `source_list` attribute (no HA-side helper\n    needed) and renders one tap-to-select row per speaker. Tapping a row stores\n    its name in g_spot_dev (the target the song list plays onto via play_track's\n    `device`) and transfers any current playback there via select_source. The\n    picked row is highlighted; g_spot_dev defaults to the active `source`.\n    source_list arrives as a quoted list string ("['Kitchen', 'Office', ...]"),\n    so rows are parsed by pulling each quoted token (single- or double-quoted)."""
     e = card.get("entity") or "media_player.spotifyplus_ben_walton"
     n = _card_rows(card, SPOT_MAX_SPEAKERS, 24)
-    glyph_for("reload")   # record F0450 so it's embedded in f_icon (reload button)
     inner = ic("speakers", color="0x1DB954")
     inner += lbl("PLAY ON \\u00B7 TAP A SPEAKER", 50, 18, "f_micro", "0x868CA0")
     # refresh: re-poll the media_player so a newly-woken speaker shows up
     inner += ("              - button:\n                  x: %d\n                  y: 10\n                  width: 40\n                  height: 30\n"
               "                  bg_color: 0x161B24\n                  radius: 10\n                  pad_all: 0\n                  scrollable: false\n"
-              "                  widgets: [label: { text: \"\\U000F0450\", align: center, text_font: f_icon, text_color: 0x1DB954 }]\n"
-              "                  on_click: [homeassistant.action: { action: homeassistant.update_entity, data: { entity_id: %s } }]\n" % (w - 54, e))
+              "                  widgets: [label: { text: \"%s\", align: center, text_font: f_icon, text_color: 0x1DB954 }]\n"
+              "                  on_click: [homeassistant.action: { action: homeassistant.update_entity, data: { entity_id: %s } }]\n" % (w - 54, glyph_for("reload"), e))
     rh, gap = 44, 6
     list_y = 48
     list_h = h - list_y - 12
@@ -1830,45 +2277,83 @@ def c_spot_speakers(card, x, y, w, h, base):
     return [card_obj(x, y, w, h, inner)], [], ts
 
 
+def c_spot_speaker(card, x, y, w, h, base):
+    """Single-speaker Spotify "Play on" tile (1x1+). Assign ONE speaker by its\n    Spotify Connect source name (exactly as it appears in the SpotifyPlus\n    media_player's source_list). Tapping transfers playback there via\n    media_player.select_source and marks it the play-track target (g_spot_dev);\n    the tile lights green while it is the player's active `source`. Drop several\n    tiles for a curated set of cast targets. The source name is carried in a\n    hidden label so the tap + highlight lambdas never embed it (dodges C++/YAML\n    string escaping of speaker names with quotes/apostrophes)."""
+    e = card.get("entity") or "media_player.spotifyplus_ben_walton"
+    spk = card.get("speaker") or card.get("name") or "Speaker"
+    disp = card.get("name") or spk
+    oid, iid, srcid = base + "_c", base + "_i", base + "_src"
+    acc = "0x1DB954"
+    lit = _darken(acc, 0.22)
+    inner = lbl(CARD_ICON["spotify_speaker"], 0, 20, "f_icon", acc, wid=iid, align="top_mid")
+    inner += lbl(disp, 0, -12, "f_small", "0xF3F5F8", align="bottom_mid",
+                 width=w - 14, text_align="center", long="dot", height=16)
+    inner += ("              - label: { id: %s, text: %s, hidden: true, x: 0, y: 0, "
+              "text_font: f_micro, text_color: 0x000000 }\n" % (srcid, esc(spk)))
+    # tap: mark this the target, transfer playback there, light self immediately.
+    tap = ("id(g_spot_dev) = std::string(lv_label_get_text(id(%s))); "
+           "lv_obj_set_style_bg_color(id(%s), lv_color_hex(%s), 0); "
+           "lv_obj_set_style_text_color(id(%s), lv_color_hex(0xFFFFFF), 0);"
+           % (srcid, oid, lit, iid))
+    on = ("lambda: '%s', homeassistant.action: { action: media_player.select_source, "
+          "data: { entity_id: %s, source: !lambda 'return id(g_spot_dev);' } }" % (tap, e))
+    # highlight = truth from the player's `source` attr: green when it is us.
+    hl = [
+        "bool on = (std::string(x) == std::string(lv_label_get_text(id(%s))));" % srcid,
+        "lv_obj_set_style_bg_color(id(%s), lv_color_hex(on ? %s : 0x0E1116), 0);" % (oid, lit),
+        "lv_obj_set_style_text_color(id(%s), lv_color_hex(on ? 0xFFFFFF : %s), 0);" % (iid, acc),
+    ]
+    ts = ["  - platform: homeassistant\n    id: ha_%s_src\n    entity_id: %s\n    attribute: source\n"
+          "    on_value:\n      then:\n        - lambda: |-\n%s" % (base, e, _indent(hl, 12))]
+    return [card_obj(x, y, w, h, inner, on, oid=oid)], [], ts
+
+
 def c_shortcuts(card, x, y, w, h, pagemap, base):
-    """Grid of icon+label tiles (one per grid cell), matching the builder's
-    .scbtn: MDI icon on top, label below. Empty slots show a + outline."""
+    """Adaptive grid of icon+label shortcut tiles."""
     inner = ""
     sc = card.get("shortcuts", [])
-    cols, rows = card["w"], card["h"]
-    n = cols * rows
+    max_cols, max_rows = card["w"], card["h"]
+    cap = max_cols * max_rows
+    shown = min(len(sc), cap)
     pad, gap = 12, 8
+    cols, rows = _adaptive_grid(shown, max_cols, max_rows, w - 2 * pad, h - 2 * pad, gap, 1.45)
     bw = (w - pad * 2 - (cols - 1) * gap) // cols
     bh = (h - pad * 2 - (rows - 1) * gap) // rows
-    for i in range(n):
-        s = sc[i] if i < len(sc) else None
+    if shown == 0:
+        inner += (
+            "              - obj: { x: %d, y: %d, width: %d, height: %d, bg_color: 0x0F1117, "
+            "border_color: 0x2A2E38, border_width: 1, radius: 14, pad_all: 0, scrollable: false, "
+            "widgets: [label: { text: \"\\U000F0415\", align: center, text_font: f_icon, text_color: 0x4A5160 }] }\n"
+            % (pad, pad, bw, bh))
+    for i, shortcut in enumerate(sc[:shown]):
         cx = pad + (i % cols) * (bw + gap)
         cy = pad + (i // cols) * (bh + gap)
-        if s:
-            glyph = glyph_for(s.get("icon", ""))
-            tgt = s.get("target", "")
-            act = "lvgl.page.show: page_home"
-            if tgt.startswith("page:"):
-                pid = pagemap.get(tgt[5:])
-                if pid:
-                    act = "lvgl.page.show: %s" % pid
-            elif tgt.startswith("special:"):
-                act = "lvgl.page.show: page_%s" % tgt.split(":")[1]
-            inner += (
-                "              - button:\n"
-                "                  x: %d\n                  y: %d\n                  width: %d\n                  height: %d\n"
-                "                  bg_color: 0x161B24\n                  radius: 14\n                  pad_all: 0\n                  scrollable: false\n"
-                "                  widgets:\n"
-                "                    - label: { text: \"%s\", align: center, y: -13, text_font: f_icon, text_color: 0x2ED5B8 }\n"
-                "                    - label: { text: %s, align: center, y: 17, width: %d, text_align: center, text_font: f_body, text_color: 0xF3F5F8 }\n"
-                "                  on_click: [%s]\n"
-                % (cx, cy, bw, bh, glyph, esc(s.get("label", "Open")), bw - 10, act))
-        else:
-            inner += (
-                "              - obj: { x: %d, y: %d, width: %d, height: %d, bg_color: 0x0F1117, "
-                "border_color: 0x2A2E38, border_width: 1, radius: 14, pad_all: 0, scrollable: false, "
-                "widgets: [label: { text: \"\\U000F0415\", align: center, text_font: f_icon, text_color: 0x4A5160 }] }\n"
-                % (cx, cy, bw, bh))
+        glyph = glyph_for(shortcut.get("icon", ""))
+        tgt = shortcut.get("target", "")
+        act = "lvgl.page.show: page_home"
+        note = ""
+        if tgt.startswith("page:"):
+            pid = pagemap.get(tgt[5:])
+            if pid:
+                act = "lvgl.page.show: %s" % pid
+        elif tgt.startswith("room:"):
+            pid = pagemap.get(slug(tgt[5:]))
+            if pid:
+                act = "lvgl.page.show: %s" % pid
+            else:
+                note = ("              # shortcut %s has no page (expected key '%s') -> Home\n"
+                        % (tgt, slug(tgt[5:])))
+        elif tgt.startswith("special:"):
+            act = "lvgl.page.show: page_%s" % tgt.split(":")[1]
+        inner += note + (
+            "              - button:\n"
+            "                  x: %d\n                  y: %d\n                  width: %d\n                  height: %d\n"
+            "                  bg_color: 0x161B24\n                  radius: 14\n                  pad_all: 0\n                  scrollable: false\n"
+            "                  widgets:\n"
+            "                    - label: { text: \"%s\", align: center, y: -13, text_font: f_icon, text_color: 0x2ED5B8 }\n"
+            "                    - label: { text: %s, align: center, y: 17, width: %d, text_align: center, text_font: f_body, text_color: 0xF3F5F8 }\n"
+            "                  on_click: [%s]\n"
+            % (cx, cy, bw, bh, glyph, esc(shortcut.get("label", "Open")), bw - 10, act))
     return [card_obj(x, y, w, h, inner)], [], []
 
 
@@ -1938,8 +2423,7 @@ def _unjoin(e):
 
 
 def vol_slider_yaml(sld, sx, sy, sw, value, e):
-    """A teal-accented volume slider (matches the web volume bars + seek bar) that
-    pushes to media_player.volume_set. Teal indicator/knob keeps one accent per surface."""
+    """A teal-accented volume slider (matches the web volume bars + seek bar) that\n    pushes to media_player.volume_set. Teal indicator/knob keeps one accent per surface."""
     return ("              - slider:\n                  id: %s\n                  x: %d\n                  y: %d\n                  width: %d\n"
             "                  bg_color: 0x23262F\n                  bg_opa: 100%%\n"
             "                  min_value: 0\n                  max_value: 100\n                  value: %d\n"
@@ -1953,8 +2437,7 @@ SPK_DEMO_VOL = [42, 28, 55, 35, 60, 22, 48, 30]
 
 
 def c_speakers(card, x, y, w, h, base):
-    """Multi-room speakers: per-speaker volume + Join/Leave grouping (images 2 & 3).
-    Demo groups the first half of the entities (first = SOURCE); the rest are joinable."""
+    """Multi-room speakers: per-speaker volume + Join/Leave grouping (images 2 & 3).\n    Demo groups the first half of the entities (first = SOURCE); the rest are joinable."""
     ents = card.get("entities", []) or DEFAULT_SPKS
     n = len(ents)
     gcount = max(1, (n + 1) // 2)
@@ -2001,7 +2484,7 @@ def c_speakers(card, x, y, w, h, base):
     # Tap a row: grouped -> unjoin (leave); solo -> join to the card's master zone.
     master = card.get("entity") or ents[0]
     inner = lbl(sg, 14, 14, "f_icon", "0x2ED5B8")
-    inner += lbl("SPEAKERS \\u00B7 TAP TO LINK OR LEAVE", 50, 20, "f_micro", "0x868CA0")
+    inner += lbl("SPEAKERS \\u00B7 TAP TO LINK OR LEAVE", 50, 20, "f_micro", "0x868CA0", width=w - 64, long="dot", height=14)
     list_y = 48
     gap = 8
     rh = max(56, min(78, (h - list_y - 14 - (n - 1) * gap) // max(1, n)))
@@ -2032,8 +2515,10 @@ def c_speakers(card, x, y, w, h, base):
                   "                          - label: { id: %s, text: %s, x: 42, y: 9, width: %d, long_mode: dot, text_font: f_body, text_color: 0xC2C7D2 }\n"
                   "                          - label: { id: %s, text: \"\\U000F0415\", align: top_right, x: -14, y: 8, text_font: f_icon, text_color: 0x2ED5B8 }\n"
                   "                          - label: { id: %s, text: \"LINKED\", align: top_right, x: -14, y: 12, text_font: f_micro, text_color: 0x2ED5B8, hidden: true }\n"
-                  % (rowid, ry, rw, rh, tog, icid, sg, nmid, esc(nm(i)), rw - 150, plusid, lnkid))
-        if e and rh >= 56:
+                  % (rowid, ry, rw, rh, tog, icid, sg, nmid, esc(nm(i)),
+                     max(40, rw - (56 if rw < 170 else 150)), plusid, lnkid))
+        has_sld = bool(e) and rh >= 56 and rw >= 180      # inline volume only when a usable track fits
+        if has_sld:
             inner += ("                          - slider:\n                              id: %s\n                              x: 42\n                              y: %d\n                              width: %d\n                              height: 8\n"
                       "                              bg_color: 0x23262F\n                              bg_opa: 100%%\n"
                       "                              min_value: 0\n                              max_value: 100\n                              value: 30\n"
@@ -2043,10 +2528,10 @@ def c_speakers(card, x, y, w, h, base):
                       "                                    action: media_player.volume_set\n"
                       "                                    data: { entity_id: %s, volume_level: !lambda 'char b[8]; snprintf(b, sizeof(b), \"%%.2f\", lv_slider_get_value(id(%s)) / 100.0); return std::string(b);' }\n"
                       % (sldv, rh - 22, rw - 120, e, sldv))
-        if e:
-            # live volume (numeric sensor)
+            # live volume (numeric sensor) — only when the slider exists
             ss.append("  - platform: homeassistant\n    id: ha_%s\n    entity_id: %s\n    attribute: volume_level\n    on_value:\n"
                       "      - lvgl.slider.update: { id: %s, value: !lambda 'return (int)(x * 100);' }\n" % (sldv, e, sldv))
+        if e:
             # live group state (group_members list attr as text) -> restyle row in place
             ts.append("  - platform: homeassistant\n    id: ha_%s_g%d\n    entity_id: %s\n    attribute: group_members\n    on_value:\n"
                       "      then:\n"
@@ -2064,95 +2549,135 @@ def c_speakers(card, x, y, w, h, base):
 
 
 def c_spotify_art(card, x, y, w, h, base):
-    """Album-art-forward Spotify control (handoff cards E/F): a pre-baked album-art
-    panel with a SOLID overlaid transport bar (LVGL-safe, no blur) + a green vertical
-    volume fill-strip and a mute button on the right. E = 4x3 (adds shuffle/repeat),
-    F = 3x3 compact. Art = server-fetched still via the shared online_image decoder."""
+    """Album-art Spotify control, 1:1 with the web preview (builder.html\n    `spotify_art`): the art panel fills the left column and a semi-transparent metadata strip (LVGL-safe, no blur) overlays its bottom — title / artist / progress\n    bar / touch-first transport row ([shuffle 48][prev 48][play 64][next 48],\n    20px gaps), each in its own band — plus a 56px green vertical volume\n    fill-rail with live percent readout and a mute button below it on the\n    right. All geometry is anchored off (w, h) so every allowed span\n    (3x3 .. 6x5) lays out without overlap: the strip is a fixed-height content\n    band (fonts don't scale) and the art + rail absorb the rest. Art = single\n    JPEG still fetched + HW-decoded on the mjpeg_stream task (fetch_still);\n    its square edge is min(art column w, h) so it fills the column under the\n    strip."""
     e = card.get("entity", "")
-    wide = card["w"] >= 4
-    tid, aid, ppid = base + "_t", base + "_a", base + "_pp"
+    tid, aid, ppid, pgid = base + "_t", base + "_a", base + "_pp", base + "_pg"
     sld, fillid, gripid, vpid = base + "_vs", base + "_vf", base + "_vg", base + "_vp"
-    GN, GN_LO = "0x1DB954", "0x0E7A37"
+    shid = base + "_sh"                                   # shuffle icon (recolored by state)
+    GN, GN_LO, SH_OFF = "0x1DB954", "0x0E7A37", "0x6E727E"
     prev = ha("media_player.media_previous_track", e) if e else "lvgl.page.show: page_home"
     plpz = ha("media_player.media_play_pause", e) if e else "lvgl.page.show: page_home"
     nxt = ha("media_player.media_next_track", e) if e else "lvgl.page.show: page_home"
     mute = ha("media_player.volume_mute", e, 'is_volume_muted: "true"') if e else "lvgl.page.show: page_home"
-    heart, shuf, rep = glyph_for("heart"), glyph_for("shuffle-variant"), glyph_for("repeat")
-    pad, gap = 12, 12
-    vw = 88 if wide else 72
+    # transport glyphs render at ~26-30px -> f_icon (30px); rail/mute stay small (18px)
+    for cp in ("000F04AE", "000F04AD", "000F03E4", "000F040A", "000F049D"):
+        USED_ICON_CP.add(cp)
+    for cp in ("000F057E", "000F075F"):
+        USED_ICONSM_CP.add(cp)
+    # Web-preview geometry (builder.html draws the 6x5 grid 1:1 at device px):
+    # card pad 14, art|rail gap 8, 56px volume rail, 36px mute button 8 below it.
+    pad, gap, vw, mut = 14, 8, 56, 36
     ax = ay = pad
-    aw = w - pad - gap - vw - pad
-    ah = h - 2 * pad
-    tp_h = 118 if wide else 104
-    tpy = ay + ah - tp_h
+    aw = w - 2 * pad - gap - vw                           # art column width
+    ah = h - 2 * pad                                      # art column height
     vx = ax + aw + gap
-    vth = ah - 12 - 44                                    # volume track height (mute btn below)
-    vol0 = 65 if wide else 80
-    real = min(aw, ah)
+    vth = ah - gap - mut                                  # volume track height (mute btn below)
+    tp_h = 148              # metadata strip: fixed-height band (fonts don't scale)
+    tpy = ay + ah - tp_h
+    trkw = aw - 20                                        # progress track (10px side insets)
+    vol0 = 65
+    real = min(aw, ah)      # square art edge: fills the column; the strip overlays its bottom
 
-    # --- art panel (dark bg + centered pre-baked art) + heart chip ---
-    inner = ("              - obj: { x: " + str(ax) + ", y: " + str(ay) + ", width: " + str(aw) + ", height: " + str(ah) + ", bg_color: 0x1B1E27, radius: 12, clip_corner: true, border_width: 0, pad_all: 0, scrollable: false }\n")
-    inner += lbl("\\U000F075A", ax + (aw - 40) // 2, ay + (ah - tp_h - 44) // 2, "f_icon", "0x5D6470")
+    # --- art panel (fills the left column; placeholder note centered like the web) ---
+    inner = ("              - obj: { x: " + str(ax) + ", y: " + str(ay) + ", width: " + str(aw) + ", height: " + str(ah) + ", bg_color: 0x1B1E27, radius: 10, clip_corner: true, border_width: 0, pad_all: 0, scrollable: false }\n")
+    inner += lbl("\\U000F075A", ax + (aw - 30) // 2, ay + (ah - 34) // 2, "f_icon", "0x5D6470")
     if e and ART_ENABLED:
         img_id = base + "_art"
-        inner += "              - image: { id: " + img_id + ", x: " + str(ax + (aw - real) // 2) + ", y: " + str(ay + (ah - real) // 2) + ", src: gen_art_" + str(real) + " }\n"
+        # ss_image placeholder src + hidden (camera-widget pattern): the stills
+        # channel unhides the widget when the first fetched art is applied.
+        inner += "              - image: { id: " + img_id + ", x: " + str(ax + (aw - real) // 2) + ", y: " + str(ay + (ah - real) // 2) + ", src: ss_image, hidden: true }\n"
         ART_IMAGES.append((real, img_id, e))
-    inner += "              - obj: { x: " + str(ax + aw - 46) + ", y: " + str(ay + 10) + ", width: 36, height: 36, bg_color: 0x000000, bg_opa: 40%, radius: 18, border_width: 0, pad_all: 0, scrollable: false, widgets: [label: { text: \"" + heart + "\", align: center, text_font: f_icon, text_color: " + GN + " }] }\n"
-    # --- solid transport panel overlaid on the art bottom ---
-    inner += "              - obj: { x: " + str(ax) + ", y: " + str(tpy) + ", width: " + str(aw) + ", height: " + str(tp_h) + ", bg_color: 0x0B0D11, radius: 0, border_width: 0, pad_all: 0, scrollable: false }\n"
-    inner += lbl("Nothing playing", ax + 14, tpy + 12, "f_body", "0xF3F5F8", wid=tid, width=aw - 28, long="dot", height=22)
-    inner += lbl("", ax + 14, tpy + 36, "f_small", "0xAEB4C2", wid=aid, width=aw - 28, long="dot", height=18)
-    pgy = tpy + 60
-    inner += "              - obj: { x: " + str(ax + 14) + ", y: " + str(pgy) + ", width: " + str(aw - 28) + ", height: 4, bg_color: 0x2A2D36, radius: 2, border_width: 0, pad_all: 0, scrollable: false }\n"
-    inner += "              - obj: { x: " + str(ax + 14) + ", y: " + str(pgy) + ", width: " + str(int((aw - 28) * 0.4)) + ", height: 4, bg_color: " + GN + ", radius: 2, border_width: 0, pad_all: 0, scrollable: false }\n"
-    # transport buttons (prev / play-pause / next centered; shuffle+repeat on the wide E)
-    small, big = 42, 52
-    bty = tpy + tp_h - big - 10
-    cx = ax + aw // 2
-    yo = (big - small) // 2
-    inner += btn(cx - big // 2, bty, big, big, "\\U000F03E4", plpz, bg=GN, color="0x052E16", radius=big // 2, font="f_icon", lid=ppid)
-    inner += btn(cx - big // 2 - 18 - small, bty + yo, small, small, "\\U000F04AE", prev, bg="0x161B24", radius=small // 2, font="f_icon")
-    inner += btn(cx + big // 2 + 18, bty + yo, small, small, "\\U000F04AD", nxt, bg="0x161B24", radius=small // 2, font="f_icon")
-    if wide:
-        inner += lbl(shuf, ax + 16, bty + (big - 22) // 2, "f_icon", "0x868CA0")
-        inner += lbl(rep, ax + aw - 38, bty + (big - 22) // 2, "f_icon", "0x868CA0")
-    # --- green vertical volume fill-strip (right) ---
-    fh0 = int(vth * vol0 / 100)
+    # --- translucent metadata strip overlaid on the art bottom; fixed bands never overlap:
+    # title 8..28, artist 30..46, progress 52..55, transport 64..136, bottom pad 12 ---
+    inner += "              - obj: { x: " + str(ax) + ", y: " + str(tpy) + ", width: " + str(aw) + ", height: " + str(tp_h) + ", bg_color: 0x000000, bg_opa: 50%, radius: 0, border_width: 0, pad_all: 0, scrollable: false }\n"
+    inner += lbl("Nothing playing", ax + 10, tpy + 8, "f_body", "0xF3F5F8", wid=tid, width=trkw, long="dot", height=20)
+    inner += lbl("", ax + 10, tpy + 30, "f_small", "0xAEB4C2", wid=aid, width=trkw, long="dot", height=16)
+    pgy = tpy + 52
+    inner += "              - obj: { x: " + str(ax + 10) + ", y: " + str(pgy) + ", width: " + str(trkw) + ", height: 3, bg_color: 0x2A2D36, radius: 2, border_width: 0, pad_all: 0, scrollable: false }\n"
+    inner += "              - obj: { id: " + pgid + ", x: " + str(ax + 10) + ", y: " + str(pgy) + ", width: " + str(max(1, int(trkw * 0.4))) + ", height: 3, bg_color: " + GN + ", radius: 2, border_width: 0, pad_all: 0, scrollable: false" + (", hidden: true" if e else "") + " }\n"
+    # transport row: 72px touch band, group [shuffle 48][prev 48][play 64][next 48]
+    # + 20px gaps = 268px, centered on the art column. Shuffle/prev/next are
+    # transparent-bg buttons so the tap target is the full 48px, not the glyph.
+    def _tbtn(bx, by, glyph, act_block, lid=None, color="0xFFFFFF"):
+        idpart = ("id: %s, " % lid) if lid else ""
+        return ("              - button:\n"
+                "                  x: %d\n                  y: %d\n                  width: 48\n                  height: 48\n"
+                "                  bg_opa: 0%%\n                  border_width: 0\n                  radius: 12\n                  pad_all: 0\n                  scrollable: false\n"
+                "                  widgets: [label: { %stext: %s, align: center, text_font: f_icon, text_color: %s }]\n"
+                "                  on_click:\n%s"
+                % (bx, by, idpart, esc(glyph), color, act_block))
+    if e:
+        # invert the live shuffle state. The icon color IS the mirrored state
+        # (the ha_<base>_sh readback below paints it green when on), so read it
+        # back off the widget — self-contained, so the host/emulator build
+        # (which drops all HA sensors) still compiles. HA's cv.boolean accepts
+        # "true"/"false" strings from the action data.
+        shuf = ("                    - homeassistant.action:\n"
+                "                        action: media_player.shuffle_set\n"
+                "                        data:\n"
+                "                          entity_id: " + e + "\n"
+                "                          shuffle: !lambda 'lv_color_t c = lv_obj_get_style_text_color(id(" + shid + "), LV_PART_MAIN); bool on = (c.red == 0x1D && c.green == 0xB9 && c.blue == 0x54); return on ? std::string(\"false\") : std::string(\"true\");'\n")
+    else:
+        shuf = "                    - lvgl.page.show: page_home\n"
+    bty = tpy + 64
+    gx = ax + (aw - 268) // 2
+    inner += _tbtn(gx, bty + 12, "\\U000F049D", shuf, lid=shid, color=SH_OFF)
+    inner += _tbtn(gx + 68, bty + 12, "\\U000F04AE", "                    - " + prev + "\n")
+    inner += btn(gx + 136, bty + 4, 64, 64, "\\U000F03E4", plpz, bg=GN, color="0x052E16", radius=32, font="f_icon", lid=ppid)
+    inner += _tbtn(gx + 220, bty + 12, "\\U000F04AD", "                    - " + nxt + "\n")
+    # --- green vertical volume fill-rail (right) + mute button below ---
+    fh0 = vth * vol0 // 100
     trk = ("              - obj:\n                  x: " + str(vx) + "\n                  y: " + str(ay) + "\n                  width: " + str(vw) + "\n                  height: " + str(vth) + "\n"
-           "                  bg_color: 0x0E1014\n                  radius: 12\n                  clip_corner: true\n                  border_width: 0\n                  pad_all: 0\n                  scrollable: false\n                  widgets:\n"
+           "                  bg_color: 0x0E1014\n                  radius: 9\n                  clip_corner: true\n                  border_width: 0\n                  pad_all: 0\n                  scrollable: false\n                  widgets:\n"
            "                    - obj: { id: " + fillid + ", x: 0, y: " + str(vth - fh0) + ", width: " + str(vw) + ", height: " + str(fh0) + ", bg_color: " + GN_LO + ", bg_grad_color: " + GN + ", bg_grad_dir: VER, border_width: 0, radius: 0, pad_all: 0, scrollable: false }\n"
-           "                    - obj: { id: " + gripid + ", x: 7, y: " + str(vth - fh0 - 3) + ", width: " + str(vw - 14) + ", height: 6, bg_color: 0xFFFFFF, radius: 3, border_width: 0, pad_all: 0, scrollable: false }\n"
-           "                    - label: { text: \"\\U000F057E\", align: top_mid, y: 10, text_font: f_icon, text_color: 0xFFFFFF }\n"
-           "                    - label: { id: " + vpid + ", text: \"" + str(vol0) + "\", align: bottom_mid, y: -10, text_font: f_title, text_color: 0xFFFFFF }\n")
+           "                    - obj: { id: " + gripid + ", x: 5, y: " + str(vth - fh0 - 4) + ", width: " + str(vw - 10) + ", height: 8, bg_color: 0xFFFFFF, radius: 4, border_width: 0, pad_all: 0, scrollable: false }\n"
+           "                    - label: { text: \"\\U000F057E\", align: top_mid, y: 6, text_font: f_iconsm, text_color: 0xFFFFFF }\n"
+           "                    - label: { id: " + vpid + ", text: \"" + str(vol0) + "\", align: bottom_mid, y: -6, text_font: f_body, text_color: 0xFFFFFF }\n")
     if e:
         trk += ("                    - slider:\n                        id: " + sld + "\n                        x: 0\n                        y: 0\n                        width: " + str(vw) + "\n                        height: " + str(vth) + "\n"
                 "                        bg_opa: 0%\n                        min_value: 0\n                        max_value: 100\n                        value: " + str(vol0) + "\n                        indicator: { bg_opa: 0% }\n                        knob: { bg_opa: 0% }\n"
                 "                        on_value:\n"
                 "                          - lvgl.widget.update: { id: " + fillid + ", height: !lambda 'return (int)(lv_slider_get_value(id(" + sld + ")) * " + str(vth) + " / 100.0f);' }\n"
                 "                          - lvgl.widget.update: { id: " + fillid + ", y: !lambda 'return (int)(" + str(vth) + " - lv_slider_get_value(id(" + sld + ")) * " + str(vth) + " / 100.0f);' }\n"
-                "                          - lvgl.widget.update: { id: " + gripid + ", y: !lambda 'return (int)(" + str(vth) + " - lv_slider_get_value(id(" + sld + ")) * " + str(vth) + " / 100.0f) - 3;' }\n"
+                "                          - lvgl.widget.update: { id: " + gripid + ", y: !lambda 'return (int)(" + str(vth) + " - lv_slider_get_value(id(" + sld + ")) * " + str(vth) + " / 100.0f) - 4;' }\n"
                 "                          - lvgl.label.update: { id: " + vpid + ", text: !lambda 'return std::to_string((int) lv_slider_get_value(id(" + sld + ")));' }\n"
                 "                        on_release:\n                          - homeassistant.action:\n                              action: media_player.volume_set\n"
                 "                              data: { entity_id: " + e + ", volume_level: !lambda 'char b[8]; snprintf(b, sizeof(b), \"%.2f\", lv_slider_get_value(id(" + sld + ")) / 100.0); return std::string(b);' }\n")
     inner += trk
-    inner += "              - button: { x: " + str(vx + (vw - 44) // 2) + ", y: " + str(ay + vth + 12) + ", width: 44, height: 44, bg_color: 0x1B1E26, border_color: 0x2B2F3A, border_width: 1, radius: 22, pad_all: 0, scrollable: false, widgets: [label: { text: \"\\U000F075F\", align: center, text_font: f_icon, text_color: 0x868CA0 }], on_click: [" + mute + "] }\n"
+    inner += "              - button: { x: " + str(vx + (vw - mut) // 2) + ", y: " + str(ay + vth + gap) + ", width: " + str(mut) + ", height: " + str(mut) + ", bg_color: 0x1B1E26, border_color: 0x2B2F3A, border_width: 1, radius: " + str(mut // 2) + ", pad_all: 0, scrollable: false, widgets: [label: { text: \"\\U000F075F\", align: center, text_font: f_iconsm, text_color: 0x868CA0 }], on_click: [" + mute + "] }\n"
 
-    ts = []
+    ss, ts = [], []
     if e:
         ts.append("  - platform: homeassistant\n    id: ha_" + tid + "\n    entity_id: " + e + "\n    attribute: media_title\n    on_value:\n"
                   "      - lvgl.label.update: { id: " + tid + ", text: !lambda 'return x.empty() ? std::string(\"Nothing playing\") : x;' }\n")
         ts.append("  - platform: homeassistant\n    id: ha_" + aid + "\n    entity_id: " + e + "\n    attribute: media_artist\n    on_value:\n"
                   "      - lvgl.label.update: { id: " + aid + ", text: !lambda 'return x;' }\n")
+        # not actively playing -> honest empty state: "Nothing playing", blank
+        # artist, empty progress (title/artist attrs vanish when idle, so their
+        # readbacks never fire to clear the last-played track).
         ts.append("  - platform: homeassistant\n    id: ha_" + base + "_st\n    entity_id: " + e + "\n    on_value:\n"
                   "      - lvgl.label.update: { id: " + tid + ", text: !lambda 'return (x == \"playing\" || x == \"paused\" || x == \"buffering\") ? std::string(lv_label_get_text(id(" + tid + "))) : std::string(\"Nothing playing\");' }\n"
-                  "      - lvgl.label.update: { id: " + ppid + ", text: !lambda 'return x == \"playing\" ? std::string(\"\\U000F03E4\") : std::string(\"\\U000F040A\");' }\n")
+                  "      - lvgl.label.update: { id: " + aid + ", text: !lambda 'return (x == \"playing\" || x == \"paused\" || x == \"buffering\") ? std::string(lv_label_get_text(id(" + aid + "))) : std::string(\"\");' }\n"
+                  "      - lvgl.label.update: { id: " + ppid + ", text: !lambda 'return x == \"playing\" ? std::string(\"\\U000F03E4\") : std::string(\"\\U000F040A\");' }\n"
+                  "      - if:\n"
+                  "          condition: { lambda: 'return x == \"playing\" || x == \"paused\" || x == \"buffering\";' }\n"
+                  "          then: [lvgl.widget.show: " + pgid + "]\n"
+                  "          else: [lvgl.widget.hide: " + pgid + "]\n")
+        # shuffle attr (HA sends bools as "on"/"off") -> icon accent green / gray;
+        # the shuffle button's on_click inverts this sensor's latest state.
+        ts.append("  - platform: homeassistant\n    id: ha_" + shid + "\n    entity_id: " + e + "\n    attribute: shuffle\n    on_value:\n"
+                  "      - lvgl.label.update: { id: " + shid + ", text_color: !lambda 'return (x == \"on\" || x == \"true\" || x == \"True\") ? lv_color_hex(" + GN + ") : lv_color_hex(" + SH_OFF + ");' }\n")
         ts.append("  - platform: homeassistant\n    id: ha_" + base + "_v\n    entity_id: " + e + "\n    attribute: volume_level\n    on_value:\n"
                   "      - lvgl.slider.update: { id: " + sld + ", value: !lambda 'return (int)(atof(x.c_str()) * 100);' }\n"
                   "      - lvgl.widget.update: { id: " + fillid + ", height: !lambda 'return (int)(atof(x.c_str()) * " + str(vth) + ");' }\n"
                   "      - lvgl.widget.update: { id: " + fillid + ", y: !lambda 'return (int)(" + str(vth) + " - atof(x.c_str()) * " + str(vth) + ");' }\n"
-                  "      - lvgl.widget.update: { id: " + gripid + ", y: !lambda 'return (int)(" + str(vth) + " - atof(x.c_str()) * " + str(vth) + ") - 3;' }\n"
+                  "      - lvgl.widget.update: { id: " + gripid + ", y: !lambda 'return (int)(" + str(vth) + " - atof(x.c_str()) * " + str(vth) + ") - 4;' }\n"
                   "      - lvgl.label.update: { id: " + vpid + ", text: !lambda 'return std::to_string((int)(atof(x.c_str()) * 100));' }\n")
-    return [card_obj(x, y, w, h, inner)], [], ts
+        # live progress: media_position / media_duration ratio -> green fill width
+        ss.append("  - platform: homeassistant\n    id: ha_" + base + "_dur\n    entity_id: " + e + "\n    attribute: media_duration\n")
+        ss.append("  - platform: homeassistant\n    id: ha_" + base + "_pos\n    entity_id: " + e + "\n    attribute: media_position\n    on_value:\n"
+                  "      - lvgl.widget.update: { id: " + pgid + ", width: !lambda 'float d = id(ha_" + base + "_dur).state; if (isnan(d) || d < 1.0f || isnan(x) || x < 0.0f) return 1; int px = (int)(" + str(trkw) + " * x / d); return px < 1 ? 1 : (px > " + str(trkw) + " ? " + str(trkw) + " : px);' }\n")
+    return [card_obj(x, y, w, h, inner)], ss, ts
 
 
 def c_generic(card, x, y, w, h, base):
@@ -2172,12 +2697,13 @@ CTRL = {
     "wx_current": c_wx_current, "wx_hourly": c_wx_hourly, "wx_daily": c_wx_daily, "wx_stats": c_wx_stats,
     "lightgroup": c_group, "outletgroup": c_outlet, "speakers": c_speakers,
     "sonos_sources": c_btngrid, "tv_sources": c_btngrid,
+    "tv_app": c_tv_app, "tv_apps": c_tv_apps,
     "tv_dpad": c_tv_dpad, "tv_transport": c_tv_transport, "tv_channel": c_tv_channel,
     "tv_volume": c_tv_volume, "tv_trackpad": c_tv_trackpad, "tvremote": c_tvremote,
     "playlist": c_playlist, "sonos_fav": c_playlist, "songlist": c_songlist,
     "sonos_library": c_songlist, "volume": c_volume, "volumes": c_volumes,
     "spotify_playlists": c_spot_playlists, "spotify_tracks": c_spot_tracks,
-    "spotify_speakers": c_spot_speakers,
+    "spotify_speakers": c_spot_speakers, "spotify_speaker": c_spot_speaker,
 }
 
 
@@ -2239,12 +2765,32 @@ HCHIP = {
     "weather_tomorrow": ("\\U000F0595", "Tmrw 74\\u00B0", "0xF2B84B"),
     "secured": ("\\U000F068A", "Secured", "0x2ED5B8"),
     "networking": ("\\U000F0928", "Online", "0x2ED5B8"),
-    "wifi": ("\\U000F0928", "Strong", "0x2ED5B8"),
+    "wifi": ("\\U000F0928", "-- dBm", "0x2ED5B8"),
     "ethernet": ("\\U000F0928", "Wired", "0x2ED5B8"),
     "sensor": ("\\U000F050F", "72\\u00B0", "0xF2685A"),
-    "lights_on": ("\\U000F0335", "3 on", "0xF2B84B"),
+    "lights_on": ("\\U000F0335", "0 on", "0xF2B84B"),
     "fans_on": ("\\U000F0210", "2 on", "0x2ED5B8"),
 }
+
+
+def _wx_header_attr_ts(base, sensor, attr, index, label_id, suffix=""):
+    lines = ["std::string t = x; size_t p = 0;", "for (int i = 0; i <= %d; i++) {" % index,
+             "  size_t nl = t.find('\\n', p);",
+             "  if (i == %d) { t = (nl==std::string::npos)?t.substr(p):t.substr(p,nl-p); break; }" % index,
+             "  if (nl==std::string::npos) { t.clear(); break; } p = nl + 1;", "}",
+             "if (!t.empty()) { t += \"%s\"; lv_label_set_text(id(%s), t.c_str()); }" % (suffix, label_id)]
+    return ("  - platform: homeassistant\n    id: ha_%s\n    entity_id: %s\n    attribute: %s\n"
+            "    on_value:\n      then:\n        - lambda: |-\n%s" % (base, sensor, attr, _indent(lines, 12)))
+
+
+def _wx_header_daily_icon_ts(base, index, icon_id):
+    lines = ["std::string t = x; size_t p = 0;", "for (int i = 0; i <= %d; i++) {" % index,
+             "  size_t nl = t.find('\\n', p);",
+             "  if (i == %d) { t = (nl==std::string::npos)?t.substr(p):t.substr(p,nl-p); break; }" % index,
+             "  if (nl==std::string::npos) { t.clear(); break; } p = nl + 1;", "}"] + _wx_cond_glyph_lines()
+    lines[-1] = "lv_label_set_text(id(%s), g.c_str());" % icon_id
+    return ("  - platform: homeassistant\n    id: ha_%s\n    entity_id: %s\n    attribute: d_cond\n"
+            "    on_value:\n      then:\n        - lambda: |-\n%s" % (base, WX_SENSOR_DAILY, _indent(lines, 12)))
 
 
 def gen_header(key, page, layout, pid):
@@ -2252,9 +2798,9 @@ def gen_header(key, page, layout, pid):
     left = hdr.get("left", "greeting")
     first = layout.get("nav", [{}])[0].get("page")
     greet = "Good evening, Ben" if key == first else page.get("title", "Aurora")
-    room = layout.get("install_room") or "Home"          # matches the builder (blank -> Home)
+    room = page.get("room") or ((layout.get("install_room") or "") if key == first else "") or page.get("title") or "Home"
     tid, did = "hct_" + pid, "hcd_" + pid                 # live clock/date label ids (per page)
-    out, clocks = "", []
+    out, clocks, weather_sens, weather_ts = "", [], [], []
     if left == "time":
         out += "        - label: { id: %s, text: \"10:42 PM\", x: 96, y: 12, text_font: f_display, text_color: 0xF3F5F8 }\n" % tid
         clocks.append((tid, "time"))
@@ -2289,21 +2835,51 @@ def gen_header(key, page, layout, pid):
     for i, item in enumerate((hdr.get("right") or [])[:4]):
         g, t, col = HCHIP.get(item, ("", item, "0x868CA0"))
         base_x = -(20 + i * 126)
-        icon_w = ("                    - label: { text: \"%s\", text_font: f_iconsm, text_color: %s }\n" % (g, col)) if g else ""
+        chipbase = "hchip_%s_%d" % (pid, i)
+        icon_id = chipbase + "_i"
+        icon_w = ("                    - label: { id: %s, text: \"%s\", text_font: f_iconsm, text_color: %s }\n" % (icon_id, g, col)) if g else ""
+        text_w = "                    - label: { text: %s, text_font: f_body, text_color: 0xF3F5F8 }\n" % esc(t)
+        chip_action = ""
+        if item == "wifi":
+            text_id = chipbase + "_t"
+            text_w = "                    - label: { id: %s, text: \"-- dBm\", text_font: f_body, text_color: 0xF3F5F8 }\n" % text_id
+            HEADER_WIFI.append((icon_id, text_id))
+        elif item == "lights_on":
+            text_id = chipbase + "_t"
+            target = "page_lights_on_%s" % pid
+            text_w = "                    - label: { id: %s, text: \"0 on\", text_font: f_body, text_color: 0xF3F5F8 }\n" % text_id
+            chip_action = "            on_click: [lvgl.page.show: %s]\n" % target
+            HEADER_LIGHTS.append((text_id, target, pid, key))
+        elif item == "weather_current":
+            text_id = chipbase + "_t"
+            text_w = "                    - label: { id: %s, text: \"72\u00B0\", text_font: f_body, text_color: 0xF3F5F8 }\n" % text_id
+            weather_sens.append(_wx_temp_readback(chipbase, "$ent_weather", text_id))
+            weather_ts.append(_wx_cond_icon_readback(chipbase, "$ent_weather", icon_id, "cond"))
+        elif item in ("weather_today", "weather_tomorrow"):
+            day = 0 if item == "weather_today" else 1
+            hi_id, lo_id = chipbase + "_hi", chipbase + "_lo"
+            text_w = ("                    - label: { text: \"H\", text_font: f_body, text_color: 0x868CA0 }\n"
+                      "                    - label: { id: %s, text: \"78\u00B0\", text_font: f_body, text_color: 0xF3F5F8 }\n"
+                      "                    - label: { text: \"L\", text_font: f_body, text_color: 0x868CA0 }\n"
+                      "                    - label: { id: %s, text: \"61\u00B0\", text_font: f_body, text_color: 0xF3F5F8 }\n" % (hi_id, lo_id))
+            weather_ts += [_wx_header_attr_ts(chipbase + "_hi", WX_SENSOR_DAILY, "d_high", day, hi_id, "\u00B0"),
+                           _wx_header_attr_ts(chipbase + "_lo", WX_SENSOR_DAILY, "d_low", day, lo_id, "\u00B0"),
+                           _wx_header_daily_icon_ts(chipbase + "_cond", day, icon_id)]
         out += (
-            "        - obj:\n"
+            "        - button:\n"
             "            align: top_right\n            x: %d\n            y: 18\n            width: 118\n            height: 40\n"
             "            bg_color: 0x14161C\n            border_color: 0x23262F\n            border_width: 1\n            radius: 12\n"
             "            pad_all: 0\n            scrollable: false\n"
+            "%s"
             "            widgets:\n"
             "              - obj:\n"
             "                  align: center\n                  width: SIZE_CONTENT\n                  height: SIZE_CONTENT\n"
             "                  bg_opa: 0\n                  border_width: 0\n                  pad_all: 0\n                  scrollable: false\n"
             "                  layout: { type: flex, flex_flow: ROW, flex_align_cross: center, pad_column: 8 }\n"
             "                  widgets:\n%s"
-            "                    - label: { text: %s, text_font: f_body, text_color: 0xF3F5F8 }\n"
-            % (base_x, icon_w, esc(t)))
-    return out, clocks
+            "%s"
+            % (base_x, chip_action, icon_w, text_w))
+    return out, clocks, weather_sens, weather_ts
 
 
 def _nav_onload(layout, active):
@@ -2316,15 +2892,26 @@ def _nav_onload(layout, active):
 
 
 def gen_settings_page(layout):
-    """Settings: brightness, screen timeout, motion wake + screensaver, restart."""
+    """Settings: display, selectable haptics, behavior, and photo screensaver."""
     onload = _nav_onload(layout, "settings")
     onload += ("        - lambda: |-\n"
-               "            if (id(g_wake_presence)) lv_obj_add_state(id(set_motion), LV_STATE_CHECKED);\n"
+
                "            if (id(g_screensaver)) lv_obj_add_state(id(set_saver), LV_STATE_CHECKED);\n"
                "            if (id(g_cam_wake)) lv_obj_add_state(id(set_cwake), LV_STATE_CHECKED);\n"
-               "            { lv_obj_t* HB[5] = { id(set_hap0),id(set_hap1),id(set_hap2),id(set_hap3),id(set_hap4) };\n"
-               "              lv_obj_t* HL[5] = { id(set_hap0_l),id(set_hap1_l),id(set_hap2_l),id(set_hap3_l),id(set_hap4_l) };\n"
-               "              for (int k=0;k<5;k++){ bool on=(k==id(g_haptic_level)); lv_obj_set_style_bg_color(HB[k], lv_color_hex(on?0x2ED5B8:0x0F1117),0); lv_obj_set_style_text_color(HL[k], lv_color_hex(on?0x06231D:0xC2C7D2),0); } }\n")
+               "            { lv_obj_t* B[5] = { id(set_hap0),id(set_hap1),id(set_hap2),id(set_hap3),id(set_hap4) };\n"
+               "              lv_obj_t* L[5] = { id(set_hap0_l),id(set_hap1_l),id(set_hap2_l),id(set_hap3_l),id(set_hap4_l) };\n"
+               "              for (int k=0;k<5;k++){ bool on=(k==id(g_haptic_level)); lv_obj_set_style_bg_color(B[k],lv_color_hex(on?0x2ED5B8:0x0F1117),0); lv_obj_set_style_text_color(L[k],lv_color_hex(on?0x06231D:0xC2C7D2),0); } }\n"
+               "            { lv_obj_t* B[3] = { id(set_hstyle0),id(set_hstyle1),id(set_hstyle2) };\n"
+               "              lv_obj_t* L[3] = { id(set_hstyle0_l),id(set_hstyle1_l),id(set_hstyle2_l) };\n"
+               "              for (int k=0;k<3;k++){ bool on=(k==id(g_haptic_style)); lv_obj_set_style_bg_color(B[k],lv_color_hex(on?0x2ED5B8:0x0F1117),0); lv_obj_set_style_text_color(L[k],lv_color_hex(on?0x06231D:0xC2C7D2),0); } }\n"
+               "            { const int V[4]={15,30,60,120}; lv_obj_t* B[4]={id(set_ssint0),id(set_ssint1),id(set_ssint2),id(set_ssint3)};\n"
+               "              lv_obj_t* L[4]={id(set_ssint0_l),id(set_ssint1_l),id(set_ssint2_l),id(set_ssint3_l)};\n"
+               "              for(int k=0;k<4;k++){ bool on=(V[k]==id(g_ss_seconds)); lv_obj_set_style_bg_color(B[k],lv_color_hex(on?0x2ED5B8:0x0F1117),0); lv_obj_set_style_text_color(L[k],lv_color_hex(on?0x06231D:0xC2C7D2),0); } }\n"
+               "            { const int V[4]={0,60000,300000,900000}; lv_obj_t* B[4]={id(set_to0),id(set_to1),id(set_to2),id(set_to3)};\n"
+               "              lv_obj_t* L[4]={id(set_to0_l),id(set_to1_l),id(set_to2_l),id(set_to3_l)}; for(int k=0;k<4;k++){ bool on=(V[k]==id(g_timeout_ms)); lv_obj_set_style_bg_color(B[k],lv_color_hex(on?0x2ED5B8:0x0F1117),0); lv_obj_set_style_text_color(L[k],lv_color_hex(on?0x06231D:0xC2C7D2),0); } }\n"
+               "            lv_dropdown_set_selected(id(set_quiet_start)->obj,id(g_quiet_start)); lv_dropdown_set_selected(id(set_quiet_end)->obj,id(g_quiet_end));\n"
+               "            { lv_obj_t* B[2]={id(set_wake0),id(set_wake1)}; lv_obj_t* L[2]={id(set_wake0_l),id(set_wake1_l)}; for(int k=0;k<2;k++){ bool on=(k==id(g_cam_wake_target)); lv_obj_set_style_bg_color(B[k],lv_color_hex(on?0x2ED5B8:0x0F1117),0); lv_obj_set_style_text_color(L[k],lv_color_hex(on?0x06231D:0xC2C7D2),0); } }\n"
+               "            { char b[24]; snprintf(b,sizeof(b),\"%d photos\",(int)id(g_ss_files).size()); lv_label_set_text(id(set_ss_count),b); }\n")
     w = "        - image: { src: img_aurora_bg, x: 0, y: 0 }\n"
     w += "        - label: { text: \"Settings\", x: 94, y: 18, text_font: f_h1, text_color: 0xF3F5F8 }\n"
     w += "        - label: { text: \"AURORA PANEL \\u00B7 10.0.0.174\", x: 94, y: 58, text_font: f_micro, text_color: 0x868CA0 }\n"
@@ -2336,64 +2923,108 @@ def gen_settings_page(layout):
             "                  indicator:\n                    bg_color: 0x2ED5B8\n                  knob:\n                    bg_color: 0x2ED5B8\n"
             "                  on_release:\n                    - light.turn_on: { id: display_backlight, brightness: !lambda 'return lv_slider_get_value(id(set_bri)) / 100.0f;' }\n")
     w += card_obj(94, 96, 448, 116, bri)
-    # --- Screen timeout card ---
+    # --- Screen timeout card (also controls when the photo screensaver starts) ---
     to = lbl("SCREEN TIMEOUT", 20, 16, "f_micro", "0x868CA0")
     opts = [("Never", 0), ("1 min", 60000), ("5 min", 300000), ("15 min", 900000)]
     tbw = (448 - 40 - 3 * 8) // 4
     for i, (lab, ms) in enumerate(opts):
-        sel = (ms == 300000)
+        body = ("id(g_timeout_ms)=%d; const int V[4]={0,60000,300000,900000};\n"
+                "                        lv_obj_t* B[4]={id(set_to0),id(set_to1),id(set_to2),id(set_to3)}; lv_obj_t* L[4]={id(set_to0_l),id(set_to1_l),id(set_to2_l),id(set_to3_l)};\n"
+                "                        for(int k=0;k<4;k++){ bool on=(V[k]==id(g_timeout_ms)); lv_obj_set_style_bg_color(B[k],lv_color_hex(on?0x2ED5B8:0x0F1117),0); lv_obj_set_style_text_color(L[k],lv_color_hex(on?0x06231D:0xC2C7D2),0); }" % ms)
         to += ("              - button:\n                  id: set_to%d\n                  x: %d\n                  y: 54\n                  width: %d\n                  height: 46\n"
-               "                  bg_color: %s\n                  radius: 10\n                  pad_all: 0\n                  scrollable: false\n"
-               "                  widgets: [label: { text: \"%s\", align: center, text_font: f_small, text_color: %s }]\n"
-               "                  on_click:\n                    - lambda: 'id(g_timeout_ms) = %d;'\n"
-               % (i, 20 + i * (tbw + 8), tbw, ("0x2ED5B8" if sel else "0x0F1117"), lab, ("0x06231D" if sel else "0xC2C7D2"), ms))
+               "                  bg_color: 0x0F1117\n                  radius: 10\n                  pad_all: 0\n                  scrollable: false\n"
+               "                  widgets: [label: { id: set_to%d_l, text: \"%s\", align: center, text_font: f_small, text_color: 0xC2C7D2 }]\n"
+               "                  on_click:\n                    - lambda: |-\n                        %s\n"
+               % (i, 20 + i * (tbw + 8), tbw, i, lab, body))
     w += card_obj(94, 224, 448, 116, to)
-    # --- Haptics card: touch-feedback strength (Off/Low/Med/High/Max) ---
+    # --- Haptics card: waveform style + strength, both preview immediately ---
+    hap = lbl("HAPTICS", 20, 12, "f_micro", "0x868CA0")
+    hap += lbl("Feel", 20, 34, "f_small", "0xC2C7D2")
+    styles = [("Crisp", 0), ("Soft", 1), ("Double", 2)]
+    sbw = (448 - 40 - 2 * 8) // 3
+    for i, (lab, sty) in enumerate(styles):
+        body = ("id(g_haptic_style)=%d; id(haptic).set_style(%d);\n"
+                "                        lv_obj_t* B[3]={id(set_hstyle0),id(set_hstyle1),id(set_hstyle2)};\n"
+                "                        lv_obj_t* L[3]={id(set_hstyle0_l),id(set_hstyle1_l),id(set_hstyle2_l)};\n"
+                "                        for(int k=0;k<3;k++){ bool on=(k==id(g_haptic_style)); lv_obj_set_style_bg_color(B[k],lv_color_hex(on?0x2ED5B8:0x0F1117),0); lv_obj_set_style_text_color(L[k],lv_color_hex(on?0x06231D:0xC2C7D2),0); }\n"
+                "                        id(haptic).click();" % (sty, sty))
+        hap += ("              - button:\n                  id: set_hstyle%d\n                  x: %d\n                  y: 58\n                  width: %d\n                  height: 40\n"
+                "                  bg_color: 0x0F1117\n                  radius: 8\n                  pad_all: 0\n                  scrollable: false\n"
+                "                  widgets: [label: { id: set_hstyle%d_l, text: \"%s\", align: center, text_font: f_small, text_color: 0xC2C7D2 }]\n"
+                "                  on_click:\n                    - lambda: |-\n                        %s\n"
+                % (i, 20 + i * (sbw + 8), sbw, i, lab, body))
+    hap += lbl("Strength", 20, 108, "f_small", "0xC2C7D2")
     hlevels = [("Off", 0), ("Low", 1), ("Med", 2), ("High", 3), ("Max", 4)]
     hbw = (448 - 40 - 4 * 8) // 5
-    hap = lbl("HAPTICS", 20, 16, "f_micro", "0x868CA0")
-    hap += lbl("Touch feedback", 20, 34, "f_title", "0xF3F5F8", height=26)
     for i, (lab, lvl) in enumerate(hlevels):
-        body = ("id(g_haptic_level) = %d; id(haptic).set_level(%d);\n"
-                "                        lv_obj_t* HB[5] = { id(set_hap0),id(set_hap1),id(set_hap2),id(set_hap3),id(set_hap4) };\n"
-                "                        lv_obj_t* HL[5] = { id(set_hap0_l),id(set_hap1_l),id(set_hap2_l),id(set_hap3_l),id(set_hap4_l) };\n"
-                "                        for (int k=0;k<5;k++){ bool on=(k==id(g_haptic_level)); lv_obj_set_style_bg_color(HB[k], lv_color_hex(on?0x2ED5B8:0x0F1117),0); lv_obj_set_style_text_color(HL[k], lv_color_hex(on?0x06231D:0xC2C7D2),0); }\n"
+        body = ("id(g_haptic_level)=%d; id(haptic).set_level(%d);\n"
+                "                        lv_obj_t* B[5]={id(set_hap0),id(set_hap1),id(set_hap2),id(set_hap3),id(set_hap4)};\n"
+                "                        lv_obj_t* L[5]={id(set_hap0_l),id(set_hap1_l),id(set_hap2_l),id(set_hap3_l),id(set_hap4_l)};\n"
+                "                        for(int k=0;k<5;k++){ bool on=(k==id(g_haptic_level)); lv_obj_set_style_bg_color(B[k],lv_color_hex(on?0x2ED5B8:0x0F1117),0); lv_obj_set_style_text_color(L[k],lv_color_hex(on?0x06231D:0xC2C7D2),0); }\n"
                 "                        id(haptic).click();" % (lvl, lvl))
-        hap += ("              - button:\n                  id: set_hap%d\n                  x: %d\n                  y: 70\n                  width: %d\n                  height: 44\n"
-                "                  bg_color: 0x0F1117\n                  radius: 10\n                  pad_all: 0\n                  scrollable: false\n"
+        hap += ("              - button:\n                  id: set_hap%d\n                  x: %d\n                  y: 132\n                  width: %d\n                  height: 40\n"
+                "                  bg_color: 0x0F1117\n                  radius: 8\n                  pad_all: 0\n                  scrollable: false\n"
                 "                  widgets: [label: { id: set_hap%d_l, text: \"%s\", align: center, text_font: f_small, text_color: 0xC2C7D2 }]\n"
                 "                  on_click:\n                    - lambda: |-\n                        %s\n"
                 % (i, 20 + i * (hbw + 8), hbw, i, lab, body))
-    w += card_obj(94, 352, 448, 116, hap)
-    # --- Behavior card: motion wake + screensaver ---
-    beh = lbl("BEHAVIOR", 20, 16, "f_micro", "0x868CA0")
-    beh += lbl("Motion wake", 20, 50, "f_body", "0xF3F5F8", height=22)
-    beh += ("              - switch:\n                  id: set_motion\n                  align: top_right\n                  x: -20\n                  y: 46\n"
-            "                  on_value:\n                    - lambda: 'id(g_wake_presence) = x;'\n")
-    beh += lbl("Screensaver", 20, 104, "f_body", "0xF3F5F8", height=22)
-    beh += ("              - switch:\n                  id: set_saver\n                  align: top_right\n                  x: -20\n                  y: 100\n"
-            "                  on_value:\n                    - lambda: 'id(g_screensaver) = x;'\n")
-    beh += lbl("Approach wake (camera)", 20, 158, "f_body", "0xF3F5F8", height=22)
-    beh += ("              - switch:\n                  id: set_cwake\n                  align: top_right\n                  x: -20\n                  y: 154\n"
+    w += card_obj(94, 352, 448, 190, hap)
+    # --- Quiet-hours schedule + camera wake ---
+    beh = lbl("SLEEP SCHEDULE", 20, 12, "f_micro", "0x868CA0")
+    beh += lbl("Approach wake", 20, 34, "f_body", "0xF3F5F8", height=22)
+    beh += ("              - switch:\n                  id: set_cwake\n                  align: top_right\n                  x: -20\n                  y: 28\n"
             "                  on_value:\n                    - lambda: 'id(g_cam_wake) = x;'\n")
-    w += card_obj(560, 96, 370, 206, beh)
+    beh += lbl("Start", 20, 72, "f_small", "0x868CA0")
+    beh += lbl("End", 193, 72, "f_small", "0x868CA0")
+    hour_opts = '["12 AM","1 AM","2 AM","3 AM","4 AM","5 AM","6 AM","7 AM","8 AM","9 AM","10 AM","11 AM","12 PM","1 PM","2 PM","3 PM","4 PM","5 PM","6 PM","7 PM","8 PM","9 PM","10 PM","11 PM"]'
+    for did, xpos, target in (("set_quiet_start", 20, "g_quiet_start"), ("set_quiet_end", 193, "g_quiet_end")):
+        beh += ("              - dropdown:\n                  id: %s\n                  x: %d\n                  y: 94\n                  width: 157\n                  height: 42\n"
+                "                  options: %s\n                  bg_color: 0x0F1117\n                  border_color: 0x23262F\n                  border_width: 1\n                  radius: 8\n                  text_color: 0xF3F5F8\n"
+                "                  dropdown_list: { bg_color: 0x14161C, border_color: 0x23262F, border_width: 1, text_color: 0xF3F5F8 }\n"
+                "                  on_value:\n                    - lambda: 'id(%s)=lv_dropdown_get_selected(id(%s)->obj);'\n"
+                % (did, xpos, hour_opts, target, did))
+    w += card_obj(560, 96, 370, 180, beh)
+    # --- Photo screensaver card ---
+    ss = lbl("PHOTO SCREENSAVER", 20, 12, "f_micro", "0x868CA0")
+    ss += lbl("Enabled", 20, 38, "f_body", "0xF3F5F8", height=22)
+    ss += lbl("0 photos", -78, 16, "f_small", "0x868CA0", wid="set_ss_count", align="top_right")
+    ss += ("              - switch:\n                  id: set_saver\n                  align: top_right\n                  x: -20\n                  y: 32\n"
+           "                  on_value:\n                    - lambda: 'id(g_screensaver)=x; if(x && id(g_timeout_ms)==0) id(g_timeout_ms)=300000;'\n")
+    ss += lbl("Change photo", 20, 78, "f_small", "0xC2C7D2")
+    intervals = [("15s", 15), ("30s", 30), ("1m", 60), ("2m", 120)]
+    ibw = (370 - 40 - 3 * 8) // 4
+    for i, (lab, secs) in enumerate(intervals):
+        body = ("id(g_ss_seconds)=%d; id(ss_seconds).publish_state(%d);\n"
+                "                        const int V[4]={15,30,60,120}; lv_obj_t* B[4]={id(set_ssint0),id(set_ssint1),id(set_ssint2),id(set_ssint3)};\n"
+                "                        lv_obj_t* L[4]={id(set_ssint0_l),id(set_ssint1_l),id(set_ssint2_l),id(set_ssint3_l)};\n"
+                "                        for(int k=0;k<4;k++){ bool on=(V[k]==id(g_ss_seconds)); lv_obj_set_style_bg_color(B[k],lv_color_hex(on?0x2ED5B8:0x0F1117),0); lv_obj_set_style_text_color(L[k],lv_color_hex(on?0x06231D:0xC2C7D2),0); }" % (secs, secs))
+        ss += ("              - button:\n                  id: set_ssint%d\n                  x: %d\n                  y: 98\n                  width: %d\n                  height: 34\n"
+               "                  bg_color: 0x0F1117\n                  radius: 8\n                  pad_all: 0\n                  scrollable: false\n"
+               "                  widgets: [label: { id: set_ssint%d_l, text: \"%s\", align: center, text_font: f_small, text_color: 0xC2C7D2 }]\n"
+               "                  on_click:\n                    - lambda: |-\n                        %s\n"
+               % (i, 20 + i * (ibw + 8), ibw, i, lab, body))
+    ss += lbl("Motion opens", 20, 138, "f_small", "0xC2C7D2")
+    wake_targets = [("Dashboard", 0), ("Photos", 1)]
+    wbw = (370 - 40 - 8) // 2
+    for i, (lab, target) in enumerate(wake_targets):
+        body = ("id(g_cam_wake_target)=%d; lv_obj_t* B[2]={id(set_wake0),id(set_wake1)}; lv_obj_t* L[2]={id(set_wake0_l),id(set_wake1_l)}; "
+                "for(int k=0;k<2;k++){ bool on=(k==id(g_cam_wake_target)); lv_obj_set_style_bg_color(B[k],lv_color_hex(on?0x2ED5B8:0x0F1117),0); lv_obj_set_style_text_color(L[k],lv_color_hex(on?0x06231D:0xC2C7D2),0); }" % target)
+        ss += ("              - button:\n                  id: set_wake%d\n                  x: %d\n                  y: 158\n                  width: %d\n                  height: 30\n"
+               "                  bg_color: 0x0F1117\n                  radius: 8\n                  pad_all: 0\n                  scrollable: false\n"
+               "                  widgets: [label: { id: set_wake%d_l, text: \"%s\", align: center, text_font: f_small, text_color: 0xC2C7D2 }]\n"
+               "                  on_click:\n                    - lambda: |-\n                        %s\n"
+               % (i, 20 + i * (wbw + 8), wbw, i, lab, body))
+    w += card_obj(560, 288, 370, 198, ss)
     # --- Restart ---
-    w += ("        - button:\n            x: 560\n            y: 318\n            width: 370\n            height: 56\n"
-          "            bg_color: 0x2a1414\n            radius: 14\n            scrollable: false\n"
-          "            widgets: [label: { text: \"Restart Panel\", align: center, text_font: f_body, text_color: 0xF2685A }]\n"
+    w += ("        - button:\n            x: 560\n            y: 498\n            width: 370\n            height: 44\n"
+          "            bg_color: 0x2a1414\n            radius: 10\n            scrollable: false\n"
+          "            widgets: [label: { text: \"Restart Panel\", align: center, text_font: f_small, text_color: 0xF2685A }]\n"
           "            on_click: [button.press: btn_restart_panel]\n")
     w += "        - label: { text: \"Guition JC1060P470 \\u00B7 web UI on :80\", x: 94, y: 576, text_font: f_small, text_color: 0x5D6470 }\n"
     return "    - id: page_settings\n      bg_color: 0x0A0B0F\n      scrollable: false\n%s      widgets:\n%s" % (onload, w)
 
 
-def gen_trackpad_page(layout, back_pid, active):
-    """Dedicated LG trackpad page — a verbatim clone of the PROVEN hand-built
-    page_trackpad (aurora.yaml): a full page whose pad/strip sit at exactly the
-    gesture engine's default zones (move pad 96,120..856,470; scroll strip
-    872,120..1004,470), entered via the remote's Pad button. on_load re-asserts
-    the canonical zone globals + engages the engine (g_tp_active); on_unload
-    disengages. Surfaces are clickable:false, same as the hand-built page —
-    the raw touchscreen handlers see every touch regardless."""
+def gen_trackpad_page(layout, back_pid, active, trackpad_pid="page_trackpad"):
+    """Dedicated LG trackpad page — a verbatim clone of the PROVEN hand-built\n    page_trackpad (aurora.yaml): a full page whose pad/strip sit at exactly the\n    gesture engine's default zones (move pad 96,120..856,470; scroll strip\n    872,120..1004,470), entered via the remote's Pad button. on_load re-asserts\n    the canonical zone globals + engages the engine (g_tp_active); on_unload\n    disengages. Surfaces are clickable:false, same as the hand-built page —\n    the raw touchscreen handlers see every touch regardless."""
     onload = _nav_onload(layout, active)
     # Pad/scroll shrink to h320 (bottom 440) to seat a Back/Home row + a volume row
     # underneath; the gesture zones MUST track the visual rects, so on_load re-asserts
@@ -2444,14 +3075,148 @@ def gen_trackpad_page(layout, back_pid, active):
     w += _remote_btn(96, 297, 520, "\\U000F075E", "", "VOLUMEDOWN", gcol="0x2ED5B8")
     w += _remote_btn(401, 297, 520, "\\U000F075F", "", "MUTE", gcol="0x2ED5B8")
     w += _remote_btn(706, 298, 520, "\\U000F075D", "", "VOLUMEUP", gcol="0x2ED5B8")
-    return ("    - id: page_trackpad\n      bg_color: 0x0A0B0F\n      scrollable: false\n%s"
+    return ("    - id: %s\n      bg_color: 0x0A0B0F\n      scrollable: false\n%s"
             "      on_unload:\n        - lambda: 'id(g_tp_active) = false;'\n"
-            "      widgets:\n%s" % (onload, w))
+            "      widgets:\n%s" % (trackpad_pid, onload, w))
 
 
+def _configured_light_entities(layout):
+    """All HA lights known at save time, falling back to placed Aurora cards."""
+    out = []
+    def include(entity):
+        return (isinstance(entity, str) and entity.startswith("light.")
+                and not (entity.startswith("light.espcontrol_") and entity.endswith("_display_backlight")))
+    for value in layout.get("home_lights", []):
+        entity = value.get("entity", value.get("entity_id", "")) if isinstance(value, dict) else value
+        if include(entity) and entity not in out:
+            out.append(entity)
+    if out:
+        return out
+    for page in layout.get("pages", {}).values():
+        for cards in page.get("subpages", [[]]):
+            for card in cards:
+                vals = []
+                if card.get("ck") in ("light", "light_t"):
+                    vals = [card.get("entity", "")]
+                elif card.get("ck") == "lightgroup":
+                    vals = card.get("entities") or []
+                for value in vals:
+                    entity = value.get("entity", value.get("entity_id", "")) if isinstance(value, dict) else value
+                    if include(entity) and entity not in out:
+                        out.append(entity)
+    return out
+
+
+def _lights_on_page(layout, target, back_pid, key, lights):
+    active = next((slug(n.get("id", "")) for n in layout.get("nav", []) if n.get("page") == key), None)
+    onload = _nav_onload(layout, active)
+    count_id = target + "_count"
+    w = "        - image: { src: img_aurora_bg, x: 0, y: 0 }\n"
+    w += "        - label: { text: \"Lights On\", x: 96, y: 24, text_font: f_h1, text_color: 0xF3F5F8 }\n"
+    w += "        - label: { id: %s, text: \"0 lights\", x: 96, y: 66, text_font: f_body, text_color: 0x868CA0 }\n" % count_id
+    w += ("        - button:\n            align: top_right\n            x: -20\n            y: 20\n            width: 118\n            height: 44\n"
+          "            bg_color: 0x161B24\n            border_color: 0x23262F\n            border_width: 1\n            radius: 10\n            pad_all: 0\n            scrollable: false\n"
+          "            widgets: [label: { text: \"Back\", align: center, text_font: f_body, text_color: 0xF3F5F8 }]\n"
+          "            on_click: [lvgl.page.show: %s]\n" % back_pid)
+    w += ("        - obj:\n            x: 96\n            y: 112\n            width: 908\n            height: 420\n"
+          "            bg_opa: 0\n            border_width: 0\n            pad_all: 0\n            scrollable: true\n"
+          "            layout: { type: flex, flex_flow: ROW_WRAP, flex_align_main: start, flex_align_cross: start, pad_row: 12, pad_column: 12 }\n"
+          "            widgets:\n")
+    tw, th = 285, 78
+    for i, entity in enumerate(lights):
+        name = entity.split(".", 1)[-1].replace("_", " ").title()
+        tile_id = target + "_tile_%d" % i
+        w += ("              - button:\n                  id: %s\n                  width: %d\n                  height: %d\n"
+              "                  bg_color: 0x161B24\n                  border_color: 0x4A3510\n                  border_width: 1\n                  radius: 10\n                  pad_all: 0\n                  scrollable: false\n                  hidden: true\n"
+              "                  widgets:\n                    - label: { text: \"\\U000F0335\", x: 16, align: left_mid, text_font: f_iconsm, text_color: 0xF2B84B }\n"
+              "                    - label: { text: %s, x: 52, align: left_mid, width: %d, long_mode: dot, text_font: f_body, text_color: 0xF3F5F8 }\n"
+              "                    - label: { text: \"\\U000F0156\", x: -14, align: right_mid, text_font: f_iconsm, text_color: 0x868CA0 }\n"
+              "                  on_click: [homeassistant.action: { action: light.turn_off, data: { entity_id: %s } }]\n"
+              % (tile_id, tw, th, esc(name), tw - 92, entity))
+    if not lights:
+        w += "        - label: { text: \"No configured lights are currently available.\", align: center, text_font: f_body, text_color: 0x868CA0 }\n"
+    return ("    - id: %s\n      bg_color: 0x0A0B0F\n      scrollable: false\n%s      widgets:\n%s" % (target, onload, w))
+
+
+def _header_live_bindings(lights):
+    sens, txt = [], []
+    if HEADER_WIFI:
+        bars = [glyph_for("wifi-strength-1", True), glyph_for("wifi-strength-2", True),
+                glyph_for("wifi-strength-3", True), glyph_for("wifi-strength-4", True)]
+        USED_ICONSM_CP.update(bar[2:].upper() for bar in bars)
+        lines = ["char b[16]; snprintf(b, sizeof(b), \"%d dBm\", (int)x);",
+                 "const char* g = x > -55 ? \"%s\" : x > -65 ? \"%s\" : x > -75 ? \"%s\" : \"%s\";" % (bars[3], bars[2], bars[1], bars[0])]
+        for icon_id, text_id in HEADER_WIFI:
+            lines += ["lv_label_set_text(id(%s), g);" % icon_id, "lv_label_set_text(id(%s), b);" % text_id]
+        sens.append("  - platform: wifi_signal\n    id: aurora_header_wifi\n    update_interval: 10s\n    on_value:\n      then:\n        - lambda: |-\n%s" % _indent(lines, 12))
+    if lights and HEADER_LIGHTS:
+        state_ids = ["ha_header_light_%d" % i for i in range(len(lights))]
+        count_labels = [x[0] for x in HEADER_LIGHTS] + [x[1] + "_count" for x in HEADER_LIGHTS]
+        for i, entity in enumerate(lights):
+            lines = ["int n = 0;"]
+            lines += ["if (id(%s).state == \"on\") n++;" % sid for sid in state_ids]
+            lines += ["char b[24]; snprintf(b, sizeof(b), n == 1 ? \"1 on\" : \"%d on\", n);"]
+            lines += ["lv_label_set_text(id(%s), b);" % lid for lid in count_labels]
+            for _label, target, _back, _key in HEADER_LIGHTS:
+                tile = target + "_tile_%d" % i
+                lines.append("if (x == \"on\") lv_obj_clear_flag(id(%s), LV_OBJ_FLAG_HIDDEN); else lv_obj_add_flag(id(%s), LV_OBJ_FLAG_HIDDEN);" % (tile, tile))
+            txt.append("  - platform: homeassistant\n    id: %s\n    entity_id: %s\n    on_value:\n      then:\n        - lambda: |-\n%s" % (state_ids[i], entity, _indent(lines, 12)))
+    return sens, txt
+def _rgb_editor_page(layout, target, back_pid, key, entity, name):
+    active = next((slug(n.get("id", "")) for n in layout.get("nav", []) if n.get("page") == key), None)
+    onload = _nav_onload(layout, active)
+    hue_id, preview_id = target + "_hue", target + "_preview"
+    w = "        - image: { src: img_aurora_bg, x: 0, y: 0 }\n"
+    w += "        - label: { text: %s, x: 96, y: 22, text_font: f_h1, text_color: 0xF3F5F8 }\n" % esc(name or "Light color")
+    w += "        - label: { text: \"COLOR\", x: 96, y: 82, text_font: f_micro, text_color: 0x868CA0 }\n"
+    w += ("        - button:\n            align: top_right\n            x: -20\n            y: 20\n            width: 120\n            height: 44\n"
+          "            bg_color: 0x161B24\n            border_color: 0x23262F\n            border_width: 1\n            radius: 10\n            pad_all: 0\n            scrollable: false\n"
+          "            widgets: [label: { text: \"Back\", align: center, text_font: f_body, text_color: 0xF3F5F8 }]\n"
+          "            on_click: [lvgl.page.show: %s]\n" % back_pid)
+    w += ("        - obj:\n            id: %s\n            x: 96\n            y: 116\n            width: 908\n            height: 90\n"
+          "            bg_color: 0xFF0000\n            border_color: 0xFFFFFF\n            border_width: 2\n            radius: 12\n            pad_all: 0\n            scrollable: false\n" % preview_id)
+    colors = ["0xFF0000", "0xFFFF00", "0x00FF00", "0x00FFFF", "0x0000FF", "0xFF00FF", "0xFF0000"]
+    strip_x, strip_y, strip_w = 96, 228, 908
+    seg = strip_w // 6
+    for i in range(6):
+        sw = strip_w - i * seg if i == 5 else seg + 1
+        w += ("        - obj: { x: %d, y: %d, width: %d, height: 52, bg_color: %s, bg_grad_color: %s, bg_grad_dir: HOR, border_width: 0, radius: 0, pad_all: 0, scrollable: false, clickable: false }\n"
+              % (strip_x + i * seg, strip_y, sw, colors[i], colors[i + 1]))
+    hsv = ("float h=lv_slider_get_value(id(%s)); float c=1.0f, x2=1.0f-fabsf(fmodf(h/60.0f,2.0f)-1.0f); "
+           "float r=0,g=0,b=0; int q=((int)h/60)%%6; if(q==0){r=c;g=x2;}else if(q==1){r=x2;g=c;}else if(q==2){g=c;b=x2;}"
+           "else if(q==3){g=x2;b=c;}else if(q==4){r=x2;b=c;}else{r=c;b=x2;} "
+           "return lv_color_hex(((int)(r*255)<<16)|((int)(g*255)<<8)|(int)(b*255));" % hue_id)
+    paint_knob = hsv.replace("return lv_color_hex", "lv_obj_set_style_bg_color(id(%s), lv_color_hex" % hue_id)
+    paint_knob = paint_knob[:-1] + ", LV_PART_KNOB);"
+    w += ("        - slider:\n            id: %s\n            x: 96\n            y: 220\n            width: 908\n            height: 68\n"
+          "            min_value: 0\n            max_value: 359\n            value: 30\n            bg_opa: 0%%\n            indicator: { bg_opa: 0%% }\n"
+          "            knob: { width: 22, height: 64, bg_color: 0xFF8000, border_color: 0x0A0B0F, border_width: 2, radius: 6 }\n"
+          "            on_value:\n              - lvgl.widget.update: { id: %s, bg_color: !lambda '%s' }\n"
+          "              - lambda: '%s'\n"
+          % (hue_id, preview_id, hsv, paint_knob))
+    w += "        - label: { text: \"WHITE\", x: 96, y: 320, text_font: f_micro, text_color: 0x868CA0 }\n"
+    presets = [("Warm", 2700, "0xFFD7A3"), ("Bright", 4000, "0xFFF4E5"), ("Cool", 6500, "0xDDEBFF")]
+    for i, (label, kelvin, color) in enumerate(presets):
+        w += ("        - button:\n            x: %d\n            y: 350\n            width: 290\n            height: 70\n"
+              "            bg_color: %s\n            border_color: 0xFFFFFF\n            border_width: 1\n            radius: 10\n            pad_all: 0\n            scrollable: false\n"
+              "            widgets: [label: { text: \"%s\", align: center, text_font: f_title, text_color: 0x101218 }]\n"
+              "            on_click:\n              - homeassistant.action:\n                  action: light.turn_on\n                  data: { entity_id: %s, color_temp_kelvin: \"%d\"%s }\n              - lvgl.page.show: %s\n"
+              % (96 + i * 309, color, label, entity, kelvin, ', brightness_pct: "100"' if label == "Bright" else "", back_pid))
+    w += ("        - button:\n            x: 96\n            y: 458\n            width: 290\n            height: 64\n"
+          "            bg_color: 0x161B24\n            border_color: 0x23262F\n            border_width: 1\n            radius: 10\n            pad_all: 0\n            scrollable: false\n"
+          "            widgets: [label: { text: \"Cancel\", align: center, text_font: f_title, text_color: 0xC2C7D2 }]\n"
+          "            on_click: [lvgl.page.show: %s]\n" % back_pid)
+    w += ("        - button:\n            x: 405\n            y: 458\n            width: 599\n            height: 64\n"
+          "            bg_color: 0x2ED5B8\n            border_width: 0\n            radius: 10\n            pad_all: 0\n            scrollable: false\n"
+          "            widgets: [label: { text: \"Apply color\", align: center, text_font: f_title, text_color: 0x06231D }]\n"
+          "            on_click:\n              - homeassistant.action:\n                  action: light.turn_on\n                  data: { entity_id: %s }\n                  data_template:\n                    hs_color: !lambda 'return std::string(\"{{ [\") + std::to_string((int)lv_slider_get_value(id(%s))) + \"%s\";'\n              - lvgl.page.show: %s\n"
+          % (entity, hue_id, ", 100] }}", back_pid))
+    return "    - id: %s\n      bg_color: 0x0A0B0F\n      scrollable: false\n%s      widgets:\n%s" % (target, onload, w)
 def gen_pages(layout, pagemap):
     pages_yaml, sens, txt, clocks = "", [], [], []
-    tp_page = None                                        # (back_pid, active nav) of the tvremote page
+    lights = _configured_light_entities(layout)
+    tp_pages = []                                         # one contextual trackpad per rich TV remote
+    rgb_pages = []                                        # one contextual editor per RGB light
     for key, page in layout.get("pages", {}).items():
         hdr = page.get("header") or {}
         header_on = bool(hdr.get("on"))
@@ -2460,48 +3225,94 @@ def gen_pages(layout, pagemap):
             pid = pagemap[key] if si == 0 else "%s_%d" % (pagemap[key], si)
             widgets = "        - image: { src: img_aurora_bg, x: 0, y: 0 }\n"
             if header_on:
-                hdr_yaml, clk = gen_header(key, page, layout, pid)
+                hdr_yaml, clk, hdr_sens, hdr_ts = gen_header(key, page, layout, pid)
                 widgets += hdr_yaml
                 clocks += clk
-            has_tv = any(c.get("ck") == "tvremote" for c in cards)
+                sens += hdr_sens
+                txt += hdr_ts
+            active = next((slug(n.get("id", "")) for n in layout.get("nav", []) if n.get("page") == key), None)
+            cam_n = len(CAM_CARDS)                        # detect a live camera card emitted on THIS sub-page
             for card in cards:
+                if card.get("ck") == "light" and card.get("rgb") and card.get("entity"):
+                    rgb_pages.append(("page_rgb_g_%s" % slug(card.get("id", "light")), pid, key, card.get("entity"), card.get("name", "Light")))
+                if card.get("ck") == "tvremote":
+                    trackpad_pid = "page_trackpad_%s" % slug(card.get("id", "tv"))
+                    card = dict(card)
+                    card["_trackpad_page"] = trackpad_pid
+                    tp_pages.append((trackpad_pid, pid, active))
                 ws, ss, ts = emit_card(card, header_on, pagemap)
                 widgets += "".join(ws)
                 sens += ss
                 txt += ts
-            # Sub-page paging affordances. These MUST be emitted as PAGE-LEVEL widgets at
-            # 8-space indent: btn() emits 14-space card-inner YAML, which would nest inside
-            # the last card's widgets and never render as a page button (the original bug).
-            # Prev starts at x=94 to clear the left nav rail; both float on the bottom strip.
-            if si > 0:                                    # Prev -> previous sub-page (sub-page 1's prev is the base page id)
-                prv = pagemap[key] if si == 1 else "%s_%d" % (pagemap[key], si - 1)
-                widgets += ("        - button:\n            x: 94\n            y: 540\n            width: 128\n            height: 46\n"
-                            "            bg_color: 0x161B24\n            border_color: 0x2ED5B8\n            border_width: 1\n            radius: 12\n"
-                            "            pad_all: 0\n            scrollable: false\n"
-                            "            widgets: [label: { text: \"Prev\", align: center, text_font: f_body, text_color: 0x2ED5B8 }]\n"
-                            "            on_click: [lvgl.page.show: %s]\n" % prv)
-            if si < len(subs) - 1:                        # Next -> following sub-page
-                nxt = "%s_%d" % (pagemap[key], si + 1)
-                widgets += ("        - button:\n            x: 802\n            y: 540\n            width: 128\n            height: 46\n"
-                            "            bg_color: 0x161B24\n            border_color: 0x2ED5B8\n            border_width: 1\n            radius: 12\n"
-                            "            pad_all: 0\n            scrollable: false\n"
-                            "            widgets: [label: { text: \"Next\", align: center, text_font: f_body, text_color: 0x2ED5B8 }]\n"
-                            "            on_click: [lvgl.page.show: %s]\n" % nxt)
-            active = next((slug(n.get("id", "")) for n in layout.get("nav", []) if n.get("page") == key), None)
+            # Sub-page navigation: swipe left/right (wired on the page below;
+            # cards set gesture_bubble so a swipe that starts on a card reaches
+            # the page) plus a slim carousel-style dot indicator centered on the
+            # bottom strip. Each dot is also a tap target that jumps straight to
+            # its sub-page — the guaranteed-discoverable path, since swipe alone
+            # isn't obvious. This replaces the old Prev/Next pills, which floated
+            # at y=540 and collided with bottom-anchored card content (the sunset
+            # readout, the transport row). Emitted as PAGE-LEVEL widgets at
+            # 8-space indent (btn()'s 14-space YAML would nest inside the last
+            # card's widgets and never render as a page control).
+            nsub = len(subs)
+            if nsub > 1:
+                tw = 34                                   # per-dot tap target
+                cx = (2 * X0 + COLS * CELLW + (COLS - 1) * GUT) // 2   # center of the usable area (past the nav rail)
+                sx = cx - nsub * tw // 2
+
+                for j in range(nsub):
+                    dpid = pagemap[key] if j == 0 else "%s_%d" % (pagemap[key], j)
+                    dot = "0x2ED5B8" if j == si else "0x3A4150"
+                    widgets += ("        - obj:\n            x: %d\n            y: 554\n            width: %d\n            height: 34\n"
+                                "            bg_opa: 0%%\n            border_width: 0\n            outline_width: 0\n            shadow_width: 0\n"
+                                "            radius: 0\n            pad_all: 0\n            scrollable: false\n            clickable: true\n"
+                                "            widgets: [obj: { align: center, width: 10, height: 10, radius: 5, bg_color: %s, border_width: 0, pad_all: 0, scrollable: false, clickable: false }]\n"
+                                "            on_click: [lvgl.page.show: %s]\n" % (sx + j * tw, tw, dot, dpid))
             onload = _nav_onload(layout, active)
-            if has_tv and tp_page is None:                # remember where the remote lives (Pad links here back)
-                tp_page = (pid, active)
+            onunload = ""
+            if len(CAM_CARDS) > cam_n:                    # live camera lifecycle: stream while the page shows
+                CAM_CARDS[0] = CAM_CARDS[0][:4] + (pid,)  # remember the hosting page (fullscreen Dismiss target)
+                onload += "        - lambda: 'id(cam_stream).start(0, id(%s_cam));'\n" % CAM_CARDS[0][3]
+                onunload = "      on_unload:\n        - lambda: 'id(cam_stream).stop();'\n"
+            # Page-level swipe -> adjacent sub-page (matches the dot targets).
+            # LVGL re-fires the gesture event every indev cycle while the finger
+            # is down, so an ungated handler cascades through several sub-pages
+            # (each freshly-shown page keeps receiving the same drag). Gate on a
+            # shared 500ms timestamp so one physical swipe advances exactly once.
+            def _swipe(evt, target):
+                return ("      %s:\n        - if:\n            condition:\n"
+                        "              lambda: 'return (millis() - id(g_swipe_ms)) > 500;'\n"
+                        "            then:\n              - lambda: 'id(g_swipe_ms) = millis();'\n"
+                        "              - lvgl.page.show: %s\n" % (evt, target))
+            swipe = ""
+            if si < nsub - 1:
+                swipe += _swipe("on_swipe_left", "%s_%d" % (pagemap[key], si + 1))
+            if si > 0:
+                sw_prev = pagemap[key] if si == 1 else "%s_%d" % (pagemap[key], si - 1)
+                swipe += _swipe("on_swipe_right", sw_prev)
             pages_yaml += (
-                "    - id: %s\n      bg_color: 0x0A0B0F\n      scrollable: false\n%s      widgets:\n%s" % (pid, onload, widgets))
-    if tp_page is not None:                               # dedicated trackpad page (hand-built clone)
-        pages_yaml += gen_trackpad_page(layout, tp_page[0], tp_page[1])
+                "    - id: %s\n      bg_color: 0x0A0B0F\n      scrollable: false\n%s%s%s      widgets:\n%s" % (pid, onload, onunload, swipe, widgets))
+    for _label, target, back_pid, key in HEADER_LIGHTS:
+        pages_yaml += _lights_on_page(layout, target, back_pid, key, lights)
+    live_sens, live_txt = _header_live_bindings(lights)
+    sens += live_sens
+    txt += live_txt
+    for trackpad_pid, back_pid, active in tp_pages:
+        pages_yaml += gen_trackpad_page(layout, back_pid, active, trackpad_pid)
+    for target, back_pid, key, entity, name in rgb_pages:
+        pages_yaml += _rgb_editor_page(layout, target, back_pid, key, entity, name)
     pages_yaml += gen_settings_page(layout)
     return pages_yaml, sens, txt, clocks
 
 
 def build_lvgl(layout):
     USED_ICON_CP.clear()  # repopulated by glyph_for() as icons are placed
+    USED_ICONSM_CP.clear()  # repopulated by card emitters needing small icons
     EXTRA_CLOCKS.clear()  # repopulated by card emitters (e.g. weather time/date)
+    ART_IMAGES.clear()    # repopulated by media/spotify_art card emitters
+    CAM_CARDS.clear()     # repopulated by the first live camera card
+    HEADER_WIFI.clear()
+    HEADER_LIGHTS.clear()
     pagemap = {key: "page_" + slug(key) for key in layout.get("pages", {})}
     nav = gen_nav(layout, pagemap)
     pages, sens, txt, clocks = gen_pages(layout, pagemap)
@@ -2510,18 +3321,23 @@ def build_lvgl(layout):
 
 # ---- base extraction: keep hardware/font/style sections, drop UI bindings ----
 KEEP = ["substitutions", "esphome", "esp32", "psram", "esp_ldo", "esp32_hosted",
-        "wifi", "api", "ota", "safe_mode", "logger", "web_server", "output", "light",
+        "wifi", "api", "ota", "safe_mode", "logger", "output", "light",
         "external_components", "i2c", "touchscreen", "display", "http_request",
         "image", "font", "globals", "number", "button", "time",
         "ov02c10_support", "esp_video_camera",   # onboard camera (HA entity + RTSP :8554)
-        "mjpeg_stream",   # front-door MJPEG viewer (defines id: cam_stream, ref'd by on_boot)
+        # NOT kept: "mjpeg_stream" — its hand-built targets are sized for the hand
+        # dashboard. assemble() ALWAYS emits its own id: cam_stream instance (the
+        # kept esphome: on_boot $cam_stream_url_override lambda references that id).
+        # NOT kept: "web_server" — internal RAM is the scarcest resource on gen
+        # builds (large layouts). The web UI is redundant next to the configurator,
+        # and under combined load (live camera RX + art decode + HA API) the panel
+        # hit sdio_rx_get_buffer asserts / bad_alloc boot-loops; the web server's
+        # listener + per-connection buffers were the biggest discretionary cut.
         "drv2605"]   # DRV2605L haptic driver (id: haptic)
 
 
 def scrub_lvgl_actions(text):
-    """Remove lvgl.* actions (and their nested params) from the kept base —
-    they reference the old UI widgets that the generated pages replace. Then
-    drop any on_<event>: automation left with no remaining actions."""
+    """Remove lvgl.* actions (and their nested params) from the kept base —\n    they reference the old UI widgets that the generated pages replace. Then\n    drop any on_<event>: automation left with no remaining actions."""
     lines = text.splitlines(keepends=True)
     out, i = [], 0
     while i < len(lines):
@@ -2572,8 +3388,7 @@ def split_sections(text):
 
 
 def style_defs(lvgl_text):
-    """Pull the style_definitions block out of the original lvgl: section.
-    Stops at the first 2-space-indented line (next key or a comment)."""
+    """Pull the style_definitions block out of the original lvgl: section.\n    Stops at the first 2-space-indented line (next key or a comment)."""
     m = re.search(r"\n  style_definitions:\n(.*?)(?=\n  \S)", lvgl_text, re.S)
     if not m:
         return ""
@@ -2585,6 +3400,17 @@ def style_defs(lvgl_text):
 # generator drops all `interval:` blocks (they reference dropped ids), so re-inject
 # the standalone g_tp_* -> pyscript.lg_pointer_* flush the TV trackpad depends on.
 # References only globals that survive into the generated build (g_tp_*) + HA services.
+# Internal RAM is the panel's scarcest resource (SDIO WiFi RX pool, mbedTLS,
+# every `new`); log it so famine shows up as a trend line instead of a crash.
+HEAP_LOG_INTERVAL_ITEM = (
+    "  - interval: 30s\n"
+    "    then:\n"
+    "      - lambda: |-\n"
+    "          ESP_LOGI(\"heap\", \"internal free=%u largest=%u | psram free=%u\",\n"
+    "                   (unsigned) heap_caps_get_free_size(MALLOC_CAP_INTERNAL),\n"
+    "                   (unsigned) heap_caps_get_largest_free_block(MALLOC_CAP_INTERNAL),\n"
+    "                   (unsigned) heap_caps_get_free_size(MALLOC_CAP_SPIRAM));\n")
+
 TP_FLUSH_INTERVAL = (
     "\ninterval:\n"
     "  - interval: 50ms\n"
@@ -2611,11 +3437,9 @@ TP_FLUSH_INTERVAL = (
     "            - lambda: 'id(g_tp_scroll) = id(g_tp_scroll) % 10;'\n"
 )
 
-# Night wake-on-approach (9pm-6am), verbatim from the hand-built build: while asleep
-# and g_cam_wake is on, the onboard camera's frame-diff motion wakes the panel; motion
-# keeps it awake; 60s of stillness sleeps it again. All refs survive generation once
-# esp_video_camera is KEPT (aurora_cam, g_* globals, ha_time, motion_threshold,
-# display_backlight, page_home).
+# Camera wake-on-approach. The camera component keeps a lightweight luma sampler
+# running even without an RTSP viewer, so this works whenever a timed-out screen
+# is dark. Night mode retains its independent 60-second sleep behavior.
 CAM_WAKE_INTERVAL = (
     "  - interval: 500ms\n"
     "    then:\n"
@@ -2623,23 +3447,18 @@ CAM_WAKE_INTERVAL = (
     "          condition:\n"
     "            lambda: |-\n"
     "              if (!id(g_cam_wake) || !id(g_screen_off)) return false;\n"
-    "              auto t = id(ha_time).now();\n"
-    "              if (!t.is_valid()) return false;\n"
-    "              if (!(t.hour >= 21 || t.hour < 6)) return false;\n"
+    "              if (millis() - id(g_cam_sleep_ms) < 1500) return false;\n"
     "              return id(aurora_cam).get_motion_level() >= (int) id(motion_threshold).state;\n"
     "          then:\n"
     "            - lambda: 'id(g_screen_off) = false; lv_display_trigger_activity(lv_display_get_default());'\n"
     "            - light.turn_on:\n"
     "                id: display_backlight\n"
     "                brightness: !lambda 'return id(g_bri) / 100.0f;'\n"
-    "            - lvgl.page.show: page_home\n"
+    "            - if:\n                condition:\n                  lambda: 'return id(g_cam_wake_target) == 1;'\n                then:\n                  - lvgl.page.show: page_screensaver\n                else:\n                  - lvgl.page.show: page_home\n"
     "      - if:\n"
     "          condition:\n"
     "            lambda: |-\n"
     "              if (!id(g_cam_wake) || id(g_screen_off)) return false;\n"
-    "              auto t = id(ha_time).now();\n"
-    "              if (!t.is_valid()) return false;\n"
-    "              if (!(t.hour >= 21 || t.hour < 6)) return false;\n"
     "              return id(aurora_cam).get_motion_level() >= (int) id(motion_threshold).state;\n"
     "          then:\n"
     "            - lambda: 'lv_display_trigger_activity(lv_display_get_default());'\n"
@@ -2649,13 +3468,26 @@ CAM_WAKE_INTERVAL = (
     "              if (!id(g_cam_wake) || id(g_screen_off)) return false;\n"
     "              auto t = id(ha_time).now();\n"
     "              if (!t.is_valid()) return false;\n"
-    "              if (!(t.hour >= 21 || t.hour < 6)) return false;\n"
+    "              int start=id(g_quiet_start), end=id(g_quiet_end);\n"
+    "              bool quiet = start < end ? (t.hour >= start && t.hour < end) : start > end ? (t.hour >= start || t.hour < end) : false;\n"
+    "              if (!quiet) return false;\n"
     "              return lv_display_get_inactive_time(lv_display_get_default()) > 60000;\n"
     "          then:\n"
-    "            - lambda: 'id(g_screen_off) = true;'\n"
+    "            - lambda: 'id(g_screen_off) = true; id(g_cam_sleep_ms) = millis();'\n"
     "            - light.turn_off: display_backlight\n"
 )
 
+CAM_WAKE_SENSORS = (
+    "  - platform: template\n    name: \"Panel Motion Level\"\n    id: panel_motion_level\n"
+    "    icon: \"mdi:run-fast\"\n    accuracy_decimals: 0\n    update_interval: 1s\n"
+    "    lambda: 'return id(aurora_cam).get_motion_level();'\n"
+    "  - platform: template\n    name: \"Panel Motion MaxDelta\"\n    id: panel_motion_maxd\n"
+    "    icon: \"mdi:delta\"\n    accuracy_decimals: 0\n    update_interval: 1s\n"
+    "    lambda: 'return id(aurora_cam).get_motion_maxdelta();'\n"
+    "  - platform: template\n    name: \"Panel Approach Flags\"\n    id: panel_flags\n"
+    "    accuracy_decimals: 0\n    update_interval: 2s\n"
+    "    lambda: 'return (float)((id(g_cam_wake) ? 2 : 0) + (id(g_screen_off) ? 1 : 0));'\n"
+)
 
 # Live header clock/date. strftime format + whether to strip a leading zero, per kind.
 CLOCK_FMT = {
@@ -2666,9 +3498,7 @@ CLOCK_FMT = {
 
 
 def clock_items(clocks):
-    """A single interval: item that repaints every live header time/date label from
-    ha_time (the HA time source kept in the generated build). Appended to the same
-    interval: list as TP_FLUSH_INTERVAL — device build only (host has no ha_time)."""
+    """A single interval: item that repaints every live header time/date label from\n    ha_time (the HA time source kept in the generated build). Appended to the same\n    interval: list as TP_FLUSH_INTERVAL — device build only (host has no ha_time)."""
     if not clocks:
         return ""
     ups = ""
@@ -2716,8 +3546,8 @@ SS_SCRIPT = (
     "          for (size_t i = 0; i < lo.size(); i++) lo[i] = tolower(lo[i]);\n"
     "          id(g_ss_is_png) = (lo.size() >= 4 && lo.compare(lo.size() - 4, 4, \".png\") == 0);\n"
     "      - if:\n          condition:\n            lambda: 'return id(g_ss_is_png);'\n          then:\n"
-    "            - online_image.set_url: { id: ss_image_png, url: !lambda 'return id(g_ss_url);' }\n            - component.update: ss_image_png\n"
-    "          else:\n            - online_image.set_url: { id: ss_image, url: !lambda 'return id(g_ss_url);' }\n            - component.update: ss_image\n"
+    "            - online_image.set_url: { id: ss_image_png, url: !lambda 'return id(g_ss_url);' }\n"
+    "          else:\n            - lambda: 'id(cam_stream).fetch_still(id(g_ss_url), id(ss_photo), 1024, 600);'\n"
 )
 SS_TEXT_SENSOR = (
     "  - platform: homeassistant\n    id: ha_ss_list\n    entity_id: sensor.aurora_screensaver\n    attribute: list\n    on_value:\n      then:\n"
@@ -2730,33 +3560,33 @@ SS_TEXT_SENSOR = (
     "            }\n"
     "            if (!cur.empty()) id(g_ss_files).push_back(cur);\n"
     "            id(g_ss_i) = 0;\n"
+    "            { char b[24]; snprintf(b, sizeof(b), \"%d photos\", (int) id(g_ss_files).size()); lv_label_set_text(id(set_ss_count), b); }\n"
+    "            ESP_LOGI(\"aurora\", \"screensaver: received %d photos; preloading\", (int) id(g_ss_files).size());\n"
 )
 SS_INTERVAL_ITEM = (
     "  - interval: 1s\n    then:\n"
     "      - if:\n          condition:\n            lambda: 'return id(g_ss_showing);'\n          then:\n"
     "            - lambda: 'id(g_ss_elapsed) += 1;'\n"
     "            - if:\n                condition:\n                  lambda: |-\n"
-    "                    int secs = (int) id(ss_seconds).state;\n                    if (secs < 5) secs = 30;\n                    return id(g_ss_elapsed) >= secs;\n"
+    "                    int secs = id(g_ss_seconds);\n                    if (secs < 5) secs = 30;\n                    return id(g_ss_elapsed) >= secs;\n"
     "                then:\n                  - lambda: 'id(g_ss_elapsed) = 0;'\n                  - script.execute: ss_next\n"
 )
 SS_ONIDLE = (
     "  on_idle:\n    timeout: !lambda 'return id(g_timeout_ms) == 0 ? 86400000 : id(g_timeout_ms);'\n    then:\n"
     "      - if:\n          condition:\n            lambda: 'return id(g_timeout_ms) > 0;'\n          then:\n"
     "            - if:\n                condition:\n                  lambda: 'return id(g_screensaver);'\n                then:\n                  - lvgl.page.show: page_screensaver\n"
-    "                else:\n                  - light.turn_off: display_backlight\n"
+    "                else:\n                  - lambda: 'id(g_screen_off) = true; id(g_cam_sleep_ms) = millis();'\n                  - light.turn_off: display_backlight\n"
 )
 
 
 def gen_screensaver_page():
-    """Full-screen photo screensaver: ss_photo (fed by the online_image decoders),
-    a dim scrim, live clock/date + demo temp. Any tap wakes to home."""
+    """Full-screen photo screensaver: ss_photo (fed by the online_image decoders),\n    a dim scrim, live clock/date + demo temp. Any tap wakes to home."""
     return (
         "    - id: page_screensaver\n      bg_color: 0x000000\n      bg_opa: 100%\n"
         "      on_load:\n"
         "        - lvgl.widget.update: { id: nav_rail, hidden: true }\n"
-        "        - lambda: 'id(g_ss_showing) = true; id(g_ss_elapsed) = 0; id(g_ss_i) = 0;'\n"
-        "        - script.execute: ss_next\n"
-        "      on_unload:\n"
+        "        - lambda: 'id(g_ss_showing) = true; id(g_ss_elapsed) = 0;'\n"
+            "      on_unload:\n"
         "        - lvgl.widget.update: { id: nav_rail, hidden: false }\n"
         "        - lambda: 'id(g_ss_showing) = false;'\n"
         "      widgets:\n"
@@ -2770,67 +3600,187 @@ def gen_screensaver_page():
     )
 
 
+def gen_camera_full_page():
+    """Fullscreen live camera (generated only when a live camera card exists):\n    black page, mjpeg_stream target 1 (800x600, 4:3) into gen_cam_full_img, the\n    shared status pill, Refresh (stream restart) + Dismiss back to the page\n    hosting the camera card. Mirrors the hand-built page_doorbell chrome."""
+    host_pid = CAM_CARDS[0][4]
+    return (
+        "    - id: page_camera_full\n      bg_color: 0x000000\n      bg_opa: 100%\n      scrollable: false\n"
+        "      on_load:\n"
+        "        - lvgl.widget.update: { id: nav_rail, hidden: true }\n"
+        "        - lambda: 'id(cam_stream).start(1, id(gen_cam_full_img));'\n"
+        "      on_unload:\n"
+        "        - lvgl.widget.update: { id: nav_rail, hidden: false }\n"
+        "        - lambda: 'id(cam_stream).stop();'\n"
+        "      widgets:\n"
+        "        - image: { id: gen_cam_full_img, src: ss_image, align: center, hidden: true }\n"
+        "        - obj: { id: gen_cam_full_pill, x: 20, y: 20, width: 78, height: 30, radius: 15, bg_color: 0x2A2F3A, "
+        "border_width: 0, pad_all: 0, scrollable: false, widgets: "
+        "[label: { id: gen_cam_full_pill_lbl, text: \"...\", align: center, text_font: f_small, text_color: 0xFFFFFF }] }\n"
+        "        - button:\n            align: bottom_right\n            x: -200\n            y: -20\n            width: 150\n            height: 56\n"
+        "            bg_color: 0x1B2230\n            radius: 14\n            pad_all: 0\n            scrollable: false\n"
+        "            widgets: [label: { text: \"Refresh\", align: center, text_font: f_body, text_color: 0xEEF0F6 }]\n"
+        "            on_click:\n              - lambda: 'id(cam_stream).restart();'\n"
+        "        - button:\n            align: bottom_right\n            x: -20\n            y: -20\n            width: 160\n            height: 56\n"
+        "            bg_color: 0x0E0F14\n            border_width: 1\n            border_color: 0x3A4150\n            radius: 14\n            pad_all: 0\n            scrollable: false\n"
+        "            widgets: [label: { text: \"Dismiss\", align: center, text_font: f_body, text_color: 0xC8CCD6 }]\n"
+        "            on_click: [lvgl.page.show: " + host_pid + "]\n"
+    )
+
+
+def gen_cam_stream():
+    """The generated mjpeg_stream instance (+ pill on_state). ALWAYS defines\n    id: cam_stream — the kept esphome: on_boot lambda applies\n    $cam_stream_url_override via id(cam_stream), so the id must exist even in\n    layouts with no camera card (always-emit chosen over scrubbing on_boot).\n    Album art rides this instance too (fetch_still shares its task + JPEG\n    accumulator), so a no-camera layout WITH art widgets keeps a full-size\n    accumulator — HA-proxied covers regularly exceed 64kB.\n    Idle cost note: setup() unconditionally allocates 2 frame buffers sized to\n    the LARGEST target + the max_jpeg_size accumulator + a 12kB-stack task, so\n    the no-camera instance (64x64 target, 64kB accumulator) still holds ~0.1MB\n    PSRAM while never started — fine on the 32MB P4."""
+    head = ("\n# Live camera stream (generated; replaces aurora.yaml's hand-sized instance).\n"
+            "# Also the album-art stills worker: gen art readbacks call id(cam_stream).fetch_still().\n"
+            "mjpeg_stream:\n"
+            "  - id: cam_stream\n    max_fps: 8.0\n"
+            "    max_source_width: 2048\n    max_source_height: 1536\n")
+    tail = "    task_core: 1\n    task_priority: 4\n    read_timeout: 10s\n"
+    if not CAM_CARDS:
+        acc = ("    max_jpeg_size: 512kB     # no camera card, but album-art stills use this accumulator\n"
+               if ART_IMAGES else
+               "    max_jpeg_size: 64kB      # idle instance: shrink the always-allocated accumulator\n")
+        return (head + acc
+                + "    targets:                 # idle placeholder — no camera card in this layout\n"
+                  "      - width: 64\n        height: 64\n" + tail)
+    _e, iw, ih, base, _pid = CAM_CARDS[0]
+
+    def pills(bg, text):
+        s = ""
+        for oid, lid in ((base + "_pill", base + "_pill_lbl"),
+                         ("gen_cam_full_pill", "gen_cam_full_pill_lbl")):
+            s += ("            - lvgl.widget.update: { id: %s, bg_color: %s }\n"
+                  "            - lvgl.label.update: { id: %s, text: \"%s\" }\n" % (oid, bg, lid, text))
+        return s
+
+    # First LIVE unhides the image widgets (they start hidden over the ss_image
+    # placeholder src) and they STAY visible on later errors — the last real
+    # frame beats a black hole.
+    unhide = ("            - lvgl.widget.update: { id: %s_cam, hidden: false }\n"
+              "            - lvgl.widget.update: { id: gen_cam_full_img, hidden: false }\n" % base)
+    cond = "      - if:\n          condition:\n            lambda: 'return %s;'\n          then:\n"
+    st = "state == esphome::mjpeg_stream::StreamState::%s"
+    return (head
+            + "    max_jpeg_size: 512kB\n"
+            + "    targets:                 # index = target_idx for start(): 0 = card, 1 = fullscreen\n"
+            + "      - width: %d\n        height: %d\n" % (iw, ih)
+            # Fullscreen target is 4:3 (pillarboxed on the 1024x600 panel):
+            # the stream scale-fills with center-crop, so a 16:9-ish target
+            # would chop the top/bottom off 4:3 doorbell frames.
+            + "      - width: 800\n        height: 600\n"
+            + tail
+            + "    on_state:                # drive the card + fullscreen pills (STOPPED = no-op)\n"
+            + cond % (st % "LIVE") + pills("0xE5484D", "LIVE") + unhide
+            + cond % (st % "CONNECTING") + pills("0x2A2F3A", "...")
+            + cond % (st % "ERROR_NET" + " || " + st % "ERROR_AUTH") + pills("0x2A2F3A", "OFFLINE"))
+
+
+def gen_cam_text_sensor():
+    """entity_picture readback (aurora.yaml ha_cam_picture pattern): build the\n    tokenized snapshot URL, derive the MJPEG stream URL from it, and stash both\n    in the kept g_cam_url / g_cam_stream_url globals (globals: is spliced\n    verbatim from aurora.yaml — a second top-level globals: key would be invalid\n    YAML, so the gen build reuses those two existing ids). Default the stream to\n    the SNAPSHOT proxy (~1fps snapshot-poll): HA's camera_proxy_stream calls the\n    camera's direct image method, which Nest never implements -> zero frames."""
+    return (
+        "  - platform: homeassistant\n    id: ha_gen_cam_0\n    entity_id: %s\n    attribute: entity_picture\n"
+        "    on_value:\n      then:\n"
+        "        - lambda: |-\n"
+        "            id(g_cam_url) = std::string(\"$ha_base\") + x;\n"
+        "            std::string sp = x;\n"
+        "            size_t p = sp.find(\"/api/camera_proxy/\");\n"
+        "            if (p != std::string::npos) sp.replace(p, 18, \"/api/camera_proxy_stream/\");\n"
+        "            id(g_cam_stream_url) = std::string(\"$ha_base\") + sp;\n"
+        "            std::string ov = \"$cam_stream_url_override\";\n"
+        "            id(cam_stream).set_url(!ov.empty() ? ov : id(g_cam_url));\n"
+        % CAM_CARDS[0][0])
+
+
 def assemble(layout):
     with open(AURORA, encoding="utf-8") as f:
         secs = split_sections(f.read())
     lvgl_text = dict(secs).get("lvgl", "")
-    ART_IMAGES.clear()
-    nav, pages, sens, txt, _, clocks = build_lvgl(layout)  # populates USED_ICON_CP
-    # keep the hardware/font/style base; embed the icons this layout uses into f_icon
+    nav, pages, sens, txt, _, clocks = build_lvgl(layout)  # populates USED_ICON_CP + ART/CAM registries
+    sens.append(_wx_temp_readback("screensaver", "$ent_weather", "lbl_ss_temp"))
+    txt.append(_wx_cond_icon_readback("screensaver", "$ent_weather", "lbl_ss_wx_icon", sfx="cond"))
+    # keep the hardware/font/style base; embed the icons this layout uses into
+    # f_icon. (g_swipe_ms now lives in aurora.yaml's globals, spliced verbatim.)
     keep_text = "".join(inject_used_glyphs(t) if n == "font" else t
-                        for n, t in secs if n in KEEP)
+                        for n, t in secs if n in KEEP and n != "esp_video_camera")
     # scrub references to dropped UI scripts + lvgl widget actions in the base
     keep_text = re.sub(r"(?m)^[ \t]*-?[ \t]*script\.(execute|stop):.*\n", "", keep_text)
     keep_text = scrub_lvgl_actions(keep_text)
     clocks += [("lbl_ss_time", "time_hm"), ("lbl_ss_date", "date_full")]   # screensaver clock
     pages += gen_screensaver_page()
     txt.append(SS_TEXT_SENSOR)
-    # album art: one decoder per art size in use; each entity's sp_nowplaying_image_url
-    # (SpotifyPlus; absolute scdn JPEG) set_urls + updates every decoder on track change.
-    art_items = ""
+    if CAM_CARDS:                                        # live camera: fullscreen page + URL readback
+        pages += gen_camera_full_page()
+        txt.append(gen_cam_text_sensor())
+    # Album art rides the mjpeg_stream stills channel: per entity, one
+    # entity_picture readback whose action queues
+    # id(cam_stream).fetch_still(url, widget, size, size) for each art widget
+    # bound to that entity. The fetch runs on the stream worker task — never
+    # the main loop: hand-rolled HTTP + hardware JPEG decode + PPA scale into
+    # a per-widget PSRAM buffer, presented (and the widget unhidden) from the
+    # component's loop(). The queue is latest-wins per widget, so track-skip
+    # storms self-cancel, and the single worker serializes all art + camera
+    # work. This replaced the per-(entity,size) online_image decoders +
+    # per-entity mode:restart gen_art_seq scripts + g_gen_art_busy flag:
+    # online_image downloads AND decodes on the main loop (measured blocking
+    # up to ~8s per fetch when HA's media proxy had to fetch from the Spotify
+    # CDN), which stalled LVGL, backed up the network stack, and bad_alloc'd
+    # the panel under rapid track skips. The HA proxy URL is still the right
+    # source: tokenized per state change, plain HTTP on the LAN (TLS-free),
+    # and works for every media_player (Sonos/LG too), not just SpotifyPlus.
     if ART_IMAGES:
-        sizes = sorted({s for s, _, _ in ART_IMAGES})
-        for s in sizes:
-            ups = "".join("      - lvgl.image.update: { id: %s, src: gen_art_%d }\n" % (iid, s)
-                          for sz, iid, _ in ART_IMAGES if sz == s)
-            art_items += ("  - id: gen_art_%d\n    url: \"http://127.0.0.1/none.jpg\"\n    format: JPEG\n    type: RGB565\n"
-                          "    resize: %dx%d\n    update_interval: never\n"
-                          "    on_download_finished:\n%s"
-                          "    on_error:\n      - logger.log: \"ART %d: download error\"\n" % (s, s, s, ups, s))
-        for n_i, ent in enumerate(sorted({e for _, _, e in ART_IMAGES})):
-            acts = "".join("              - online_image.set_url: { id: gen_art_%d, url: !lambda 'return x;' }\n"
-                           "              - component.update: gen_art_%d\n" % (s, s) for s in sizes)
-            txt.append("  - platform: homeassistant\n    id: ha_gen_art_%d\n    entity_id: %s\n    attribute: sp_nowplaying_image_url\n"
+        by_ent = {}
+        for s, iid, e in ART_IMAGES:
+            by_ent.setdefault(e, []).append((s, iid))
+        for n_i, ent in enumerate(sorted(by_ent)):
+            fetches = "".join(
+                "              - lambda: 'id(cam_stream).fetch_still(std::string(\"$ha_base\") + x, id(%s), %d, %d);'\n"
+                % (iid, s, s)
+                for s, iid in by_ent[ent])
+            # entity_picture is a relative tokenized proxy path ("/api/media_player_proxy/...").
+            txt.append("  - platform: homeassistant\n    id: ha_gen_art_%d\n    entity_id: %s\n    attribute: entity_picture\n"
                        "    on_value:\n      then:\n        - if:\n            condition:\n"
-                       "              lambda: 'return x.rfind(\"http\", 0) == 0;'\n            then:\n%s"
-                       % (n_i, ent, acts))
+                       "              lambda: 'return x.rfind(\"/\", 0) == 0;'\n            then:\n%s"
+                       % (n_i, ent, fetches))
+    # Screen-off paths that do NOT navigate would leave the camera page loaded —
+    # its on_unload (cam_stream.stop()) never fires and the stream keeps decoding
+    # into a dark panel. With a live camera card, show page_home right before the
+    # backlight goes off (a no-op when already home); the page switch fires the
+    # camera page's on_unload. Exactly two branches turn the backlight off
+    # without a page.show: the SS_ONIDLE screensaver-off else (the screensaver-on
+    # path already navigates to page_screensaver) and CAM_WAKE_INTERVAL's
+    # night-sleep clause. Other layouts' idle behavior is unchanged.
+    # Raw onboard motion capture leaves too little internal RAM for hosted Wi-Fi.
+    # Keep it out of the generated dashboard until capture buffers move to PSRAM.
+    ss_onidle, cam_wake = SS_ONIDLE, ""
+    if CAM_CARDS:
+        a = "                else:\n                  - lambda: 'id(g_screen_off) = true; id(g_cam_sleep_ms) = millis();'\n                  - light.turn_off: display_backlight\n"
+        assert a in ss_onidle, "screen-off anchor moved; camera stream would leak while dark"
+        ss_onidle = ss_onidle.replace(
+            a, "                else:\n                  - lambda: 'id(g_screen_off) = true; id(g_cam_sleep_ms) = millis();'\n"
+               "                  - lvgl.page.show: page_home\n"
+               "                  - light.turn_off: display_backlight\n")
     # interval: list = trackpad flush + camera night-wake + screensaver cycle + clock repaint
-    out = keep_text + TP_FLUSH_INTERVAL + CAM_WAKE_INTERVAL + SS_INTERVAL_ITEM + clock_items(clocks)
-    out += SS_ONLINE_IMAGE + art_items + SS_SCRIPT
+    out = keep_text + TP_FLUSH_INTERVAL + cam_wake + SS_INTERVAL_ITEM + HEAP_LOG_INTERVAL_ITEM + clock_items(clocks)
+    out += SS_ONLINE_IMAGE + SS_SCRIPT + gen_cam_stream()
     if sens:
         out += "\nsensor:\n" + "".join(sens)
     out += "\ntext_sensor:\n" + "".join(txt)
     out += ("\nlvgl:\n"
             "  buffer_size: 25%\n"
-            + SS_ONIDLE                                   # enter screensaver on idle timeout
+            + ss_onidle                                   # enter screensaver on idle timeout
             + style_defs(lvgl_text)
             + "  top_layer:\n      widgets:\n"
             "      - obj:\n          id: nav_rail\n          x: 0\n          y: 0\n          width: 74\n          height: 600\n"
             "          bg_color: 0x0C0D12\n          bg_opa: 90%\n          border_width: 0\n          radius: 0\n          pad_all: 0\n          widgets:\n"
             + nav
             + "  pages:\n" + pages)
-    return out
+    return harvest_font_glyphs(out)
 
 
 EMUL = os.path.join(os.path.dirname(AURORA), "aurora-emul.yaml")
 
 
 def host_assemble(layout):
-    """Emit a host+SDL desktop build of the generated UI for screenshotting.
-    Same LVGL pages/cards/fonts/styles as the device, but on the `host`
-    platform with an SDL window instead of the ESP32-P4 hardware. Drops the
-    HA-backed state sensors (no live data on the desktop) and the background
-    image; a bare api: keeps the cards' homeassistant.action refs valid."""
+    """Emit a host+SDL desktop build of the generated UI for screenshotting.\n    Same LVGL pages/cards/fonts/styles as the device, but on the `host`\n    platform with an SDL window instead of the ESP32-P4 hardware. Drops the\n    HA-backed state sensors (no live data on the desktop) and the background\n    image; a bare api: keeps the cards' homeassistant.action refs valid."""
     with open(AURORA, encoding="utf-8") as f:
         secs = split_sections(f.read())
     lvgl_text = dict(secs).get("lvgl", "")
@@ -2850,7 +3800,9 @@ def host_assemble(layout):
     pages = re.sub(r"light\.turn_on: \{ id: display_backlight[^}]*\}", "logger.log: emul", pages)
     pages = pages.replace("button.press: btn_restart_panel", "logger.log: emul")
     pages = re.sub(r"id\(haptic\)\.[A-Za-z_]+\([^;]*\);", "", pages)   # strip haptic calls (settings page)
-    return (
+    pages = re.sub(r"id\(ss_seconds\)\.publish_state\([^;]*\);", "", pages)
+    pages = pages.replace("lvgl.page.show: page_screensaver", "logger.log: emul")
+    out = (
         "# AUTO-GENERATED host/SDL emulator build of layout.json — DO NOT EDIT.\n"
         "esphome:\n  name: aurora-emul\n\n"
         "host:\n\n"
@@ -2868,6 +3820,7 @@ def host_assemble(layout):
         + nav
         + "  pages:\n" + pages
     )
+    return harvest_font_glyphs(out)
 
 
 def _loader():

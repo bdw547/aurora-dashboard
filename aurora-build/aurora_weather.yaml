@@ -4,7 +4,13 @@
 # HA removed the `forecast` attribute from weather entities — it's now only
 # available via the weather.get_forecasts service (which returns a response the
 # panel can't read directly). This package calls that service every 15 min and
-# republishes a 6-day daily forecast as plain sensor attributes the panel reads.
+# republishes the forecast as plain sensor attributes the panel reads.
+#
+# This package now publishes BOTH forecasts:
+#   - sensor.aurora_weather_daily   — 6-day daily (d_names/d_high/d_low/d_cond)
+#   - sensor.aurora_weather_hourly  — next 7 hours (h_times/h_temps/h_conds)
+# If you already had an older (daily-only) copy installed, you MUST re-install
+# this file and restart HA so the new hourly sensor is created.
 #
 # INSTALL: in configuration.yaml:
 #     homeassistant:
@@ -33,10 +39,29 @@ template:
         attributes:
           today_high: "{{ fc['weather.forecast_home'].forecast[0].temperature | round }}"
           today_low: "{{ fc['weather.forecast_home'].forecast[0].templow | round }}"
+          stat_humidity: >-
+            {{ (state_attr('weather.forecast_home', 'humidity') | default('—', true)) ~ '%' }}
+          stat_wind: >-
+            {%- set speed = state_attr('weather.forecast_home', 'wind_speed') -%}
+            {%- set unit = state_attr('weather.forecast_home', 'wind_speed_unit') or '' -%}
+            {{ (speed | round(1) | string) ~ ' ' ~ unit if speed is not none else '—' }}
+          stat_uv: >-
+            {%- set uv = fc['weather.forecast_home'].forecast[0].uv_index | default(state_attr('weather.forecast_home', 'uv_index'), true) -%}
+            {{ uv | round(1) if uv is not none else '—' }}
+          stat_pressure: >-
+            {%- set pressure = state_attr('weather.forecast_home', 'pressure') -%}
+            {%- set unit = state_attr('weather.forecast_home', 'pressure_unit') or '' -%}
+            {{ (pressure | round(2) | string) ~ ' ' ~ unit if pressure is not none else '—' }}
+          stat_sunrise: >-
+            {%- set value = state_attr('sun.sun', 'next_rising') -%}
+            {{ (value | as_datetime | as_local).strftime('%-I:%M%p').lower() if value else '—' }}
+          stat_sunset: >-
+            {%- set value = state_attr('sun.sun', 'next_setting') -%}
+            {{ (value | as_datetime | as_local).strftime('%-I:%M%p').lower() if value else '—' }}
           d_names: >-
             {%- set ns = namespace(s=[]) -%}
             {%- for f in fc['weather.forecast_home'].forecast[:6] -%}
-              {%- set ns.s = ns.s + [as_datetime(f.datetime) | as_local | strftime('%a')] -%}
+              {%- set ns.s = ns.s + [(as_datetime(f.datetime) | as_local).strftime('%a')] -%}
             {%- endfor -%}
             {{ ns.s | join('\n') }}
           d_high: >-
@@ -54,6 +79,48 @@ template:
           d_cond: >-
             {%- set ns = namespace(s=[]) -%}
             {%- for f in fc['weather.forecast_home'].forecast[:6] -%}
+              {%- set ns.s = ns.s + [f.condition] -%}
+            {%- endfor -%}
+            {{ ns.s | join('\n') }}
+
+  # ---- Hourly forecast (next 7 hours) -------------------------------------
+  # Same triggers / service / target as the daily block above, but type: hourly.
+  # Change the weather entity below if yours differs (keep it the same as daily).
+  - trigger:
+      - platform: homeassistant
+        event: start
+      - platform: time_pattern
+        minutes: "/15"
+    action:
+      - service: weather.get_forecasts
+        data:
+          type: hourly
+        target:
+          entity_id: weather.forecast_home
+        response_variable: fc
+    sensor:
+      - name: Aurora Weather Hourly
+        unique_id: aurora_weather_hourly
+        state: "{{ fc['weather.forecast_home'].forecast | count }}"
+        attributes:
+          h_times: >-
+            {%- set ns = namespace(s=[]) -%}
+            {%- for f in fc['weather.forecast_home'].forecast[:7] -%}
+              {%- set d = as_datetime(f.datetime) | as_local -%}
+              {%- set hour12 = d.strftime('%I') | int -%}
+              {%- set ap = 'A' if d.hour < 12 else 'P' -%}
+              {%- set ns.s = ns.s + [hour12 ~ ap] -%}
+            {%- endfor -%}
+            {{ ns.s | join('\n') }}
+          h_temps: >-
+            {%- set ns = namespace(s=[]) -%}
+            {%- for f in fc['weather.forecast_home'].forecast[:7] -%}
+              {%- set ns.s = ns.s + [f.temperature | round | string] -%}
+            {%- endfor -%}
+            {{ ns.s | join('\n') }}
+          h_conds: >-
+            {%- set ns = namespace(s=[]) -%}
+            {%- for f in fc['weather.forecast_home'].forecast[:7] -%}
               {%- set ns.s = ns.s + [f.condition] -%}
             {%- endfor -%}
             {{ ns.s | join('\n') }}

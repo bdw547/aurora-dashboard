@@ -16,7 +16,17 @@
 //   - The ESPHome main loop() owns the LVGL widget pointer and the image
 //     descriptor. It consumes ready_idx_, flips front_idx_ under swap_mutex_
 //     and calls lv_img_set_src(). All public runtime API (start/stop/
-//     restart/set_url) must be called from the main loop / YAML lambdas.
+//     restart/set_url/fetch_still) must be called from the main loop / YAML
+//     lambdas.
+//
+// Stills channel: fetch_still() enqueues one-shot JPEG fetches (album art)
+// that ride the same worker task, JPEG accumulator, HW decoder and PPA as the
+// stream — serviced only at documented safe points where the accumulator is
+// idle (see service_stills_()). Each still lands in a per-widget
+// double-buffered PSRAM output and is presented (and its widget unhidden)
+// from loop() via a per-slot atomic `pending` mailbox. The request queue is
+// latest-wins per widget, so rapid track skips self-cancel; failures are
+// logged and dropped (art is cosmetic — the next track change re-requests).
 //
 // Budget note (max concurrent streams): each instance costs ~6.5 MB PSRAM
 // worst-case (2x scaled RGB565 buffers + 512 KB JPEG accumulator + a
@@ -86,6 +96,14 @@ class MJPEGStream : public Component {
   void stop();
   // Force a disconnect + reconnect (e.g. after a network hiccup).
   void restart();
+  // Stills channel: enqueue a one-shot JPEG fetch (e.g. album art). The worker
+  // task downloads url (plain http only), HW-decodes and PPA cover-scales
+  // (center-crop + byte_swap) it into a per-widget PSRAM buffer sized w x h;
+  // loop() then points the widget at it and clears LV_OBJ_FLAG_HIDDEN.
+  // Latest-wins per widget: a queued-but-not-started request for the same
+  // widget is replaced in place. w/h should be FIXED per widget (the buffer is
+  // allocated on first use and reused; a larger later request is dropped).
+  void fetch_still(const std::string &url, lv_obj_t *widget, uint16_t w, uint16_t h);
   bool is_live() const { return this->state_.load() == StreamState::LIVE; }
   void add_on_state_callback(std::function<void(StreamState)> &&cb) {
     this->state_callbacks_.add(std::move(cb));
@@ -112,6 +130,45 @@ class MJPEGStream : public Component {
   int accumulate_until_boundary_(const std::string &delim, size_t *out_len);
   void handle_frame_(size_t len);
   void decode_and_scale_(size_t jpeg_len, uint32_t now_ms);
+  // Shared by the stream frame path and the stills channel (same task, never
+  // concurrent): decode jpeg_buf_[0..len) into dec_buf_, then PPA cover-scale
+  // (center-crop + byte_swap) dec_buf_ into an arbitrary RGB565 output.
+  bool decode_jpeg_(size_t jpeg_len, jpeg_decode_picture_info_t *info);
+  bool ppa_scale_into_(const jpeg_decode_picture_info_t &info, uint8_t *out, size_t out_size, uint16_t tw,
+                       uint16_t th);
+
+  // ---- Stills channel (task side; see fetch_still() for the public API) ----
+  struct StillReq {
+    std::string url;
+    lv_obj_t *widget{nullptr};  // opaque key for the task; only loop() dereferences it
+    uint16_t w{0}, h{0};
+  };
+  // Per-widget output registry entry. Double-buffered so the task never writes
+  // pixels LVGL may be reading: loop() flips `front` as it consumes `pending`,
+  // and the task scales into 1 - front only while !pending. (A single buffer
+  // with just the flag would not be enough: an overlapping widget invalidation
+  // can make LVGL re-read the applied buffer at any later time.)
+  struct StillSlot {
+    lv_obj_t *widget{nullptr};             // registry key; task only compares the pointer
+    uint8_t *buf[2] = {nullptr, nullptr};  // PSRAM RGB565, allocated on first use, w*h*2 each
+    size_t buf_size{0};                    // per half, 64-aligned
+    uint16_t w{0}, h{0};                   // dims of the published back buffer
+    int front{0};                          // half LVGL displays; written by loop() only, while pending
+    lv_img_dsc_t dsc{};                    // loop()-owned
+    std::atomic<bool> pending{false};      // task published; loop() applies + clears
+  };
+  static constexpr size_t STILL_QUEUE_CAP = 6;  // matches max concurrent art cards
+  static constexpr size_t STILL_SLOT_CAP = 8;   // per-widget buffer registry cap
+
+  bool pop_still_(StillReq &out);
+  // Service queued stills. ONLY call at the documented safe points where the
+  // JPEG accumulator is idle (task_main_ idle branch / top of a connection
+  // cycle / wait loops, and stream_multipart_ right after handle_frame_).
+  void service_stills_(bool drain);
+  void process_still_(const StillReq &req);  // parks/restores the stream socket around the fetch
+  bool fetch_and_present_still_(const StillReq &req);
+  bool read_still_body_(long content_length, size_t *out_len);
+  StillSlot *claim_still_slot_(const StillReq &req);
 
   // Buffered socket reads (4 KB internal chunk, memcpy into PSRAM).
   bool fill_rx_();
@@ -152,6 +209,12 @@ class MJPEGStream : public Component {
   int front_idx_{0};                // guarded by swap_mutex_
   std::mutex swap_mutex_;
 
+  // ---- Stills channel shared state -------------------------------------------
+  std::vector<StillReq> still_queue_;  // guarded by still_mutex_ (loop pushes, task pops)
+  std::mutex still_mutex_;
+  StillSlot still_slots_[STILL_SLOT_CAP];  // task claims/writes; loop() applies via pending
+  uint8_t *still_save_buf_{nullptr};       // task-only: parks rx_buf_ live bytes during a mid-stream still
+
   // ---- Main-loop-only state --------------------------------------------------
   lv_obj_t *img_widget_{nullptr};  // owned by the main loop; task never reads
   lv_img_dsc_t img_dsc_{};
@@ -160,6 +223,7 @@ class MJPEGStream : public Component {
   uint32_t last_stats_ms_{0};
   uint32_t stats_last_ok_{0};
   uint32_t stats_last_net_{0};
+  uint32_t stats_last_stills_{0};
 
   // ---- Task-only state --------------------------------------------------------
   int sock_{-1};
@@ -175,12 +239,15 @@ class MJPEGStream : public Component {
   ppa_client_handle_t ppa_{nullptr};
   uint32_t last_present_ms_{0};
   uint32_t backoff_ms_{500};
+  uint32_t empty_closes_{0};  // consecutive connections that yielded no frames
 
   // ---- Stats -------------------------------------------------------------------
   std::atomic<uint32_t> frames_ok_{0};       // decoded + scaled + presented
   std::atomic<uint32_t> frames_net_{0};      // frames received off the wire
   std::atomic<uint32_t> frames_dropped_{0};  // oversize / invalid / decode fail
   std::atomic<uint32_t> connects_{0};        // connection attempts
+  std::atomic<uint32_t> stills_ok_{0};       // stills fetched + decoded + published
+  std::atomic<uint32_t> stills_failed_{0};   // stills dropped (fetch/decode/registry)
 };
 
 class StateTrigger : public Trigger<StreamState> {

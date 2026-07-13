@@ -50,7 +50,10 @@ substitutions:
   # Optional go2rtc MJPEG URL for the live view, e.g.
   # http://10.0.0.208:1984/api/stream.mjpeg?src=camera.front_door (full fps).
   # Empty = derive from HA camera_proxy_stream (~2fps).
-  cam_stream_url_override: ""
+  # go2rtc full-rate MJPEG (nest: source with protocols=RTSP + an
+  # ffmpeg:#video=mjpeg transcode leg in /config/go2rtc.yaml). Set to ""
+  # to fall back to HA's snapshot proxy (~1 fps snapshot-poll).
+  cam_stream_url_override: "http://10.0.0.208:1984/api/stream.mjpeg?src=front_door"
   ent_person: "person.ben"
   ent_weather: "weather.forecast_home"
   ent_weather_fc: "sensor.aurora_weather_daily"
@@ -74,12 +77,15 @@ esphome:
       then:
         - lvgl.display.set_rotation: 0
         - script.execute: demo_watchdog
-        - lambda: 'id(haptic).set_level(id(g_haptic_level));'   # apply saved touch-feedback strength
+        - lambda: 'id(haptic).set_level(id(g_haptic_level)); id(haptic).set_style(id(g_haptic_style));'
         # Apply the go2rtc stream override at boot so live video doesn't
         # depend on HA delivering the entity_picture attribute first.
         - lambda: |-
             std::string ov = "$cam_stream_url_override";
             if (!ov.empty()) id(cam_stream).set_url(ov);
+        # Keep DMA memory free through WiFi/API startup; HA photo preload normally
+        # enables motion sooner from its completion callback.
+        - delay: 90s
 
 esp32:
   variant: esp32p4
@@ -305,8 +311,10 @@ mjpeg_stream:
   - id: cam_stream
     max_fps: 8.0
     max_jpeg_size: 512kB
-    max_source_width: 1920
-    max_source_height: 1080
+    # HA's go2rtc image provider serves Nest stills at 1600x1200 (4:3), so the
+    # height cap must exceed 1200; sized with headroom (decode buf ~6.3MB max).
+    max_source_width: 2048
+    max_source_height: 1536
     targets:                 # list index = target_idx passed to start()
       - width: 600
         height: 452
@@ -453,7 +461,7 @@ display:
 # --- Assets ---
 http_request:
   verify_ssl: false
-  timeout: 15s
+  timeout: 60s
 
 online_image:
   - id: art_image
@@ -501,9 +509,14 @@ online_image:
     resize: 1024x600
     update_interval: never
     on_download_finished:
+      - logger.log:
+          format: "SS: photo ready: %s"
+          args: ["id(g_ss_url).c_str()"]
       - lvgl.image.update: { id: ss_photo, src: ss_image }
     on_error:
-      - logger.log: "SS: photo download error"
+      - logger.log:
+          format: "SS: photo download error: %s"
+          args: ["id(g_ss_url).c_str()"]
   # Second screensaver decoder for PNG photos (runtime_image has no auto-detect,
   # and one online_image is locked to a single format). ss_next picks jpg vs png
   # by file extension and updates ss_photo from whichever finishes.
@@ -514,9 +527,14 @@ online_image:
     resize: 1024x600
     update_interval: never
     on_download_finished:
+      - logger.log:
+          format: "SS: png ready: %s"
+          args: ["id(g_ss_url).c_str()"]
       - lvgl.image.update: { id: ss_photo, src: ss_image_png }
     on_error:
-      - logger.log: "SS: png download error"
+      - logger.log:
+          format: "SS: png download error: %s"
+          args: ["id(g_ss_url).c_str()"]
   - id: cam_big
     url: "http://127.0.0.1/none.jpg"
     format: JPEG
@@ -1468,7 +1486,7 @@ text_sensor:
             }
             if (!cur.empty()) id(g_ss_files).push_back(cur);
             id(g_ss_i) = 0;
-            ESP_LOGI("aurora", "screensaver: %d photos", (int) id(g_ss_files).size());
+            ESP_LOGI("aurora", "screensaver: %d photos; preloading first image", (int) id(g_ss_files).size());
   # ---- Thermostat hvac_action (Main Floor / Master / Upstairs) ----
   - platform: homeassistant
     id: ha_mf_action
@@ -1570,7 +1588,15 @@ text_sensor:
             if (p != std::string::npos) sp.replace(p, 18, "/api/camera_proxy_stream/");
             id(g_cam_stream_url) = std::string("$ha_base") + sp;
             std::string ov = "$cam_stream_url_override";
-            id(cam_stream).set_url(!ov.empty() ? ov : id(g_cam_stream_url));
+            // Default source is the SNAPSHOT proxy, not camera_proxy_stream:
+            // HA's MJPEG still-stream calls the camera's direct image method,
+            // which Nest never implements (NotImplementedError -> 0 frames),
+            // while snapshots go through the go2rtc image provider and work.
+            // mjpeg_stream treats an image/jpeg response as snapshot-poll mode
+            // (one frame per connection, paced to max_fps) => ~1-2 fps live.
+            // Set $cam_stream_url_override (e.g. go2rtc stream.mjpeg) for
+            // true full-rate MJPEG once a working source exists.
+            id(cam_stream).set_url(!ov.empty() ? ov : id(g_cam_url));
   # ---- Doorbell chime -> pop up the camera (guard: ignore initial sync) ----
   - platform: homeassistant
     id: ha_chime
@@ -2358,6 +2384,13 @@ text_sensor:
   # <<< AURORA_ROOM_STATE_TEXT
 
 globals:
+  # Sub-page swipe debounce (configurator builds use it; harmless here). Defined
+  # in the base so both device (assemble) and host (host_assemble) builds splice
+  # it verbatim — gen_pages emits on_swipe handlers that reference it.
+  - id: g_swipe_ms
+    type: uint32_t
+    restore_value: no
+    initial_value: '0'
   - id: sel_light
     type: std::string
     restore_value: false
@@ -2445,7 +2478,11 @@ globals:
   - id: g_haptic_level
     type: int
     restore_value: true
-    initial_value: '3'
+    initial_value: '3'  # Haptic waveform: 0=crisp click, 1=soft bump, 2=short double click.
+  - id: g_haptic_style
+    type: int
+    restore_value: true
+    initial_value: '0'
   - id: g_timeout_ms
     type: int
     restore_value: true
@@ -2458,16 +2495,32 @@ globals:
     type: bool
     restore_value: true
     initial_value: 'false'
-  # Night mode (9pm-6am): auto-sleep after a short idle + wake when the panel's
-  # own camera sees someone approach. Default on (the user asked for it).
+  # Quiet-hours approach mode: schedule and wake behavior are configurable.
   - id: g_cam_wake
     type: bool
     restore_value: true
     initial_value: 'true'
+  - id: g_quiet_start
+    type: int
+    restore_value: true
+    initial_value: '21'
+  - id: g_quiet_end
+    type: int
+    restore_value: true
+    initial_value: '6'
+  # Camera motion wake destination: 0=dashboard, 1=photo gallery.
+  - id: g_cam_wake_target
+    type: int
+    restore_value: true
+    initial_value: '0'
   - id: g_screen_off
     type: bool
     restore_value: false
     initial_value: 'false'
+  - id: g_cam_sleep_ms
+    type: uint32_t
+    restore_value: false
+    initial_value: '0'
   - id: ss_idx
     type: int
     restore_value: false
@@ -2488,6 +2541,10 @@ globals:
     type: int
     restore_value: false
     initial_value: '0'
+  - id: g_ss_seconds
+    type: int
+    restore_value: true
+    initial_value: '30'
   - id: g_ss_url
     type: std::string
     restore_value: false
@@ -2733,6 +2790,8 @@ script:
   - id: ss_next
     mode: restart
     then:
+      - lambda: 'id(aurora_cam).set_motion_capture_enabled(false);'
+      - delay: 250ms
       - lambda: |-
           // Choose the next photo. Prefer the HA-published file list (any
           // filename); fall back to legacy 1.jpg..$ss_count.jpg if it's absent.
@@ -2762,10 +2821,8 @@ script:
             lambda: 'return id(g_ss_is_png);'
           then:
             - online_image.set_url: { id: ss_image_png, url: !lambda 'return id(g_ss_url);' }
-            - component.update: ss_image_png
           else:
-            - online_image.set_url: { id: ss_image, url: !lambda 'return id(g_ss_url);' }
-            - component.update: ss_image
+            - lambda: 'id(cam_stream).fetch_still(id(g_ss_url), id(ss_photo), 1024, 600);'
   - id: cam_snap_once
     mode: restart
     then:
@@ -2899,6 +2956,8 @@ number:
     min_value: 5
     max_value: 600
     step: 5
+    set_action:
+      - lambda: 'id(g_ss_seconds) = (int) x;'
 
 interval:
   # NOTE: live camera video now runs off the main loop via the mjpeg_stream
@@ -2929,54 +2988,50 @@ interval:
                 data:
                   dy: !lambda 'return std::to_string(id(g_tp_scroll) / 10);'
             - lambda: 'id(g_tp_scroll) = id(g_tp_scroll) % 10;'
-  # Night wake-on-approach (9pm-6am): while the screen is asleep and the night
-  # toggle is on, the panel's own camera watches for motion (frame-diff on the
-  # captured luma). Enough motion -> wake to the home page. Touch + presence
-  # remain as backup wake sources.
+  # Camera wake-on-approach: while the screen is asleep, the onboard camera's
+  # frame-difference signal wakes it at any hour. Motion also keeps an awake
+  # panel active. Night mode retains its independent 60-second sleep behavior.
   - interval: 500ms
     then:
-      # Asleep at night + camera sees someone approach -> wake. lv_display_trigger_activity
-      # resets LVGL's idle clock so on_idle re-arms and auto-sleeps ~1 min later if
-      # they walk away (a non-touch wake otherwise leaves the screen lit forever).
       - if:
           condition:
             lambda: |-
               if (!id(g_cam_wake) || !id(g_screen_off)) return false;
-              auto t = id(ha_time).now();
-              if (!t.is_valid()) return false;
-              if (!(t.hour >= 21 || t.hour < 6)) return false;
+              if (millis() - id(g_cam_sleep_ms) < 1500) return false;
               return id(aurora_cam).get_motion_level() >= (int) id(motion_threshold).state;
           then:
             - lambda: 'id(g_screen_off) = false; lv_display_trigger_activity(lv_display_get_default());'
             - light.turn_on:
                 id: display_backlight
                 brightness: !lambda 'return id(g_bri) / 100.0f;'
-            - lvgl.page.show: page_home
-      # Already awake at night + motion continues -> keep it alive (so it doesn't
-      # sleep while you're standing in front of it).
+            - if:
+                condition:
+                  lambda: 'return id(g_cam_wake_target) == 1;'
+                then:
+                  - lvgl.page.show: page_screensaver
+                else:
+                  - lvgl.page.show: page_home
       - if:
           condition:
             lambda: |-
               if (!id(g_cam_wake) || id(g_screen_off)) return false;
-              auto t = id(ha_time).now();
-              if (!t.is_valid()) return false;
-              if (!(t.hour >= 21 || t.hour < 6)) return false;
               return id(aurora_cam).get_motion_level() >= (int) id(motion_threshold).state;
           then:
             - lambda: 'lv_display_trigger_activity(lv_display_get_default());'
-      # Awake at night + no touch/motion for 60s -> go dark. Self-contained here
-      # rather than relying on the LVGL on_idle trigger, which never fired in
-      # testing. Uses the same LVGL inactivity counter (resets on touch).
+      # Night mode owns its fixed one-minute sleep cadence. Daytime sleep remains
+      # controlled by the selected Screen Timeout through LVGL on_idle.
       - if:
           condition:
             lambda: |-
               if (!id(g_cam_wake) || id(g_screen_off)) return false;
               auto t = id(ha_time).now();
               if (!t.is_valid()) return false;
-              if (!(t.hour >= 21 || t.hour < 6)) return false;
+              int start=id(g_quiet_start), end=id(g_quiet_end);
+              bool quiet = start < end ? (t.hour >= start && t.hour < end) : start > end ? (t.hour >= start || t.hour < end) : false;
+              if (!quiet) return false;
               return lv_display_get_inactive_time(lv_display_get_default()) > 60000;
           then:
-            - lambda: 'id(g_screen_off) = true;'
+            - lambda: 'id(g_screen_off) = true; id(g_cam_sleep_ms) = millis();'
             - light.turn_off: display_backlight
   - interval: 10s
     then:
@@ -3036,7 +3091,7 @@ interval:
             - if:
                 condition:
                   lambda: |-
-                    int secs = (int) id(ss_seconds).state;
+                    int secs = id(g_ss_seconds);
                     if (secs < 5) secs = 30;
                     return id(g_ss_elapsed) >= secs;
                 then:
@@ -3061,16 +3116,18 @@ lvgl:
             lambda: |-
               if (id(g_timeout_ms) <= 0) return false;
               auto t = id(ha_time).now();
-              bool night = t.is_valid() && (t.hour >= 21 || t.hour < 6);
-              return !night;
+              if (!t.is_valid()) return true;
+              int start=id(g_quiet_start), end=id(g_quiet_end);
+              bool quiet = start < end ? (t.hour >= start && t.hour < end) : start > end ? (t.hour >= start || t.hour < end) : false;
+              return !quiet;
           then:
-            - lambda: 'id(g_screen_off) = true;'
             - if:
                 condition:
                   lambda: 'return id(g_screensaver);'
                 then:
                   - lvgl.page.show: page_screensaver
                 else:
+                  - lambda: 'id(g_screen_off) = true; id(g_cam_sleep_ms) = millis();'
                   - light.turn_off: display_backlight
 
   style_definitions:
@@ -7267,7 +7324,7 @@ lvgl:
         - lvgl.widget.update: { id: nav_rail, hidden: true }
         - lvgl.widget.update: { id: lbl_ssid, hidden: true }
         - lvgl.widget.update: { id: lbl_ip, hidden: true }
-        - lambda: 'id(g_ss_showing) = true; id(g_ss_elapsed) = 0; id(g_ss_i) = 0;'
+        - lambda: 'id(g_ss_showing) = true; id(g_ss_elapsed) = 0;'
         - script.execute: ss_next
       on_unload:
         - lambda: 'id(g_ss_showing) = false;'
