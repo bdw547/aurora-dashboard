@@ -3870,9 +3870,10 @@ def gen_screensaver_page(entity):
         "      on_load:\n"
         "        - lvgl.widget.update: { id: nav_rail, hidden: true }\n"
         "        - lambda: |-\n"
-        "            id(g_ss_showing)=true; id(g_ss_elapsed)=0; bool sp=id(g_screensaver_mode)==1;\n"
+        "            id(g_ss_showing)=true; id(g_ss_elapsed)=0; bool sp=id(g_screensaver_mode)==1 && id(ha_ss_spotify_state).state==\"playing\";\n"
         "            if(sp){lv_obj_add_flag(id(ss_photo_panel),LV_OBJ_FLAG_HIDDEN);lv_obj_clear_flag(id(ss_spotify_panel),LV_OBJ_FLAG_HIDDEN);}\n"
         "            else{lv_obj_clear_flag(id(ss_photo_panel),LV_OBJ_FLAG_HIDDEN);lv_obj_add_flag(id(ss_spotify_panel),LV_OBJ_FLAG_HIDDEN);}\n"
+        "        - if:\n            condition:\n              lambda: 'return id(g_screensaver_mode)!=1 || id(ha_ss_spotify_state).state!=\"playing\";'\n            then:\n              - script.execute: ss_next\n"
         "      on_unload:\n"
         "        - lvgl.widget.update: { id: nav_rail, hidden: false }\n"
         "        - lambda: 'id(g_ss_showing)=false;'\n"
@@ -3900,7 +3901,7 @@ def gen_screensaver_page(entity):
         "              - button: { x: 620, y: 284, width: 68, height: 68, bg_color: 0x171A20, border_width: 0, radius: 34, pad_all: 0, scrollable: false, widgets: [label: { text: \"\\U000F04AE\", align: center, text_font: f_icon, text_color: 0xFFFFFF }], on_click: [" + prev + "] }\n"
         "              - button: { x: 740, y: 272, width: 92, height: 92, bg_color: 0x1DB954, border_width: 0, radius: 46, pad_all: 0, scrollable: false, widgets: [label: { id: ss_spotify_play, text: \"\\U000F040A\", align: center, text_font: f_icon, text_color: 0x052E16 }], on_click: [" + play + "] }\n"
         "              - button: { x: 884, y: 284, width: 68, height: 68, bg_color: 0x171A20, border_width: 0, radius: 34, pad_all: 0, scrollable: false, widgets: [label: { text: \"\\U000F04AD\", align: center, text_font: f_icon, text_color: 0xFFFFFF }], on_click: [" + nxt + "] }\n"
-        "              - label: { text: \"\\U000F057E\", x: 612, y: 424, text_font: f_icon, text_color: 0xAEB4C2, clickable: false }\n"
+        "              - label: { text: \"\\U000F057E\", x: 612, y: 405, width: 36, height: 48, text_align: center, text_font: f_icon, text_color: 0xAEB4C2, clickable: false }\n"
         "              - slider:\n                  id: ss_spotify_volume\n                  x: 660\n                  y: 420\n                  width: 250\n                  height: 18\n"
         "                  min_value: 0\n                  max_value: 100\n                  value: 50\n                  bg_color: 0x2A2D36\n"
         "                  indicator: { bg_color: 0x1DB954 }\n                  knob: { bg_color: 0xFFFFFF }\n"
@@ -3925,7 +3926,13 @@ def gen_screensaver_spotify_bindings(entity):
         "  - platform: homeassistant\n    id: ha_ss_spotify_artist\n    entity_id: " + entity + "\n    attribute: media_artist\n    on_value:\n"
         "      - lvgl.label.update: { id: ss_spotify_artist, text: !lambda 'return x;' }\n",
         "  - platform: homeassistant\n    id: ha_ss_spotify_state\n    entity_id: " + entity + "\n    on_value:\n"
-        "      - lvgl.label.update: { id: ss_spotify_play, text: !lambda 'return x==\"playing\"?std::string(\"\\U000F03E4\"):std::string(\"\\U000F040A\");' }\n",
+        "      - lvgl.label.update: { id: ss_spotify_play, text: !lambda 'return x==\"playing\"?std::string(\"\\U000F03E4\"):std::string(\"\\U000F040A\");' }\n"
+        "      - if:\n          condition:\n            lambda: 'return id(g_ss_showing) && id(g_screensaver_mode)==1;'\n          then:\n"
+        "            - lambda: |-\n"
+        "                bool sp=x==\"playing\";\n"
+        "                if(sp){lv_obj_add_flag(id(ss_photo_panel),LV_OBJ_FLAG_HIDDEN);lv_obj_clear_flag(id(ss_spotify_panel),LV_OBJ_FLAG_HIDDEN);}\n"
+        "                else{lv_obj_clear_flag(id(ss_photo_panel),LV_OBJ_FLAG_HIDDEN);lv_obj_add_flag(id(ss_spotify_panel),LV_OBJ_FLAG_HIDDEN);}\n"
+        "            - if:\n                condition:\n                  lambda: 'return x!=\"playing\";'\n                then:\n                  - lambda: 'id(g_ss_elapsed)=0;'\n                  - script.execute: ss_next\n",
         "  - platform: homeassistant\n    id: ha_ss_spotify_favorite\n    entity_id: sensor.aurora_spotify_favorite\n    attribute: is_favorite\n    on_value:\n"
         "      - lvgl.label.update: { id: ss_spotify_favorite, text: !lambda 'return (x==\"true\"||x==\"True\"||x==\"on\")?std::string(\"\\U000F02D1\"):std::string(\"\\U000F02D5\");', text_color: !lambda 'return (x==\"true\"||x==\"True\"||x==\"on\")?lv_color_hex(0x1DB954):lv_color_hex(0xFFFFFF);' }\n",
     ]
