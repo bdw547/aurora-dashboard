@@ -2391,6 +2391,33 @@ globals:
     type: uint32_t
     restore_value: no
     initial_value: '0'
+  # Notification center queue. Home Assistant owns/restores the queue; the
+  # panel keeps parsed records here so row actions can use runtime data.
+  # Shared globals live in the base because device and host builds splice it.
+  - id: g_notif_items
+    type: std::vector<std::string>
+    restore_value: false
+  - id: g_notif_count
+    type: int
+    restore_value: false
+    initial_value: '0'
+  - id: g_notif_action
+    type: std::string
+    restore_value: false
+  - id: g_notif_target
+    type: std::string
+    restore_value: false
+  - id: g_notif_camera
+    type: bool
+    restore_value: false
+    initial_value: 'false'
+  - id: g_notif_urgent
+    type: bool
+    restore_value: false
+    initial_value: 'false'
+  - id: g_notif_latest_seen
+    type: std::string
+    restore_value: false
   - id: sel_light
     type: std::string
     restore_value: false

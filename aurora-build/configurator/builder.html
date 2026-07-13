@@ -286,6 +286,7 @@ const C = {
   lock:     {label:'Lock', domain:'lock', icon:'lock', color:'var(--teal)', spans:[[1,1],[2,1],[2,2],...V], def:[2,1], min:[1,1], ctrl:'lock'},
   camera:   {label:'Camera', domain:'camera', icon:'cctv', color:'var(--red)', spans:[[2,2],[3,3],[4,3],[6,5]], def:[3,3], min:[2,2], ctrl:'cam'},
   alarm:    {label:'Alarm panel', domain:'alarm_control_panel', icon:'shield-home', color:'var(--red)', spans:[[2,2],[3,2]], def:[3,2], min:[2,2], ctrl:'val'},
+  notifications:{label:'Notifications', domain:'', icon:'bell-outline', color:'var(--violet)', spans:[[2,2],[3,2],[2,3],[3,3],[4,3],[4,4],[6,5]], def:[3,3], min:[2,2], ctrl:'notifications', fixed:true},
   binary:   {label:'Binary sensor', domain:'binary_sensor', icon:'motion-sensor', color:'var(--blue)', spans:[[1,1],[2,1],...V], def:[1,1], min:[1,1], ctrl:'val'},
   sensor:   {label:'Sensor', domain:'sensor', icon:'thermometer', color:'var(--red)', spans:[[1,1],[2,1],[3,1],[4,1],[5,1]], def:[2,1], min:[1,1], ctrl:'val'},
   chart:    {label:'Sensor — trend chart', domain:'sensor', icon:'chart-line', color:'var(--teal)', spans:[[2,2],[3,2],[4,2],[5,2]], def:[3,2], min:[2,2], ctrl:'val'},
@@ -307,7 +308,7 @@ const CATS = [
   ['TV', ['tvremote','tv_app','tv_apps']],
   ['Media', ['media','volume']],
   ['Groups', ['group','shortcuts']],
-  ['Safety', ['lock','camera','alarm','binary']],
+  ['Safety', ['lock','camera','alarm','notifications','binary']],
   ['Info', ['sensor','weather','person','vacuum']],
   ['Actions', ['scene','script']],
 ];
@@ -355,6 +356,7 @@ const DESC={
   shortcuts:'Quick-jump buttons to pages, rooms or the camera',
   lock:'Lock / unlock with live state',
   camera:'Live camera view',
+  notifications:'Restored alert queue with urgent wake-up popups and actions',
   alarm:'Alarm panel — state + arm / disarm',
   binary:'Motion / door / occupancy — lights up when active',
   sensor:'Numeric reading — plain value or a trend chart, with units + color rules',
@@ -496,6 +498,7 @@ const HEADER_ITEMS = {
   sensor:          {label:'Sensor status', icon:'thermometer', txt:'72°', color:'var(--red)'},
   lights_on:       {label:'Lights on (count)', icon:'lightbulb-group', txt:'0 on', color:'var(--amber)'},
   fans_on:         {label:'Fans on (count)', icon:'fan', txt:'2 on', color:'var(--teal)'},
+  notifications:   {label:'Notifications (count)', icon:'bell-outline', txt:'3', color:'var(--violet)'},
 };
 function defHeader(on){ return {on:!!on, left:'greeting', right:['weather_current','secured']}; }
 const COLS=6; let ROWS=5;
@@ -556,7 +559,7 @@ function firstFit(w,h,except){ for(let y=1;y<=ROWS-h+1;y++) for(let x=1;x<=COLS-
 
 function renderPalette(){ const el=document.getElementById('palContent'); el.innerHTML='';
   for(const [cat,keys] of CATS){ const h=document.createElement('div'); h.className='pcat'; h.textContent=cat; el.appendChild(h);
-    for(const k of keys){ const c=C[k]; const d=document.createElement('div'); d.className='pitem'; d.onclick=()=>openEntityPicker(k);
+    for(const k of keys){ const c=C[k]; const d=document.createElement('div'); d.className='pitem'; d.onclick=()=>c.fixed?addCard(k,null,null):openEntityPicker(k);
       const hint=DESC[k] || c.spans.map(s=>s[0]+'×'+s[1]).join(' · ');
       d.innerHTML=`<div class="ic" style="background:#0f1117;color:${c.color}"><span class="mdi mdi-${c.icon}"></span></div>
         <div style="min-width:0"><div class="nm">${c.label}</div><div class="sz">${hint}</div></div>`; el.appendChild(d); } } }
@@ -609,6 +612,13 @@ function cardInner(c){ const def=C[c.ck], nm=c.name||def.label, big=c.w>=3, ctrl
   const ico=`<span class="ci mdi mdi-${def.icon}" style="color:${def.color}"></span>`;
   const tog=(on)=>`<div class="tg${on?'':' off'}"><i></i></div>`;
   const nme=`<div class="ct">${nm}</div>`;
+  if(c.ck==='notifications'){
+    const rows=[['Front door','Someone is at the door','Now','#f2685a'],['Laundry complete','The washer cycle finished','8:41 PM','#8fa6ff'],['Garage open','Open for 12 minutes','8:33 PM','#f2b84b']];
+    const n=Math.max(1,Math.min(3,Math.floor((c.h*100+(c.h-1)*14-72)/54)));
+    return head+`<div style="display:flex;align-items:center;gap:9px"><span class="mdi mdi-bell-outline" style="font-size:22px;color:${def.color}"></span><span style="font-size:17px;font-weight:700;flex:1">${nm}</span><span style="font-size:18px;font-weight:800;color:${def.color}">3</span></div>
+      <div style="display:flex;flex-direction:column;gap:8px;margin-top:14px">${rows.slice(0,n).map(r=>`<div style="height:46px;flex:0 0 46px;background:#0f1117;border-radius:9px;position:relative;padding:6px 66px 5px 15px;overflow:hidden">
+        <i style="position:absolute;left:0;top:0;bottom:0;width:4px;background:${r[3]}"></i><div style="font-size:12px;font-weight:700;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${r[0]}</div>
+        <div style="font-size:10px;color:var(--t2);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;margin-top:3px">${r[1]}</div><span style="position:absolute;right:8px;top:7px;font-size:9px;color:var(--t3)">${r[2]}</span></div>`).join('')}</div>`; }
   if(c.ck==='chart'){ const bars=[30,44,38,58,52,68,60,78,58,48,56,70,64,82,74,88,80,66];
     const spark=bars.map(v=>`<div style="flex:1;height:${v}%;background:${def.color};border-radius:2px;opacity:.85"></div>`).join('');
     return head+`<div style="display:flex;align-items:center;gap:8px;min-width:0"><span class="mdi mdi-${def.icon}" style="color:${def.color};font-size:20px"></span><span style="font-weight:600;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${nm}</span></div>
@@ -1046,6 +1056,13 @@ function renderInspector(){ const el=document.getElementById('insp'); const c=se
     el.querySelector('#addEnt').onclick=()=>addEntityPicker(c);
     wireCardActions(el,c);
     return; }
+  if(def.fixed){
+    el.innerHTML=`<h3 class="sec">${def.label}</h3>
+      <div class="field"><label>Name</label><input id="fName" value="${(c.name||'').replace(/"/g,'&quot;')}"></div>
+      <div class="csub" style="padding:4px 0 12px;color:var(--t2)">Uses sensor.aurora_notifications from the Aurora Home Assistant package. Warning and critical alerts wake the panel automatically.</div>
+      ${cardActionsHTML(c)}`;
+    el.querySelector('#fName').oninput=(e)=>{c.name=e.target.value;renderGrid();};
+    wireCardActions(el,c); return; }
   if((c.ck==='sensor'||c.ck==='chart'||c.ck==='binary'||c.ck==='person') && c.entity && c.device_class===undefined) applyEntityMeta(c,c.entity);
   el.innerHTML=`<h3 class="sec">${def.label}</h3>
     <div class="field"><label>Name</label><input id="fName" value="${(c.name||'').replace(/"/g,'&quot;')}"></div>
@@ -1158,6 +1175,7 @@ function openEntityPicker(ck,existing){ const def=C[ck], mbox=document.getElemen
   const doms=def.domains||[def.domain]; const dom=doms.join(' / '); const list=ENTS.filter(e=>doms.includes(e.domain));
   let chosen=existing?existing.entity:((list[0]&&list[0].entity_id)||'');
   mbox.innerHTML=`<h2>${def.label}</h2><p>${list.length} ${dom} entit${list.length===1?'y':'ies'} from Home Assistant${ENTS.length?'':' — connect to load yours'}</p>
+  if(def.fixed && !existing){ closeModal(); addCard(ck,null,null); return; }
     ${existing?'':styleRow(ck)}
     <input id="esrch" placeholder="Filter…" style="width:100%;margin-bottom:8px;background:#0F1117;border:1px solid var(--bd);border-radius:9px;color:var(--tx);padding:8px 10px;font:inherit">
     <div class="field"><div class="elist" id="elist"></div></div>

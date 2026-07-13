@@ -1,0 +1,124 @@
+# =============================================================================
+# Aurora - notification center package
+# -----------------------------------------------------------------------------
+# Install in Home Assistant's configuration.yaml:
+#
+#   homeassistant:
+#     packages:
+#       aurora_notifications: !include aurora_notifications.yaml
+#
+# Send from automations with script.aurora_notify. The trigger-based sensor
+# keeps the five newest records and restores them across HA restarts.
+# =============================================================================
+
+template:
+  - triggers:
+      - trigger: event
+        event_type: aurora_notification
+    sensor:
+      - name: Aurora Notifications
+        unique_id: aurora_notifications
+        icon: mdi:bell-outline
+        state: >-
+          {% if trigger.event.data.command | default('add') == 'clear' %}
+            0
+          {% else %}
+            {{ [this.state | int(0) + 1, 999999] | min }}
+          {% endif %}
+        attributes:
+          items: >-
+            {% if trigger.event.data.command | default('add') == 'clear' %}
+              {{ '' }}
+            {% else %}
+              {% set clean = namespace(v=[]) %}
+              {% for value in [now().timestamp() | int,
+                trigger.event.data.severity | default('info') | lower,
+                trigger.event.data.title | default('Notification'),
+                trigger.event.data.message | default(''),
+                now().strftime('%-I:%M %p'),
+                trigger.event.data.action_label | default(''),
+                trigger.event.data.action | default(''),
+                trigger.event.data.target | default(''),
+                1 if trigger.event.data.camera | default(false) | bool else 0] %}
+                {% set clean.v = clean.v + [value | string | replace('\x1f', ' ') | replace('\t', ' ') | replace('\n', ' ')] %}
+              {% endfor %}
+              {% set record = clean.v | join('\x1f') %}
+              {% set old = this.attributes.items | default('', true) %}
+              {{ ([record] + (old.split('\n') if old else []))[:5] | join('\n') }}
+            {% endif %}
+          latest: >-
+            {% if trigger.event.data.command | default('add') == 'clear' %}
+              {{ '' }}
+            {% else %}
+              {% set clean = namespace(v=[]) %}
+              {% for value in [now().timestamp() | int,
+                trigger.event.data.severity | default('info') | lower,
+                trigger.event.data.title | default('Notification'),
+                trigger.event.data.message | default(''),
+                now().strftime('%-I:%M %p'),
+                trigger.event.data.action_label | default(''),
+                trigger.event.data.action | default(''),
+                trigger.event.data.target | default(''),
+                1 if trigger.event.data.camera | default(false) | bool else 0] %}
+                {% set clean.v = clean.v + [value | string | replace('\x1f', ' ') | replace('\t', ' ') | replace('\n', ' ')] %}
+              {% endfor %}
+              {{ clean.v | join('\x1f') }}
+            {% endif %}
+
+script:
+  aurora_notify:
+    alias: Aurora - send panel notification
+    mode: queued
+    max: 20
+    fields:
+      title: { required: true, example: Front door }
+      message: { required: true, example: Someone is at the door. }
+      severity:
+        example: warning
+        selector: { select: { options: [info, warning, critical] } }
+      action_label: { example: Unlock }
+      action: { example: lock.unlock }
+      target: { example: lock.front_door }
+      camera:
+        example: true
+        default: false
+        selector:
+          boolean:
+    sequence:
+      - event: aurora_notification
+        event_data:
+          command: add
+          title: "{{ title }}"
+          message: "{{ message }}"
+          severity: "{{ severity | default('info', true) }}"
+          action_label: "{{ action_label | default('', true) }}"
+          action: "{{ action | default('', true) }}"
+          target: "{{ target | default('', true) }}"
+          camera: "{{ camera | default(false) }}"
+
+  aurora_notifications_clear:
+    alias: Aurora - clear panel notifications
+    mode: restart
+    sequence:
+      - event: aurora_notification
+        event_data: { command: clear }
+
+  aurora_notification_action:
+    alias: Aurora - run panel notification action
+    mode: queued
+    fields:
+      action_name: { required: true, example: lock.unlock }
+      target: { required: true, example: lock.front_door }
+    sequence:
+      - condition: template
+        value_template: >-
+          {% set allowed = ['light', 'switch', 'lock', 'cover', 'fan',
+            'script', 'scene', 'button', 'input_boolean'] %}
+          {% set action_parts = (action_name | default('') | lower).split('.') %}
+          {% set target_parts = (target | default('') | lower).split('.') %}
+          {{ action_parts | count == 2 and action_parts[0] in allowed
+             and target_parts | count == 2 and target_parts[0] | length > 0
+             and target_parts[1] | length > 0 }}
+      - action: "{{ action_name }}"
+        target:
+          entity_id: "{{ target }}"

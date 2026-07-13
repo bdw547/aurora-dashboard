@@ -134,6 +134,7 @@ Aurora controls **your** Home Assistant entities, so you need HA running on your
 |---|---|
 | Media (Spotify) | The **SpotifyPlus** integration (via HACS: `thlucas1/homeassistantcomponent_spotifyplus`), authenticated to your Spotify Premium account. |
 | Media **Library** (playlist/track browsing) | The Aurora HA package **`aurora-build/aurora_spotify_library.yaml`** installed in HA (see *Spotify Library setup* below). |
+| Notification center | The Aurora HA package **`aurora-build/aurora_notifications.yaml`** installed in HA (see *Notification center setup* below). |
 | TV Remote | The **webOS TV** (`webostv`) integration for your LG TV. |
 | TV Remote **trackpad** (cursor / scroll / volume) | The **LG pointer bridge** pyscript module (`aurora-build/lg_pointer_bridge/`) — it opens webOS's Magic-Remote pointer socket, which `webostv` can't. See that folder's README to install. |
 | Climate | A weather entity (default `weather.forecast_home`). |
@@ -276,6 +277,53 @@ The package provides `sensor.aurora_spotify_playlists` / `sensor.aurora_spotify_
 
 ---
 
+## Notification center setup (HA package)
+
+The notification center keeps the five newest panel alerts in Home Assistant,
+restores them after an HA restart, and wakes the panel for `warning` or
+`critical` alerts. Informational alerts stay in the queue without waking the
+screen.
+
+1. Copy **`aurora-build/aurora_notifications.yaml`** to your HA config at
+   `packages/aurora_notifications.yaml`.
+2. Make sure package loading is enabled in `configuration.yaml` as shown in
+   the Spotify Library setup above.
+3. Check the HA configuration, then restart Home Assistant.
+4. Add **Notifications** as a card or top-bar item in the configurator.
+
+Send an alert from an automation by calling `script.aurora_notify`:
+
+```yaml
+actions:
+  - action: script.aurora_notify
+    data:
+      title: Front door
+      message: Someone is at the door.
+      severity: warning
+      camera: true
+```
+
+An alert can optionally show an action button. The package limits panel actions
+to the `light`, `switch`, `lock`, `cover`, `fan`, `script`, `scene`,
+`button`, and `input_boolean` domains:
+
+```yaml
+actions:
+  - action: script.aurora_notify
+    data:
+      title: Garage left open
+      message: The garage has been open for 15 minutes.
+      severity: critical
+      action_label: Close
+      action: cover.close_cover
+      target: cover.garage_door
+```
+
+Use `script.aurora_notifications_clear` to clear the queue. The panel's
+**Clear all** button calls the same script.
+
+---
+
 ## Project layout (Aurora-relevant)
 
 ```
@@ -286,6 +334,7 @@ components/
   esp_video_camera/    ← camera: V4L2 capture, HW H.264, RTSP server, motion detect
   ov02c10_support/     ← injects the OV02C10 camera-sensor driver
 aurora-build/
+  aurora_notifications.yaml     (HA package for restored panel alerts)
   aurora_spotify_library.yaml   ← HA package for the Spotify Library
   configurator/        ← no-code web configurator:
                           serve.py     (local server, entity-rebind wizard, flash)
@@ -319,6 +368,7 @@ RTP is sent **TCP‑interleaved**, so it works through Home Assistant / ffmpeg's
 ## Status & roadmap
 
 **Recently shipped:**
+- **Notification center** - restored five-alert queue, configurator card/top-bar item, safe action buttons, and urgent wake-up popups.
 - **No-code web configurator** — entity-rebind wizard + drag-and-drop page builder (6×5 grid, per-card type/entity selection, live preview) + a `layout.json → aurora-gen.yaml` generator, so you can point Aurora at your own HA and design screens without editing YAML. See **[Design it your way](#-design-it-your-way--no-yaml-required)**. ✅
 - **Live camera** — OV02C10 → hardware H.264 → on-device RTSP, viewable in Home Assistant. ✅
 - **Wake-on-approach + evening-gated screen sleep** — the camera wakes the panel when you walk up at night. ✅
@@ -328,7 +378,6 @@ RTP is sent **TCP‑interleaved**, so it works through Home Assistant / ffmpeg's
 - **Photo screensaver** with clock + outdoor-temperature overlay. ✅
 
 **In progress / planned:**
-- **Notifications** surfaced on the panel.
 - **Weather radar** on the Climate screen.
 - **Intercom** — video calls between multiple panels *(long-term)*.
 - **Voice control** *(long-term)*.

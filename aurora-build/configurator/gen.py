@@ -803,6 +803,8 @@ EXTRA_CLOCKS = []   # (label_id, kind) live-clock bindings contributed by card e
 CAM_CARDS = []
 HEADER_WIFI = []       # (icon_label_id, text_label_id)
 HEADER_LIGHTS = []     # (count_label_id, generated_page_id, back_page_id, page_key)
+HEADER_NOTIFICATIONS = []  # count label ids
+NOTIF_CARDS = []       # (count label id, row widget ids)
 
 
 def c_media(card, x, y, w, h, base):
@@ -2686,6 +2688,37 @@ def c_generic(card, x, y, w, h, base):
     return [card_obj(x, y, w, h, inner)], [], []
 
 
+def c_notifications(card, x, y, w, h, base):
+    """Compact view of the restored Aurora notification queue."""
+    count_id = base + "_count"
+    rows = max(1, min(3, (h - 72) // 54))
+    inner = lbl(glyph_for("bell-outline"), 16, 14, "f_icon", "0x8FA6FF")
+    inner += lbl(card.get("name", "Notifications"), 54, 16, "f_title", "0xF3F5F8",
+                 width=w - 142, long="dot", height=30)
+    inner += lbl("0", -18, 18, "f_title", "0x8FA6FF", wid=count_id, align="top_right")
+    ids = []
+    for i in range(rows):
+        row, accent = "%s_row%d" % (base, i), "%s_ac%d" % (base, i)
+        title_id = "%s_t%d" % (base, i)
+        msg_id, time_id = "%s_m%d" % (base, i), "%s_tm%d" % (base, i)
+        top = 58 + i * 54
+        inner += (
+            "              - obj:\n                  id: %s\n                  x: 14\n                  y: %d\n"
+            "                  width: %d\n                  height: 46\n                  bg_color: 0x0F1117\n"
+            "                  border_width: 0\n                  radius: 9\n                  pad_all: 0\n                  scrollable: false\n"
+            "                  widgets:\n"
+            "                    - obj: { id: %s, x: 0, y: 0, width: 4, height: 46, bg_color: 0x8FA6FF, border_width: 0, radius: 2, pad_all: 0, scrollable: false }\n"
+            "                    - label: { id: %s, text: %s, x: 14, y: 5, width: %d, height: 18, long_mode: dot, text_font: f_small, text_color: 0xF3F5F8 }\n"
+            "                    - label: { id: %s, text: %s, x: 14, y: 25, width: %d, height: 16, long_mode: dot, text_font: f_micro, text_color: 0x868CA0 }\n"
+            "                    - label: { id: %s, text: \"\", x: -10, y: 5, align: top_right, text_font: f_micro, text_color: 0x868CA0 }\n"
+            % (row, top, w - 28, accent, title_id, esc("No notifications" if i == 0 else ""),
+               w - 126, msg_id, esc("New alerts will appear here." if i == 0 else ""),
+               w - 80, time_id))
+        ids.append((row, accent, title_id, msg_id, time_id))
+    NOTIF_CARDS.append((count_id, ids))
+    return [card_obj(x, y, w, h, inner, "lvgl.page.show: page_notifications")], [], []
+
+
 CTRL = {
     "switch": c_toggle, "light_t": c_toggle, "light": c_light, "sensor": c_sensor,
     "binary": c_binary, "person": c_binary, "vacuum": c_state, "alarm": c_state,
@@ -2704,6 +2737,7 @@ CTRL = {
     "sonos_library": c_songlist, "volume": c_volume, "volumes": c_volumes,
     "spotify_playlists": c_spot_playlists, "spotify_tracks": c_spot_tracks,
     "spotify_speakers": c_spot_speakers, "spotify_speaker": c_spot_speaker,
+    "notifications": c_notifications,
 }
 
 
@@ -2770,6 +2804,7 @@ HCHIP = {
     "sensor": ("\\U000F050F", "72\\u00B0", "0xF2685A"),
     "lights_on": ("\\U000F0335", "0 on", "0xF2B84B"),
     "fans_on": ("\\U000F0210", "2 on", "0x2ED5B8"),
+    "notifications": ("\\U000F009C", "0", "0x8FA6FF"),
 }
 
 
@@ -2850,6 +2885,11 @@ def gen_header(key, page, layout, pid):
             text_w = "                    - label: { id: %s, text: \"0 on\", text_font: f_body, text_color: 0xF3F5F8 }\n" % text_id
             chip_action = "            on_click: [lvgl.page.show: %s]\n" % target
             HEADER_LIGHTS.append((text_id, target, pid, key))
+        elif item == "notifications":
+            text_id = chipbase + "_t"
+            text_w = "                    - label: { id: %s, text: \"0\", text_font: f_body, text_color: 0xF3F5F8 }\n" % text_id
+            chip_action = "            on_click: [lvgl.page.show: page_notifications]\n"
+            HEADER_NOTIFICATIONS.append(text_id)
         elif item == "weather_current":
             text_id = chipbase + "_t"
             text_w = "                    - label: { id: %s, text: \"72\u00B0\", text_font: f_body, text_color: 0xF3F5F8 }\n" % text_id
@@ -3212,6 +3252,151 @@ def _rgb_editor_page(layout, target, back_pid, key, entity, name):
           "            on_click:\n              - homeassistant.action:\n                  action: light.turn_on\n                  data: { entity_id: %s }\n                  data_template:\n                    hs_color: !lambda 'return std::string(\"{{ [\") + std::to_string((int)lv_slider_get_value(id(%s))) + \"%s\";'\n              - lvgl.page.show: %s\n"
           % (entity, hue_id, ", 100] }}", back_pid))
     return "    - id: %s\n      bg_color: 0x0A0B0F\n      scrollable: false\n%s      widgets:\n%s" % (target, onload, w)
+def _notification_split_lines(var="r"):
+
+
+    return (
+        "std::vector<std::string> f; std::string p; "
+        "for(char c : %s){ if(c == 0x1F){ f.push_back(p); p.clear(); } else p += c; } "
+        "f.push_back(p);" % var)
+
+
+def gen_notification_page(layout):
+    """Five-row restored notification center with safe, fixed-script actions."""
+    onload = _nav_onload(layout, None)
+    w = "        - image: { src: img_aurora_bg, x: 0, y: 0 }\n"
+    w += "        - label: { text: \"Notifications\", x: 96, y: 20, text_font: f_h1, text_color: 0xF3F5F8 }\n"
+    w += "        - label: { id: notif_page_count, text: \"0 alerts\", x: 96, y: 62, text_font: f_body, text_color: 0x868CA0 }\n"
+    w += (
+        "        - button:\n            x: 844\n            y: 20\n            width: 160\n            height: 46\n"
+        "            bg_color: 0x161B24\n            border_color: 0x23262F\n            border_width: 1\n"
+        "            radius: 10\n            pad_all: 0\n            scrollable: false\n"
+        "            widgets: [label: { text: \"Clear all\", align: center, text_font: f_body, text_color: 0xC2C7D2 }]\n"
+        "            on_click: [homeassistant.action: { action: script.aurora_notifications_clear }]\n")
+    w += "        - label: { id: notif_empty, text: \"You are all caught up.\", x: 96, y: 260, width: 908, text_align: center, text_font: f_title, text_color: 0x5D6470 }\n"
+    for i in range(5):
+        top = 94 + i * 94
+        w += (
+            "        - obj:\n            id: notif_row_%d\n            x: 96\n            y: %d\n"
+            "            width: 908\n            height: 82\n            bg_color: 0x14161C\n"
+            "            border_color: 0x23262F\n            border_width: 1\n            radius: 10\n"
+            "            pad_all: 0\n            scrollable: false\n            hidden: true\n"
+            "            widgets:\n"
+            "              - obj: { id: notif_accent_%d, x: 0, y: 0, width: 6, height: 82, bg_color: 0x8FA6FF, border_width: 0, radius: 3, pad_all: 0, scrollable: false }\n"
+            "              - label: { id: notif_title_%d, text: \"Notification\", x: 22, y: 12, width: 560, height: 24, long_mode: dot, text_font: f_title, text_color: 0xF3F5F8 }\n"
+            "              - label: { id: notif_message_%d, text: \"\", x: 22, y: 44, width: 650, height: 20, long_mode: dot, text_font: f_body, text_color: 0xC2C7D2 }\n"
+            "              - label: { id: notif_time_%d, text: \"\", x: -22, y: 14, align: top_right, text_font: f_small, text_color: 0x868CA0 }\n"
+            "              - button:\n                  id: notif_action_%d\n                  align: right_mid\n                  x: -20\n"
+            "                  width: 130\n                  height: 40\n                  bg_color: 0x232A38\n                  radius: 9\n"
+            "                  pad_all: 0\n                  scrollable: false\n                  hidden: true\n"
+            "                  widgets: [label: { id: notif_action_lbl_%d, text: \"Action\", align: center, text_font: f_small, text_color: 0xEEF0F6 }]\n"
+            "                  on_click:\n"
+            "                    - lambda: |-\n"
+            "                        if (id(g_notif_items).size() <= %d) return; std::string r=id(g_notif_items)[%d]; %s\n"
+            "                        id(g_notif_action)=f.size()>6?f[6]:\"\"; id(g_notif_target)=f.size()>7?f[7]:\"\";\n"
+            "                    - if:\n                        condition:\n                          lambda: 'return !id(g_notif_action).empty() && !id(g_notif_target).empty();'\n"
+            "                        then:\n                          - homeassistant.action:\n                              action: script.aurora_notification_action\n"
+            "                              data:\n                                action_name: !lambda 'return id(g_notif_action);'\n"
+            "                                target: !lambda 'return id(g_notif_target);'\n"
+            % (i, top, i, i, i, i, i, i, i, i, _notification_split_lines()))
+    return "    - id: page_notifications\n      bg_color: 0x0A0B0F\n      scrollable: false\n%s      widgets:\n%s" % (onload, w)
+
+
+def gen_notification_popup(has_camera):
+    view = (
+        "                        - if:\n                            condition:\n                              lambda: 'return id(g_notif_camera);'\n"
+        "                            then:\n                              - lvgl.page.show: page_camera_full\n"
+        "                            else:\n                              - lvgl.page.show: page_notifications\n"
+        if has_camera else "                        - lvgl.page.show: page_notifications\n")
+    return (
+        "      - obj:\n          id: notif_popup\n          x: 0\n          y: 0\n          width: 1024\n          height: 600\n"
+        "          bg_color: 0x000000\n          bg_opa: 65%%\n          border_width: 0\n          radius: 0\n"
+        "          pad_all: 0\n          scrollable: false\n          hidden: true\n          widgets:\n"
+        "            - obj:\n                align: center\n                width: 650\n                height: 286\n"
+        "                bg_color: 0x14161C\n                border_color: 0x343949\n                border_width: 1\n"
+        "                radius: 12\n                pad_all: 0\n                scrollable: false\n                widgets:\n"
+        "                  - obj: { id: notif_popup_accent, x: 0, y: 0, width: 8, height: 286, bg_color: 0xF2B84B, border_width: 0, radius: 4, pad_all: 0, scrollable: false }\n"
+        "                  - label: { text: \"\\U000F009C\", x: 32, y: 28, text_font: f_icon, text_color: 0x8FA6FF }\n"
+        "                  - label: { id: notif_popup_title, text: \"Notification\", x: 86, y: 28, width: 520, height: 36, long_mode: dot, text_font: f_h1, text_color: 0xF3F5F8 }\n"
+        "                  - label: { id: notif_popup_message, text: \"\", x: 32, y: 90, width: 586, height: 72, long_mode: wrap, text_font: f_body, text_color: 0xC2C7D2 }\n"
+        "                  - button:\n                      x: 32\n                      y: 204\n                      width: 270\n                      height: 54\n"
+        "                      bg_color: 0x2ED5B8\n                      radius: 10\n                      pad_all: 0\n                      scrollable: false\n"
+        "                      widgets: [label: { id: notif_popup_view_lbl, text: \"Open center\", align: center, text_font: f_title, text_color: 0x06231D }]\n"
+        "                      on_click:\n%s"
+        "                        - lvgl.widget.hide: notif_popup\n"
+        "                  - button:\n                      x: 318\n                      y: 204\n                      width: 300\n                      height: 54\n"
+        "                      bg_color: 0x1B1E26\n                      border_color: 0x343949\n                      border_width: 1\n"
+        "                      radius: 10\n                      pad_all: 0\n                      scrollable: false\n"
+        "                      widgets: [label: { text: \"Dismiss\", align: center, text_font: f_title, text_color: 0xC2C7D2 }]\n"
+        "                      on_click: [lvgl.widget.hide: notif_popup]\n" % view)
+
+
+def notification_text_sensors():
+    """HA queue/readback bindings for the full page, cards, header, and popup."""
+    count_labels = HEADER_NOTIFICATIONS + [c[0] for c in NOTIF_CARDS]
+    lines = [
+        "id(g_notif_items).clear(); std::string cur;",
+        "for(char c : x){ if(c=='\\n'){ if(!cur.empty()) id(g_notif_items).push_back(cur); cur.clear(); } else cur += c; }",
+        "if(!cur.empty()) id(g_notif_items).push_back(cur);",
+        "if(id(g_notif_items).size()>5) id(g_notif_items).resize(5);",
+        "id(g_notif_count)=(int)id(g_notif_items).size(); char count[24];",
+        "snprintf(count,sizeof(count),id(g_notif_count)==1?\"1 alert\":\"%d alerts\",id(g_notif_count));",
+        "lv_label_set_text(id(notif_page_count), count); char count_short[8];",
+        "snprintf(count_short,sizeof(count_short),\"%d\",id(g_notif_count));",
+    ]
+    for label in count_labels:
+        lines.append("lv_label_set_text(id(%s), count_short);" % label)
+    lines += [
+        "if(id(g_notif_count)>0) lv_obj_add_flag(id(notif_empty),LV_OBJ_FLAG_HIDDEN); else lv_obj_clear_flag(id(notif_empty),LV_OBJ_FLAG_HIDDEN);",
+        "lv_obj_t* R[5]={id(notif_row_0),id(notif_row_1),id(notif_row_2),id(notif_row_3),id(notif_row_4)};",
+        "lv_obj_t* A[5]={id(notif_accent_0),id(notif_accent_1),id(notif_accent_2),id(notif_accent_3),id(notif_accent_4)};",
+        "lv_obj_t* T[5]={id(notif_title_0),id(notif_title_1),id(notif_title_2),id(notif_title_3),id(notif_title_4)};",
+        "lv_obj_t* M[5]={id(notif_message_0),id(notif_message_1),id(notif_message_2),id(notif_message_3),id(notif_message_4)};",
+        "lv_obj_t* TM[5]={id(notif_time_0),id(notif_time_1),id(notif_time_2),id(notif_time_3),id(notif_time_4)};",
+        "lv_obj_t* B[5]={id(notif_action_0),id(notif_action_1),id(notif_action_2),id(notif_action_3),id(notif_action_4)};",
+        "lv_obj_t* BL[5]={id(notif_action_lbl_0),id(notif_action_lbl_1),id(notif_action_lbl_2),id(notif_action_lbl_3),id(notif_action_lbl_4)};",
+        "for(int i=0;i<5;i++){ if(i>=id(g_notif_count)){lv_obj_add_flag(R[i],LV_OBJ_FLAG_HIDDEN);continue;} lv_obj_clear_flag(R[i],LV_OBJ_FLAG_HIDDEN);",
+        "std::string r=id(g_notif_items)[i]; %s" % _notification_split_lines(),
+        "std::string sev=f.size()>1?f[1]:\"info\"; lv_color_t col=lv_color_hex(sev==\"critical\"?0xF2685A:(sev==\"warning\"?0xF2B84B:0x8FA6FF));",
+        "lv_obj_set_style_bg_color(A[i],col,0); lv_label_set_text(T[i],f.size()>2?f[2].c_str():\"Notification\");",
+        "lv_label_set_text(M[i],f.size()>3?f[3].c_str():\"\"); lv_label_set_text(TM[i],f.size()>4?f[4].c_str():\"\");",
+        "bool act=f.size()>7&&!f[5].empty()&&!f[6].empty()&&!f[7].empty(); if(act){lv_label_set_text(BL[i],f[5].c_str());lv_obj_clear_flag(B[i],LV_OBJ_FLAG_HIDDEN);}else lv_obj_add_flag(B[i],LV_OBJ_FLAG_HIDDEN);}",
+    ]
+    for count_id, rows in NOTIF_CARDS:
+        for i, (row, accent, title_id, msg_id, time_id) in enumerate(rows):
+            lines += [
+                "{ int i=%d; if(i>=id(g_notif_count)){lv_obj_add_flag(id(%s),LV_OBJ_FLAG_HIDDEN);}else{lv_obj_clear_flag(id(%s),LV_OBJ_FLAG_HIDDEN);std::string r=id(g_notif_items)[i];%s"
+                % (i, row, row, _notification_split_lines()),
+                "std::string sev=f.size()>1?f[1]:\"info\";lv_obj_set_style_bg_color(id(%s),lv_color_hex(sev==\"critical\"?0xF2685A:(sev==\"warning\"?0xF2B84B:0x8FA6FF)),0);"
+                % accent,
+                "lv_label_set_text(id(%s),f.size()>2?f[2].c_str():\"Notification\");lv_label_set_text(id(%s),f.size()>3?f[3].c_str():\"\");lv_label_set_text(id(%s),f.size()>4?f[4].c_str():\"\");}}"
+                % (title_id, msg_id, time_id),
+            ]
+    items = ("  - platform: homeassistant\n    id: ha_aurora_notifications\n"
+             "    entity_id: sensor.aurora_notifications\n    attribute: items\n"
+             "    on_value:\n      then:\n        - lambda: |-\n%s" % _indent(lines, 12))
+    latest_lines = [
+        "id(g_notif_urgent)=false;",
+        "if(x.empty() || x==id(g_notif_latest_seen)) return;",
+        "id(g_notif_latest_seen)=x;",
+        "std::string r=x; %s" % _notification_split_lines(),
+        "if(f.size()<4 || (f[1]!=\"warning\" && f[1]!=\"critical\")) return;",
+        "id(g_notif_urgent)=true;",
+        "id(g_notif_camera)=f.size()>8 && f[8]==\"1\";",
+        "lv_label_set_text(id(notif_popup_title),f[2].c_str()); lv_label_set_text(id(notif_popup_message),f[3].c_str());",
+        "lv_label_set_text(id(notif_popup_view_lbl),id(g_notif_camera)?\"View camera\":\"Open center\");",
+        "lv_obj_set_style_bg_color(id(notif_popup_accent),lv_color_hex(f[1]==\"critical\"?0xF2685A:0xF2B84B),0);",
+        "lv_obj_clear_flag(id(notif_popup),LV_OBJ_FLAG_HIDDEN); id(g_screen_off)=false; id(haptic).click();",
+    ]
+    latest = ("  - platform: homeassistant\n    id: ha_aurora_notification_latest\n"
+              "    entity_id: sensor.aurora_notifications\n    attribute: latest\n"
+              "    on_value:\n      then:\n        - lambda: |-\n%s"
+              "        - if:\n            condition:\n              lambda: 'return id(g_notif_urgent);'\n"
+              "            then:\n              - light.turn_on: { id: display_backlight, brightness: !lambda 'return id(g_bri) / 100.0f;' }\n"
+              % _indent(latest_lines, 12))
+    return [items, latest]
+
+
 def gen_pages(layout, pagemap):
     pages_yaml, sens, txt, clocks = "", [], [], []
     lights = _configured_light_entities(layout)
@@ -3302,6 +3487,7 @@ def gen_pages(layout, pagemap):
     for target, back_pid, key, entity, name in rgb_pages:
         pages_yaml += _rgb_editor_page(layout, target, back_pid, key, entity, name)
     pages_yaml += gen_settings_page(layout)
+    pages_yaml += gen_notification_page(layout)
     return pages_yaml, sens, txt, clocks
 
 
@@ -3313,6 +3499,8 @@ def build_lvgl(layout):
     CAM_CARDS.clear()     # repopulated by the first live camera card
     HEADER_WIFI.clear()
     HEADER_LIGHTS.clear()
+    HEADER_NOTIFICATIONS.clear()
+    NOTIF_CARDS.clear()
     pagemap = {key: "page_" + slug(key) for key in layout.get("pages", {})}
     nav = gen_nav(layout, pagemap)
     pages, sens, txt, clocks = gen_pages(layout, pagemap)
@@ -3707,6 +3895,7 @@ def assemble(layout):
     clocks += [("lbl_ss_time", "time_hm"), ("lbl_ss_date", "date_full")]   # screensaver clock
     pages += gen_screensaver_page()
     txt.append(SS_TEXT_SENSOR)
+    txt.extend(notification_text_sensors())
     if CAM_CARDS:                                        # live camera: fullscreen page + URL readback
         pages += gen_camera_full_page()
         txt.append(gen_cam_text_sensor())
@@ -3772,6 +3961,7 @@ def assemble(layout):
             "      - obj:\n          id: nav_rail\n          x: 0\n          y: 0\n          width: 74\n          height: 600\n"
             "          bg_color: 0x0C0D12\n          bg_opa: 90%\n          border_width: 0\n          radius: 0\n          pad_all: 0\n          widgets:\n"
             + nav
+            + gen_notification_popup(bool(CAM_CARDS))
             + "  pages:\n" + pages)
     return harvest_font_glyphs(out)
 
@@ -3818,6 +4008,7 @@ def host_assemble(layout):
           "      - obj:\n          id: nav_rail\n          x: 0\n          y: 0\n          width: 74\n          height: 600\n"
           "          bg_color: 0x0C0D12\n          bg_opa: 90%\n          border_width: 0\n          radius: 0\n          pad_all: 0\n          widgets:\n"
         + nav
+        + gen_notification_popup(False)
         + "  pages:\n" + pages
     )
     return harvest_font_glyphs(out)
