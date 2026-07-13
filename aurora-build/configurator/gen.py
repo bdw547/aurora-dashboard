@@ -326,35 +326,20 @@ def _strip_readbacks(base, e, sldid, fillid, gripid, pct, pwrid, pwic, axis, ext
 
 
 def _rgb_palette(base, entity, w, h, bx, by, size=40):
-    """Palette button + modal swatches and live rgb_color mirror for RGB lights."""
-    bid, pid = base + "_rgb", base + "_rgbp"
-    btn = ("              - button:\n                  id: " + bid + "\n                  x: " + str(bx) + "\n                  y: " + str(by) + "\n"
-           "                  width: " + str(size) + "\n                  height: " + str(size) + "\n                  bg_color: 0x302510\n"
-           "                  border_color: 0xE6A62B\n                  border_width: 1\n                  radius: " + str(size // 2) + "\n"
-           "                  pad_all: 0\n                  scrollable: false\n"
-           "                  widgets: [label: { text: \"\\U000F03D8\", align: center, text_font: f_iconsm, text_color: 0xFFFFFF }]\n"
-           "                  on_click: [lvgl.widget.show: " + pid + "]\n")
-    pw, ph = max(124, w - 16), max(84, h - 16)
-    sw, gap = 32, 6
-    sx = max(8, (pw - (3 * sw + 2 * gap)) // 2)
-    sy = max(6, (ph - (2 * sw + gap)) // 2)
-    colors = [("red", "0xEF4444"), ("orange", "0xF59E0B"), ("green", "0x22C55E"),
-              ("blue", "0x3B82F6"), ("purple", "0xA855F7"), ("white", "0xFFFFFF")]
-    panel = ("              - obj:\n                  id: " + pid + "\n                  x: 8\n                  y: 8\n                  width: " + str(pw) + "\n"
-             "                  height: " + str(ph) + "\n                  bg_color: 0x0B0D11\n                  bg_opa: 94%\n"
-             "                  border_color: 0x3A3D46\n                  border_width: 1\n                  radius: 10\n                  pad_all: 0\n"
-             "                  clip_corner: true\n                  scrollable: true\n                  scrollbar_mode: \"OFF\"\n                  hidden: true\n                  widgets:\n")
-    for i, (name, color) in enumerate(colors):
-        action = ("homeassistant.action: { action: light.turn_on, data: { entity_id: " + entity + ", color_name: " + name + " } }") if entity else "lvgl.page.show: page_home"
-        panel += ("                    - button:\n                        x: " + str(sx + (i % 3) * (sw + gap)) + "\n                        y: " + str(sy + (i // 3) * (sw + gap)) + "\n"
-                  "                        width: " + str(sw) + "\n                        height: " + str(sw) + "\n                        bg_color: " + color + "\n"
-                  "                        border_color: 0xFFFFFF\n                        border_width: 1\n                        radius: 16\n                        pad_all: 0\n                        scrollable: false\n"
-                  "                        on_click: [" + action + ", lvgl.widget.hide: " + pid + "]\n")
+    """Compact card button opening a full-screen contextual RGB editor."""
+    bid = base + "_rgb"
+    target = "page_rgb_" + base
+    button = ("              - button:\n                  id: " + bid + "\n                  x: " + str(bx) + "\n                  y: " + str(by) + "\n"
+              "                  width: " + str(size) + "\n                  height: " + str(size) + "\n                  bg_color: 0x302510\n"
+              "                  border_color: 0xE6A62B\n                  border_width: 1\n                  radius: " + str(size // 2) + "\n"
+              "                  pad_all: 0\n                  scrollable: false\n"
+              "                  widgets: [label: { text: \"\\U000F03D8\", align: center, text_font: f_iconsm, text_color: 0xFFFFFF }]\n"
+              "                  on_click: [lvgl.page.show: " + target + "]\n")
     ts = []
     if entity:
         ts.append("  - platform: homeassistant\n    id: ha_" + base + "_rgb\n    entity_id: " + entity + "\n    attribute: rgb_color\n    on_value:\n"
                   "      - lvgl.widget.update: { id: " + bid + ", bg_color: !lambda 'std::string v=x; for(char &c:v) if(c==\"[\"[0]||c==\"]\"[0]||c==\",\"[0]) c=\" \"[0]; int r=230,g=166,b=43; sscanf(v.c_str(), \"%d %d %d\", &r,&g,&b); return lv_color_hex(((r&255)<<16)|((g&255)<<8)|(b&255));' }\n")
-    return btn, panel, ts
+    return button, "", ts
 
 def c_light(card, x, y, w, h, base):
     e = card.get("entity", "")
@@ -816,6 +801,8 @@ EXTRA_CLOCKS = []   # (label_id, kind) live-clock bindings contributed by card e
 # mjpeg_stream instance + pill on_state + entity_picture readback + fullscreen page.
 # One entry max — the device supports 2 concurrent streams, we ship 1.
 CAM_CARDS = []
+HEADER_WIFI = []       # (icon_label_id, text_label_id)
+HEADER_LIGHTS = []     # (count_label_id, generated_page_id, back_page_id, page_key)
 
 
 def c_media(card, x, y, w, h, base):
@@ -1969,7 +1956,7 @@ def c_tvremote(card, x, y, w, h, base):
     for i, (g, key) in enumerate(bar):
         bx = mx + i * (bw + 8)
         if key == "pad":                              # open the dedicated trackpad page (the proven gesture path)
-            inner += btn(bx, by, bw, 62, g, "lvgl.page.show: page_trackpad",
+            inner += btn(bx, by, bw, 62, g, "lvgl.page.show: " + card.get("_trackpad_page", "page_trackpad"),
                          font="f_icon", bg="0x161B24", color="0x2ED5B8")
             continue
         if key in media_acts:
@@ -2737,10 +2724,10 @@ HCHIP = {
     "weather_tomorrow": ("\\U000F0595", "Tmrw 74\\u00B0", "0xF2B84B"),
     "secured": ("\\U000F068A", "Secured", "0x2ED5B8"),
     "networking": ("\\U000F0928", "Online", "0x2ED5B8"),
-    "wifi": ("\\U000F0928", "Strong", "0x2ED5B8"),
+    "wifi": ("\\U000F0928", "-- dBm", "0x2ED5B8"),
     "ethernet": ("\\U000F0928", "Wired", "0x2ED5B8"),
     "sensor": ("\\U000F050F", "72\\u00B0", "0xF2685A"),
-    "lights_on": ("\\U000F0335", "3 on", "0xF2B84B"),
+    "lights_on": ("\\U000F0335", "0 on", "0xF2B84B"),
     "fans_on": ("\\U000F0210", "2 on", "0x2ED5B8"),
 }
 
@@ -2770,7 +2757,7 @@ def gen_header(key, page, layout, pid):
     left = hdr.get("left", "greeting")
     first = layout.get("nav", [{}])[0].get("page")
     greet = "Good evening, Ben" if key == first else page.get("title", "Aurora")
-    room = layout.get("install_room") or "Home"          # matches the builder (blank -> Home)
+    room = page.get("room") or ((layout.get("install_room") or "") if key == first else "") or page.get("title") or "Home"
     tid, did = "hct_" + pid, "hcd_" + pid                 # live clock/date label ids (per page)
     out, clocks, weather_sens, weather_ts = "", [], [], []
     if left == "time":
@@ -2811,7 +2798,18 @@ def gen_header(key, page, layout, pid):
         icon_id = chipbase + "_i"
         icon_w = ("                    - label: { id: %s, text: \"%s\", text_font: f_iconsm, text_color: %s }\n" % (icon_id, g, col)) if g else ""
         text_w = "                    - label: { text: %s, text_font: f_body, text_color: 0xF3F5F8 }\n" % esc(t)
-        if item == "weather_current":
+        chip_action = ""
+        if item == "wifi":
+            text_id = chipbase + "_t"
+            text_w = "                    - label: { id: %s, text: \"-- dBm\", text_font: f_body, text_color: 0xF3F5F8 }\n" % text_id
+            HEADER_WIFI.append((icon_id, text_id))
+        elif item == "lights_on":
+            text_id = chipbase + "_t"
+            target = "page_lights_on_%s" % pid
+            text_w = "                    - label: { id: %s, text: \"0 on\", text_font: f_body, text_color: 0xF3F5F8 }\n" % text_id
+            chip_action = "            on_click: [lvgl.page.show: %s]\n" % target
+            HEADER_LIGHTS.append((text_id, target, pid, key))
+        elif item == "weather_current":
             text_id = chipbase + "_t"
             text_w = "                    - label: { id: %s, text: \"72\u00B0\", text_font: f_body, text_color: 0xF3F5F8 }\n" % text_id
             weather_sens.append(_wx_temp_readback(chipbase, "$ent_weather", text_id))
@@ -2827,10 +2825,11 @@ def gen_header(key, page, layout, pid):
                            _wx_header_attr_ts(chipbase + "_lo", WX_SENSOR_DAILY, "d_low", day, lo_id, "\u00B0"),
                            _wx_header_daily_icon_ts(chipbase + "_cond", day, icon_id)]
         out += (
-            "        - obj:\n"
+            "        - button:\n"
             "            align: top_right\n            x: %d\n            y: 18\n            width: 118\n            height: 40\n"
             "            bg_color: 0x14161C\n            border_color: 0x23262F\n            border_width: 1\n            radius: 12\n"
             "            pad_all: 0\n            scrollable: false\n"
+            "%s"
             "            widgets:\n"
             "              - obj:\n"
             "                  align: center\n                  width: SIZE_CONTENT\n                  height: SIZE_CONTENT\n"
@@ -2838,7 +2837,7 @@ def gen_header(key, page, layout, pid):
             "                  layout: { type: flex, flex_flow: ROW, flex_align_cross: center, pad_column: 8 }\n"
             "                  widgets:\n%s"
             "%s"
-            % (base_x, icon_w, text_w))
+            % (base_x, chip_action, icon_w, text_w))
     return out, clocks, weather_sens, weather_ts
 
 
@@ -2983,7 +2982,7 @@ def gen_settings_page(layout):
     return "    - id: page_settings\n      bg_color: 0x0A0B0F\n      scrollable: false\n%s      widgets:\n%s" % (onload, w)
 
 
-def gen_trackpad_page(layout, back_pid, active):
+def gen_trackpad_page(layout, back_pid, active, trackpad_pid="page_trackpad"):
     """Dedicated LG trackpad page — a verbatim clone of the PROVEN hand-built\n    page_trackpad (aurora.yaml): a full page whose pad/strip sit at exactly the\n    gesture engine's default zones (move pad 96,120..856,470; scroll strip\n    872,120..1004,470), entered via the remote's Pad button. on_load re-asserts\n    the canonical zone globals + engages the engine (g_tp_active); on_unload\n    disengages. Surfaces are clickable:false, same as the hand-built page —\n    the raw touchscreen handlers see every touch regardless."""
     onload = _nav_onload(layout, active)
     # Pad/scroll shrink to h320 (bottom 440) to seat a Back/Home row + a volume row
@@ -3035,14 +3034,141 @@ def gen_trackpad_page(layout, back_pid, active):
     w += _remote_btn(96, 297, 520, "\\U000F075E", "", "VOLUMEDOWN", gcol="0x2ED5B8")
     w += _remote_btn(401, 297, 520, "\\U000F075F", "", "MUTE", gcol="0x2ED5B8")
     w += _remote_btn(706, 298, 520, "\\U000F075D", "", "VOLUMEUP", gcol="0x2ED5B8")
-    return ("    - id: page_trackpad\n      bg_color: 0x0A0B0F\n      scrollable: false\n%s"
+    return ("    - id: %s\n      bg_color: 0x0A0B0F\n      scrollable: false\n%s"
             "      on_unload:\n        - lambda: 'id(g_tp_active) = false;'\n"
-            "      widgets:\n%s" % (onload, w))
+            "      widgets:\n%s" % (trackpad_pid, onload, w))
 
 
+def _configured_light_entities(layout):
+    """All HA lights known at save time, falling back to placed Aurora cards."""
+    out = []
+    for value in layout.get("home_lights", []):
+        entity = value.get("entity", value.get("entity_id", "")) if isinstance(value, dict) else value
+        if isinstance(entity, str) and entity.startswith("light.") and entity not in out:
+            out.append(entity)
+    if out:
+        return out
+    for page in layout.get("pages", {}).values():
+        for cards in page.get("subpages", [[]]):
+            for card in cards:
+                vals = []
+                if card.get("ck") in ("light", "light_t"):
+                    vals = [card.get("entity", "")]
+                elif card.get("ck") == "lightgroup":
+                    vals = card.get("entities") or []
+                for value in vals:
+                    entity = value.get("entity", value.get("entity_id", "")) if isinstance(value, dict) else value
+                    if isinstance(entity, str) and entity.startswith("light.") and entity not in out:
+                        out.append(entity)
+    return out
+
+
+def _lights_on_page(layout, target, back_pid, key, lights):
+    active = next((slug(n.get("id", "")) for n in layout.get("nav", []) if n.get("page") == key), None)
+    onload = _nav_onload(layout, active)
+    count_id = target + "_count"
+    w = "        - image: { src: img_aurora_bg, x: 0, y: 0 }\n"
+    w += "        - label: { text: \"Lights On\", x: 96, y: 24, text_font: f_h1, text_color: 0xF3F5F8 }\n"
+    w += "        - label: { id: %s, text: \"0 lights\", x: 96, y: 66, text_font: f_body, text_color: 0x868CA0 }\n" % count_id
+    w += ("        - button:\n            align: top_right\n            x: -20\n            y: 20\n            width: 118\n            height: 44\n"
+          "            bg_color: 0x161B24\n            border_color: 0x23262F\n            border_width: 1\n            radius: 10\n            pad_all: 0\n            scrollable: false\n"
+          "            widgets: [label: { text: \"Back\", align: center, text_font: f_body, text_color: 0xF3F5F8 }]\n"
+          "            on_click: [lvgl.page.show: %s]\n" % back_pid)
+    w += ("        - obj:\n            x: 96\n            y: 112\n            width: 908\n            height: 420\n"
+          "            bg_opa: 0\n            border_width: 0\n            pad_all: 0\n            scrollable: true\n"
+          "            layout: { type: flex, flex_flow: ROW_WRAP, flex_align_main: start, flex_align_cross: start, pad_row: 12, pad_column: 12 }\n"
+          "            widgets:\n")
+    tw, th = 285, 78
+    for i, entity in enumerate(lights):
+        name = entity.split(".", 1)[-1].replace("_", " ").title()
+        tile_id = target + "_tile_%d" % i
+        w += ("              - button:\n                  id: %s\n                  width: %d\n                  height: %d\n"
+              "                  bg_color: 0x161B24\n                  border_color: 0x4A3510\n                  border_width: 1\n                  radius: 10\n                  pad_all: 0\n                  scrollable: false\n                  hidden: true\n"
+              "                  widgets:\n                    - label: { text: \"\U000F0335\", x: 16, align: left_mid, text_font: f_iconsm, text_color: 0xF2B84B }\n"
+              "                    - label: { text: %s, x: 52, align: left_mid, width: %d, long_mode: dot, text_font: f_body, text_color: 0xF3F5F8 }\n"
+              "                    - label: { text: \"\U000F0156\", x: -14, align: right_mid, text_font: f_iconsm, text_color: 0x868CA0 }\n"
+              "                  on_click: [homeassistant.action: { action: light.turn_off, data: { entity_id: %s } }]\n"
+              % (tile_id, tw, th, esc(name), tw - 92, entity))
+    if not lights:
+        w += "        - label: { text: \"No configured lights are currently available.\", align: center, text_font: f_body, text_color: 0x868CA0 }\n"
+    return ("    - id: %s\n      bg_color: 0x0A0B0F\n      scrollable: false\n%s      widgets:\n%s" % (target, onload, w))
+
+
+def _header_live_bindings(lights):
+    sens, txt = [], []
+    if HEADER_WIFI:
+        bars = [glyph_for("wifi-strength-1", True), glyph_for("wifi-strength-2", True),
+                glyph_for("wifi-strength-3", True), glyph_for("wifi-strength-4", True)]
+        lines = ["char b[16]; snprintf(b, sizeof(b), \"%d dBm\", (int)x);",
+                 "const char* g = x > -55 ? \"%s\" : x > -65 ? \"%s\" : x > -75 ? \"%s\" : \"%s\";" % (bars[3], bars[2], bars[1], bars[0])]
+        for icon_id, text_id in HEADER_WIFI:
+            lines += ["lv_label_set_text(id(%s), g);" % icon_id, "lv_label_set_text(id(%s), b);" % text_id]
+        sens.append("  - platform: wifi_signal\n    id: aurora_header_wifi\n    update_interval: 10s\n    on_value:\n      then:\n        - lambda: |-\n%s" % _indent(lines, 12))
+    if lights and HEADER_LIGHTS:
+        state_ids = ["ha_header_light_%d" % i for i in range(len(lights))]
+        count_labels = [x[0] for x in HEADER_LIGHTS] + [x[1] + "_count" for x in HEADER_LIGHTS]
+        for i, entity in enumerate(lights):
+            lines = ["int n = 0;"]
+            lines += ["if (id(%s).state == \"on\") n++;" % sid for sid in state_ids]
+            lines += ["char b[24]; snprintf(b, sizeof(b), n == 1 ? \"1 on\" : \"%d on\", n);"]
+            lines += ["lv_label_set_text(id(%s), b);" % lid for lid in count_labels]
+            for _label, target, _back, _key in HEADER_LIGHTS:
+                tile = target + "_tile_%d" % i
+                lines.append("if (x == \"on\") lv_obj_clear_flag(id(%s), LV_OBJ_FLAG_HIDDEN); else lv_obj_add_flag(id(%s), LV_OBJ_FLAG_HIDDEN);" % (tile, tile))
+            txt.append("  - platform: homeassistant\n    id: %s\n    entity_id: %s\n    on_value:\n      then:\n        - lambda: |-\n%s" % (state_ids[i], entity, _indent(lines, 12)))
+    return sens, txt
+def _rgb_editor_page(layout, target, back_pid, key, entity, name):
+    active = next((slug(n.get("id", "")) for n in layout.get("nav", []) if n.get("page") == key), None)
+    onload = _nav_onload(layout, active)
+    hue_id, preview_id = target + "_hue", target + "_preview"
+    w = "        - image: { src: img_aurora_bg, x: 0, y: 0 }\n"
+    w += "        - label: { text: %s, x: 96, y: 22, text_font: f_h1, text_color: 0xF3F5F8 }\n" % esc(name or "Light color")
+    w += "        - label: { text: \"COLOR\", x: 96, y: 82, text_font: f_micro, text_color: 0x868CA0 }\n"
+    w += ("        - button:\n            align: top_right\n            x: -20\n            y: 20\n            width: 120\n            height: 44\n"
+          "            bg_color: 0x161B24\n            border_color: 0x23262F\n            border_width: 1\n            radius: 10\n            pad_all: 0\n            scrollable: false\n"
+          "            widgets: [label: { text: \"Back\", align: center, text_font: f_body, text_color: 0xF3F5F8 }]\n"
+          "            on_click: [lvgl.page.show: %s]\n" % back_pid)
+    w += ("        - obj:\n            id: %s\n            x: 96\n            y: 116\n            width: 908\n            height: 90\n"
+          "            bg_color: 0xFF0000\n            border_color: 0xFFFFFF\n            border_width: 2\n            radius: 12\n            pad_all: 0\n            scrollable: false\n" % preview_id)
+    colors = ["0xFF0000", "0xFFFF00", "0x00FF00", "0x00FFFF", "0x0000FF", "0xFF00FF", "0xFF0000"]
+    strip_x, strip_y, strip_w = 96, 228, 908
+    seg = strip_w // 6
+    for i in range(6):
+        sw = strip_w - i * seg if i == 5 else seg + 1
+        w += ("        - obj: { x: %d, y: %d, width: %d, height: 52, bg_color: %s, bg_grad_color: %s, bg_grad_dir: HOR, border_width: 0, radius: 0, pad_all: 0, scrollable: false, clickable: false }\n"
+              % (strip_x + i * seg, strip_y, sw, colors[i], colors[i + 1]))
+    hsv = ("float h=lv_slider_get_value(id(%s)); float c=1.0f, x2=1.0f-fabsf(fmodf(h/60.0f,2.0f)-1.0f); "
+           "float r=0,g=0,b=0; int q=((int)h/60)%%6; if(q==0){r=c;g=x2;}else if(q==1){r=x2;g=c;}else if(q==2){g=c;b=x2;}"
+           "else if(q==3){g=x2;b=c;}else if(q==4){r=x2;b=c;}else{r=c;b=x2;} "
+           "return lv_color_hex(((int)(r*255)<<16)|((int)(g*255)<<8)|(int)(b*255));" % hue_id)
+    w += ("        - slider:\n            id: %s\n            x: 96\n            y: 220\n            width: 908\n            height: 68\n"
+          "            min_value: 0\n            max_value: 359\n            value: 30\n            bg_opa: 0%%\n            indicator: { bg_opa: 0%% }\n"
+          "            knob: { width: 22, height: 64, bg_color: 0xFFFFFF, border_color: 0x0A0B0F, border_width: 2, radius: 6 }\n"
+          "            on_value:\n              - lvgl.widget.update: { id: %s, bg_color: !lambda '%s' }\n"
+          % (hue_id, preview_id, hsv))
+    w += "        - label: { text: \"WHITE\", x: 96, y: 320, text_font: f_micro, text_color: 0x868CA0 }\n"
+    presets = [("Warm", 2700, "0xFFD7A3"), ("Bright", 4000, "0xFFF4E5"), ("Cool", 6500, "0xDDEBFF")]
+    for i, (label, kelvin, color) in enumerate(presets):
+        w += ("        - button:\n            x: %d\n            y: 350\n            width: 290\n            height: 70\n"
+              "            bg_color: %s\n            border_color: 0xFFFFFF\n            border_width: 1\n            radius: 10\n            pad_all: 0\n            scrollable: false\n"
+              "            widgets: [label: { text: \"%s\", align: center, text_font: f_title, text_color: 0x101218 }]\n"
+              "            on_click:\n              - homeassistant.action:\n                  action: light.turn_on\n                  data: { entity_id: %s, color_temp_kelvin: \"%d\"%s }\n              - lvgl.page.show: %s\n"
+              % (96 + i * 309, color, label, entity, kelvin, ', brightness_pct: "100"' if label == "Bright" else "", back_pid))
+    w += ("        - button:\n            x: 96\n            y: 458\n            width: 290\n            height: 64\n"
+          "            bg_color: 0x161B24\n            border_color: 0x23262F\n            border_width: 1\n            radius: 10\n            pad_all: 0\n            scrollable: false\n"
+          "            widgets: [label: { text: \"Cancel\", align: center, text_font: f_title, text_color: 0xC2C7D2 }]\n"
+          "            on_click: [lvgl.page.show: %s]\n" % back_pid)
+    w += ("        - button:\n            x: 405\n            y: 458\n            width: 599\n            height: 64\n"
+          "            bg_color: 0x2ED5B8\n            border_width: 0\n            radius: 10\n            pad_all: 0\n            scrollable: false\n"
+          "            widgets: [label: { text: \"Apply color\", align: center, text_font: f_title, text_color: 0x06231D }]\n"
+          "            on_click:\n              - homeassistant.action:\n                  action: light.turn_on\n                  data: { entity_id: %s }\n                  data_template:\n                    hs_color: !lambda 'return std::string(\"{{ [\") + std::to_string((int)lv_slider_get_value(id(%s))) + \"%s\";'\n              - lvgl.page.show: %s\n"
+          % (entity, hue_id, ", 100] }}", back_pid))
+    return "    - id: %s\n      bg_color: 0x0A0B0F\n      scrollable: false\n%s      widgets:\n%s" % (target, onload, w)
 def gen_pages(layout, pagemap):
     pages_yaml, sens, txt, clocks = "", [], [], []
-    tp_page = None                                        # (back_pid, active nav) of the tvremote page
+    lights = _configured_light_entities(layout)
+    tp_pages = []                                         # one contextual trackpad per rich TV remote
+    rgb_pages = []                                        # one contextual editor per RGB light
     for key, page in layout.get("pages", {}).items():
         hdr = page.get("header") or {}
         header_on = bool(hdr.get("on"))
@@ -3056,9 +3182,16 @@ def gen_pages(layout, pagemap):
                 clocks += clk
                 sens += hdr_sens
                 txt += hdr_ts
-            has_tv = any(c.get("ck") == "tvremote" for c in cards)
+            active = next((slug(n.get("id", "")) for n in layout.get("nav", []) if n.get("page") == key), None)
             cam_n = len(CAM_CARDS)                        # detect a live camera card emitted on THIS sub-page
             for card in cards:
+                if card.get("ck") == "light" and card.get("rgb") and card.get("entity"):
+                    rgb_pages.append(("page_rgb_g_%s" % slug(card.get("id", "light")), pid, key, card.get("entity"), card.get("name", "Light")))
+                if card.get("ck") == "tvremote":
+                    trackpad_pid = "page_trackpad_%s" % slug(card.get("id", "tv"))
+                    card = dict(card)
+                    card["_trackpad_page"] = trackpad_pid
+                    tp_pages.append((trackpad_pid, pid, active))
                 ws, ss, ts = emit_card(card, header_on, pagemap)
                 widgets += "".join(ws)
                 sens += ss
@@ -3089,15 +3222,12 @@ def gen_pages(layout, pagemap):
                                 "            bg_opa: 0%%\n            border_width: 0\n            radius: 0\n            pad_all: 0\n            scrollable: false\n"
                                 "            widgets: [obj: { align: center, width: 10, height: 10, radius: 5, bg_color: %s, border_width: 0, pad_all: 0, scrollable: false, clickable: false }]\n"
                                 "            on_click: [lvgl.page.show: %s]\n" % (sx + j * tw, tw, dot, dpid))
-            active = next((slug(n.get("id", "")) for n in layout.get("nav", []) if n.get("page") == key), None)
             onload = _nav_onload(layout, active)
             onunload = ""
             if len(CAM_CARDS) > cam_n:                    # live camera lifecycle: stream while the page shows
                 CAM_CARDS[0] = CAM_CARDS[0][:4] + (pid,)  # remember the hosting page (fullscreen Dismiss target)
                 onload += "        - lambda: 'id(cam_stream).start(0, id(%s_cam));'\n" % CAM_CARDS[0][3]
                 onunload = "      on_unload:\n        - lambda: 'id(cam_stream).stop();'\n"
-            if has_tv and tp_page is None:                # remember where the remote lives (Pad links here back)
-                tp_page = (pid, active)
             # Page-level swipe -> adjacent sub-page (matches the dot targets).
             # LVGL re-fires the gesture event every indev cycle while the finger
             # is down, so an ungated handler cascades through several sub-pages
@@ -3116,8 +3246,15 @@ def gen_pages(layout, pagemap):
                 swipe += _swipe("on_swipe_right", sw_prev)
             pages_yaml += (
                 "    - id: %s\n      bg_color: 0x0A0B0F\n      scrollable: false\n%s%s%s      widgets:\n%s" % (pid, onload, onunload, swipe, widgets))
-    if tp_page is not None:                               # dedicated trackpad page (hand-built clone)
-        pages_yaml += gen_trackpad_page(layout, tp_page[0], tp_page[1])
+    for _label, target, back_pid, key in HEADER_LIGHTS:
+        pages_yaml += _lights_on_page(layout, target, back_pid, key, lights)
+    live_sens, live_txt = _header_live_bindings(lights)
+    sens += live_sens
+    txt += live_txt
+    for trackpad_pid, back_pid, active in tp_pages:
+        pages_yaml += gen_trackpad_page(layout, back_pid, active, trackpad_pid)
+    for target, back_pid, key, entity, name in rgb_pages:
+        pages_yaml += _rgb_editor_page(layout, target, back_pid, key, entity, name)
     pages_yaml += gen_settings_page(layout)
     return pages_yaml, sens, txt, clocks
 
@@ -3128,6 +3265,8 @@ def build_lvgl(layout):
     EXTRA_CLOCKS.clear()  # repopulated by card emitters (e.g. weather time/date)
     ART_IMAGES.clear()    # repopulated by media/spotify_art card emitters
     CAM_CARDS.clear()     # repopulated by the first live camera card
+    HEADER_WIFI.clear()
+    HEADER_LIGHTS.clear()
     pagemap = {key: "page_" + slug(key) for key in layout.get("pages", {})}
     nav = gen_nav(layout, pagemap)
     pages, sens, txt, clocks = gen_pages(layout, pagemap)

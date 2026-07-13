@@ -491,10 +491,10 @@ const HEADER_ITEMS = {
   weather_tomorrow:{label:'Weather — tomorrow', icon:'weather-partly-cloudy', txt:'Tmrw 74°', color:'var(--amber)'},
   secured:         {label:'Secured status', icon:'shield-check', txt:'Secured', color:'var(--teal)'},
   networking:      {label:'Networking', icon:'lan-connect', txt:'Online', color:'var(--teal)'},
-  wifi:            {label:'Wi-Fi bars', icon:'wifi-strength-4', txt:'Strong', color:'var(--teal)'},
+  wifi:            {label:'Wi-Fi bars', icon:'wifi-strength-3', txt:'-58 dBm', color:'var(--teal)'},
   ethernet:        {label:'Ethernet', icon:'ethernet-cable', txt:'Wired', color:'var(--teal)'},
   sensor:          {label:'Sensor status', icon:'thermometer', txt:'72°', color:'var(--red)'},
-  lights_on:       {label:'Lights on (count)', icon:'lightbulb-group', txt:'3 on', color:'var(--amber)'},
+  lights_on:       {label:'Lights on (count)', icon:'lightbulb-group', txt:'0 on', color:'var(--amber)'},
   fans_on:         {label:'Fans on (count)', icon:'fan', txt:'2 on', color:'var(--teal)'},
 };
 function defHeader(on){ return {on:!!on, left:'greeting', right:['weather_current','secured']}; }
@@ -529,7 +529,7 @@ function cap(c){ const k=c.ck;
     return Math.max(4,Math.floor(c.w*c.h/2)); }
   return 1; }
 
-function blankPage(title){ return {title:title||'Page', type:'custom', header:defHeader(false), subpages:[[]]}; }
+function blankPage(title){ return {title:title||'Page', room:'', type:'custom', header:defHeader(false), subpages:[[]]}; }
 function defaultLayout(){ const l={ install_room:'', nav:[
       {id:'home',icon:'home-variant',label:'Home',page:'home'},{id:'rooms',icon:'sofa',label:'Rooms',page:'rooms'},
       {id:'lights',icon:'lightbulb',label:'Lights',page:'lights'},{id:'climate',icon:'thermostat',label:'Climate',page:'climate'},
@@ -589,7 +589,7 @@ function renderRail(){ const r=document.getElementById('rail'); r.innerHTML='';
   const sp=document.createElement('div'); sp.style.flex='1'; r.appendChild(sp);
   const s=document.createElement('div'); s.className='ni'; s.innerHTML='<span class="mdi mdi-cog"></span>'; s.style.marginBottom='14px'; r.appendChild(s); }
 function renderHeader(){ const h=document.getElementById('phead'); const hd=L.pages[curPage].header; const on=hd&&hd.on; h.className=on?'on':''; if(!on){h.innerHTML='';return;}
-  const room=L.install_room||'Home'; const greet=curPage==='home'?'Good evening, Ben':L.pages[curPage].title; let left='';
+  const room=L.pages[curPage].room||((curPage==='home'&&L.install_room)||'')||L.pages[curPage].title||'Home'; const greet=curPage==='home'?'Good evening, Ben':L.pages[curPage].title; let left='';
   if(hd.left==='time') left=`<div class="greet">10:42<span style="font-size:20px;color:var(--t2);font-weight:600"> PM</span></div>`;
   else if(hd.left==='date') left=`<div class="greet">Sunday</div><div class="subln">June 29</div>`;
   else if(hd.left==='time_date') left=`<div class="greet">10:42 PM</div><div class="subln">Sunday, June 29</div>`;
@@ -964,7 +964,7 @@ function renderInspector(){ const el=document.getElementById('insp'); const c=se
       ${on?`<div class="field"><label>Left content</label><select id="hLeft">${leftOpts}</select></div>
       <div class="field"><label>Right status chips (${hd.right.length}/4)</label><div id="hchips"></div><button class="btn ghost" id="addChip" style="width:100%;margin-top:6px">+ Add status</button></div>`:''}
       <div class="field"><label>Page title</label><input id="pgTitle" value="${(L.pages[curPage].title||'').replace(/"/g,'&quot;')}"></div>
-      <div class="field"><label>Install room (header greeting label)</label><select id="instRoom"><option value="">— none —</option></select>
+      <div class="field"><label>Room shown in this top bar</label><select id="instRoom"><option value="">— use page title —</option></select>
         <button class="btn ghost" id="buildHomeBtn" style="width:100%;margin-top:6px">Build Home from this room</button></div>
       <div class="empty">Select a card to edit it, or pick one from the palette to add.</div>`;
     el.querySelector('#hdrTgl').onclick=()=>{ if(!on){ if(curCards().some(c=>c.y+c.h-1>4)){ toast('Move cards out of the bottom row first (top bar uses 4 rows)'); return; } } hd.on=!on; renderAll(); };
@@ -1081,8 +1081,9 @@ function renderInspector(){ const el=document.getElementById('insp'); const c=se
   wireCardActions(el,c);
 }
 function fillRooms(){ const s=document.getElementById('instRoom'); if(!s) return;
-  Object.values(AREAS).forEach(a=>{ const o=document.createElement('option'); o.value=a.name; o.textContent=a.name; if(L.install_room===a.name)o.selected=true; s.appendChild(o); });
-  s.onchange=(e)=>{ L.install_room=e.target.value; renderHeader(); }; }
+  const page=L.pages[curPage], selected=page.room||((curPage==='home'&&L.install_room)||'');
+  Object.values(AREAS).forEach(a=>{ const o=document.createElement('option'); o.value=a.name; o.textContent=a.name; if(selected===a.name)o.selected=true; s.appendChild(o); });
+  s.onchange=(e)=>{ page.room=e.target.value; renderHeader(); }; }
 // ---- Device capacity meter ----
 // Weighted "load score" ~ how big the generated setup() gets. Heavy cards pre-build
 // many widgets/rows. Calibrated so Ben's known-good 116-card layout (score ~324,
@@ -1245,6 +1246,7 @@ function openTemplates(){ const mbox=document.getElementById('mbox');
 // Normalize a page object (from a restored version or an applied template) so it
 // has the fields the renderer expects — mirrors boot()'s per-page fixups.
 function normPage(p){ if(typeof p.header!=='object'||p.header===null) p.header=defHeader(p.header===true);
+  if(typeof p.room!=='string') p.room='';
   if(!Array.isArray(p.header.right)) p.header.right=['weather_current','secured']; if(!p.header.left) p.header.left='greeting';
   if(!Array.isArray(p.subpages)||!p.subpages.length) p.subpages=[[]];
   p.subpages.forEach(sp=>sp.forEach(c=>{ if(C[c.ck]&&C[c.ck].multi&&!c.entities)c.entities=[]; if(c.ck==='shortcuts'&&!c.shortcuts)c.shortcuts=[]; if(c.ck==='tv_apps'&&!c.sources)c.sources=[]; }));
@@ -1314,7 +1316,8 @@ function roomWizard(target){ const isHome=(target==='home'); const mbox=document
   mbox.querySelector('#rmCreate').onclick=isHome?buildHomeFromRoom:createRoom;
   const areaSel=mbox.querySelector('#rmArea'), nameInp=mbox.querySelector('#rmName');   // nameInp is null in 'home' mode
   // 'home': pre-select the area whose NAME matches L.install_room (blank/unknown -> leave default, don't block)
-  if(isHome && L.install_room){ const hit=Object.keys(AREAS).find(id=>((AREAS[id].name)||id)===L.install_room); if(hit) areaSel.value=hit; }
+  const homeRoom=isHome&&L.pages.home?(L.pages.home.room||L.install_room):'';
+  if(homeRoom){ const hit=Object.keys(AREAS).find(id=>((AREAS[id].name)||id)===homeRoom); if(hit) areaSel.value=hit; }
   const sync=()=>{ RMarea=areaSel.value; if(nameInp) nameInp.value=(AREAS[RMarea]&&AREAS[RMarea].name)||RMarea; loadAreaEnts(); };
   areaSel.onchange=sync; sync(); }
 
@@ -1369,7 +1372,7 @@ function createRoom(){
   const subpages=packRoomCards(cards, usableRows);
   // unique page key; prefer key == slug(roomName) so room:<Name> shortcuts resolve too
   const base=roomSlug(roomName); let key=base, i=2; while(L.pages[key]){ key=base+'_'+i; i++; }
-  L.pages[key]=normPage({title:roomName, type:'custom', header:hdr, subpages});  // orphan page (not added to nav)
+  L.pages[key]=normPage({title:roomName, room:roomName, type:'custom', header:hdr, subpages});  // orphan page (not added to nav)
   ensureRoomsHub(roomName, key);
   curPage=key; curSub=0; sel=null; closeModal(); renderAll();                    // open it in the editor (Phase-1 idiom)
   toast('Room “'+roomName+'” created ('+cards.length+' card'+(cards.length===1?'':'s')+') — Save to keep it'); }
@@ -1385,6 +1388,7 @@ function buildHomeFromRoom(){
   if(!confirm('Replace the Home page layout with these cards? Your current Home cards will be overwritten.')) return;
   const usableRows=(home.header&&home.header.on)?4:5;            // pack for the Home page's OWN header
   home.subpages=packRoomCards(cards, usableRows);                // replace subpages; title + header untouched
+  home.room=(AREAS[RMarea]&&AREAS[RMarea].name)||RMarea||home.room||'';
   home.subpages.forEach(sp=>sp.forEach(c=>{ if(C[c.ck]&&C[c.ck].multi&&!c.entities)c.entities=[]; if(c.ck==='shortcuts'&&!c.shortcuts)c.shortcuts=[]; }));
   curPage='home'; curSub=0; sel=null; closeModal(); renderAll();
   toast('Home rebuilt from room ('+cards.length+' card'+(cards.length===1?'':'s')+') — Save to keep it'); }
@@ -1537,7 +1541,10 @@ async function connect(){ const url=document.getElementById('haurl').value.trim(
     document.getElementById('cdot').className='dot ok'; document.getElementById('cstat').textContent=ENTS.length+' entities · '+Object.keys(AREAS).length+' areas';
     renderPalette(); renderInspector(); toast('Connected to Home Assistant');
   }catch(e){ document.getElementById('cdot').className='dot'; document.getElementById('cstat').textContent='not connected'; toast('Connect failed: '+e.message); } }
-async function save(){ try{ await j('/api/layout',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(L)}); toast('Layout saved ✓'); }catch(e){ toast('Save failed: '+e.message); } }
+async function save(){ try{
+  if(ENTS.length) L.home_lights=ENTS.filter(e=>e.domain==='light').map(e=>e.entity_id);
+  await j('/api/layout',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(L)}); toast('Layout saved ✓');
+}catch(e){ toast('Save failed: '+e.message); } }
 let SERIAL_DEV='';
 // Re-check for a USB-attached panel and update the serial control live (no page
 // reload). The option is always visible: enabled when /dev/ttyACM* is present,
@@ -1563,6 +1570,7 @@ async function flash(){
 
 async function boot(){ try{ L=await j('/api/layout'); if(!L||!L.pages||!Object.keys(L.pages).length) L=defaultLayout(); }catch(e){ L=defaultLayout(); }
   Object.values(L.pages).forEach(p=>{ if(typeof p.header!=='object'||p.header===null) p.header=defHeader(p.header===true);
+    if(typeof p.room!=='string') p.room='';
     if(!Array.isArray(p.header.right)) p.header.right=['weather_current','secured']; if(!p.header.left) p.header.left='greeting';
     p.subpages.forEach(sp=>sp.forEach(c=>{ if(C[c.ck]&&C[c.ck].multi&&!c.entities)c.entities=[]; if(c.ck==='shortcuts'&&!c.shortcuts)c.shortcuts=[]; if(c.ck==='tv_apps'&&!c.sources)c.sources=[]; })); });
   curPage=L.nav[0]?L.nav[0].page:Object.keys(L.pages)[0]; curSub=0;

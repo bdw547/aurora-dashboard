@@ -97,12 +97,14 @@
           {
             "id": "c2nx8a7",
             "ck": "spotify_art",
-            "entity": "media_player.gameroom",
-            "name": "Gameroom",
+            "entity": "media_player.spotifyplus_ben_walton",
+            "name": "Office",
             "x": 4,
             "y": 1,
             "w": 3,
-            "h": 4
+            "h": 4,
+            "device_class": "",
+            "unit": ""
           },
           {
             "id": "ccz4stp",
