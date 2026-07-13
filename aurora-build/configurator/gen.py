@@ -2181,6 +2181,52 @@ def c_spot_tracks(card, x, y, w, h, base):
     return [card_obj(x, y, w, h, inner)], [], ts
 
 
+SPOT_MAX_QUEUE = 30
+
+
+def c_spot_queue(card, x, y, w, h, base):
+    """Read-only upcoming-song list backed by sensor.aurora_spotify_queue."""
+    n = _card_rows(card, SPOT_MAX_QUEUE, SPOT_MAX_QUEUE)
+    inner = ic("spotify_queue", color="0x1DB954")
+    inner += lbl("UP NEXT", 50, 18, "f_micro", "0x868CA0")
+    inner += ("              - button:\n                  x: %d\n                  y: 10\n                  width: 40\n                  height: 30\n"
+              "                  bg_color: 0x161B24\n                  radius: 10\n                  pad_all: 0\n                  scrollable: false\n"
+              "                  widgets: [label: { text: \"%s\", align: center, text_font: f_icon, text_color: 0x1DB954 }]\n"
+              "                  on_click: [homeassistant.action: { action: script.aurora_spotify_refresh_queue }]\n"
+              % (w - 54, glyph_for("reload")))
+    rh, gap, list_y = 44, 6, 48
+    inner += ("              - obj:\n                  id: %s_lst\n                  x: 14\n                  y: %d\n                  width: %d\n                  height: %d\n"
+              "                  bg_opa: 0\n                  border_width: 0\n                  radius: 0\n                  pad_all: 0\n                  widgets:\n"
+              % (base, list_y, w - 28, h - list_y - 12))
+    for i in range(n):
+        inner += ("                    - obj:\n                        id: %s_r%d\n                        x: 0\n                        y: %d\n"
+                  "                        width: %d\n                        height: %d\n                        bg_color: 0x0F1117\n"
+                  "                        radius: 8\n                        border_width: 0\n                        pad_all: 0\n                        scrollable: false\n                        hidden: true\n"
+                  "                        widgets: [label: { id: %s_l%d, text: \"\", x: 12, align: left_mid, width: %d, long_mode: dot, text_font: f_small, text_color: 0xF3F5F8 }]\n"
+                  % (base, i, i * (rh + gap), w - 32, rh, base, i, w - 56))
+    inner += ("                    - label: { id: %s_empty, text: \"Queue is empty\", align: top_mid, y: 12, text_font: f_small, text_color: 0x5D6470 }\n" % base)
+    larr = ", ".join("id(%s_l%d)" % (base, i) for i in range(n))
+    rarr = ", ".join("id(%s_r%d)" % (base, i) for i in range(n))
+    populate = [
+        "const std::string &str = x;",
+        "lv_obj_t* L[%d] = { %s };" % (n, larr),
+        "lv_obj_t* R[%d] = { %s };" % (n, rarr),
+        "int idx = 0; size_t st = 0;",
+        "for (size_t i = 0; i <= str.size() && idx < %d; i++) {" % n,
+        "  if (i == str.size() || str[i] == '\\n') {",
+        "    std::string tok = str.substr(st, i - st);",
+        "    if (!tok.empty()) { lv_label_set_text(L[idx], tok.c_str()); lv_obj_clear_flag(R[idx], LV_OBJ_FLAG_HIDDEN); idx++; }",
+        "    st = i + 1;",
+        "  }",
+        "}",
+        "for (int j = idx; j < %d; j++) lv_obj_add_flag(R[j], LV_OBJ_FLAG_HIDDEN);" % n,
+        "if (idx > 0) lv_obj_add_flag(id(%s_empty), LV_OBJ_FLAG_HIDDEN);" % base,
+        "else lv_obj_clear_flag(id(%s_empty), LV_OBJ_FLAG_HIDDEN);" % base,
+    ]
+    ts = ["  - platform: homeassistant\n    id: ha_%s_q\n    entity_id: sensor.aurora_spotify_queue\n    attribute: names\n"
+          "    on_value:\n      then:\n        - lambda: |-\n%s" % (base, _indent(populate, 12))]
+    return [card_obj(x, y, w, h, inner)], [], ts
+
 SPOT_MAX_SPEAKERS = 14
 
 
@@ -2553,7 +2599,7 @@ def c_speakers(card, x, y, w, h, base):
 def c_spotify_art(card, x, y, w, h, base):
     """Album-art Spotify control, 1:1 with the web preview (builder.html\n    `spotify_art`): the art panel fills the left column and a semi-transparent metadata strip (LVGL-safe, no blur) overlays its bottom — title / artist / progress\n    bar / touch-first transport row ([shuffle 48][prev 48][play 64][next 48],\n    20px gaps), each in its own band — plus a 56px green vertical volume\n    fill-rail with live percent readout and a mute button below it on the\n    right. All geometry is anchored off (w, h) so every allowed span\n    (3x3 .. 6x5) lays out without overlap: the strip is a fixed-height content\n    band (fonts don't scale) and the art + rail absorb the rest. Art = single\n    JPEG still fetched + HW-decoded on the mjpeg_stream task (fetch_still);\n    its square edge is min(art column w, h) so it fills the column under the\n    strip."""
     e = card.get("entity", "")
-    tid, aid, ppid, pgid = base + "_t", base + "_a", base + "_pp", base + "_pg"
+    tid, aid, ppid, pgid, favid = base + "_t", base + "_a", base + "_pp", base + "_pg", base + "_fav"
     sld, fillid, gripid, vpid = base + "_vs", base + "_vf", base + "_vg", base + "_vp"
     shid = base + "_sh"                                   # shuffle icon (recolored by state)
     GN, GN_LO, SH_OFF = "0x1DB954", "0x0E7A37", "0x6E727E"
@@ -2562,7 +2608,7 @@ def c_spotify_art(card, x, y, w, h, base):
     nxt = ha("media_player.media_next_track", e) if e else "lvgl.page.show: page_home"
     mute = ha("media_player.volume_mute", e, 'is_volume_muted: "true"') if e else "lvgl.page.show: page_home"
     # transport glyphs render at ~26-30px -> f_icon (30px); rail/mute stay small (18px)
-    for cp in ("000F04AE", "000F04AD", "000F03E4", "000F040A", "000F049D"):
+    for cp in ("000F04AE", "000F04AD", "000F03E4", "000F040A", "000F049D", "000F02D1", "000F02D5"):
         USED_ICON_CP.add(cp)
     for cp in ("000F057E", "000F075F"):
         USED_ICONSM_CP.add(cp)
@@ -2592,8 +2638,9 @@ def c_spotify_art(card, x, y, w, h, base):
     # --- translucent metadata strip overlaid on the art bottom; fixed bands never overlap:
     # title 8..28, artist 30..46, progress 52..55, transport 64..136, bottom pad 12 ---
     inner += "              - obj: { x: " + str(ax) + ", y: " + str(tpy) + ", width: " + str(aw) + ", height: " + str(tp_h) + ", bg_color: 0x000000, bg_opa: 50%, radius: 0, border_width: 0, pad_all: 0, scrollable: false }\n"
-    inner += lbl("Nothing playing", ax + 10, tpy + 8, "f_body", "0xF3F5F8", wid=tid, width=trkw, long="dot", height=20)
+    inner += lbl("Nothing playing", ax + 10, tpy + 8, "f_body", "0xF3F5F8", wid=tid, width=trkw - 48, long="dot", height=20)
     inner += lbl("", ax + 10, tpy + 30, "f_small", "0xAEB4C2", wid=aid, width=trkw, long="dot", height=16)
+    inner += "              - button: { x: " + str(ax + aw - 48) + ", y: " + str(tpy + 2) + ", width: 42, height: 42, bg_opa: 0%, border_width: 0, radius: 12, pad_all: 0, scrollable: false, widgets: [label: { id: " + favid + ", text: \"\\U000F02D5\", align: center, text_font: f_icon, text_color: 0xFFFFFF }], on_click: [homeassistant.action: { action: script.aurora_spotify_toggle_favorite }] }\n"
     pgy = tpy + 52
     inner += "              - obj: { x: " + str(ax + 10) + ", y: " + str(pgy) + ", width: " + str(trkw) + ", height: 3, bg_color: 0x2A2D36, radius: 2, border_width: 0, pad_all: 0, scrollable: false }\n"
     inner += "              - obj: { id: " + pgid + ", x: " + str(ax + 10) + ", y: " + str(pgy) + ", width: " + str(max(1, int(trkw * 0.4))) + ", height: 3, bg_color: " + GN + ", radius: 2, border_width: 0, pad_all: 0, scrollable: false" + (", hidden: true" if e else "") + " }\n"
@@ -2675,6 +2722,9 @@ def c_spotify_art(card, x, y, w, h, base):
                   "      - lvgl.widget.update: { id: " + fillid + ", y: !lambda 'return (int)(" + str(vth) + " - atof(x.c_str()) * " + str(vth) + ");' }\n"
                   "      - lvgl.widget.update: { id: " + gripid + ", y: !lambda 'return (int)(" + str(vth) + " - atof(x.c_str()) * " + str(vth) + ") - 4;' }\n"
                   "      - lvgl.label.update: { id: " + vpid + ", text: !lambda 'return std::to_string((int)(atof(x.c_str()) * 100));' }\n")
+        ts.append("  - platform: homeassistant\n    id: ha_" + favid + "\n    entity_id: sensor.aurora_spotify_favorite\n    attribute: is_favorite\n    on_value:\n"
+                  "      - lvgl.label.update: { id: " + favid + ", text: !lambda 'return (x == \"true\" || x == \"True\" || x == \"on\") ? std::string(\"\\U000F02D1\") : std::string(\"\\U000F02D5\");', "
+                  "text_color: !lambda 'return (x == \"true\" || x == \"True\" || x == \"on\") ? lv_color_hex(0x1DB954) : lv_color_hex(0xFFFFFF);' }\n")
         # live progress: media_position / media_duration ratio -> green fill width
         ss.append("  - platform: homeassistant\n    id: ha_" + base + "_dur\n    entity_id: " + e + "\n    attribute: media_duration\n")
         ss.append("  - platform: homeassistant\n    id: ha_" + base + "_pos\n    entity_id: " + e + "\n    attribute: media_position\n    on_value:\n"
@@ -2736,7 +2786,7 @@ CTRL = {
     "playlist": c_playlist, "sonos_fav": c_playlist, "songlist": c_songlist,
     "sonos_library": c_songlist, "volume": c_volume, "volumes": c_volumes,
     "spotify_playlists": c_spot_playlists, "spotify_tracks": c_spot_tracks,
-    "spotify_speakers": c_spot_speakers, "spotify_speaker": c_spot_speaker,
+    "spotify_queue": c_spot_queue, "spotify_speakers": c_spot_speakers, "spotify_speaker": c_spot_speaker,
     "notifications": c_notifications,
 }
 
@@ -2951,6 +3001,7 @@ def gen_settings_page(layout):
                "              lv_obj_t* L[4]={id(set_to0_l),id(set_to1_l),id(set_to2_l),id(set_to3_l)}; for(int k=0;k<4;k++){ bool on=(V[k]==id(g_timeout_ms)); lv_obj_set_style_bg_color(B[k],lv_color_hex(on?0x2ED5B8:0x0F1117),0); lv_obj_set_style_text_color(L[k],lv_color_hex(on?0x06231D:0xC2C7D2),0); } }\n"
                "            lv_dropdown_set_selected(id(set_quiet_start)->obj,id(g_quiet_start)); lv_dropdown_set_selected(id(set_quiet_end)->obj,id(g_quiet_end));\n"
                "            { lv_obj_t* B[2]={id(set_wake0),id(set_wake1)}; lv_obj_t* L[2]={id(set_wake0_l),id(set_wake1_l)}; for(int k=0;k<2;k++){ bool on=(k==id(g_cam_wake_target)); lv_obj_set_style_bg_color(B[k],lv_color_hex(on?0x2ED5B8:0x0F1117),0); lv_obj_set_style_text_color(L[k],lv_color_hex(on?0x06231D:0xC2C7D2),0); } }\n"
+               "            { lv_obj_t* B[2]={id(set_ssmode0),id(set_ssmode1)}; lv_obj_t* L[2]={id(set_ssmode0_l),id(set_ssmode1_l)}; for(int k=0;k<2;k++){ bool on=(k==id(g_screensaver_mode)); lv_obj_set_style_bg_color(B[k],lv_color_hex(on?0x1DB954:0x0F1117),0); lv_obj_set_style_text_color(L[k],lv_color_hex(on?0x052E16:0xC2C7D2),0); } }\n"
                "            { char b[24]; snprintf(b,sizeof(b),\"%d photos\",(int)id(g_ss_files).size()); lv_label_set_text(id(set_ss_count),b); }\n")
     w = "        - image: { src: img_aurora_bg, x: 0, y: 0 }\n"
     w += "        - label: { text: \"Settings\", x: 94, y: 18, text_font: f_h1, text_color: 0xF3F5F8 }\n"
@@ -3023,13 +3074,23 @@ def gen_settings_page(layout):
                 "                  on_value:\n                    - lambda: 'id(%s)=lv_dropdown_get_selected(id(%s)->obj);'\n"
                 % (did, xpos, hour_opts, target, did))
     w += card_obj(560, 96, 370, 180, beh)
-    # --- Photo screensaver card ---
-    ss = lbl("PHOTO SCREENSAVER", 20, 12, "f_micro", "0x868CA0")
+    # --- Screensaver content and wake behavior ---
+    ss = lbl("SCREENSAVER", 20, 12, "f_micro", "0x868CA0")
     ss += lbl("Enabled", 20, 38, "f_body", "0xF3F5F8", height=22)
     ss += lbl("0 photos", -78, 16, "f_small", "0x868CA0", wid="set_ss_count", align="top_right")
     ss += ("              - switch:\n                  id: set_saver\n                  align: top_right\n                  x: -20\n                  y: 32\n"
            "                  on_value:\n                    - lambda: 'id(g_screensaver)=x; if(x && id(g_timeout_ms)==0) id(g_timeout_ms)=300000;'\n")
-    ss += lbl("Change photo", 20, 78, "f_small", "0xC2C7D2")
+    ss += lbl("Mode", 20, 70, "f_small", "0xC2C7D2")
+    mode_labels = [("Photos", 0), ("Spotify", 1)]
+    for i, (lab, mode) in enumerate(mode_labels):
+        body = ("id(g_screensaver_mode)=%d; lv_obj_t* B[2]={id(set_ssmode0),id(set_ssmode1)}; lv_obj_t* L[2]={id(set_ssmode0_l),id(set_ssmode1_l)}; "
+                "for(int k=0;k<2;k++){ bool on=(k==id(g_screensaver_mode)); lv_obj_set_style_bg_color(B[k],lv_color_hex(on?0x1DB954:0x0F1117),0); lv_obj_set_style_text_color(L[k],lv_color_hex(on?0x052E16:0xC2C7D2),0); }" % mode)
+        ss += ("              - button:\n                  id: set_ssmode%d\n                  x: %d\n                  y: 62\n                  width: 100\n                  height: 30\n"
+               "                  bg_color: 0x0F1117\n                  radius: 8\n                  pad_all: 0\n                  scrollable: false\n"
+               "                  widgets: [label: { id: set_ssmode%d_l, text: \"%s\", align: center, text_font: f_small, text_color: 0xC2C7D2 }]\n"
+               "                  on_click:\n                    - lambda: |-\n                        %s\n"
+               % (i, 112 + i * 108, i, lab, body))
+    ss += lbl("Photo timing", 20, 102, "f_small", "0xC2C7D2")
     intervals = [("15s", 15), ("30s", 30), ("1m", 60), ("2m", 120)]
     ibw = (370 - 40 - 3 * 8) // 4
     for i, (lab, secs) in enumerate(intervals):
@@ -3037,18 +3098,18 @@ def gen_settings_page(layout):
                 "                        const int V[4]={15,30,60,120}; lv_obj_t* B[4]={id(set_ssint0),id(set_ssint1),id(set_ssint2),id(set_ssint3)};\n"
                 "                        lv_obj_t* L[4]={id(set_ssint0_l),id(set_ssint1_l),id(set_ssint2_l),id(set_ssint3_l)};\n"
                 "                        for(int k=0;k<4;k++){ bool on=(V[k]==id(g_ss_seconds)); lv_obj_set_style_bg_color(B[k],lv_color_hex(on?0x2ED5B8:0x0F1117),0); lv_obj_set_style_text_color(L[k],lv_color_hex(on?0x06231D:0xC2C7D2),0); }" % (secs, secs))
-        ss += ("              - button:\n                  id: set_ssint%d\n                  x: %d\n                  y: 98\n                  width: %d\n                  height: 34\n"
+        ss += ("              - button:\n                  id: set_ssint%d\n                  x: %d\n                  y: 118\n                  width: %d\n                  height: 26\n"
                "                  bg_color: 0x0F1117\n                  radius: 8\n                  pad_all: 0\n                  scrollable: false\n"
                "                  widgets: [label: { id: set_ssint%d_l, text: \"%s\", align: center, text_font: f_small, text_color: 0xC2C7D2 }]\n"
                "                  on_click:\n                    - lambda: |-\n                        %s\n"
                % (i, 20 + i * (ibw + 8), ibw, i, lab, body))
-    ss += lbl("Motion opens", 20, 138, "f_small", "0xC2C7D2")
-    wake_targets = [("Dashboard", 0), ("Photos", 1)]
+    ss += lbl("Motion opens", 20, 148, "f_small", "0xC2C7D2")
+    wake_targets = [("Dashboard", 0), ("Screensaver", 1)]
     wbw = (370 - 40 - 8) // 2
     for i, (lab, target) in enumerate(wake_targets):
         body = ("id(g_cam_wake_target)=%d; lv_obj_t* B[2]={id(set_wake0),id(set_wake1)}; lv_obj_t* L[2]={id(set_wake0_l),id(set_wake1_l)}; "
                 "for(int k=0;k<2;k++){ bool on=(k==id(g_cam_wake_target)); lv_obj_set_style_bg_color(B[k],lv_color_hex(on?0x2ED5B8:0x0F1117),0); lv_obj_set_style_text_color(L[k],lv_color_hex(on?0x06231D:0xC2C7D2),0); }" % target)
-        ss += ("              - button:\n                  id: set_wake%d\n                  x: %d\n                  y: 158\n                  width: %d\n                  height: 30\n"
+        ss += ("              - button:\n                  id: set_wake%d\n                  x: %d\n                  y: 164\n                  width: %d\n                  height: 24\n"
                "                  bg_color: 0x0F1117\n                  radius: 8\n                  pad_all: 0\n                  scrollable: false\n"
                "                  widgets: [label: { id: set_wake%d_l, text: \"%s\", align: center, text_font: f_small, text_color: 0xC2C7D2 }]\n"
                "                  on_click:\n                    - lambda: |-\n                        %s\n"
@@ -3753,7 +3814,7 @@ SS_TEXT_SENSOR = (
 )
 SS_INTERVAL_ITEM = (
     "  - interval: 1s\n    then:\n"
-    "      - if:\n          condition:\n            lambda: 'return id(g_ss_showing);'\n          then:\n"
+    "      - if:\n          condition:\n            lambda: 'return id(g_ss_showing) && id(g_screensaver_mode) == 0;'\n          then:\n"
     "            - lambda: 'id(g_ss_elapsed) += 1;'\n"
     "            - if:\n                condition:\n                  lambda: |-\n"
     "                    int secs = id(g_ss_seconds);\n                    if (secs < 5) secs = 30;\n                    return id(g_ss_elapsed) >= secs;\n"
@@ -3767,25 +3828,96 @@ SS_ONIDLE = (
 )
 
 
-def gen_screensaver_page():
-    """Full-screen photo screensaver: ss_photo (fed by the online_image decoders),\n    a dim scrim, live clock/date + demo temp. Any tap wakes to home."""
+
+
+
+def spotify_screensaver_entity(layout):
+    """Use the first configured Spotify card, with the package owner as fallback."""
+    stack = [layout]
+    while stack:
+        item = stack.pop()
+        if isinstance(item, dict):
+            if item.get("ck", "").startswith("spotify") and item.get("entity"):
+                return item["entity"]
+            stack.extend(reversed(list(item.values())))
+        elif isinstance(item, list):
+            stack.extend(reversed(item))
+    return "media_player.spotifyplus_ben_walton"
+
+
+def gen_screensaver_page(entity):
+    """Full-screen photo or Spotify player, selected from Settings."""
+    if entity and ART_ENABLED:
+        ART_IMAGES.append((520, "ss_spotify_art", entity))
+    prev = ha("media_player.media_previous_track", entity)
+    play = ha("media_player.media_play_pause", entity)
+    nxt = ha("media_player.media_next_track", entity)
     return (
         "    - id: page_screensaver\n      bg_color: 0x000000\n      bg_opa: 100%\n"
         "      on_load:\n"
         "        - lvgl.widget.update: { id: nav_rail, hidden: true }\n"
-        "        - lambda: 'id(g_ss_showing) = true; id(g_ss_elapsed) = 0;'\n"
-            "      on_unload:\n"
+        "        - lambda: |-\n"
+        "            id(g_ss_showing)=true; id(g_ss_elapsed)=0; bool sp=id(g_screensaver_mode)==1;\n"
+        "            if(sp){lv_obj_add_flag(id(ss_photo_panel),LV_OBJ_FLAG_HIDDEN);lv_obj_clear_flag(id(ss_spotify_panel),LV_OBJ_FLAG_HIDDEN);}\n"
+        "            else{lv_obj_clear_flag(id(ss_photo_panel),LV_OBJ_FLAG_HIDDEN);lv_obj_add_flag(id(ss_spotify_panel),LV_OBJ_FLAG_HIDDEN);}\n"
+        "      on_unload:\n"
         "        - lvgl.widget.update: { id: nav_rail, hidden: false }\n"
-        "        - lambda: 'id(g_ss_showing) = false;'\n"
+        "        - lambda: 'id(g_ss_showing)=false;'\n"
         "      widgets:\n"
-        "        - image: { id: ss_photo, src: ss_image, align: center }\n"
-        "        - button: { id: ss_wake, x: 0, y: 0, width: 1024, height: 600, bg_opa: 0%, border_width: 0, radius: 0, on_click: [lvgl.page.show: page_home] }\n"
-        "        - obj: { id: ss_scrim, align: bottom_mid, x: 0, y: 0, width: 1024, height: 184, bg_color: 0x000000, bg_opa: 50%, border_width: 0, radius: 0, pad_all: 0, scrollable: false, clickable: false }\n"
-        "        - label: { id: lbl_ss_time, text: \"9:41\", align: bottom_left, x: 44, y: -86, text_font: f_display, text_color: 0xFFFFFF }\n"
-        "        - label: { id: lbl_ss_date, text: \"\", align: bottom_left, x: 48, y: -36, text_font: f_body, text_color: 0xC8CCD6 }\n"
-        "        - label: { id: lbl_ss_temp, text: \"72\\u00B0\", align: bottom_right, x: -44, y: -62, text_font: f_title, text_color: 0xFFFFFF }\n"
-        "        - label: { id: lbl_ss_wx_icon, text: \"\\U000F0599\", align: bottom_right, x: -46, y: -104, text_font: f_icon, text_color: 0xFFFFFF }\n"
+        "        - obj:\n            id: ss_photo_panel\n            x: 0\n            y: 0\n            width: 1024\n            height: 600\n"
+        "            bg_opa: 0%\n            border_width: 0\n            radius: 0\n            pad_all: 0\n            scrollable: false\n            widgets:\n"
+        "              - button: { x: 0, y: 0, width: 1024, height: 600, bg_opa: 0%, border_width: 0, radius: 0, on_click: [lvgl.page.show: page_home] }\n"
+        "              - image: { id: ss_photo, src: ss_image, align: center, clickable: false }\n"
+        "              - obj: { id: ss_scrim, align: bottom_mid, width: 1024, height: 184, bg_color: 0x000000, bg_opa: 50%, border_width: 0, radius: 0, pad_all: 0, scrollable: false, clickable: false }\n"
+        "              - label: { id: lbl_ss_time, text: \"9:41\", align: bottom_left, x: 44, y: -86, text_font: f_display, text_color: 0xFFFFFF, clickable: false }\n"
+        "              - label: { id: lbl_ss_date, text: \"\", align: bottom_left, x: 48, y: -36, text_font: f_body, text_color: 0xC8CCD6, clickable: false }\n"
+        "              - label: { id: lbl_ss_temp, text: \"72\\u00B0\", align: bottom_right, x: -44, y: -62, text_font: f_title, text_color: 0xFFFFFF, clickable: false }\n"
+        "              - label: { id: lbl_ss_wx_icon, text: \"\\U000F0599\", align: bottom_right, x: -46, y: -104, text_font: f_icon, text_color: 0xFFFFFF, clickable: false }\n"
+        "        - obj:\n            id: ss_spotify_panel\n            x: 0\n            y: 0\n            width: 1024\n            height: 600\n"
+        "            bg_color: 0x080A0D\n            border_width: 0\n            radius: 0\n            pad_all: 0\n            scrollable: false\n            hidden: true\n            widgets:\n"
+        "              - button: { x: 0, y: 0, width: 1024, height: 600, bg_opa: 0%, border_width: 0, radius: 0, on_click: [lvgl.page.show: page_home] }\n"
+        "              - obj: { x: 40, y: 40, width: 520, height: 520, bg_color: 0x171A20, border_width: 0, radius: 12, pad_all: 0, scrollable: false, clickable: false, widgets: [label: { text: \"\\U000F075A\", align: center, text_font: f_icon, text_color: 0x5D6470 }] }\n"
+        "              - image: { id: ss_spotify_art, x: 40, y: 40, src: ss_image, hidden: true, clickable: false }\n"
+        "              - label: { text: \"SPOTIFY\", x: 612, y: 54, text_font: f_micro, text_color: 0x1DB954, clickable: false }\n"
+        "              - label: { id: ss_spotify_title, text: \"Nothing playing\", x: 612, y: 88, width: 342, height: 70, long_mode: wrap, text_font: f_h1, text_color: 0xFFFFFF, clickable: false }\n"
+        "              - label: { id: ss_spotify_artist, text: \"\", x: 612, y: 164, width: 342, height: 28, long_mode: dot, text_font: f_body, text_color: 0xAEB4C2, clickable: false }\n"
+        "              - obj: { x: 612, y: 218, width: 350, height: 5, bg_color: 0x2A2D36, border_width: 0, radius: 3, pad_all: 0, scrollable: false, clickable: false }\n"
+        "              - obj: { id: ss_spotify_progress, x: 612, y: 218, width: 1, height: 5, bg_color: 0x1DB954, border_width: 0, radius: 3, pad_all: 0, scrollable: false, clickable: false }\n"
+        "              - label: { id: ss_spotify_position, text: \"0:00 / 0:00\", x: 612, y: 232, width: 350, text_align: right, text_font: f_small, text_color: 0x868CA0, clickable: false }\n"
+        "              - button: { x: 620, y: 284, width: 68, height: 68, bg_color: 0x171A20, border_width: 0, radius: 34, pad_all: 0, scrollable: false, widgets: [label: { text: \"\\U000F04AE\", align: center, text_font: f_icon, text_color: 0xFFFFFF }], on_click: [" + prev + "] }\n"
+        "              - button: { x: 740, y: 272, width: 92, height: 92, bg_color: 0x1DB954, border_width: 0, radius: 46, pad_all: 0, scrollable: false, widgets: [label: { id: ss_spotify_play, text: \"\\U000F040A\", align: center, text_font: f_icon, text_color: 0x052E16 }], on_click: [" + play + "] }\n"
+        "              - button: { x: 884, y: 284, width: 68, height: 68, bg_color: 0x171A20, border_width: 0, radius: 34, pad_all: 0, scrollable: false, widgets: [label: { text: \"\\U000F04AD\", align: center, text_font: f_icon, text_color: 0xFFFFFF }], on_click: [" + nxt + "] }\n"
+        "              - label: { text: \"\\U000F057E\", x: 612, y: 424, text_font: f_icon, text_color: 0xAEB4C2, clickable: false }\n"
+        "              - slider:\n                  id: ss_spotify_volume\n                  x: 660\n                  y: 420\n                  width: 250\n                  height: 18\n"
+        "                  min_value: 0\n                  max_value: 100\n                  value: 50\n                  bg_color: 0x2A2D36\n"
+        "                  indicator: { bg_color: 0x1DB954 }\n                  knob: { bg_color: 0xFFFFFF }\n"
+        "                  on_release:\n                    - homeassistant.action:\n                        action: media_player.volume_set\n"
+        "                        data: { entity_id: " + entity + ", volume_level: !lambda 'char b[8]; snprintf(b,sizeof(b),\"%.2f\",lv_slider_get_value(id(ss_spotify_volume))/100.0); return std::string(b);' }\n"
+        "              - button: { x: 918, y: 402, width: 58, height: 58, bg_color: 0x171A20, border_width: 0, radius: 29, pad_all: 0, scrollable: false, widgets: [label: { id: ss_spotify_favorite, text: \"\\U000F02D5\", align: center, text_font: f_icon, text_color: 0xFFFFFF }], on_click: [homeassistant.action: { action: script.aurora_spotify_toggle_favorite }] }\n"
     )
+
+
+def gen_screensaver_spotify_bindings(entity):
+    sensors = [
+        "  - platform: homeassistant\n    id: ha_ss_spotify_duration\n    entity_id: " + entity + "\n    attribute: media_duration\n",
+        "  - platform: homeassistant\n    id: ha_ss_spotify_position\n    entity_id: " + entity + "\n    attribute: media_position\n    on_value:\n      then:\n"
+        "        - lvgl.widget.update: { id: ss_spotify_progress, width: !lambda 'float d=id(ha_ss_spotify_duration).state; if(isnan(d)||d<1||isnan(x)) return 1; int w=(int)(350*x/d); return w<1?1:(w>350?350:w);' }\n"
+        "        - lvgl.label.update: { id: ss_spotify_position, text: !lambda 'int p=isnan(x)?0:(int)x; float df=id(ha_ss_spotify_duration).state; int d=isnan(df)?0:(int)df; char b[32]; snprintf(b,sizeof(b),\"%d:%02d / %d:%02d\",p/60,p%60,d/60,d%60); return std::string(b);' }\n",
+        "  - platform: homeassistant\n    id: ha_ss_spotify_volume\n    entity_id: " + entity + "\n    attribute: volume_level\n    on_value:\n"
+        "      - lvgl.slider.update: { id: ss_spotify_volume, value: !lambda 'return (int)(x*100);' }\n",
+    ]
+    texts = [
+        "  - platform: homeassistant\n    id: ha_ss_spotify_title\n    entity_id: " + entity + "\n    attribute: media_title\n    on_value:\n"
+        "      - lvgl.label.update: { id: ss_spotify_title, text: !lambda 'return x.empty()?std::string(\"Nothing playing\"):x;' }\n",
+        "  - platform: homeassistant\n    id: ha_ss_spotify_artist\n    entity_id: " + entity + "\n    attribute: media_artist\n    on_value:\n"
+        "      - lvgl.label.update: { id: ss_spotify_artist, text: !lambda 'return x;' }\n",
+        "  - platform: homeassistant\n    id: ha_ss_spotify_state\n    entity_id: " + entity + "\n    on_value:\n"
+        "      - lvgl.label.update: { id: ss_spotify_play, text: !lambda 'return x==\"playing\"?std::string(\"\\U000F03E4\"):std::string(\"\\U000F040A\");' }\n",
+        "  - platform: homeassistant\n    id: ha_ss_spotify_favorite\n    entity_id: sensor.aurora_spotify_favorite\n    attribute: is_favorite\n    on_value:\n"
+        "      - lvgl.label.update: { id: ss_spotify_favorite, text: !lambda 'return (x==\"true\"||x==\"True\"||x==\"on\")?std::string(\"\\U000F02D1\"):std::string(\"\\U000F02D5\");', text_color: !lambda 'return (x==\"true\"||x==\"True\"||x==\"on\")?lv_color_hex(0x1DB954):lv_color_hex(0xFFFFFF);' }\n",
+    ]
+    return sensors, texts
+
 
 
 def gen_camera_full_page():
@@ -3893,7 +4025,10 @@ def assemble(layout):
     keep_text = re.sub(r"(?m)^[ \t]*-?[ \t]*script\.(execute|stop):.*\n", "", keep_text)
     keep_text = scrub_lvgl_actions(keep_text)
     clocks += [("lbl_ss_time", "time_hm"), ("lbl_ss_date", "date_full")]   # screensaver clock
-    pages += gen_screensaver_page()
+    spotify_entity = spotify_screensaver_entity(layout)
+    pages += gen_screensaver_page(spotify_entity)
+    spotify_sens, spotify_txt = gen_screensaver_spotify_bindings(spotify_entity)
+    sens.extend(spotify_sens); txt.extend(spotify_txt)
     txt.append(SS_TEXT_SENSOR)
     txt.extend(notification_text_sensors())
     if CAM_CARDS:                                        # live camera: fullscreen page + URL readback

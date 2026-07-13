@@ -273,7 +273,13 @@ The Media **Library** (browse playlists → tracks → tap to play in a room) ne
 4. Check config → **Restart HA**.
 5. Run the action **`script.aurora_spotify_refresh_playlists`** once to populate your playlists.
 
-The package provides `sensor.aurora_spotify_playlists` / `sensor.aurora_spotify_tracks` and the `aurora_spotify_load_playlist` / `aurora_spotify_play_track` scripts the panel calls. (Lists are capped at Spotify's per-fetch limit of 50.)
+The package also powers the Spotify queue card and saved-track heart. It
+provides the playlist/track sensors, `sensor.aurora_spotify_queue`,
+`sensor.aurora_spotify_favorite`, and the scripts the panel calls. Queue and
+favorite state refresh automatically when the active track changes.
+
+In panel Settings, choose **Spotify** as the screensaver mode. The generated
+screensaver uses the first Spotify card's media-player entity.
 
 ---
 

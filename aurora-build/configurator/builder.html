@@ -305,6 +305,7 @@ const C = {
   spotify_art:{label:'Spotify player — art + volume', domain:'media_player', icon:'spotify', color:'#1DB954', spans:[[3,3],[4,3],[3,4],[4,4],[3,5],[4,5],[5,4],[5,5],[6,4],[6,5]], def:[4,3], min:[3,3], ctrl:'media'},
   spotify_playlists:{label:'Spotify playlists', domain:'media_player', icon:'playlist-play', color:'#1DB954', spans:[[2,1],[3,1],[2,2],[3,2],[2,3],[3,3]], def:[3,1], min:[2,1], ctrl:'spot_pl'},
   spotify_tracks:{label:'Spotify songs', domain:'media_player', icon:'playlist-music', color:'#1DB954', spans:[[2,3],[2,4],[2,5],[3,4],[3,5],[4,5]], def:[2,5], min:[2,3], ctrl:'spot_tr'},
+  spotify_queue:{label:'Spotify queue', domain:'media_player', icon:'playlist-music-outline', color:'#1DB954', spans:[[2,3],[2,4],[2,5],[3,3],[3,4],[3,5],[4,4],[4,5]], def:[3,4], min:[2,3], ctrl:'spot_queue'},
   spotify_speakers:{label:'Spotify speakers (Play on)', domain:'media_player', icon:'speaker-multiple', color:'#1DB954', spans:[[2,2],[3,2],[2,3],[3,3],[2,4],[3,4]], def:[3,3], min:[2,2], ctrl:'spot_spk'},
   spotify_speaker:{label:'Spotify speaker — single tile', domain:'media_player', icon:'speaker', color:'#1DB954', spans:[[1,1],[2,1],[1,2],[2,2]], def:[1,1], min:[1,1], ctrl:'spot_spk1', speakerField:true},
   playlist: {label:'Spotify playlist — single button', domain:'media_player', icon:'playlist-play', color:'#1DB954', spans:[[1,1],[2,1],[3,1]], def:[2,1], min:[1,1], ctrl:'playlist', playlistField:true},
@@ -342,7 +343,7 @@ const C = {
 const CATS = [
   ['Lighting', ['light','switch','lightgroup','outletgroup']],
   ['Comfort', ['climate','fan','cover']],
-  ['Spotify', ['spotify','spotify_playlists','spotify_tracks','spotify_speakers','volume']],
+  ['Spotify', ['spotify','spotify_playlists','spotify_tracks','spotify_queue','spotify_speakers','volume']],
   ['Sonos', ['sonos','speakers','sonos_sources','sonos_library','sonos_fav','volume']],
   ['TV', ['tvremote','tv_app','tv_apps']],
   ['Media', ['media','volume']],
@@ -380,6 +381,7 @@ const DESC={
   spotify:'Now-playing + transport — classic or album-art style',
   spotify_playlists:'Playlist picker — browse-all dropdown or a one-playlist button',
   spotify_tracks:'Live song list of the picked playlist — tap to play',
+  spotify_queue:'Upcoming songs from the active Spotify queue',
   spotify_speakers:'Where to play — all speakers or a single-speaker tile',
   volume:'Volume slider — one player, or a per-speaker list',
   sonos:'Sonos now-playing with transport',
@@ -897,6 +899,8 @@ function cardInner(c){ const def=C[c.ck], nm=c.name||def.label, big=c.w>=3, ctrl
     return head+`<div class="toprow"><span class="csub" style="letter-spacing:1px;font-size:10px">PLAYLIST</span><span class="mdi mdi-refresh" style="color:#1DB954;margin-left:auto"></span></div>${dd}<div class="csub" style="margin-top:8px;font-size:11px">Pick a playlist to load its songs</div>`; }
   if(ctrl==='spot_tr'){ const rows=[['MakeDamnSure','Taking Back Sunday'],['Cute Without The E','Taking Back Sunday'],['Buried a Lie','Senses Fail'],['The Quiet Things','Brand New'],['Sic Transit Gloria','Brand New'],['Ohio Is For Lovers','Hawthorne Heights'],['Vindicated','Dashboard Confessional']]; const n=Math.max(3,c.h*2); let lis=''; for(let i=0;i<n;i++){ const r=rows[i%rows.length]; const np=i===2; lis+=`<div class="trk"${np?' style="background:#1B2230"':''}><span style="color:${np?'#1DB954':'var(--tx)'};white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${r[0]}</span><span class="csub">${r[1]}</span></div>`; }
     return head+`<div class="toprow">${ico}<span class="csub" style="letter-spacing:1px">TRACKS · TAP TO PLAY</span></div><div class="trklist">${lis}</div>`; }
+  if(ctrl==='spot_queue'){ const rows=[['Up next','The Weeknd'],['Dreams','Fleetwood Mac'],['Midnight City','M83'],['Instant Crush','Daft Punk'],['Redbone','Childish Gambino'],['Electric Feel','MGMT']]; const n=Math.max(3,c.h*2); let lis=''; for(let i=0;i<n;i++){ const r=rows[i%rows.length]; lis+=`<div class="trk"><span style="color:var(--tx);white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${r[0]}</span><span class="csub">${r[1]}</span></div>`; }
+    return head+`<div class="toprow">${ico}<span class="csub" style="letter-spacing:1px">UP NEXT</span><span class="mdi mdi-refresh" style="color:#1DB954;margin-left:auto"></span></div><div class="trklist">${lis}</div>`; }
   if(ctrl==='spot_spk'){ const rooms=['Living Room','Kitchen','Office','Dining Room','Patio','Gameroom']; const n=Math.max(3,c.h*2); let lis=''; for(let i=0;i<n;i++){ const nm=rooms[i%rooms.length]; const on=i===0; lis+=`<div class="trk" style="${on?'background:#1DB954;':''}"><span style="color:${on?'#06231D':'var(--tx)'};white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${nm}</span></div>`; }
     return head+`<div class="toprow">${ico}<span class="csub" style="letter-spacing:1px">PLAY ON · TAP A SPEAKER</span></div><div class="trklist">${lis}</div>`; }
   if(ctrl==='spot_spk1'){ const label=c.speaker||c.name||'Speaker';
@@ -1159,7 +1163,7 @@ const LOAD_W={ tvremote:8, chart:6, speakers:5,
 // Cards whose pre-built row count is a per-card 'rows' option. per = load per row,
 // set so the default count matches the old fixed weight (tracks 50->8, speakers 14->5),
 // so the meter's calibration is unchanged at defaults but drops as you trim rows.
-const ROW_CFG={ spotify_tracks:{def:50,max:50,per:0.16}, spotify_speakers:{def:14,max:24,per:0.357} };
+const ROW_CFG={ spotify_tracks:{def:50,max:50,per:0.16}, spotify_queue:{def:30,max:30,per:0.16}, spotify_speakers:{def:14,max:24,per:0.357} };
 const LOAD_DEFAULT=1, LOAD_BUDGET=600, LOAD_WARN=0.75, LOAD_DANGER=0.90;
 function cardRows(c){ const cf=ROW_CFG[c.ck]; if(!cf) return null; let v=parseInt(c.rows,10); if(isNaN(v)) v=cf.def; return Math.max(4,Math.min(cf.max,v)); }
 function layoutLoad(){ let s=0; if(!L||!L.pages) return 0;
