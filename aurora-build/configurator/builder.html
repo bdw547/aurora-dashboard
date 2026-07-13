@@ -11,23 +11,27 @@
   --amber:#F2B84B; --blue:#4FA8F5; --red:#F2685A; --violet:#B06CFF; --onbd:#2A5048;
 }
 *{box-sizing:border-box;margin:0;padding:0}
-body{background:#070809;color:var(--tx);font-family:'Sora',system-ui,sans-serif;font-size:14px;height:100vh;overflow:hidden}
+body{background:#070809;color:var(--tx);font-family:'Sora',system-ui,sans-serif;font-size:14px;height:100vh;height:100dvh;overflow:hidden;display:flex;flex-direction:column}
 .mono{font-family:'IBM Plex Mono',monospace}
 button{font-family:inherit;cursor:pointer;border:0}
-#top{height:56px;display:flex;align-items:center;gap:14px;padding:0 18px;background:#0B0C11;border-bottom:1px solid var(--bd)}
+#top{min-height:56px;display:flex;align-items:center;gap:14px;padding:8px 18px;background:#0B0C11;border-bottom:1px solid var(--bd);flex:0 0 auto;flex-wrap:wrap}
 #top .brand{font-weight:800;font-size:17px;letter-spacing:-.3px}
 #top .brand b{background:linear-gradient(90deg,var(--teal),var(--violet));-webkit-background-clip:text;background-clip:text;color:transparent}
 #top .sp{flex:1}
+.top-connect,.top-actions{display:flex;align-items:center;gap:8px;flex-wrap:wrap}
+.top-connect{flex:1 1 560px}
+.top-actions{justify-content:flex-end}
 #top input{background:#0F1117;border:1px solid var(--bd);border-radius:9px;color:var(--tx);padding:8px 10px;font:inherit;font-size:12px}
 #top .pill{font-size:11px;color:var(--t2);display:flex;align-items:center;gap:6px}
 .dot{width:8px;height:8px;border-radius:50%;background:var(--t3)}.dot.ok{background:var(--teal)}
 .btn{background:var(--teal);color:var(--ink);border-radius:9px;padding:9px 14px;font-weight:700;font-size:13px}
 .btn.ghost{background:#12141b;color:var(--tx);border:1px solid var(--bd)}
 .btn.amber{background:var(--amber);color:#241a05}
-#app{display:flex;height:calc(100vh - 56px)}
-#palette{width:248px;background:#0A0B0F;border-right:1px solid var(--bd);overflow-y:auto;padding:14px}
-#center{flex:1;display:flex;flex-direction:column;align-items:center;overflow:auto;padding:18px;background:#070809}
-#inspector{width:300px;background:#0A0B0F;border-left:1px solid var(--bd);overflow-y:auto;padding:16px}
+#app{display:flex;flex:1 1 auto;min-height:0;position:relative;overflow:hidden}
+#palette{width:clamp(216px,16vw,248px);flex:0 0 auto;background:#0A0B0F;border-right:1px solid var(--bd);overflow-y:auto;padding:14px}
+#center{flex:1;min-width:0;display:flex;flex-direction:column;align-items:center;overflow:auto;padding:18px;background:#070809}
+#inspector{width:clamp(264px,19vw,300px);flex:0 0 auto;background:#0A0B0F;border-left:1px solid var(--bd);overflow-y:auto;padding:16px}
+#mobileTools,#panelShade{display:none}
 h3.sec{font-size:11px;letter-spacing:1.4px;text-transform:uppercase;color:var(--t3);font-weight:600;margin:6px 0 10px}
 .pcat{font-size:10px;letter-spacing:1px;text-transform:uppercase;color:var(--t3);margin:14px 0 6px}
 .pitem{display:flex;align-items:center;gap:10px;padding:9px 10px;border:1px solid var(--bd);border-radius:10px;background:#0E0F14;margin-bottom:7px;cursor:pointer;transition:.12s}
@@ -44,10 +48,10 @@ h3.sec{font-size:11px;letter-spacing:1.4px;text-transform:uppercase;color:var(--
 .tab{padding:6px 12px;border-radius:8px;background:#0E0F14;border:1px solid var(--bd);font-size:12px;color:var(--t2);cursor:pointer}
 .tab.on{background:var(--teal);color:var(--ink);font-weight:700;border-color:var(--teal)}
 .tab .x{margin-left:6px;opacity:.7}
-.stagewrap{display:flex;justify-content:center}
+.stagewrap{display:flex;justify-content:flex-start;position:relative;flex:0 0 auto}
 #frame{width:1024px;height:600px;background:var(--canvas);position:relative;border-radius:18px;border:1px solid #1b1d26;
   background-image:radial-gradient(130% 100% at 88% -10%,rgba(46,213,184,.10),rgba(123,108,255,.06) 42%,transparent 70%);
-  flex:0 0 auto;overflow:hidden;box-shadow:0 20px 60px rgba(0,0,0,.5)}
+  flex:0 0 auto;overflow:hidden;box-shadow:0 20px 60px rgba(0,0,0,.5);transform-origin:top left}
 #rail{position:absolute;left:0;top:0;width:74px;height:600px;background:var(--nav);border-right:1px solid #15171e;display:flex;flex-direction:column;align-items:center;padding-top:14px;gap:12px}
 #rail .ni{width:46px;height:46px;border-radius:13px;display:flex;align-items:center;justify-content:center;font-size:22px;color:var(--t3)}
 #rail .ni.on{background:var(--teal);color:var(--ink)}
@@ -183,20 +187,47 @@ h3.sec{font-size:11px;letter-spacing:1.4px;text-transform:uppercase;color:var(--
 .elrow{display:flex;align-items:center;justify-content:space-between;gap:8px;background:#0E0F14;border:1px solid var(--bd);border-radius:9px;padding:7px 10px;margin-bottom:6px;font-size:12px}
 .elrow .x{color:var(--red);cursor:pointer;font-size:15px}
 #modal{position:fixed;inset:0;background:rgba(0,0,0,.6);display:none;align-items:center;justify-content:center;z-index:50}
-.mbox{width:520px;max-height:82vh;background:#101116;border:1px solid var(--bd);border-radius:16px;padding:20px;overflow:auto}
+.mbox{width:min(520px,calc(100vw - 24px));max-height:calc(100dvh - 24px);background:#101116;border:1px solid var(--bd);border-radius:16px;padding:20px;overflow:auto}
 .mbox h2{font-size:18px;margin-bottom:4px}.mbox p{color:var(--t2);font-size:12px;margin-bottom:14px}
 .elist{max-height:300px;overflow:auto;border:1px solid var(--bd);border-radius:10px}
 .erow{padding:9px 12px;border-bottom:1px solid #15171e;cursor:pointer;font-size:13px;display:flex;justify-content:space-between;gap:10px}
 .erow:hover{background:#15171e}.erow.on{background:rgba(46,213,184,.12)}
 .erow .eid{color:var(--t3);font-size:11px}
 .mfoot{display:flex;justify-content:flex-end;gap:10px;margin-top:16px}
-#flashbox{position:fixed;right:18px;bottom:18px;width:440px;max-height:50vh;background:#0B0C11;border:1px solid var(--bd);border-radius:14px;padding:14px;display:none;z-index:40}
+#flashbox{position:fixed;right:18px;bottom:18px;width:min(440px,calc(100vw - 36px));max-height:50vh;background:#0B0C11;border:1px solid var(--bd);border-radius:14px;padding:14px;display:none;z-index:40}
 #flashlog{white-space:pre-wrap;font-family:'IBM Plex Mono',monospace;font-size:11px;color:#c2c7d2;max-height:32vh;overflow:auto;background:#08090c;border-radius:8px;padding:10px;margin-top:8px}
 .toast{position:fixed;bottom:18px;left:50%;transform:translateX(-50%);background:#101116;border:1px solid var(--onbd);color:var(--teal);padding:10px 18px;border-radius:10px;font-size:13px;z-index:60;display:none}
+@media (max-width:1300px){
+  #top .sp{display:none}
+  .top-actions{margin-left:auto}
+  #palette,#inspector{position:absolute;top:0;bottom:0;z-index:31;width:min(320px,calc(100vw - 32px));transition:transform .18s ease,visibility .18s ease;box-shadow:0 18px 48px rgba(0,0,0,.55)}
+  #palette{left:0;transform:translateX(-105%)}
+  #inspector{right:0;transform:translateX(105%)}
+  #palette.open,#inspector.open{transform:translateX(0)}
+  #palette:not(.open),#inspector:not(.open){visibility:hidden;pointer-events:none}
+  #panelShade.on{display:block;position:absolute;inset:0;z-index:30;background:rgba(0,0,0,.48)}
+  #mobileTools{display:flex;align-self:stretch;justify-content:space-between;gap:8px;margin-bottom:10px}
+  #mobileTools .btn{display:flex;align-items:center;gap:6px}
+  #mobileTools .btn.on{border-color:var(--teal);color:var(--teal)}
+}
+@media (max-width:760px){
+  #top{gap:8px;padding:8px 10px}
+  #top .brand,.top-connect,.top-actions{width:100%}
+  .top-connect{flex-basis:auto}
+  .top-actions{justify-content:flex-start;margin-left:0}
+  #haurl{width:180px!important}
+  #hatok{width:140px!important}
+  #panip{width:130px!important}
+  #center{padding:10px}
+  #navbuild,#tabs{align-self:stretch}
+  #hint{text-align:center;line-height:1.5}
+  #flashbox{right:12px;bottom:12px;width:calc(100vw - 24px)}
+}
 </style></head>
 <body>
 <div id="top">
   <div class="brand">Aurora <b>Page Builder</b></div>
+  <div class="top-connect">
   <input id="haurl" placeholder="HA URL  http://10.0.0.208:8123" style="width:210px">
   <input id="hatok" placeholder="Long-lived token" type="password" style="width:150px">
   <input id="panip" placeholder="Panel IP  10.0.0.174" style="width:140px">
@@ -204,7 +235,9 @@ h3.sec{font-size:11px;letter-spacing:1.4px;text-transform:uppercase;color:var(--
   <button class="btn ghost" id="rescanBtn" title="Re-scan for a USB-connected panel" style="padding:8px 10px"><span class="mdi mdi-refresh"></span></button>
   <button class="btn ghost" id="connect">Connect</button>
   <span class="pill"><span class="dot" id="cdot"></span><span id="cstat">not connected</span></span>
+  </div>
   <div class="sp"></div>
+  <div class="top-actions">
   <div id="capWrap" title="Device capacity — an estimate of how full the generated firmware is vs the panel's memory limit. Too many cards can overflow the panel's memory and stop it booting." style="display:flex;align-items:center;gap:6px;font-size:11px;color:var(--t2)">
     <span id="capTxt">Capacity</span>
     <div style="width:92px;height:8px;background:#10121a;border:1px solid var(--hair);border-radius:5px;overflow:hidden"><div id="capBar" style="height:100%;width:0%;background:var(--teal);transition:width .2s,background .2s"></div></div>
@@ -218,14 +251,20 @@ h3.sec{font-size:11px;letter-spacing:1.4px;text-transform:uppercase;color:var(--
   <button class="btn amber" id="flashBtn">Build &amp; Flash</button>
   <button class="btn ghost" id="acctBtn" title="Change access password"><span class="mdi mdi-key-variant"></span></button>
   <button class="btn ghost" id="lockBtn" title="Lock / sign out"><span class="mdi mdi-lock"></span></button>
+  </div>
 </div>
 
 <div id="app">
+  <div id="panelShade"></div>
   <div id="palette"><h3 class="sec">Card palette</h3>
     <div style="font-size:12px;color:var(--t2);margin-bottom:6px">Click a card to add it to the page — then drag to move, and drag its corner handle to resize.</div>
     <div id="palContent"></div></div>
 
   <div id="center">
+    <div id="mobileTools">
+      <button class="btn ghost" id="paletteToggle"><span class="mdi mdi-view-grid-plus"></span> Cards</button>
+      <button class="btn ghost" id="inspectorToggle"><span class="mdi mdi-tune"></span> Inspector</button>
+    </div>
     <div id="navbuild"></div>
     <div id="tabs"></div>
     <div class="stagewrap"><div id="frame">
@@ -890,9 +929,11 @@ function attachResize(d,c){
       d.innerHTML=cardInner(c); d.appendChild(hnd); badge.textContent=c.w+'×'+c.h; d.appendChild(badge); };   // live preview re-render at the new span
     d.setPointerCapture(e.pointerId); d.classList.add('rsz'); apply();                 // capture on the CARD so re-rendering innerHTML can't kill the drag
     const move=(ev)=>{ const r=grid.getBoundingClientRect();
-      const px=ev.clientX-(r.left+(c.x-1)*(CELL_W+GUT)), py=ev.clientY-(r.top+(c.y-1)*(CELL_H+GUT));
-      let tw=Math.max(mw,Math.min(maxW,Math.round((px+GUT)/(CELL_W+GUT))));
-      let th=Math.max(mh,Math.min(maxH,Math.round((py+GUT)/(CELL_H+GUT))));
+      const sx=r.width/(COLS*CELL_W+(COLS-1)*GUT), sy=r.height/(ROWS*CELL_H+(ROWS-1)*GUT);
+      const stepX=(CELL_W+GUT)*sx, stepY=(CELL_H+GUT)*sy;
+      const px=ev.clientX-(r.left+(c.x-1)*stepX), py=ev.clientY-(r.top+(c.y-1)*stepY);
+      let tw=Math.max(mw,Math.min(maxW,Math.round((px+GUT*sx)/stepX)));
+      let th=Math.max(mh,Math.min(maxH,Math.round((py+GUT*sy)/stepY)));
       let nw=c.w, nh=c.h;                                                              // clamp growth at the first obstruction, per axis
       if(fits(c.x,c.y,tw,th,c.id)){ nw=tw; nh=th; }
       else if(fits(c.x,c.y,tw,c.h,c.id)) nw=tw;
@@ -935,7 +976,10 @@ function pasteClip(){ if(!CLIP||!CLIP.card) return; ROWS=rowsFor();
 function isEditable(t){ return !!(t&&(t.tagName==='INPUT'||t.tagName==='TEXTAREA'||t.tagName==='SELECT'||t.isContentEditable)); }
 document.addEventListener('keydown',(e)=>{ if(!L) return;
   const modalOpen=document.getElementById('modal').style.display==='flex';
-  if(e.key==='Escape'){ if(modalOpen) closeModal(); else if(sel){ sel=null; renderInspector(); markSel(); } return; }
+  if(e.key==='Escape'){
+    if(modalOpen) closeModal();
+    else if(!closeBuilderPanels()&&sel){ sel=null; renderInspector(); markSel(); }
+    return; }
   if(!(e.ctrlKey||e.metaKey)||modalOpen||isEditable(document.activeElement)) return;
   const k=(e.key||'').toLowerCase();
   // Don't hijack Ctrl+C when the user is copying selected TEXT (e.g. inspector readouts).
@@ -1135,14 +1179,56 @@ function renderCapacity(){ const bar=document.getElementById('capBar'); if(!bar)
       ? 'DANGER ('+pct+'%): this layout is at/over the panel memory limit and may fail to boot (stack overflow / boot-loop). Remove some cards or pages before flashing.'
     : f>=LOAD_WARN ? 'Getting large ('+pct+'%): approaching the panel memory limit. Still OK to flash, but avoid adding many more heavy cards (media, TV remote, track/speaker lists).'
     : 'Device capacity ('+pct+'%): estimated fullness of the generated firmware vs the panel memory limit.'; }
-function renderAll(){ ROWS=rowsFor(); renderNav(); renderTabs(); renderRail(); renderHeader(); renderGrid(); renderInspector(); renderCapacity(); }
+let stageFitRequest=0, builderObserver=null;
+function isCompactBuilder(){ return window.matchMedia('(max-width:1300px)').matches; }
+function updateBuilderPanelButtons(){
+  document.getElementById('paletteToggle').classList.toggle('on',document.getElementById('palette').classList.contains('open'));
+  document.getElementById('inspectorToggle').classList.toggle('on',document.getElementById('inspector').classList.contains('open')); }
+function closeBuilderPanels(){
+  const palette=document.getElementById('palette'), inspector=document.getElementById('inspector');
+  const wasOpen=palette.classList.contains('open')||inspector.classList.contains('open');
+  palette.classList.remove('open'); inspector.classList.remove('open');
+  document.getElementById('panelShade').classList.remove('on'); updateBuilderPanelButtons();
+  return wasOpen; }
+function toggleBuilderPanel(id){
+  if(!isCompactBuilder()) return;
+  const panel=document.getElementById(id), shouldOpen=!panel.classList.contains('open');
+  closeBuilderPanels();
+  if(shouldOpen){ panel.classList.add('open'); document.getElementById('panelShade').classList.add('on'); }
+  updateBuilderPanelButtons(); }
+function fitStage(){
+  stageFitRequest=0;
+  const center=document.getElementById('center'), wrap=document.querySelector('.stagewrap');
+  const frame=document.getElementById('frame'), hint=document.getElementById('hint');
+  if(!center||!wrap||!frame||!hint) return;
+  const cs=getComputedStyle(center), centerRect=center.getBoundingClientRect(), wrapRect=wrap.getBoundingClientRect();
+  const padX=parseFloat(cs.paddingLeft)+parseFloat(cs.paddingRight);
+  const padBottom=parseFloat(cs.paddingBottom);
+  const availableW=Math.max(160,center.clientWidth-padX);
+  const availableH=Math.max(168,centerRect.bottom-wrapRect.top-hint.offsetHeight-10-padBottom);
+  const scale=Math.max(.28,Math.min(1,availableW/1024,availableH/600));
+  frame.style.transform='scale('+scale+')';
+  wrap.style.width=(1024*scale)+'px'; wrap.style.height=(600*scale)+'px';
+  wrap.dataset.scale=scale.toFixed(4); }
+function scheduleStageFit(){
+  if(stageFitRequest) cancelAnimationFrame(stageFitRequest);
+  stageFitRequest=requestAnimationFrame(fitStage); }
+function syncBuilderLayout(){
+  if(!isCompactBuilder()) closeBuilderPanels();
+  scheduleStageFit(); }
+function renderAll(){
+  ROWS=rowsFor(); renderNav(); renderTabs(); renderRail(); renderHeader(); renderGrid(); renderInspector(); renderCapacity();
+  scheduleStageFit(); }
 
 function attachDrag(el,c){ el.addEventListener('pointerdown',(e)=>{ if(e.target.closest('button')) return;
   sel=c.id; renderInspector(); markSel(); const grid=document.getElementById('grid');
   el.setPointerCapture(e.pointerId); el.style.cursor='grabbing'; el.style.zIndex=20; el.style.opacity=.85;
-  const move=(ev)=>{ const r=grid.getBoundingClientRect(); const colW=r.width/COLS, rowH=r.height/ROWS;
-    let nx=Math.round((ev.clientX-r.left-(colW*c.w/2))/colW)+1; nx=Math.max(1,Math.min(COLS-c.w+1,nx));
-    let ny=Math.round((ev.clientY-r.top-(rowH*c.h/2))/rowH)+1; ny=Math.max(1,Math.min(ROWS-c.h+1,ny));
+  const move=(ev)=>{ const r=grid.getBoundingClientRect();
+    const sx=r.width/(COLS*CELL_W+(COLS-1)*GUT), sy=r.height/(ROWS*CELL_H+(ROWS-1)*GUT);
+    const stepX=(CELL_W+GUT)*sx, stepY=(CELL_H+GUT)*sy;
+    const cardW=(c.w*CELL_W+(c.w-1)*GUT)*sx, cardH=(c.h*CELL_H+(c.h-1)*GUT)*sy;
+    let nx=Math.round((ev.clientX-r.left-cardW/2)/stepX)+1; nx=Math.max(1,Math.min(COLS-c.w+1,nx));
+    let ny=Math.round((ev.clientY-r.top-cardH/2)/stepY)+1; ny=Math.max(1,Math.min(ROWS-c.h+1,ny));
     if((nx!==c.x||ny!==c.y)&&fits(nx,ny,c.w,c.h,c.id)){ c.x=nx;c.y=ny; el.style.gridColumn=`${c.x} / span ${c.w}`; el.style.gridRow=`${c.y} / span ${c.h}`; } };
   const up=(ev)=>{ try{ el.releasePointerCapture(ev.pointerId); }catch(_){}
     el.style.cursor='grab'; el.style.zIndex=''; el.style.opacity='';
@@ -1605,6 +1691,18 @@ async function boot(){ try{ L=await j('/api/layout'); if(!L||!L.pages||!Object.k
   document.getElementById('roomBtn').onclick=roomWizard;
   document.getElementById('rescanBtn').onclick=async()=>{ const has=await scanSerial(); toast(has?('USB panel found: '+SERIAL_DEV.replace('/dev/','')):'No USB panel — plug it in, then run on Windows:  usbipd attach --wsl --busid <id>'); };
   document.getElementById('grid').addEventListener('click',()=>{ sel=null; renderInspector(); markSel(); });
+  document.getElementById('paletteToggle').onclick=()=>toggleBuilderPanel('palette');
+  document.getElementById('inspectorToggle').onclick=()=>toggleBuilderPanel('inspector');
+  document.getElementById('panelShade').onclick=closeBuilderPanels;
+  window.addEventListener('resize',syncBuilderLayout);
+  if('ResizeObserver' in window){
+    builderObserver=new ResizeObserver(scheduleStageFit);
+    builderObserver.observe(document.getElementById('center'));
+    builderObserver.observe(document.getElementById('top'));
+    builderObserver.observe(document.getElementById('navbuild'));
+    builderObserver.observe(document.getElementById('tabs'));
+  }
+  scheduleStageFit();
   if(cfg.has_token||cfg.ha_url) connect();
 }
 boot();
