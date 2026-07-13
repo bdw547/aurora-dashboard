@@ -1127,6 +1127,47 @@ def _wx_attr_ts(base, sfx, sensor, attr, label_id):
             % (base, sfx, sensor, attr, label_id))
 
 
+def _wx_num_stat(base, sfx, entity, attr, label_id, fmt):
+    """Format a numeric attribute directly from the selected HA weather entity."""
+    return ("  - platform: homeassistant\n    id: ha_%s_%s\n    entity_id: %s\n    attribute: %s\n"
+            "    on_value:\n      - lvgl.label.update: { id: %s, text: !lambda 'char b[24]; snprintf(b, sizeof(b), \"%s\", x); return std::string(b);' }\n"
+            % (base, sfx, entity, attr, label_id, fmt))
+
+
+def _wx_sun_time(base, sfx, attr, label_id):
+    """Convert sun.sun's UTC ISO timestamp to the panel's configured local time."""
+    code = ("if (x.size() < 19) return std::string(\"--\"); "
+            "std::string iso=x.substr(0,19); iso[10]=0x20; esphome::ESPTime utc; "
+            "if (!esphome::ESPTime::strptime(iso, utc)) return std::string(\"--\"); "
+            "utc.recalc_timestamp_utc(); auto local=esphome::ESPTime::from_epoch_local(utc.timestamp); "
+            "int hour=local.hour%12; if(hour==0) hour=12; char b[16]; "
+            "snprintf(b,sizeof(b),\"%d:%02d%s\",hour,local.minute,local.hour>=12?\"pm\":\"am\"); return std::string(b);")
+    return ("  - platform: homeassistant\n    id: ha_%s_%s\n    entity_id: sun.sun\n    attribute: %s\n"
+            "    on_value:\n      - lvgl.label.update: { id: %s, text: !lambda '%s' }\n"
+            % (base, sfx, attr, label_id, code))
+
+
+def _wx_stat_bindings(base, weather_entity, ids):
+    """Live detail bindings shared by the full weather and Weather Stats cards."""
+    numeric = {
+        "stat_humidity": ("humidity", "%.0f%%"),
+        "stat_wind": ("wind_speed", "%.1f mph"),
+        "stat_uv": ("uv_index", "%.1f"),
+        "stat_pressure": ("pressure", "%.2f inHg"),
+    }
+    sun = {
+        "stat_sunrise": "next_rising",
+        "stat_sunset": "next_setting",
+    }
+    sensors, text_sensors = [], []
+    for i, (label_id, key) in enumerate(ids):
+        if key in numeric:
+            attr, fmt = numeric[key]
+            sensors.append(_wx_num_stat(base, "st%d" % i, weather_entity, attr, label_id, fmt))
+        elif key in sun:
+            text_sensors.append(_wx_sun_time(base, "st%d" % i, sun[key], label_id))
+    return sensors, text_sensors
+
 def _wx_split_ts(base, sfx, sensor, attr, ids, body_lines):
     """homeassistant text_sensor that reads a \n-joined package attribute and\n    splits it across THIS card's per-column label `ids` (column count derived\n    from len(ids), never hardcoded). `body_lines` = per-token C++ operating on\n    the token std::string `t` and target L[i]. Mirrors the hand dashboard loop."""
     n = len(ids)
@@ -1234,8 +1275,9 @@ def c_weather(card, x, y, w, h, base):
         ts.append(_wx_split_ts(base, "dh", WX_SENSOR_DAILY, "d_high", dy_hi, _WX_SET_DEG))
         ts.append(_wx_split_ts(base, "dl", WX_SENSOR_DAILY, "d_low", dy_lo, _WX_SET_DEG))
         ts.append(_wx_split_ts(base, "dc", WX_SENSOR_DAILY, "d_cond", dy_ic, _wx_cond_glyph_lines()))
-        for i, (stat_id, attr) in enumerate(stat_ids):
-            ts.append(_wx_attr_ts(base, "st%d" % i, WX_SENSOR_DAILY, attr, stat_id))
+        stat_sens, stat_ts = _wx_stat_bindings(base, e, stat_ids)
+        ss += stat_sens
+        ts += stat_ts
     return [card_obj(x, y, w, h, inner)], ss, ts
 
 
@@ -1324,11 +1366,10 @@ def c_wx_stats(card, x, y, w, h, base):
         inner += lbl(lab.title(), 14, ry, "f_body", "0xC8CCD6")
         inner += lbl(val, -14, ry, "f_body", "0xEEF0F6", wid=vid, align="top_right")
         ids.append((vid, attr))
-    ts = []
+    sensors, text_sensors = ([], [])
     if e:
-        for i, (vid, attr) in enumerate(ids):
-            ts.append(_wx_attr_ts(base, "st%d" % i, WX_SENSOR_DAILY, attr, vid))
-    return [card_obj(x, y, w, h, inner)], [], ts
+        sensors, text_sensors = _wx_stat_bindings(base, e, ids)
+    return [card_obj(x, y, w, h, inner)], sensors, text_sensors
 
 
 def c_camera(card, x, y, w, h, base):
