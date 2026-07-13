@@ -1690,7 +1690,10 @@ async function boot(){ try{ L=await j('/api/layout'); if(!L||!L.pages||!Object.k
   document.getElementById('verBtn').onclick=versionsModal; document.getElementById('pagesBtn').onclick=pagesModal;
   document.getElementById('roomBtn').onclick=roomWizard;
   document.getElementById('rescanBtn').onclick=async()=>{ const has=await scanSerial(); toast(has?('USB panel found: '+SERIAL_DEV.replace('/dev/','')):'No USB panel — plug it in, then run on Windows:  usbipd attach --wsl --busid <id>'); };
-  document.getElementById('grid').addEventListener('click',()=>{ sel=null; renderInspector(); markSel(); });
+  document.addEventListener('click',(e)=>{
+    if(!sel||e.target.closest('.pc,#inspector,#inspectorToggle,#modal')) return;
+    sel=null; renderInspector(); markSel();
+  });
   document.getElementById('paletteToggle').onclick=()=>toggleBuilderPanel('palette');
   document.getElementById('inspectorToggle').onclick=()=>toggleBuilderPanel('inspector');
   document.getElementById('panelShade').onclick=closeBuilderPanels;
