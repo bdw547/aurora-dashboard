@@ -81,7 +81,9 @@ script:
       target: { example: lock.front_door }
       camera:
         example: true
-        selector: { boolean: {} }
+        default: false
+        selector:
+          boolean:
     sequence:
       - event: aurora_notification
         event_data:
