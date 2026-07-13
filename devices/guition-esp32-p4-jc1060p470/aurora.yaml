@@ -2522,6 +2522,11 @@ globals:
     type: bool
     restore_value: true
     initial_value: 'false'
+  # Generated screensaver content: 0=photo gallery, 1=Spotify now playing.
+  - id: g_screensaver_mode
+    type: int
+    restore_value: true
+    initial_value: '0'
   # Quiet-hours approach mode: schedule and wake behavior are configurable.
   - id: g_cam_wake
     type: bool

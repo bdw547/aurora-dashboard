@@ -15,6 +15,10 @@
 #   sensor.aurora_spotify_playlists  attr names = "\n"-joined playlist names
 #                                    attr uris  = "\n"-joined matching uris
 #   sensor.aurora_spotify_tracks     attr names = "\n"-joined "Title — Artist"
+#   sensor.aurora_spotify_queue      attr names = "\n"-joined upcoming songs
+#   sensor.aurora_spotify_favorite   attr is_favorite = current track saved state
+#   script.aurora_spotify_refresh_queue
+#   script.aurora_spotify_toggle_favorite
 #   script.aurora_spotify_load_playlist(playlist_uri)  loads a playlist's tracks
 #
 # Owning entity: media_player.spotifyplus_ben_walton
@@ -46,6 +50,65 @@ template:
         state: "{{ trigger.event.data.names | count }}"
         attributes:
           names: "{{ trigger.event.data.names | join('\n') }}"
+
+  - trigger:
+      - trigger: event
+        event_type: aurora_spotify_queue_updated
+    sensor:
+      - name: Aurora Spotify Queue
+        unique_id: aurora_spotify_queue
+        state: "{{ trigger.event.data.names | count }}"
+        attributes:
+          names: "{{ trigger.event.data.names | join('\n') }}"
+
+  - trigger:
+      - trigger: event
+        event_type: aurora_spotify_favorite_updated
+    sensor:
+      - name: Aurora Spotify Favorite
+        unique_id: aurora_spotify_favorite
+        state: "{{ trigger.event.data.is_favorite | bool }}"
+        attributes:
+          is_favorite: "{{ trigger.event.data.is_favorite | bool }}"
+          track_id: "{{ trigger.event.data.track_id | default('') }}"
+
+automation:
+  - alias: Aurora Spotify - Sync Active Player
+    id: aurora_spotify_sync_active_player
+    mode: restart
+    triggers:
+      - trigger: homeassistant
+        event: start
+      - trigger: state
+        entity_id: media_player.spotify_ben_walton
+        to: "playing"
+      - trigger: state
+        entity_id: media_player.spotify_ben_walton
+        attribute: source
+    actions:
+      - delay:
+          seconds: 2
+      - variables:
+          active_source: "{{ state_attr('media_player.spotify_ben_walton', 'source') | default('', true) }}"
+          available_sources: "{{ state_attr('media_player.spotifyplus_ben_walton', 'source_list') | default([], true) }}"
+      - condition: template
+        value_template: "{{ active_source | length > 0 and active_source in available_sources }}"
+      - action: media_player.select_source
+        data:
+          entity_id: media_player.spotifyplus_ben_walton
+          source: "{{ active_source }}"
+
+  - alias: Aurora Spotify - Refresh Current Track Details
+    id: aurora_spotify_refresh_current_track_details
+    triggers:
+      - trigger: homeassistant
+        event: start
+      - trigger: state
+        entity_id: media_player.spotifyplus_ben_walton
+        attribute: media_content_id
+    actions:
+      - action: script.aurora_spotify_refresh_queue
+      - action: script.aurora_spotify_refresh_favorite
 
 script:
   # Fetch the user's playlists and publish names + uris to the panel.
@@ -116,3 +179,84 @@ script:
           context_uri: "{{ context_uri }}"
           offset_position: "{{ position | int }}"
           device_id: "{{ device | default('', true) }}"
+
+  aurora_spotify_refresh_queue:
+    alias: Aurora Spotify - Refresh Queue
+    sequence:
+      - action: spotifyplus.get_player_queue_info
+        data:
+          entity_id: media_player.spotifyplus_ben_walton
+        response_variable: queue_response
+      - variables:
+          items: "{{ queue_response.result.queue | default([], true) }}"
+      - event: aurora_spotify_queue_updated
+        event_data:
+          names: >-
+            {% set out = namespace(rows=[]) %}
+            {% for item in items[:30] %}
+              {% set artist = (item.artists | map(attribute='name') | join(', ')) if item.artists is defined else '' %}
+              {% set out.rows = out.rows + [item.name ~ ('  -  ' ~ artist if artist else '')] %}
+            {% endfor %}
+            {{ out.rows }}
+
+  aurora_spotify_refresh_favorite:
+    alias: Aurora Spotify - Refresh Favorite
+    sequence:
+      - variables:
+          current_uri: >-
+            {{ state_attr('media_player.spotifyplus_ben_walton', 'media_content_id')
+               or state_attr('media_player.spotify_ben_walton', 'media_content_id') or '' }}
+          current_id: "{{ current_uri.split(':')[-1] if current_uri.startswith('spotify:track:') else '' }}"
+      - action: spotifyplus.check_track_favorites
+        data:
+          entity_id: media_player.spotifyplus_ben_walton
+          ids: "{{ current_id }}"
+        response_variable: favorite_response
+        continue_on_error: true
+      - variables:
+          favorite_items: "{{ favorite_response.result | default([], true) }}"
+          is_favorite: >-
+            {% if favorite_items is mapping %}
+              {% set keyed_value = favorite_items.get(current_uri, favorite_items.get(current_id)) %}
+              {% if keyed_value is not none %}
+                {{ keyed_value | bool }}
+              {% else %}
+                {{ favorite_items.get('is_favorite', favorite_items.get('is_saved', false)) | bool }}
+              {% endif %}
+            {% elif favorite_items is sequence and favorite_items | count > 0 %}
+              {% set first = favorite_items[0] %}
+              {{ first.get('is_favorite', first.get('is_saved', false)) | bool if first is mapping else first | bool }}
+            {% else %}
+              {{ false }}
+            {% endif %}
+      - event: aurora_spotify_favorite_updated
+        event_data:
+          is_favorite: "{{ is_favorite }}"
+          track_id: "{{ current_uri }}"
+
+  aurora_spotify_toggle_favorite:
+    alias: Aurora Spotify - Toggle Favorite
+    sequence:
+      - variables:
+          is_favorite: "{{ state_attr('sensor.aurora_spotify_favorite', 'is_favorite') | bool }}"
+          current_uri: >-
+            {{ state_attr('media_player.spotifyplus_ben_walton', 'media_content_id')
+               or state_attr('media_player.spotify_ben_walton', 'media_content_id') or '' }}
+          current_id: "{{ current_uri.split(':')[-1] if current_uri.startswith('spotify:track:') else '' }}"
+      - condition: template
+        value_template: "{{ current_id | length > 0 }}"
+      - choose:
+          - conditions: "{{ is_favorite }}"
+            sequence:
+              - action: spotifyplus.remove_track_favorites
+                data:
+                  entity_id: media_player.spotifyplus_ben_walton
+                  ids: "{{ current_id }}"
+        default:
+          - action: spotifyplus.save_track_favorites
+            data:
+              entity_id: media_player.spotifyplus_ben_walton
+              ids: "{{ current_id }}"
+      - delay:
+          milliseconds: 350
+      - action: script.aurora_spotify_refresh_favorite
