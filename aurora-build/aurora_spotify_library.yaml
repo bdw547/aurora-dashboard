@@ -73,6 +73,31 @@ template:
           track_id: "{{ trigger.event.data.track_id | default('') }}"
 
 automation:
+  - alias: Aurora Spotify - Sync Active Player
+    id: aurora_spotify_sync_active_player
+    mode: restart
+    triggers:
+      - trigger: homeassistant
+        event: start
+      - trigger: state
+        entity_id: media_player.spotify_ben_walton
+        to: "playing"
+      - trigger: state
+        entity_id: media_player.spotify_ben_walton
+        attribute: source
+    actions:
+      - delay:
+          seconds: 2
+      - variables:
+          active_source: "{{ state_attr('media_player.spotify_ben_walton', 'source') | default('', true) }}"
+          available_sources: "{{ state_attr('media_player.spotifyplus_ben_walton', 'source_list') | default([], true) }}"
+      - condition: template
+        value_template: "{{ active_source | length > 0 and active_source in available_sources }}"
+      - action: media_player.select_source
+        data:
+          entity_id: media_player.spotifyplus_ben_walton
+          source: "{{ active_source }}"
+
   - alias: Aurora Spotify - Refresh Current Track Details
     id: aurora_spotify_refresh_current_track_details
     triggers:
@@ -178,7 +203,9 @@ script:
     alias: Aurora Spotify - Refresh Favorite
     sequence:
       - variables:
-          current_uri: "{{ state_attr('media_player.spotifyplus_ben_walton', 'media_content_id') | default('', true) }}"
+          current_uri: >-
+            {{ state_attr('media_player.spotifyplus_ben_walton', 'media_content_id')
+               or state_attr('media_player.spotify_ben_walton', 'media_content_id') or '' }}
           current_id: "{{ current_uri.split(':')[-1] if current_uri.startswith('spotify:track:') else '' }}"
       - action: spotifyplus.check_track_favorites
         data:
@@ -212,7 +239,9 @@ script:
     sequence:
       - variables:
           is_favorite: "{{ state_attr('sensor.aurora_spotify_favorite', 'is_favorite') | bool }}"
-          current_uri: "{{ state_attr('media_player.spotifyplus_ben_walton', 'media_content_id') | default('', true) }}"
+          current_uri: >-
+            {{ state_attr('media_player.spotifyplus_ben_walton', 'media_content_id')
+               or state_attr('media_player.spotify_ben_walton', 'media_content_id') or '' }}
           current_id: "{{ current_uri.split(':')[-1] if current_uri.startswith('spotify:track:') else '' }}"
       - condition: template
         value_template: "{{ current_id | length > 0 }}"
