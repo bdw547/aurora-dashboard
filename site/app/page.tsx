@@ -1,4 +1,4 @@
-﻿const components = [
+const components = [
   { name: "Lights", detail: "Toggle, dim, and group lights by room with live Home Assistant state." },
   { name: "Climate", detail: "Weather, temperature, humidity, wind, and thermostat-ready controls." },
   { name: "Security", detail: "Locks, presence, sensors, alerts, and the panel camera feed." },
@@ -48,6 +48,7 @@ export default function Home() {
             <a href="#emulator">Emulator</a>
             <a href="#setup">Setup</a>
             <a href="#benefits">Benefits</a>
+            <a href="/demo-builder">Demo Builder</a>
           </div>
         </nav>
 
@@ -60,7 +61,7 @@ export default function Home() {
               preview the 1024 x 600 panel, and flash firmware without hand-editing YAML.
             </p>
             <div className="hero-actions" aria-label="Page shortcuts">
-              <a className="primary-action" href="#setup">See setup flow</a>
+              <a className="primary-action" href="/demo-builder">Try demo builder</a>
               <a className="secondary-action" href="#library">Explore components</a>
             </div>
             <div className="proof-strip" aria-label="Aurora highlights">
@@ -91,6 +92,7 @@ export default function Home() {
           </div>
           <div className="config-panel">
             <h3>What the builder gives you</h3>
+            <a className="inline-demo-link" href="/demo-builder">Open the credential-free demo builder</a>
             <ul>
               <li>Drag cards onto a 6 x 5 layout grid.</li>
               <li>Bind every card to your own Home Assistant entity.</li>
