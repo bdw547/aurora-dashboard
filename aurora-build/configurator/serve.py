@@ -310,7 +310,7 @@ def write_home_layout(order):
 # Dynamic rooms (Phase 1) — generate room pages / picker / state sensors from
 # rooms.json into AURORA_ROOM_* marker regions, mirroring the home-grid pattern.
 # ===========================================================================
-ROOMS_JSON = os.path.join(HERE, "rooms.json")
+ROOMS_JSON = os.environ.get("AURORA_ROOMS_JSON", os.path.join(HERE, "rooms.json"))
 ROOM_TYPES = {"light", "fan", "switch", "sensor", "lock", "climate", "media", "cover"}
 ROOM_MAX_ENTITIES = 6                 # column geometry: x=100+140*i, i in 0..5
 ROOM_X0, ROOM_PITCH = 100, 140        # entity-card columns on a room page
@@ -1060,7 +1060,7 @@ def ha_entity_attrs(url, token, entity):
 
 
 # --- page-builder layout persistence (layout.json next to this file) ---
-LAYOUT_JSON = os.path.join(HERE, "layout.json")
+LAYOUT_JSON = os.environ.get("AURORA_LAYOUT_JSON", os.path.join(HERE, "layout.json"))
 BUILDER_HTML = os.path.join(HERE, "builder.html")
 
 # --- comprehensive icon dataset (Material Design Icons v7.4.47 metadata) ---
@@ -1163,7 +1163,7 @@ def _store_delete(path, sid):
 import hashlib as _hashlib
 import secrets as _secrets
 
-CONFIG_JSON = os.path.join(HERE, "config.json")
+CONFIG_JSON = os.environ.get("AURORA_CONFIG_JSON", os.path.join(HERE, "config.json"))
 SESSIONS = set()   # valid session tokens, in-memory (cleared on restart)
 
 
