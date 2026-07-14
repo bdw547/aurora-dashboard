@@ -2741,10 +2741,10 @@ def c_generic(card, x, y, w, h, base):
 def c_notifications(card, x, y, w, h, base):
     """Compact view of the restored Aurora notification queue."""
     count_id = base + "_count"
-    rows = max(1, min(3, (h - 72) // 54))
+    rows = max(0, min(3, (h - 72) // 54))
     inner = lbl(glyph_for("bell-outline"), 16, 14, "f_icon", "0x8FA6FF")
     inner += lbl(card.get("name", "Notifications"), 54, 16, "f_title", "0xF3F5F8",
-                 width=w - 142, long="dot", height=30)
+                 width=max(40, w - 142), long="dot", height=30)
     inner += lbl("0", -18, 18, "f_title", "0x8FA6FF", wid=count_id, align="top_right")
     ids = []
     for i in range(rows):

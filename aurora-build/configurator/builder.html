@@ -658,7 +658,7 @@ function cardInner(c){ const def=C[c.ck], nm=c.name||def.label, big=c.w>=3, ctrl
   const nme=`<div class="ct">${nm}</div>`;
   if(c.ck==='notifications'){
     const rows=[['Front door','Someone is at the door','Now','#f2685a'],['Laundry complete','The washer cycle finished','8:41 PM','#8fa6ff'],['Garage open','Open for 12 minutes','8:33 PM','#f2b84b']];
-    const n=Math.max(1,Math.min(3,Math.floor((c.h*100+(c.h-1)*14-72)/54)));
+    const n=Math.max(0,Math.min(3,Math.floor((c.h*100+(c.h-1)*14-72)/54)));
     return head+`<div style="display:flex;align-items:center;gap:9px"><span class="mdi mdi-bell-outline" style="font-size:22px;color:${def.color}"></span><span style="font-size:17px;font-weight:700;flex:1">${nm}</span><span style="font-size:18px;font-weight:800;color:${def.color}">3</span></div>
       <div style="display:flex;flex-direction:column;gap:8px;margin-top:14px">${rows.slice(0,n).map(r=>`<div style="height:46px;flex:0 0 46px;background:#0f1117;border-radius:9px;position:relative;padding:6px 66px 5px 15px;overflow:hidden">
         <i style="position:absolute;left:0;top:0;bottom:0;width:4px;background:${r[3]}"></i><div style="font-size:12px;font-weight:700;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${r[0]}</div>
