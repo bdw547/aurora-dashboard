@@ -1272,10 +1272,10 @@ function styleRow(ck){ const g=STYLE_OF[ck]; if(!g) return '';   // add-time sty
 function wireStyleRow(mbox){ mbox.querySelectorAll('.stb').forEach(b=>{ b.onclick=()=>{ if(!b.classList.contains('on')) openEntityPicker(b.dataset.ck); }; }); }
 function openEntityPicker(ck,existing){ const def=C[ck], mbox=document.getElementById('mbox');
   if(def.multi && !existing){ closeModal(); addCard(ck,null,null); return; }   // multi: add now, entities come from the inspector
+  if(def.fixed && !existing){ closeModal(); addCard(ck,null,null); return; }
   const doms=def.domains||[def.domain]; const dom=doms.join(' / '); const list=ENTS.filter(e=>doms.includes(e.domain));
   let chosen=existing?existing.entity:((list[0]&&list[0].entity_id)||'');
   mbox.innerHTML=`<h2>${def.label}</h2><p>${list.length} ${dom} entit${list.length===1?'y':'ies'} from Home Assistant${ENTS.length?'':' — connect to load yours'}</p>
-  if(def.fixed && !existing){ closeModal(); addCard(ck,null,null); return; }
     ${existing?'':styleRow(ck)}
     <input id="esrch" placeholder="Filter…" style="width:100%;margin-bottom:8px;background:#0F1117;border:1px solid var(--bd);border-radius:9px;color:var(--tx);padding:8px 10px;font:inherit">
     <div class="field"><div class="elist" id="elist"></div></div>
