@@ -794,6 +794,7 @@ def c_action(card, x, y, w, h, base):
 # hidden over the ss_image placeholder src; the component unhides each one when
 # its first still is applied. Host builds skip art (no mjpeg_stream component).
 ART_IMAGES = []
+RADAR_IMAGES = []  # (entity, image widget id, picture sensor id, width, height)
 ART_ENABLED = True
 EXTRA_CLOCKS = []   # (label_id, kind) live-clock bindings contributed by card emitters
 # Live camera plumbing: the FIRST camera card registers (entity, inner_w, inner_h,
@@ -1372,6 +1373,64 @@ def c_wx_stats(card, x, y, w, h, base):
     if e:
         sensors, text_sensors = _wx_stat_bindings(base, e, ids)
     return [card_obj(x, y, w, h, inner)], sensors, text_sensors
+
+
+def _radar_fetch_lambda(pic_id, image_id, width, height, value=""):
+    source = value or ("id(%s).state" % pic_id)
+    return ("std::string p=%s; if(p.rfind(\"/\",0)==0) "
+            "id(cam_stream).fetch_still(std::string(\"$ha_base\")+p,id(%s),%d,%d);"
+            % (source, image_id, width, height))
+
+
+def c_radar(card, x, y, w, h, base):
+    """Weather radar still supplied by a Home Assistant camera entity."""
+    entity = card.get("entity", "")
+    image_id, pic_id = base + "_radar", "ha_" + base + "_radar_pic"
+    inner_w, inner_h = w - 16, h - 16
+    live = bool(entity and ART_ENABLED)
+
+    inner = ("              - obj: { x: 8, y: 8, width: %d, height: %d, bg_color: 0x101820, "
+             "border_width: 0, radius: 12, pad_all: 0, scrollable: false, clickable: false }\n"
+             % (inner_w, inner_h))
+    inner += lbl(glyph_for("radar"), 0, 0, "f_bigicon", "0x33465C", align="center")
+    if live:
+        RADAR_IMAGES.append((entity, image_id, pic_id, inner_w, inner_h))
+        inner += ("              - image: { id: %s, src: ss_image, x: 8, y: 8, hidden: true, clickable: false }\n"
+                  % image_id)
+
+    inner += ("              - obj: { x: 8, y: 8, width: %d, height: 54, bg_color: 0x080A0D, "
+              "bg_opa: 72%%, border_width: 0, radius: 0, pad_all: 0, scrollable: false, clickable: false }\n"
+              % inner_w)
+    inner += lbl(card.get("name", "Weather Radar"), 20, 16, "f_body", "0xF3F5F8",
+                 width=max(40, w - 132), long="dot", height=20)
+    inner += lbl("WEATHER RADAR", 20, 37, "f_micro", "0x8FA6FF",
+                 width=max(40, w - 132), long="dot", height=16)
+
+    if live:
+        inner += (
+            "              - button:\n"
+            "                  x: %d\n                  y: 16\n                  width: 38\n                  height: 38\n"
+            "                  bg_color: 0x171A20\n                  bg_opa: 86%%\n"
+            "                  border_width: 0\n                  radius: 19\n                  pad_all: 0\n"
+            "                  scrollable: false\n"
+            "                  widgets: [label: { text: \"%s\", align: center, text_font: f_iconsm, text_color: 0xFFFFFF }]\n"
+            "                  on_click:\n                    - lambda: '%s'\n"
+            % (w - 54, glyph_for("refresh"), _radar_fetch_lambda(pic_id, image_id, inner_w, inner_h)))
+
+    if h >= 160:
+        inner += ("              - obj: { x: 8, y: %d, width: %d, height: 40, bg_color: 0x080A0D, "
+                  "bg_opa: 62%%, border_width: 0, radius: 0, pad_all: 0, scrollable: false, clickable: false }\n"
+                  % (h - 48, inner_w))
+        inner += lbl("Refreshes every 5 min", 20, -25, "f_micro", "0xD6D9E0", align="bottom_left",
+                     width=max(40, w - 40), long="dot", height=16)
+
+    text_sensors = []
+    if live:
+        text_sensors.append(
+            "  - platform: homeassistant\n    id: %s\n    entity_id: %s\n    attribute: entity_picture\n"
+            "    on_value:\n      - lambda: '%s'\n"
+            % (pic_id, entity, _radar_fetch_lambda(pic_id, image_id, inner_w, inner_h, "x")))
+    return [card_obj(x, y, w, h, inner)], [], text_sensors
 
 
 def c_camera(card, x, y, w, h, base):
@@ -2776,7 +2835,7 @@ CTRL = {
     "climate": c_climate, "scene": c_action, "script": c_action, "media": c_media,
     "spotify": c_media, "sonos": c_media, "fan": c_fan, "cover": c_cover,
     "spotify_art": c_spotify_art,
-    "lock": c_lock, "weather": c_weather, "camera": c_camera, "group": c_group,
+    "lock": c_lock, "weather": c_weather, "radar": c_radar, "camera": c_camera, "group": c_group,
     "wx_current": c_wx_current, "wx_hourly": c_wx_hourly, "wx_daily": c_wx_daily, "wx_stats": c_wx_stats,
     "lightgroup": c_group, "outletgroup": c_outlet, "speakers": c_speakers,
     "sonos_sources": c_btngrid, "tv_sources": c_btngrid,
@@ -3491,6 +3550,7 @@ def gen_pages(layout, pagemap):
                 txt += hdr_ts
             active = next((slug(n.get("id", "")) for n in layout.get("nav", []) if n.get("page") == key), None)
             cam_n = len(CAM_CARDS)                        # detect a live camera card emitted on THIS sub-page
+            radar_n = len(RADAR_IMAGES)                     # radar stills placed on THIS sub-page
             for card in cards:
                 if card.get("ck") == "light" and card.get("rgb") and card.get("entity"):
                     rgb_pages.append(("page_rgb_g_%s" % slug(card.get("id", "light")), pid, key, card.get("entity"), card.get("name", "Light")))
@@ -3529,6 +3589,8 @@ def gen_pages(layout, pagemap):
                                 "            on_click: [lvgl.page.show: %s]\n" % (sx + j * tw, tw, dot, dpid))
             onload = _nav_onload(layout, active)
             onunload = ""
+            for _entity, image_id, pic_id, rw, rh in RADAR_IMAGES[radar_n:]:
+                onload += "        - lambda: '%s'\n" % _radar_fetch_lambda(pic_id, image_id, rw, rh)
             if len(CAM_CARDS) > cam_n:                    # live camera lifecycle: stream while the page shows
                 CAM_CARDS[0] = CAM_CARDS[0][:4] + (pid,)  # remember the hosting page (fullscreen Dismiss target)
                 onload += "        - lambda: 'id(cam_stream).start(0, id(%s_cam));'\n" % CAM_CARDS[0][3]
@@ -3570,6 +3632,7 @@ def build_lvgl(layout):
     USED_ICONSM_CP.clear()  # repopulated by card emitters needing small icons
     EXTRA_CLOCKS.clear()  # repopulated by card emitters (e.g. weather time/date)
     ART_IMAGES.clear()    # repopulated by media/spotify_art card emitters
+    RADAR_IMAGES.clear()  # repopulated by weather radar card emitters
     CAM_CARDS.clear()     # repopulated by the first live camera card
     HEADER_WIFI.clear()
     HEADER_LIGHTS.clear()
@@ -3775,6 +3838,16 @@ def clock_items(clocks):
     return "  - interval: 5s\n    then:\n" + ups
 
 
+def radar_refresh_interval():
+    """Refresh configured radar camera stills without blocking the LVGL loop."""
+    if not RADAR_IMAGES:
+        return ""
+    actions = "".join(
+        "      - lambda: '%s'\n" % _radar_fetch_lambda(pic_id, image_id, width, height)
+        for _entity, image_id, pic_id, width, height in RADAR_IMAGES)
+    return "  - interval: 5min\n    then:\n" + actions
+
+
 # --- Screensaver subsystem (regenerated). The hand-built one lives on a page the
 # generator drops; only the g_ss_* globals + ss_base/ss_count/ha_base substitutions
 # survive. Re-inject the photo decoders, the ss_next picker, the HA photo-list sensor,
@@ -3976,8 +4049,8 @@ def gen_cam_stream():
             "    max_source_width: 2048\n    max_source_height: 1536\n")
     tail = "    task_core: 1\n    task_priority: 4\n    read_timeout: 10s\n"
     if not CAM_CARDS:
-        acc = ("    max_jpeg_size: 512kB     # no camera card, but album-art stills use this accumulator\n"
-               if ART_IMAGES else
+        acc = ("    max_jpeg_size: 512kB     # album art and radar stills use this accumulator\n"
+               if (ART_IMAGES or RADAR_IMAGES) else
                "    max_jpeg_size: 64kB      # idle instance: shrink the always-allocated accumulator\n")
         return (head + acc
                 + "    targets:                 # idle placeholder — no camera card in this layout\n"
@@ -4103,7 +4176,8 @@ def assemble(layout):
                "                  - lvgl.page.show: page_home\n"
                "                  - light.turn_off: display_backlight\n")
     # interval: list = trackpad flush + camera night-wake + screensaver cycle + clock repaint
-    out = keep_text + TP_FLUSH_INTERVAL + cam_wake + SS_INTERVAL_ITEM + HEAP_LOG_INTERVAL_ITEM + clock_items(clocks)
+    out = (keep_text + TP_FLUSH_INTERVAL + cam_wake + SS_INTERVAL_ITEM
+           + radar_refresh_interval() + HEAP_LOG_INTERVAL_ITEM + clock_items(clocks))
     out += SS_ONLINE_IMAGE + SS_SCRIPT + gen_cam_stream()
     if sens:
         out += "\nsensor:\n" + "".join(sens)

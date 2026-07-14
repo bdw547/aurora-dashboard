@@ -328,6 +328,7 @@ const C = {
   tv_apps:  {label:'TV apps / inputs — grid', domain:'media_player', icon:'apps-box', color:'var(--violet)', spans:[[1,2],[2,2],[3,2],[2,3],[3,3]], def:[2,2], min:[1,2], ctrl:'tv_apps'},
   lock:     {label:'Lock', domain:'lock', icon:'lock', color:'var(--teal)', spans:[[1,1],[2,1],[2,2],...V], def:[2,1], min:[1,1], ctrl:'lock'},
   camera:   {label:'Camera', domain:'camera', icon:'cctv', color:'var(--red)', spans:[[2,2],[3,3],[4,3],[6,5]], def:[3,3], min:[2,2], ctrl:'cam'},
+  radar:    {label:'Weather radar', domain:'camera', icon:'radar', color:'var(--blue)', spans:[[2,2],[3,2],[3,3],[4,3],[6,5]], def:[3,3], min:[2,2], ctrl:'radar'},
   alarm:    {label:'Alarm panel', domain:'alarm_control_panel', icon:'shield-home', color:'var(--red)', spans:[[2,2],[3,2]], def:[3,2], min:[2,2], ctrl:'val'},
   notifications:{label:'Notifications', domain:'', icon:'bell-outline', color:'var(--violet)', spans:[[2,2],[3,2],[2,3],[3,3],[4,3],[4,4],[6,5]], def:[3,3], min:[2,2], ctrl:'notifications', fixed:true},
   binary:   {label:'Binary sensor', domain:'binary_sensor', icon:'motion-sensor', color:'var(--blue)', spans:[[1,1],[2,1],...V], def:[1,1], min:[1,1], ctrl:'val'},
@@ -352,7 +353,7 @@ const CATS = [
   ['Media', ['media','volume']],
   ['Groups', ['group','shortcuts']],
   ['Safety', ['lock','camera','alarm','notifications','binary']],
-  ['Info', ['sensor','weather','person','vacuum']],
+  ['Info', ['sensor','weather','radar','person','vacuum']],
   ['Actions', ['scene','script']],
 ];
 // --- Card styles: duplicate palette entries merged into ONE card + a style option.
@@ -400,6 +401,7 @@ const DESC={
   shortcuts:'Quick-jump buttons to pages, rooms or the camera',
   lock:'Lock / unlock with live state',
   camera:'Live camera view',
+  radar:'Auto-refreshing JPEG weather radar image from a Home Assistant camera entity',
   notifications:'Restored alert queue with urgent wake-up popups and actions',
   alarm:'Alarm panel — state + arm / disarm',
   binary:'Motion / door / occupancy — lights up when active',
@@ -827,6 +829,7 @@ function cardInner(c){ const def=C[c.ck], nm=c.name||def.label, big=c.w>=3, ctrl
     const rows=ents.map((e,i)=>`<div style="margin-bottom:12px"><div style="font-size:13px;font-weight:600;color:var(--tx);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;margin-bottom:5px">${nm2(e)}</div><div class="hbar"><i style="width:${dv[i%6]}%;background:var(--teal)"></i></div></div>`).join('');
     return head+`<div class="toprow">${ico}<span class="csub">${nm}</span></div><div style="margin-top:10px;flex:1;overflow:hidden">${rows}</div>`; }
   if(ctrl==='tv_trackpad') return head+`<div class="toprow">${ico}<span class="csub">${nm}</span></div><div style="flex:1;display:flex;flex-direction:column;gap:8px;margin-top:8px"><div style="flex:1;display:flex;gap:8px;min-height:0"><div style="flex:1;border:1px solid var(--bd);border-radius:12px;background:#0f1117;display:flex;align-items:center;justify-content:center;color:var(--t3);font-size:12px">Drag · tap</div><div style="width:40px;border:1px solid var(--bd);border-radius:12px;background:#0f1117;display:flex;flex-direction:column;align-items:center;justify-content:space-between;padding:8px 0;color:var(--t3)"><span class="mdi mdi-chevron-up"></span><span style="font-size:9px">SCROLL</span><span class="mdi mdi-chevron-down"></span></div></div><div class="row" style="gap:6px;justify-content:center"><span class="tbtn mdi mdi-arrow-left"></span><span class="tbtn mdi mdi-home"></span><span class="tbtn mdi mdi-volume-minus"></span><span class="tbtn mdi mdi-volume-mute"></span><span class="tbtn mdi mdi-volume-plus"></span></div></div>`;
+  if(ctrl==='radar') return head+`<div style="position:absolute;inset:8px;background:#101820;border-radius:8px;overflow:hidden"><span class="mdi mdi-radar" style="position:absolute;inset:0;display:flex;align-items:center;justify-content:center;font-size:46px;color:#33465c"></span><i style="position:absolute;left:18%;top:52%;width:18%;height:16%;background:#4fa8f5;opacity:.7"></i><i style="position:absolute;left:40%;top:30%;width:24%;height:22%;background:#2ed5b8;opacity:.72"></i><i style="position:absolute;left:62%;top:58%;width:14%;height:18%;background:#f2b84b;opacity:.76"></i></div><div style="position:absolute;left:8px;right:8px;top:8px;height:54px;background:rgba(8,10,13,.78);padding:9px 12px"><div style="font-size:14px;font-weight:700">${nm}</div><div style="font-size:9px;color:var(--blue);margin-top:3px">WEATHER RADAR</div></div><span class="mdi mdi-refresh" style="position:absolute;right:20px;top:24px;color:#fff;font-size:18px"></span>`;
   if(ctrl==='cam') return head+`<div class="cambg"><span class="mdi mdi-cctv"></span></div><div style="position:absolute;left:12px;top:10px;font-size:9px;font-weight:700;color:#fff;background:var(--red);border-radius:5px;padding:2px 6px">LIVE</div><div class="csub" style="position:absolute;left:12px;bottom:10px">${nm}</div>`;
   if(ctrl==='wx'){
     if(c.h<3||c.w<4) return head+`<div class="row"><span class="mdi mdi-weather-sunny" style="font-size:${big?40:28}px;color:var(--amber)"></span><div><div style="font-size:${big?30:22}px;font-weight:700">72°</div><div class="csub">Sunny</div></div></div>`;

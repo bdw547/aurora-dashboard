@@ -330,6 +330,24 @@ Use `script.aurora_notifications_clear` to clear the queue. The panel's
 
 ---
 
+## Weather radar card
+
+Aurora can display a weather-radar still supplied by any Home Assistant
+`camera` entity. Add **Weather radar** from the configurator's **Info** category,
+then select the radar camera entity. The card refreshes when Home Assistant
+changes its image, whenever its page opens, when the refresh button is tapped,
+and every five minutes.
+
+The selected camera must return a JPEG image through Home Assistant's
+`entity_picture` URL. Aurora downloads and hardware-decodes that JPEG on its
+background image worker, so radar updates do not stall touch or LVGL. A
+PNG-only camera will remain on the radar placeholder; expose a JPEG version of
+that image in Home Assistant before selecting it. Home Assistant's
+[Generic Camera integration](https://www.home-assistant.io/integrations/generic/)
+can be used when a radar provider offers a stable JPEG still URL.
+
+---
+
 ## Project layout (Aurora-relevant)
 
 ```
@@ -374,6 +392,7 @@ RTP is sent **TCP‑interleaved**, so it works through Home Assistant / ffmpeg's
 ## Status & roadmap
 
 **Recently shipped:**
+- **Weather radar card** - selectable Home Assistant camera source with background JPEG decode, page/manual refresh, and five-minute updates.
 - **Notification center** - restored five-alert queue, configurator card/top-bar item, safe action buttons, and urgent wake-up popups.
 - **No-code web configurator** — entity-rebind wizard + drag-and-drop page builder (6×5 grid, per-card type/entity selection, live preview) + a `layout.json → aurora-gen.yaml` generator, so you can point Aurora at your own HA and design screens without editing YAML. See **[Design it your way](#-design-it-your-way--no-yaml-required)**. ✅
 - **Live camera** — OV02C10 → hardware H.264 → on-device RTSP, viewable in Home Assistant. ✅
@@ -384,7 +403,6 @@ RTP is sent **TCP‑interleaved**, so it works through Home Assistant / ffmpeg's
 - **Photo screensaver** with clock + outdoor-temperature overlay. ✅
 
 **In progress / planned:**
-- **Weather radar** on the Climate screen.
 - **Intercom** — video calls between multiple panels *(long-term)*.
 - **Voice control** *(long-term)*.
 
