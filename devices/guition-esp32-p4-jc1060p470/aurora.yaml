@@ -2391,6 +2391,11 @@ globals:
     type: uint32_t
     restore_value: no
     initial_value: '0'
+  # Latest RainViewer tile host + frame path, shared by generated radar cards.
+  - id: g_radar_base
+    type: std::string
+    restore_value: no
+    initial_value: '""'
   # Notification center queue. Home Assistant owns/restores the queue; the
   # panel keeps parsed records here so row actions can use runtime data.
   # Shared globals live in the base because device and host builds splice it.

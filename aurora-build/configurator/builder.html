@@ -328,7 +328,7 @@ const C = {
   tv_apps:  {label:'TV apps / inputs — grid', domain:'media_player', icon:'apps-box', color:'var(--violet)', spans:[[1,2],[2,2],[3,2],[2,3],[3,3]], def:[2,2], min:[1,2], ctrl:'tv_apps'},
   lock:     {label:'Lock', domain:'lock', icon:'lock', color:'var(--teal)', spans:[[1,1],[2,1],[2,2],...V], def:[2,1], min:[1,1], ctrl:'lock'},
   camera:   {label:'Camera', domain:'camera', icon:'cctv', color:'var(--red)', spans:[[2,2],[3,3],[4,3],[6,5]], def:[3,3], min:[2,2], ctrl:'cam'},
-  radar:    {label:'Weather radar', domain:'camera', icon:'radar', color:'var(--blue)', spans:[[2,2],[3,2],[3,3],[4,3],[6,5]], def:[3,3], min:[2,2], ctrl:'radar'},
+  radar:    {label:'Weather radar', domain:'', icon:'radar', color:'var(--blue)', spans:[[2,2],[3,2],[3,3],[4,3],[6,5]], def:[3,3], min:[2,2], ctrl:'radar', direct:true},
   alarm:    {label:'Alarm panel', domain:'alarm_control_panel', icon:'shield-home', color:'var(--red)', spans:[[2,2],[3,2]], def:[3,2], min:[2,2], ctrl:'val'},
   notifications:{label:'Notifications', domain:'', icon:'bell-outline', color:'var(--violet)', spans:[[2,2],[3,2],[2,3],[3,3],[4,3],[4,4],[6,5]], def:[3,3], min:[2,2], ctrl:'notifications', fixed:true},
   binary:   {label:'Binary sensor', domain:'binary_sensor', icon:'motion-sensor', color:'var(--blue)', spans:[[1,1],[2,1],...V], def:[1,1], min:[1,1], ctrl:'val'},
@@ -401,7 +401,7 @@ const DESC={
   shortcuts:'Quick-jump buttons to pages, rooms or the camera',
   lock:'Lock / unlock with live state',
   camera:'Live camera view',
-  radar:'Auto-refreshing JPEG weather radar image from a Home Assistant camera entity',
+  radar:'Live RainViewer radar centered on your Home Assistant location',
   notifications:'Restored alert queue with urgent wake-up popups and actions',
   alarm:'Alarm panel — state + arm / disarm',
   binary:'Motion / door / occupancy — lights up when active',
@@ -549,7 +549,7 @@ const HEADER_ITEMS = {
 function defHeader(on){ return {on:!!on, left:'greeting', right:['weather_current','secured']}; }
 const COLS=6; let ROWS=5;
 
-let L=null, ENTS=[], AREAS={}, sel=null, curPage=null, curSub=0, curPageInit=null;
+let L=null, ENTS=[], AREAS={}, HA_LOC={}, sel=null, curPage=null, curSub=0, curPageInit=null;
 // module clipboard for card copy/cut/paste — card is a deep clone; cut points at the source
 let CLIP=null;   // {card:<deep clone>, cut:{page,sub,id}|null} | null
 function idUsed(id){ if(!L||!L.pages) return false;
@@ -585,7 +585,7 @@ function defaultLayout(){ const l={ install_room:'', nav:[
       {id:'media',icon:'music',label:'Media',page:'media'}],
     pages:{home:blankPage('Home'),rooms:blankPage('Rooms'),lights:blankPage('Lights'),climate:blankPage('Climate'),media:blankPage('Media')} };
   l.pages.home.header=defHeader(true); return l; }
-function mk(ck,entity,name,x,y,w,h){ const c={id:uid(),ck,entity:entity||'',name:name||C[ck].label,x,y,w,h}; if(C[ck].multi) c.entities=[]; if(ck==='shortcuts') c.shortcuts=[]; if(ck==='tv_apps') c.sources=[]; return c; }
+function mk(ck,entity,name,x,y,w,h){ const c={id:uid(),ck,entity:entity||'',name:name||C[ck].label,x,y,w,h}; if(C[ck].multi) c.entities=[]; if(ck==='shortcuts') c.shortcuts=[]; if(ck==='tv_apps') c.sources=[]; if(ck==='radar'){c.lat=Number(HA_LOC.latitude)||0;c.lon=Number(HA_LOC.longitude)||0;c.zoom=6;} return c; }
 const TEMPLATES = {
   'Living-room home':()=>{ const l=defaultLayout(); l.install_room='Living Room'; l.pages.home.header=defHeader(true);
     l.pages.home.subpages=[[ mk('climate',null,'Main Floor',1,1,4,4), mk('light',null,'Main Lights',5,1,2,2), mk('group',null,'House status',5,3,2,2) ]]; return l; },
@@ -605,7 +605,7 @@ function firstFit(w,h,except){ for(let y=1;y<=ROWS-h+1;y++) for(let x=1;x<=COLS-
 
 function renderPalette(){ const el=document.getElementById('palContent'); el.innerHTML='';
   for(const [cat,keys] of CATS){ const h=document.createElement('div'); h.className='pcat'; h.textContent=cat; el.appendChild(h);
-    for(const k of keys){ const c=C[k]; const d=document.createElement('div'); d.className='pitem'; d.onclick=()=>c.fixed?addCard(k,null,null):openEntityPicker(k);
+    for(const k of keys){ const c=C[k]; const d=document.createElement('div'); d.className='pitem'; d.onclick=()=>c.fixed||c.direct?addCard(k,null,null):openEntityPicker(k);
       const hint=DESC[k] || c.spans.map(s=>s[0]+'×'+s[1]).join(' · ');
       d.innerHTML=`<div class="ic" style="background:#0f1117;color:${c.color}"><span class="mdi mdi-${c.icon}"></span></div>
         <div style="min-width:0"><div class="nm">${c.label}</div><div class="sz">${hint}</div></div>`; el.appendChild(d); } } }
@@ -1114,6 +1114,22 @@ function renderInspector(){ const el=document.getElementById('insp'); const c=se
     el.querySelector('#addEnt').onclick=()=>addEntityPicker(c);
     wireCardActions(el,c);
     return; }
+  if(c.ck==='radar'){
+    const lat=Number(c.lat), lon=Number(c.lon), zoom=Math.max(4,Math.min(7,Number(c.zoom)||6));
+    c.lat=Number.isFinite(lat)?lat:0; c.lon=Number.isFinite(lon)?lon:0; c.zoom=zoom;
+    el.innerHTML=`<h3 class="sec">${def.label}</h3>
+      <div class="field"><label>Name</label><input id="fName" value="${(c.name||'').replace(/"/g,'&quot;')}"></div>
+      <div class="field"><label>Latitude</label><input id="fLat" type="number" min="-90" max="90" step="0.0001" value="${c.lat}"></div>
+      <div class="field"><label>Longitude</label><input id="fLon" type="number" min="-180" max="180" step="0.0001" value="${c.lon}"></div>
+      <button class="btn ghost" id="radarHome" style="width:100%;margin-bottom:12px"><span class="mdi mdi-map-marker"></span> Use Home location</button>
+      <div class="field"><label>Map zoom</label><select id="fZoom">${[[4,'Regional'],[5,'Wide area'],[6,'Local area'],[7,'Nearby']].map(([v,t])=>`<option value="${v}" ${zoom===v?'selected':''}>${t}</option>`).join('')}</select></div>
+      ${cardActionsHTML(c)}`;
+    el.querySelector('#fName').oninput=(e)=>{c.name=e.target.value;renderGrid();};
+    el.querySelector('#fLat').onchange=(e)=>{const v=Number(e.target.value);if(Number.isFinite(v)&&v>=-90&&v<=90)c.lat=v;};
+    el.querySelector('#fLon').onchange=(e)=>{const v=Number(e.target.value);if(Number.isFinite(v)&&v>=-180&&v<=180)c.lon=v;};
+    el.querySelector('#fZoom').onchange=(e)=>{c.zoom=Number(e.target.value);renderGrid();};
+    el.querySelector('#radarHome').onclick=()=>{if(Number.isFinite(Number(HA_LOC.latitude))&&Number.isFinite(Number(HA_LOC.longitude))){c.lat=Number(HA_LOC.latitude);c.lon=Number(HA_LOC.longitude);renderInspector();}else toast('Connect Home Assistant to load its location');};
+    wireCardActions(el,c); return; }
   if(def.fixed){
     el.innerHTML=`<h3 class="sec">${def.label}</h3>
       <div class="field"><label>Name</label><input id="fName" value="${(c.name||'').replace(/"/g,'&quot;')}"></div>
@@ -1272,7 +1288,7 @@ function styleRow(ck){ const g=STYLE_OF[ck]; if(!g) return '';   // add-time sty
 function wireStyleRow(mbox){ mbox.querySelectorAll('.stb').forEach(b=>{ b.onclick=()=>{ if(!b.classList.contains('on')) openEntityPicker(b.dataset.ck); }; }); }
 function openEntityPicker(ck,existing){ const def=C[ck], mbox=document.getElementById('mbox');
   if(def.multi && !existing){ closeModal(); addCard(ck,null,null); return; }   // multi: add now, entities come from the inspector
-  if(def.fixed && !existing){ closeModal(); addCard(ck,null,null); return; }
+  if((def.fixed||def.direct) && !existing){ closeModal(); addCard(ck,null,null); return; }
   const doms=def.domains||[def.domain]; const dom=doms.join(' / '); const list=ENTS.filter(e=>doms.includes(e.domain));
   let chosen=existing?existing.entity:((list[0]&&list[0].entity_id)||'');
   mbox.innerHTML=`<h2>${def.label}</h2><p>${list.length} ${dom} entit${list.length===1?'y':'ies'} from Home Assistant${ENTS.length?'':' — connect to load yours'}</p>
@@ -1656,9 +1672,14 @@ async function connect(){ const url=document.getElementById('haurl').value.trim(
   document.getElementById('cstat').textContent='connecting…';
   try{ ENTS=await j('/api/entities',{method:'POST',headers:{'Content-Type':'application/json'},body:'{}'});
     try{ AREAS=(await j('/api/ha/areas',{method:'POST',headers:{'Content-Type':'application/json'},body:'{}'}))||{}; }catch(e){ AREAS={}; }
+    try{ HA_LOC=(await j('/api/ha/location'))||{}; }catch(e){ HA_LOC={}; }
     document.getElementById('cdot').className='dot ok'; document.getElementById('cstat').textContent=ENTS.length+' entities · '+Object.keys(AREAS).length+' areas';
     renderPalette(); renderInspector(); toast('Connected to Home Assistant');
   }catch(e){ document.getElementById('cdot').className='dot'; document.getElementById('cstat').textContent='not connected'; toast('Connect failed: '+e.message); } }
+async function loadHaLocation(){ try{ HA_LOC=(await j('/api/ha/location'))||{}; }catch(e){ HA_LOC={}; return; }
+  if(!Number.isFinite(Number(HA_LOC.latitude))||!Number.isFinite(Number(HA_LOC.longitude))) return;
+  Object.values(L.pages).forEach(p=>p.subpages.forEach(sp=>sp.forEach(c=>{ if(c.ck==='radar'&&(!Number.isFinite(Number(c.lat))||!Number.isFinite(Number(c.lon))||(Number(c.lat)===0&&Number(c.lon)===0))){ c.lat=Number(HA_LOC.latitude); c.lon=Number(HA_LOC.longitude); c.zoom=Number(c.zoom)||6; } })));
+  if(sel&&curCards().some(c=>c.id===sel&&c.ck==='radar')) renderInspector(); }
 async function save(){ try{
   if(ENTS.length) L.home_lights=ENTS.filter(e=>e.domain==='light'&&!(e.entity_id.startsWith('light.espcontrol_')&&e.entity_id.endsWith('_display_backlight'))).map(e=>e.entity_id);
   await j('/api/layout',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(L)}); toast('Layout saved ✓');
@@ -1698,6 +1719,7 @@ async function boot(){ try{ L=await j('/api/layout'); if(!L||!L.pages||!Object.k
   document.getElementById('hatok').placeholder=cfg.has_token?'•••• saved (blank = keep)':'Long-lived token';
   scanSerial();
   renderPalette(); renderAll();
+  loadHaLocation();
   document.getElementById('connect').onclick=connect; document.getElementById('saveBtn').onclick=save;
   document.getElementById('flashBtn').onclick=flash; document.getElementById('tplBtn').onclick=openTemplates;
   document.getElementById('lockBtn').onclick=logout; document.getElementById('acctBtn').onclick=accountModal;

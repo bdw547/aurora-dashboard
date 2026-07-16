@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 """Aurora Phase 2 — layout.json -> on-device LVGL firmware generator.\n\nReads the page-builder's layout.json and emits the device UI: a dynamic nav\nrail, one LVGL page per layout page (+ sub-pages), grid-positioned cards wired\nto Home Assistant via homeassistant.action, and per-card state sensors.\n\nIt reuses the hand-built hardware/font/style base from aurora.yaml (everything\nexcept the UI), splicing in the generated `lvgl:` + state `sensor:`/`text_sensor:`\nblocks, and writes a self-contained devices/.../aurora-gen.yaml.\n\n    python3 gen.py            # assemble aurora-gen.yaml from layout.json\n    python3 gen.py --check    # generate + structurally validate (no write)\n"""
 import json
+import math
 import os
 import re
 import sys
@@ -1375,35 +1376,95 @@ def c_wx_stats(card, x, y, w, h, base):
     return [card_obj(x, y, w, h, inner)], sensors, text_sensors
 
 
-def _radar_fetch_lambda(pic_id, image_id, width, height, value=""):
-    source = value or ("id(%s).state" % pic_id)
-    return ("std::string p=%s; if(p.rfind(\"/\",0)==0) "
-            "id(cam_stream).fetch_still(std::string(\"$ha_base\")+p,id(%s),%d,%d);"
-            % (source, image_id, width, height))
+def _radar_location(card):
+    """Return Web Mercator tile coordinates for a configured radar card."""
+    try:
+        lat = float(card.get("lat"))
+        lon = float(card.get("lon"))
+        zoom = max(4, min(7, int(card.get("zoom", 6))))
+    except (TypeError, ValueError):
+        return None
+    if not (-85.0511 <= lat <= 85.0511 and -180 <= lon <= 180):
+        return None
+    n = 1 << zoom
+    xf = (lon + 180.0) / 360.0 * n
+    lat_r = math.radians(lat)
+    yf = (1.0 - math.asinh(math.tan(lat_r)) / math.pi) / 2.0 * n
+    tx, ty = int(math.floor(xf)), int(math.floor(yf))
+    return lat, lon, zoom, tx % n, max(0, min(n - 1, ty)), xf - math.floor(xf), yf - math.floor(yf)
 
 
 def c_radar(card, x, y, w, h, base):
-    """Weather radar still supplied by a Home Assistant camera entity."""
-    entity = card.get("entity", "")
-    image_id, pic_id = base + "_radar", "ha_" + base + "_radar_pic"
+    """Direct RainViewer radar over an OpenStreetMap tile; no HA camera needed."""
+    location = _radar_location(card)
     inner_w, inner_h = w - 16, h - 16
-    live = bool(entity and ART_ENABLED)
+    live = bool(location and ART_ENABLED)
+    frame_id = base + "_radar_frame"
 
-    inner = ("              - obj: { x: 8, y: 8, width: %d, height: %d, bg_color: 0x101820, "
-             "border_width: 0, radius: 12, pad_all: 0, scrollable: false, clickable: false }\n"
-             % (inner_w, inner_h))
-    inner += lbl(glyph_for("radar"), 0, 0, "f_bigicon", "0x33465C", align="center")
+    inner = (
+        "              - obj:\n"
+        "                  id: %s\n                  x: 8\n                  y: 8\n"
+        "                  width: %d\n                  height: %d\n"
+        "                  bg_color: 0x101820\n                  border_width: 0\n"
+        "                  radius: 12\n                  clip_corner: true\n"
+        "                  pad_all: 0\n                  scrollable: false\n                  clickable: false\n"
+        "                  widgets:\n" % (frame_id, inner_w, inner_h)
+    )
+
     if live:
-        RADAR_IMAGES.append((entity, image_id, pic_id, inner_w, inner_h))
-        inner += ("              - image: { id: %s, src: ss_image, x: 8, y: 8, hidden: true, clickable: false }\n"
-                  % image_id)
+        _lat, _lon, zoom, tx, ty, frac_x, frac_y = location
+        tile_px = min(inner_w, inner_h)
+        img_x = (inner_w - tile_px) // 2
+        img_y = (inner_h - tile_px) // 2
+        marker_x = max(img_x + 7, min(img_x + tile_px - 7, round(img_x + frac_x * tile_px)))
+        marker_y = max(img_y + 7, min(img_y + tile_px - 7, round(img_y + frac_y * tile_px)))
+        map_src = base + "_radar_map_src"
+        radar_src = base + "_radar_src"
+        map_widget = base + "_radar_map"
+        radar_widget = base + "_radar"
+        RADAR_IMAGES.append({
+            "map_src": map_src, "radar_src": radar_src,
+            "map_widget": map_widget, "radar_widget": radar_widget,
+            "map_url": "https://tile.openstreetmap.org/%d/%d/%d.png" % (zoom, tx, ty),
+            "radar_suffix": "/256/%d/%d/%d/2/1_1.png" % (zoom, tx, ty),
+            "tile_px": tile_px,
+        })
+        inner += (
+            "                    - image:\n"
+            "                        id: %s\n                        src: %s\n"
+            "                        x: %d\n                        y: %d\n"
+            "                        width: %d\n                        height: %d\n                        clickable: false\n"
+            "                    - image:\n"
+            "                        id: %s\n                        src: %s\n"
+            "                        x: %d\n                        y: %d\n"
+            "                        width: %d\n                        height: %d\n                        clickable: false\n"
+            "                    - obj:\n"
+            "                        x: %d\n                        y: %d\n"
+            "                        width: 14\n                        height: 14\n"
+            "                        radius: 7\n                        bg_color: 0xFFFFFF\n"
+            "                        border_width: 3\n                        border_color: 0x2E7CF6\n"
+            "                        pad_all: 0\n                        clickable: false\n"
+            % (map_widget, map_src, img_x, img_y, tile_px, tile_px,
+               radar_widget, radar_src, img_x, img_y, tile_px, tile_px,
+               marker_x - 7, marker_y - 7)
+        )
+    else:
+        inner += (
+            "                    - label:\n"
+            "                        text: \"%s\"\n                        align: center\n"
+            "                        text_font: f_bigicon\n                        text_color: 0x33465C\n"
+            % glyph_for("radar")
+        )
 
-    inner += ("              - obj: { x: 8, y: 8, width: %d, height: 54, bg_color: 0x080A0D, "
-              "bg_opa: 72%%, border_width: 0, radius: 0, pad_all: 0, scrollable: false, clickable: false }\n"
-              % inner_w)
+    inner += (
+        "              - obj: { x: 8, y: 8, width: %d, height: 54, bg_color: 0x080A0D, "
+        "bg_opa: 72%%, border_width: 0, radius: 0, pad_all: 0, scrollable: false, clickable: false }\n"
+        % inner_w
+    )
     inner += lbl(card.get("name", "Weather Radar"), 20, 16, "f_body", "0xF3F5F8",
                  width=max(40, w - 132), long="dot", height=20)
-    inner += lbl("WEATHER RADAR", 20, 37, "f_micro", "0x8FA6FF",
+    subtitle = "RAINVIEWER  Z%d" % location[2] if location else "SET LOCATION"
+    inner += lbl(subtitle, 20, 37, "f_micro", "0x8FA6FF",
                  width=max(40, w - 132), long="dot", height=16)
 
     if live:
@@ -1414,23 +1475,20 @@ def c_radar(card, x, y, w, h, base):
             "                  border_width: 0\n                  radius: 19\n                  pad_all: 0\n"
             "                  scrollable: false\n"
             "                  widgets: [label: { text: \"%s\", align: center, text_font: f_iconsm, text_color: 0xFFFFFF }]\n"
-            "                  on_click:\n                    - lambda: '%s'\n"
-            % (w - 54, glyph_for("refresh"), _radar_fetch_lambda(pic_id, image_id, inner_w, inner_h)))
+            "                  on_click:\n                    - script.execute: radar_refresh\n"
+            % (w - 54, glyph_for("refresh"))
+        )
 
     if h >= 160:
-        inner += ("              - obj: { x: 8, y: %d, width: %d, height: 40, bg_color: 0x080A0D, "
-                  "bg_opa: 62%%, border_width: 0, radius: 0, pad_all: 0, scrollable: false, clickable: false }\n"
-                  % (h - 48, inner_w))
-        inner += lbl("Refreshes every 5 min", 20, -25, "f_micro", "0xD6D9E0", align="bottom_left",
-                     width=max(40, w - 40), long="dot", height=16)
+        inner += (
+            "              - obj: { x: 8, y: %d, width: %d, height: 34, bg_color: 0x080A0D, "
+            "bg_opa: 62%%, border_width: 0, radius: 0, pad_all: 0, scrollable: false, clickable: false }\n"
+            % (h - 42, inner_w)
+        )
+        inner += lbl("RainViewer | OpenStreetMap", 20, -21, "f_micro", "0xD6D9E0",
+                     align="bottom_left", width=max(40, w - 40), long="dot", height=16)
 
-    text_sensors = []
-    if live:
-        text_sensors.append(
-            "  - platform: homeassistant\n    id: %s\n    entity_id: %s\n    attribute: entity_picture\n"
-            "    on_value:\n      - lambda: '%s'\n"
-            % (pic_id, entity, _radar_fetch_lambda(pic_id, image_id, inner_w, inner_h, "x")))
-    return [card_obj(x, y, w, h, inner)], [], text_sensors
+    return [card_obj(x, y, w, h, inner)], [], []
 
 
 def c_camera(card, x, y, w, h, base):
@@ -3589,8 +3647,8 @@ def gen_pages(layout, pagemap):
                                 "            on_click: [lvgl.page.show: %s]\n" % (sx + j * tw, tw, dot, dpid))
             onload = _nav_onload(layout, active)
             onunload = ""
-            for _entity, image_id, pic_id, rw, rh in RADAR_IMAGES[radar_n:]:
-                onload += "        - lambda: '%s'\n" % _radar_fetch_lambda(pic_id, image_id, rw, rh)
+            if len(RADAR_IMAGES) > radar_n:
+                onload += "        - script.execute: radar_refresh\n"
             if len(CAM_CARDS) > cam_n:                    # live camera lifecycle: stream while the page shows
                 CAM_CARDS[0] = CAM_CARDS[0][:4] + (pid,)  # remember the hosting page (fullscreen Dismiss target)
                 onload += "        - lambda: 'id(cam_stream).start(0, id(%s_cam));'\n" % CAM_CARDS[0][3]
@@ -3839,13 +3897,74 @@ def clock_items(clocks):
 
 
 def radar_refresh_interval():
-    """Refresh configured radar camera stills without blocking the LVGL loop."""
+    """Refresh direct radar metadata and tiles every five minutes."""
     if not RADAR_IMAGES:
         return ""
-    actions = "".join(
-        "      - lambda: '%s'\n" % _radar_fetch_lambda(pic_id, image_id, width, height)
-        for _entity, image_id, pic_id, width, height in RADAR_IMAGES)
-    return "  - interval: 5min\n    then:\n" + actions
+    return "  - interval: 5min\n    then:\n      - script.execute: radar_refresh\n"
+
+
+def radar_online_images():
+    """Runtime PNG decoders for OSM base tiles and transparent RainViewer data."""
+    out = ""
+    for item in RADAR_IMAGES:
+        out += (
+            "  - id: %(map_src)s\n"
+            "    url: \"%(map_url)s\"\n"
+            "    request_headers:\n"
+            "      User-Agent: \"AuroraDashboard/1.0 (+https://github.com/bdw547/aurora-dashboard)\"\n"
+            "    format: PNG\n    type: RGB565\n"
+            "    resize: %(tile_px)dx%(tile_px)d\n    update_interval: never\n"
+            "    on_download_finished:\n"
+            "      - lvgl.image.update: { id: %(map_widget)s, src: %(map_src)s }\n"
+            "    on_error:\n      - logger.log: \"Radar: map tile download failed\"\n"
+            "  - id: %(radar_src)s\n"
+            "    url: \"http://127.0.0.1/radar.png\"\n"
+            "    format: PNG\n    type: RGB565\n    transparency: alpha_channel\n"
+            "    resize: %(tile_px)dx%(tile_px)d\n    update_interval: never\n"
+            "    on_download_finished:\n"
+            "      - lvgl.image.update: { id: %(radar_widget)s, src: %(radar_src)s }\n"
+            "    on_error:\n      - logger.log: \"Radar: RainViewer tile download failed\"\n"
+            % item
+        )
+    return out
+
+
+def radar_script_item():
+    """Fetch RainViewer metadata, select the newest past frame, then update tiles."""
+    if not RADAR_IMAGES:
+        return ""
+    base_updates = "".join(
+        "      - component.update: %s\n" % item["map_src"] for item in RADAR_IMAGES)
+    radar_updates = "".join(
+        "              - online_image.set_url: { id: %s, url: !lambda 'return id(g_radar_base) + \"%s\";' }\n"
+        % (item["radar_src"], item["radar_suffix"]) for item in RADAR_IMAGES)
+    return (
+        "  - id: radar_refresh\n    mode: restart\n    then:\n"
+        + base_updates
+        + "      - http_request.get:\n"
+          "          url: \"https://api.rainviewer.com/public/weather-maps.json\"\n"
+          "          request_headers:\n"
+          "            User-Agent: \"AuroraDashboard/1.0 (+https://github.com/bdw547/aurora-dashboard)\"\n"
+          "          capture_response: true\n          max_response_buffer_size: 8kB\n"
+          "          on_response:\n            then:\n"
+          "              - lambda: |-\n"
+          "                  id(g_radar_base).clear();\n"
+          "                  json::parse_json(body, [&](JsonObject root) -> bool {\n"
+          "                    const char *host = root[\"host\"] | \"\";\n"
+          "                    JsonArray past = root[\"radar\"][\"past\"].as<JsonArray>();\n"
+          "                    if (!host[0] || past.size() == 0) return false;\n"
+          "                    const char *path = past[past.size() - 1][\"path\"] | \"\";\n"
+          "                    if (!path[0]) return false;\n"
+          "                    id(g_radar_base) = std::string(host) + path;\n"
+          "                    return true;\n"
+          "                  });\n"
+          "              - if:\n                  condition:\n"
+          "                    lambda: 'return !id(g_radar_base).empty();'\n"
+          "                  then:\n"
+        + radar_updates
+        + "          on_error:\n            then:\n"
+          "              - logger.log: \"Radar: RainViewer metadata request failed\"\n"
+    )
 
 
 # --- Screensaver subsystem (regenerated). The hand-built one lives on a page the
@@ -4049,8 +4168,8 @@ def gen_cam_stream():
             "    max_source_width: 2048\n    max_source_height: 1536\n")
     tail = "    task_core: 1\n    task_priority: 4\n    read_timeout: 10s\n"
     if not CAM_CARDS:
-        acc = ("    max_jpeg_size: 512kB     # album art and radar stills use this accumulator\n"
-               if (ART_IMAGES or RADAR_IMAGES) else
+        acc = ("    max_jpeg_size: 512kB     # album art stills use this accumulator\n"
+               if ART_IMAGES else
                "    max_jpeg_size: 64kB      # idle instance: shrink the always-allocated accumulator\n")
         return (head + acc
                 + "    targets:                 # idle placeholder — no camera card in this layout\n"
@@ -4178,7 +4297,7 @@ def assemble(layout):
     # interval: list = trackpad flush + camera night-wake + screensaver cycle + clock repaint
     out = (keep_text + TP_FLUSH_INTERVAL + cam_wake + SS_INTERVAL_ITEM
            + radar_refresh_interval() + HEAP_LOG_INTERVAL_ITEM + clock_items(clocks))
-    out += SS_ONLINE_IMAGE + SS_SCRIPT + gen_cam_stream()
+    out += SS_ONLINE_IMAGE + radar_online_images() + SS_SCRIPT + radar_script_item() + gen_cam_stream()
     if sens:
         out += "\nsensor:\n" + "".join(sens)
     out += "\ntext_sensor:\n" + "".join(txt)

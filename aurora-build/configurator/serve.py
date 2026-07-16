@@ -1006,6 +1006,22 @@ def ha_entities(url, token):
     return sorted(ents, key=lambda e: e["entity_id"])
 
 
+def ha_location(url, token):
+    """Return only the non-sensitive location fields from Home Assistant."""
+    req = urllib.request.Request(
+        url.rstrip("/") + "/api/config",
+        headers={"Authorization": "Bearer " + token,
+                 "Content-Type": "application/json"})
+    with urllib.request.urlopen(req, timeout=5) as r:
+        cfg = json.load(r)
+    lat = float(cfg.get("latitude"))
+    lon = float(cfg.get("longitude"))
+    if not (-90 <= lat <= 90 and -180 <= lon <= 180):
+        raise ValueError("Home Assistant returned an invalid location")
+    return {"latitude": lat, "longitude": lon,
+            "location_name": cfg.get("location_name") or "Home"}
+
+
 def ha_areas(url, token):
     """Return {area_id: {name, entities[]}} via the HA template API (areas come
     from HA's area registry, so the builder's room options match HA)."""
@@ -1362,6 +1378,15 @@ class H(BaseHTTPRequestHandler):
         if self.path == "/api/config":
             c = read_config()
             return self._send(200, json.dumps({"ha_url": c["ha_url"], "panel_ip": c["panel_ip"], "has_token": bool(c["ha_token"])}))
+        if self.path == "/api/ha/location":
+            c = read_config()
+            if not c["ha_url"] or not c["ha_token"]:
+                return self._send(502, json.dumps({"error": "Home Assistant is not configured"}))
+            try:
+                location = ha_location(c["ha_url"], c["ha_token"])
+            except Exception as e:  # noqa: BLE001
+                return self._send(502, json.dumps({"error": "HA location query failed: " + str(e)}))
+            return self._send(200, json.dumps(location))
         if self.path == "/api/layout":
             return self._send(200, json.dumps(read_layout()))
         if self.path.startswith("/api/ha/area-entities"):

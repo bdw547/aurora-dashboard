@@ -332,19 +332,16 @@ Use `script.aurora_notifications_clear` to clear the queue. The panel's
 
 ## Weather radar card
 
-Aurora can display a weather-radar still supplied by any Home Assistant
-`camera` entity. Add **Weather radar** from the configurator's **Info** category,
-then select the radar camera entity. The card refreshes when Home Assistant
-changes its image, whenever its page opens, when the refresh button is tapped,
-and every five minutes.
+Add **Weather radar** from the configurator's **Info** category. No camera or
+weather entity is required: the configurator reads Home Assistant's configured
+latitude and longitude, while the card inspector allows the location and map
+zoom to be adjusted per card.
 
-The selected camera must return a JPEG image through Home Assistant's
-`entity_picture` URL. Aurora downloads and hardware-decodes that JPEG on its
-background image worker, so radar updates do not stall touch or LVGL. A
-PNG-only camera will remain on the radar placeholder; expose a JPEG version of
-that image in Home Assistant before selecting it. Home Assistant's
-[Generic Camera integration](https://www.home-assistant.io/integrations/generic/)
-can be used when a radar provider offers a stable JPEG still URL.
+The panel displays the latest public RainViewer radar frame over an
+OpenStreetMap base tile. It refreshes when its page opens, when the refresh
+button is tapped, and every five minutes. RainViewer requires no API key for
+personal and educational use; the generated card includes source attribution.
+Radar zoom is limited to levels 4 through 7 by RainViewer's public tile API.
 
 ---
 
