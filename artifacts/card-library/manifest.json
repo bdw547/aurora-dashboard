@@ -1,0 +1,3830 @@
+{
+  "generated_from": "aurora-build/configurator/builder.html",
+  "count": 294,
+  "records": [
+    {
+      "index": 1,
+      "page": "library",
+      "ck": "light",
+      "label": "Light",
+      "w": 2,
+      "h": 1,
+      "min": [
+        1,
+        1
+      ],
+      "id": "library_0001_light_2x1"
+    },
+    {
+      "index": 2,
+      "page": "library_0002_light_3x1",
+      "ck": "light",
+      "label": "Light",
+      "w": 3,
+      "h": 1,
+      "min": [
+        1,
+        1
+      ],
+      "id": "library_0002_light_3x1"
+    },
+    {
+      "index": 3,
+      "page": "library_0003_light_4x1",
+      "ck": "light",
+      "label": "Light",
+      "w": 4,
+      "h": 1,
+      "min": [
+        1,
+        1
+      ],
+      "id": "library_0003_light_4x1"
+    },
+    {
+      "index": 4,
+      "page": "library_0004_light_5x1",
+      "ck": "light",
+      "label": "Light",
+      "w": 5,
+      "h": 1,
+      "min": [
+        1,
+        1
+      ],
+      "id": "library_0004_light_5x1"
+    },
+    {
+      "index": 5,
+      "page": "library_0005_light_6x1",
+      "ck": "light",
+      "label": "Light",
+      "w": 6,
+      "h": 1,
+      "min": [
+        1,
+        1
+      ],
+      "id": "library_0005_light_6x1"
+    },
+    {
+      "index": 6,
+      "page": "library_0006_light_1x2",
+      "ck": "light",
+      "label": "Light",
+      "w": 1,
+      "h": 2,
+      "min": [
+        1,
+        1
+      ],
+      "id": "library_0006_light_1x2"
+    },
+    {
+      "index": 7,
+      "page": "library_0007_light_1x3",
+      "ck": "light",
+      "label": "Light",
+      "w": 1,
+      "h": 3,
+      "min": [
+        1,
+        1
+      ],
+      "id": "library_0007_light_1x3"
+    },
+    {
+      "index": 8,
+      "page": "library_0008_light_1x4",
+      "ck": "light",
+      "label": "Light",
+      "w": 1,
+      "h": 4,
+      "min": [
+        1,
+        1
+      ],
+      "id": "library_0008_light_1x4"
+    },
+    {
+      "index": 9,
+      "page": "library_0009_light_1x5",
+      "ck": "light",
+      "label": "Light",
+      "w": 1,
+      "h": 5,
+      "min": [
+        1,
+        1
+      ],
+      "id": "library_0009_light_1x5"
+    },
+    {
+      "index": 10,
+      "page": "library_0010_light_2x2",
+      "ck": "light",
+      "label": "Light",
+      "w": 2,
+      "h": 2,
+      "min": [
+        1,
+        1
+      ],
+      "id": "library_0010_light_2x2"
+    },
+    {
+      "index": 11,
+      "page": "library_0011_light_3x2",
+      "ck": "light",
+      "label": "Light",
+      "w": 3,
+      "h": 2,
+      "min": [
+        1,
+        1
+      ],
+      "id": "library_0011_light_3x2"
+    },
+    {
+      "index": 12,
+      "page": "library_0012_light_4x4",
+      "ck": "light",
+      "label": "Light",
+      "w": 4,
+      "h": 4,
+      "min": [
+        1,
+        1
+      ],
+      "id": "library_0012_light_4x4"
+    },
+    {
+      "index": 13,
+      "page": "library_0013_light_t_1x1",
+      "ck": "light_t",
+      "label": "Light \u2014 simple toggle",
+      "w": 1,
+      "h": 1,
+      "min": [
+        1,
+        1
+      ],
+      "id": "library_0013_light_t_1x1"
+    },
+    {
+      "index": 14,
+      "page": "library_0014_light_t_1x2",
+      "ck": "light_t",
+      "label": "Light \u2014 simple toggle",
+      "w": 1,
+      "h": 2,
+      "min": [
+        1,
+        1
+      ],
+      "id": "library_0014_light_t_1x2"
+    },
+    {
+      "index": 15,
+      "page": "library_0015_light_t_2x1",
+      "ck": "light_t",
+      "label": "Light \u2014 simple toggle",
+      "w": 2,
+      "h": 1,
+      "min": [
+        1,
+        1
+      ],
+      "id": "library_0015_light_t_2x1"
+    },
+    {
+      "index": 16,
+      "page": "library_0016_light_t_2x2",
+      "ck": "light_t",
+      "label": "Light \u2014 simple toggle",
+      "w": 2,
+      "h": 2,
+      "min": [
+        1,
+        1
+      ],
+      "id": "library_0016_light_t_2x2"
+    },
+    {
+      "index": 17,
+      "page": "library_0017_light_t_3x3",
+      "ck": "light_t",
+      "label": "Light \u2014 simple toggle",
+      "w": 3,
+      "h": 3,
+      "min": [
+        1,
+        1
+      ],
+      "id": "library_0017_light_t_3x3"
+    },
+    {
+      "index": 18,
+      "page": "library_0018_switch_1x1",
+      "ck": "switch",
+      "label": "Switch / outlet",
+      "w": 1,
+      "h": 1,
+      "min": [
+        1,
+        1
+      ],
+      "id": "library_0018_switch_1x1"
+    },
+    {
+      "index": 19,
+      "page": "library_0019_switch_2x1",
+      "ck": "switch",
+      "label": "Switch / outlet",
+      "w": 2,
+      "h": 1,
+      "min": [
+        1,
+        1
+      ],
+      "id": "library_0019_switch_2x1"
+    },
+    {
+      "index": 20,
+      "page": "library_0020_switch_2x2",
+      "ck": "switch",
+      "label": "Switch / outlet",
+      "w": 2,
+      "h": 2,
+      "min": [
+        1,
+        1
+      ],
+      "id": "library_0020_switch_2x2"
+    },
+    {
+      "index": 21,
+      "page": "library_0021_switch_1x3",
+      "ck": "switch",
+      "label": "Switch / outlet",
+      "w": 1,
+      "h": 3,
+      "min": [
+        1,
+        1
+      ],
+      "id": "library_0021_switch_1x3"
+    },
+    {
+      "index": 22,
+      "page": "library_0022_switch_1x4",
+      "ck": "switch",
+      "label": "Switch / outlet",
+      "w": 1,
+      "h": 4,
+      "min": [
+        1,
+        1
+      ],
+      "id": "library_0022_switch_1x4"
+    },
+    {
+      "index": 23,
+      "page": "library_0023_switch_1x5",
+      "ck": "switch",
+      "label": "Switch / outlet",
+      "w": 1,
+      "h": 5,
+      "min": [
+        1,
+        1
+      ],
+      "id": "library_0023_switch_1x5"
+    },
+    {
+      "index": 24,
+      "page": "library_0024_lightgroup_2x2",
+      "ck": "lightgroup",
+      "label": "Light group",
+      "w": 2,
+      "h": 2,
+      "min": [
+        2,
+        2
+      ],
+      "id": "library_0024_lightgroup_2x2"
+    },
+    {
+      "index": 25,
+      "page": "library_0025_lightgroup_3x2",
+      "ck": "lightgroup",
+      "label": "Light group",
+      "w": 3,
+      "h": 2,
+      "min": [
+        2,
+        2
+      ],
+      "id": "library_0025_lightgroup_3x2"
+    },
+    {
+      "index": 26,
+      "page": "library_0026_lightgroup_2x3",
+      "ck": "lightgroup",
+      "label": "Light group",
+      "w": 2,
+      "h": 3,
+      "min": [
+        2,
+        2
+      ],
+      "id": "library_0026_lightgroup_2x3"
+    },
+    {
+      "index": 27,
+      "page": "library_0027_lightgroup_3x3",
+      "ck": "lightgroup",
+      "label": "Light group",
+      "w": 3,
+      "h": 3,
+      "min": [
+        2,
+        2
+      ],
+      "id": "library_0027_lightgroup_3x3"
+    },
+    {
+      "index": 28,
+      "page": "library_0028_lightgroup_4x3",
+      "ck": "lightgroup",
+      "label": "Light group",
+      "w": 4,
+      "h": 3,
+      "min": [
+        2,
+        2
+      ],
+      "id": "library_0028_lightgroup_4x3"
+    },
+    {
+      "index": 29,
+      "page": "library_0029_lightgroup_2x4",
+      "ck": "lightgroup",
+      "label": "Light group",
+      "w": 2,
+      "h": 4,
+      "min": [
+        2,
+        2
+      ],
+      "id": "library_0029_lightgroup_2x4"
+    },
+    {
+      "index": 30,
+      "page": "library_0030_lightgroup_4x4",
+      "ck": "lightgroup",
+      "label": "Light group",
+      "w": 4,
+      "h": 4,
+      "min": [
+        2,
+        2
+      ],
+      "id": "library_0030_lightgroup_4x4"
+    },
+    {
+      "index": 31,
+      "page": "library_0031_lightgroup_2x5",
+      "ck": "lightgroup",
+      "label": "Light group",
+      "w": 2,
+      "h": 5,
+      "min": [
+        2,
+        2
+      ],
+      "id": "library_0031_lightgroup_2x5"
+    },
+    {
+      "index": 32,
+      "page": "library_0032_lightgroup_5x4",
+      "ck": "lightgroup",
+      "label": "Light group",
+      "w": 5,
+      "h": 4,
+      "min": [
+        2,
+        2
+      ],
+      "id": "library_0032_lightgroup_5x4"
+    },
+    {
+      "index": 33,
+      "page": "library_0033_lightgroup_6x4",
+      "ck": "lightgroup",
+      "label": "Light group",
+      "w": 6,
+      "h": 4,
+      "min": [
+        2,
+        2
+      ],
+      "id": "library_0033_lightgroup_6x4"
+    },
+    {
+      "index": 34,
+      "page": "library_0034_lightgroup_5x5",
+      "ck": "lightgroup",
+      "label": "Light group",
+      "w": 5,
+      "h": 5,
+      "min": [
+        2,
+        2
+      ],
+      "id": "library_0034_lightgroup_5x5"
+    },
+    {
+      "index": 35,
+      "page": "library_0035_lightgroup_6x5",
+      "ck": "lightgroup",
+      "label": "Light group",
+      "w": 6,
+      "h": 5,
+      "min": [
+        2,
+        2
+      ],
+      "id": "library_0035_lightgroup_6x5"
+    },
+    {
+      "index": 36,
+      "page": "library_0036_outletgroup_1x1",
+      "ck": "outletgroup",
+      "label": "Outlets",
+      "w": 1,
+      "h": 1,
+      "min": [
+        1,
+        1
+      ],
+      "id": "library_0036_outletgroup_1x1"
+    },
+    {
+      "index": 37,
+      "page": "library_0037_outletgroup_1x2",
+      "ck": "outletgroup",
+      "label": "Outlets",
+      "w": 1,
+      "h": 2,
+      "min": [
+        1,
+        1
+      ],
+      "id": "library_0037_outletgroup_1x2"
+    },
+    {
+      "index": 38,
+      "page": "library_0038_outletgroup_2x1",
+      "ck": "outletgroup",
+      "label": "Outlets",
+      "w": 2,
+      "h": 1,
+      "min": [
+        1,
+        1
+      ],
+      "id": "library_0038_outletgroup_2x1"
+    },
+    {
+      "index": 39,
+      "page": "library_0039_outletgroup_1x3",
+      "ck": "outletgroup",
+      "label": "Outlets",
+      "w": 1,
+      "h": 3,
+      "min": [
+        1,
+        1
+      ],
+      "id": "library_0039_outletgroup_1x3"
+    },
+    {
+      "index": 40,
+      "page": "library_0040_outletgroup_3x1",
+      "ck": "outletgroup",
+      "label": "Outlets",
+      "w": 3,
+      "h": 1,
+      "min": [
+        1,
+        1
+      ],
+      "id": "library_0040_outletgroup_3x1"
+    },
+    {
+      "index": 41,
+      "page": "library_0041_fan_1x1",
+      "ck": "fan",
+      "label": "Fan",
+      "w": 1,
+      "h": 1,
+      "min": [
+        1,
+        1
+      ],
+      "id": "library_0041_fan_1x1"
+    },
+    {
+      "index": 42,
+      "page": "library_0042_fan_1x2",
+      "ck": "fan",
+      "label": "Fan",
+      "w": 1,
+      "h": 2,
+      "min": [
+        1,
+        1
+      ],
+      "id": "library_0042_fan_1x2"
+    },
+    {
+      "index": 43,
+      "page": "library_0043_fan_2x1",
+      "ck": "fan",
+      "label": "Fan",
+      "w": 2,
+      "h": 1,
+      "min": [
+        1,
+        1
+      ],
+      "id": "library_0043_fan_2x1"
+    },
+    {
+      "index": 44,
+      "page": "library_0044_fan_2x2",
+      "ck": "fan",
+      "label": "Fan",
+      "w": 2,
+      "h": 2,
+      "min": [
+        1,
+        1
+      ],
+      "id": "library_0044_fan_2x2"
+    },
+    {
+      "index": 45,
+      "page": "library_0045_fan_3x3",
+      "ck": "fan",
+      "label": "Fan",
+      "w": 3,
+      "h": 3,
+      "min": [
+        1,
+        1
+      ],
+      "id": "library_0045_fan_3x3"
+    },
+    {
+      "index": 46,
+      "page": "library_0046_cover_1x1",
+      "ck": "cover",
+      "label": "Cover / blinds",
+      "w": 1,
+      "h": 1,
+      "min": [
+        1,
+        1
+      ],
+      "id": "library_0046_cover_1x1"
+    },
+    {
+      "index": 47,
+      "page": "library_0047_cover_2x1",
+      "ck": "cover",
+      "label": "Cover / blinds",
+      "w": 2,
+      "h": 1,
+      "min": [
+        1,
+        1
+      ],
+      "id": "library_0047_cover_2x1"
+    },
+    {
+      "index": 48,
+      "page": "library_0048_cover_1x2",
+      "ck": "cover",
+      "label": "Cover / blinds",
+      "w": 1,
+      "h": 2,
+      "min": [
+        1,
+        1
+      ],
+      "id": "library_0048_cover_1x2"
+    },
+    {
+      "index": 49,
+      "page": "library_0049_cover_1x3",
+      "ck": "cover",
+      "label": "Cover / blinds",
+      "w": 1,
+      "h": 3,
+      "min": [
+        1,
+        1
+      ],
+      "id": "library_0049_cover_1x3"
+    },
+    {
+      "index": 50,
+      "page": "library_0050_cover_2x2",
+      "ck": "cover",
+      "label": "Cover / blinds",
+      "w": 2,
+      "h": 2,
+      "min": [
+        1,
+        1
+      ],
+      "id": "library_0050_cover_2x2"
+    },
+    {
+      "index": 51,
+      "page": "library_0051_cover_2x3",
+      "ck": "cover",
+      "label": "Cover / blinds",
+      "w": 2,
+      "h": 3,
+      "min": [
+        1,
+        1
+      ],
+      "id": "library_0051_cover_2x3"
+    },
+    {
+      "index": 52,
+      "page": "library_0052_climate_1x1",
+      "ck": "climate",
+      "label": "Climate / thermostat",
+      "w": 1,
+      "h": 1,
+      "min": [
+        1,
+        1
+      ],
+      "id": "library_0052_climate_1x1"
+    },
+    {
+      "index": 53,
+      "page": "library_0053_climate_2x2",
+      "ck": "climate",
+      "label": "Climate / thermostat",
+      "w": 2,
+      "h": 2,
+      "min": [
+        1,
+        1
+      ],
+      "id": "library_0053_climate_2x2"
+    },
+    {
+      "index": 54,
+      "page": "library_0054_climate_3x2",
+      "ck": "climate",
+      "label": "Climate / thermostat",
+      "w": 3,
+      "h": 2,
+      "min": [
+        1,
+        1
+      ],
+      "id": "library_0054_climate_3x2"
+    },
+    {
+      "index": 55,
+      "page": "library_0055_climate_3x3",
+      "ck": "climate",
+      "label": "Climate / thermostat",
+      "w": 3,
+      "h": 3,
+      "min": [
+        1,
+        1
+      ],
+      "id": "library_0055_climate_3x3"
+    },
+    {
+      "index": 56,
+      "page": "library_0056_climate_4x4",
+      "ck": "climate",
+      "label": "Climate / thermostat",
+      "w": 4,
+      "h": 4,
+      "min": [
+        1,
+        1
+      ],
+      "id": "library_0056_climate_4x4"
+    },
+    {
+      "index": 57,
+      "page": "library_0057_climate_6x5",
+      "ck": "climate",
+      "label": "Climate / thermostat",
+      "w": 6,
+      "h": 5,
+      "min": [
+        1,
+        1
+      ],
+      "id": "library_0057_climate_6x5"
+    },
+    {
+      "index": 58,
+      "page": "library_0058_climate_1x3",
+      "ck": "climate",
+      "label": "Climate / thermostat",
+      "w": 1,
+      "h": 3,
+      "min": [
+        1,
+        1
+      ],
+      "id": "library_0058_climate_1x3"
+    },
+    {
+      "index": 59,
+      "page": "library_0059_climate_1x4",
+      "ck": "climate",
+      "label": "Climate / thermostat",
+      "w": 1,
+      "h": 4,
+      "min": [
+        1,
+        1
+      ],
+      "id": "library_0059_climate_1x4"
+    },
+    {
+      "index": 60,
+      "page": "library_0060_climate_1x5",
+      "ck": "climate",
+      "label": "Climate / thermostat",
+      "w": 1,
+      "h": 5,
+      "min": [
+        1,
+        1
+      ],
+      "id": "library_0060_climate_1x5"
+    },
+    {
+      "index": 61,
+      "page": "library_0061_group_2x2",
+      "ck": "group",
+      "label": "Status group",
+      "w": 2,
+      "h": 2,
+      "min": [
+        2,
+        2
+      ],
+      "id": "library_0061_group_2x2"
+    },
+    {
+      "index": 62,
+      "page": "library_0062_group_2x3",
+      "ck": "group",
+      "label": "Status group",
+      "w": 2,
+      "h": 3,
+      "min": [
+        2,
+        2
+      ],
+      "id": "library_0062_group_2x3"
+    },
+    {
+      "index": 63,
+      "page": "library_0063_group_2x4",
+      "ck": "group",
+      "label": "Status group",
+      "w": 2,
+      "h": 4,
+      "min": [
+        2,
+        2
+      ],
+      "id": "library_0063_group_2x4"
+    },
+    {
+      "index": 64,
+      "page": "library_0064_group_2x5",
+      "ck": "group",
+      "label": "Status group",
+      "w": 2,
+      "h": 5,
+      "min": [
+        2,
+        2
+      ],
+      "id": "library_0064_group_2x5"
+    },
+    {
+      "index": 65,
+      "page": "library_0065_shortcuts_2x2",
+      "ck": "shortcuts",
+      "label": "Shortcuts",
+      "w": 2,
+      "h": 2,
+      "min": [
+        2,
+        2
+      ],
+      "id": "library_0065_shortcuts_2x2"
+    },
+    {
+      "index": 66,
+      "page": "library_0066_shortcuts_3x2",
+      "ck": "shortcuts",
+      "label": "Shortcuts",
+      "w": 3,
+      "h": 2,
+      "min": [
+        2,
+        2
+      ],
+      "id": "library_0066_shortcuts_3x2"
+    },
+    {
+      "index": 67,
+      "page": "library_0067_shortcuts_2x3",
+      "ck": "shortcuts",
+      "label": "Shortcuts",
+      "w": 2,
+      "h": 3,
+      "min": [
+        2,
+        2
+      ],
+      "id": "library_0067_shortcuts_2x3"
+    },
+    {
+      "index": 68,
+      "page": "library_0068_shortcuts_4x2",
+      "ck": "shortcuts",
+      "label": "Shortcuts",
+      "w": 4,
+      "h": 2,
+      "min": [
+        2,
+        2
+      ],
+      "id": "library_0068_shortcuts_4x2"
+    },
+    {
+      "index": 69,
+      "page": "library_0069_shortcuts_2x4",
+      "ck": "shortcuts",
+      "label": "Shortcuts",
+      "w": 2,
+      "h": 4,
+      "min": [
+        2,
+        2
+      ],
+      "id": "library_0069_shortcuts_2x4"
+    },
+    {
+      "index": 70,
+      "page": "library_0070_shortcuts_5x2",
+      "ck": "shortcuts",
+      "label": "Shortcuts",
+      "w": 5,
+      "h": 2,
+      "min": [
+        2,
+        2
+      ],
+      "id": "library_0070_shortcuts_5x2"
+    },
+    {
+      "index": 71,
+      "page": "library_0071_shortcuts_2x5",
+      "ck": "shortcuts",
+      "label": "Shortcuts",
+      "w": 2,
+      "h": 5,
+      "min": [
+        2,
+        2
+      ],
+      "id": "library_0071_shortcuts_2x5"
+    },
+    {
+      "index": 72,
+      "page": "library_0072_shortcuts_6x2",
+      "ck": "shortcuts",
+      "label": "Shortcuts",
+      "w": 6,
+      "h": 2,
+      "min": [
+        2,
+        2
+      ],
+      "id": "library_0072_shortcuts_6x2"
+    },
+    {
+      "index": 73,
+      "page": "library_0073_speakers_1x1",
+      "ck": "speakers",
+      "label": "Speakers (multi-room + volume)",
+      "w": 1,
+      "h": 1,
+      "min": [
+        1,
+        1
+      ],
+      "id": "library_0073_speakers_1x1"
+    },
+    {
+      "index": 74,
+      "page": "library_0074_speakers_2x2",
+      "ck": "speakers",
+      "label": "Speakers (multi-room + volume)",
+      "w": 2,
+      "h": 2,
+      "min": [
+        1,
+        1
+      ],
+      "id": "library_0074_speakers_2x2"
+    },
+    {
+      "index": 75,
+      "page": "library_0075_speakers_3x2",
+      "ck": "speakers",
+      "label": "Speakers (multi-room + volume)",
+      "w": 3,
+      "h": 2,
+      "min": [
+        1,
+        1
+      ],
+      "id": "library_0075_speakers_3x2"
+    },
+    {
+      "index": 76,
+      "page": "library_0076_speakers_2x3",
+      "ck": "speakers",
+      "label": "Speakers (multi-room + volume)",
+      "w": 2,
+      "h": 3,
+      "min": [
+        1,
+        1
+      ],
+      "id": "library_0076_speakers_2x3"
+    },
+    {
+      "index": 77,
+      "page": "library_0077_speakers_3x3",
+      "ck": "speakers",
+      "label": "Speakers (multi-room + volume)",
+      "w": 3,
+      "h": 3,
+      "min": [
+        1,
+        1
+      ],
+      "id": "library_0077_speakers_3x3"
+    },
+    {
+      "index": 78,
+      "page": "library_0078_speakers_4x4",
+      "ck": "speakers",
+      "label": "Speakers (multi-room + volume)",
+      "w": 4,
+      "h": 4,
+      "min": [
+        1,
+        1
+      ],
+      "id": "library_0078_speakers_4x4"
+    },
+    {
+      "index": 79,
+      "page": "library_0079_speakers_3x4",
+      "ck": "speakers",
+      "label": "Speakers (multi-room + volume)",
+      "w": 3,
+      "h": 4,
+      "min": [
+        1,
+        1
+      ],
+      "id": "library_0079_speakers_3x4"
+    },
+    {
+      "index": 80,
+      "page": "library_0080_speakers_5x4",
+      "ck": "speakers",
+      "label": "Speakers (multi-room + volume)",
+      "w": 5,
+      "h": 4,
+      "min": [
+        1,
+        1
+      ],
+      "id": "library_0080_speakers_5x4"
+    },
+    {
+      "index": 81,
+      "page": "library_0081_speakers_6x5",
+      "ck": "speakers",
+      "label": "Speakers (multi-room + volume)",
+      "w": 6,
+      "h": 5,
+      "min": [
+        1,
+        1
+      ],
+      "id": "library_0081_speakers_6x5"
+    },
+    {
+      "index": 82,
+      "page": "library_0082_sonos_sources_1x1",
+      "ck": "sonos_sources",
+      "label": "Sonos sources",
+      "w": 1,
+      "h": 1,
+      "min": [
+        1,
+        1
+      ],
+      "id": "library_0082_sonos_sources_1x1"
+    },
+    {
+      "index": 83,
+      "page": "library_0083_sonos_sources_2x1",
+      "ck": "sonos_sources",
+      "label": "Sonos sources",
+      "w": 2,
+      "h": 1,
+      "min": [
+        1,
+        1
+      ],
+      "id": "library_0083_sonos_sources_2x1"
+    },
+    {
+      "index": 84,
+      "page": "library_0084_sonos_sources_3x1",
+      "ck": "sonos_sources",
+      "label": "Sonos sources",
+      "w": 3,
+      "h": 1,
+      "min": [
+        1,
+        1
+      ],
+      "id": "library_0084_sonos_sources_3x1"
+    },
+    {
+      "index": 85,
+      "page": "library_0085_sonos_sources_1x2",
+      "ck": "sonos_sources",
+      "label": "Sonos sources",
+      "w": 1,
+      "h": 2,
+      "min": [
+        1,
+        1
+      ],
+      "id": "library_0085_sonos_sources_1x2"
+    },
+    {
+      "index": 86,
+      "page": "library_0086_sonos_sources_1x3",
+      "ck": "sonos_sources",
+      "label": "Sonos sources",
+      "w": 1,
+      "h": 3,
+      "min": [
+        1,
+        1
+      ],
+      "id": "library_0086_sonos_sources_1x3"
+    },
+    {
+      "index": 87,
+      "page": "library_0087_sonos_sources_3x2",
+      "ck": "sonos_sources",
+      "label": "Sonos sources",
+      "w": 3,
+      "h": 2,
+      "min": [
+        1,
+        1
+      ],
+      "id": "library_0087_sonos_sources_3x2"
+    },
+    {
+      "index": 88,
+      "page": "library_0088_sonos_sources_2x3",
+      "ck": "sonos_sources",
+      "label": "Sonos sources",
+      "w": 2,
+      "h": 3,
+      "min": [
+        1,
+        1
+      ],
+      "id": "library_0088_sonos_sources_2x3"
+    },
+    {
+      "index": 89,
+      "page": "library_0089_sonos_sources_3x3",
+      "ck": "sonos_sources",
+      "label": "Sonos sources",
+      "w": 3,
+      "h": 3,
+      "min": [
+        1,
+        1
+      ],
+      "id": "library_0089_sonos_sources_3x3"
+    },
+    {
+      "index": 90,
+      "page": "library_0090_sonos_sources_5x4",
+      "ck": "sonos_sources",
+      "label": "Sonos sources",
+      "w": 5,
+      "h": 4,
+      "min": [
+        1,
+        1
+      ],
+      "id": "library_0090_sonos_sources_5x4"
+    },
+    {
+      "index": 91,
+      "page": "library_0091_sonos_library_4x3",
+      "ck": "sonos_library",
+      "label": "Sonos library",
+      "w": 4,
+      "h": 3,
+      "min": [
+        3,
+        3
+      ],
+      "id": "library_0091_sonos_library_4x3"
+    },
+    {
+      "index": 92,
+      "page": "library_0092_sonos_library_3x4",
+      "ck": "sonos_library",
+      "label": "Sonos library",
+      "w": 3,
+      "h": 4,
+      "min": [
+        3,
+        3
+      ],
+      "id": "library_0092_sonos_library_3x4"
+    },
+    {
+      "index": 93,
+      "page": "library_0093_sonos_library_4x4",
+      "ck": "sonos_library",
+      "label": "Sonos library",
+      "w": 4,
+      "h": 4,
+      "min": [
+        3,
+        3
+      ],
+      "id": "library_0093_sonos_library_4x4"
+    },
+    {
+      "index": 94,
+      "page": "library_0094_sonos_library_3x5",
+      "ck": "sonos_library",
+      "label": "Sonos library",
+      "w": 3,
+      "h": 5,
+      "min": [
+        3,
+        3
+      ],
+      "id": "library_0094_sonos_library_3x5"
+    },
+    {
+      "index": 95,
+      "page": "library_0095_sonos_library_4x5",
+      "ck": "sonos_library",
+      "label": "Sonos library",
+      "w": 4,
+      "h": 5,
+      "min": [
+        3,
+        3
+      ],
+      "id": "library_0095_sonos_library_4x5"
+    },
+    {
+      "index": 96,
+      "page": "library_0096_sonos_library_5x5",
+      "ck": "sonos_library",
+      "label": "Sonos library",
+      "w": 5,
+      "h": 5,
+      "min": [
+        3,
+        3
+      ],
+      "id": "library_0096_sonos_library_5x5"
+    },
+    {
+      "index": 97,
+      "page": "library_0097_sonos_fav_1x1",
+      "ck": "sonos_fav",
+      "label": "Sonos favorite",
+      "w": 1,
+      "h": 1,
+      "min": [
+        1,
+        1
+      ],
+      "id": "library_0097_sonos_fav_1x1"
+    },
+    {
+      "index": 98,
+      "page": "library_0098_sonos_fav_2x1",
+      "ck": "sonos_fav",
+      "label": "Sonos favorite",
+      "w": 2,
+      "h": 1,
+      "min": [
+        1,
+        1
+      ],
+      "id": "library_0098_sonos_fav_2x1"
+    },
+    {
+      "index": 99,
+      "page": "library_0099_sonos_fav_3x1",
+      "ck": "sonos_fav",
+      "label": "Sonos favorite",
+      "w": 3,
+      "h": 1,
+      "min": [
+        1,
+        1
+      ],
+      "id": "library_0099_sonos_fav_3x1"
+    },
+    {
+      "index": 100,
+      "page": "library_0100_spotify_1x1",
+      "ck": "spotify",
+      "label": "Spotify player",
+      "w": 1,
+      "h": 1,
+      "min": [
+        1,
+        1
+      ],
+      "id": "library_0100_spotify_1x1"
+    },
+    {
+      "index": 101,
+      "page": "library_0101_spotify_2x2",
+      "ck": "spotify",
+      "label": "Spotify player",
+      "w": 2,
+      "h": 2,
+      "min": [
+        1,
+        1
+      ],
+      "id": "library_0101_spotify_2x2"
+    },
+    {
+      "index": 102,
+      "page": "library_0102_spotify_3x2",
+      "ck": "spotify",
+      "label": "Spotify player",
+      "w": 3,
+      "h": 2,
+      "min": [
+        1,
+        1
+      ],
+      "id": "library_0102_spotify_3x2"
+    },
+    {
+      "index": 103,
+      "page": "library_0103_spotify_4x3",
+      "ck": "spotify",
+      "label": "Spotify player",
+      "w": 4,
+      "h": 3,
+      "min": [
+        1,
+        1
+      ],
+      "id": "library_0103_spotify_4x3"
+    },
+    {
+      "index": 104,
+      "page": "library_0104_spotify_6x5",
+      "ck": "spotify",
+      "label": "Spotify player",
+      "w": 6,
+      "h": 5,
+      "min": [
+        1,
+        1
+      ],
+      "id": "library_0104_spotify_6x5"
+    },
+    {
+      "index": 105,
+      "page": "library_0105_spotify_art_3x3",
+      "ck": "spotify_art",
+      "label": "Spotify player \u2014 art + volume",
+      "w": 3,
+      "h": 3,
+      "min": [
+        3,
+        3
+      ],
+      "id": "library_0105_spotify_art_3x3"
+    },
+    {
+      "index": 106,
+      "page": "library_0106_spotify_art_4x3",
+      "ck": "spotify_art",
+      "label": "Spotify player \u2014 art + volume",
+      "w": 4,
+      "h": 3,
+      "min": [
+        3,
+        3
+      ],
+      "id": "library_0106_spotify_art_4x3"
+    },
+    {
+      "index": 107,
+      "page": "library_0107_spotify_art_3x4",
+      "ck": "spotify_art",
+      "label": "Spotify player \u2014 art + volume",
+      "w": 3,
+      "h": 4,
+      "min": [
+        3,
+        3
+      ],
+      "id": "library_0107_spotify_art_3x4"
+    },
+    {
+      "index": 108,
+      "page": "library_0108_spotify_art_4x4",
+      "ck": "spotify_art",
+      "label": "Spotify player \u2014 art + volume",
+      "w": 4,
+      "h": 4,
+      "min": [
+        3,
+        3
+      ],
+      "id": "library_0108_spotify_art_4x4"
+    },
+    {
+      "index": 109,
+      "page": "library_0109_spotify_art_3x5",
+      "ck": "spotify_art",
+      "label": "Spotify player \u2014 art + volume",
+      "w": 3,
+      "h": 5,
+      "min": [
+        3,
+        3
+      ],
+      "id": "library_0109_spotify_art_3x5"
+    },
+    {
+      "index": 110,
+      "page": "library_0110_spotify_art_4x5",
+      "ck": "spotify_art",
+      "label": "Spotify player \u2014 art + volume",
+      "w": 4,
+      "h": 5,
+      "min": [
+        3,
+        3
+      ],
+      "id": "library_0110_spotify_art_4x5"
+    },
+    {
+      "index": 111,
+      "page": "library_0111_spotify_art_5x4",
+      "ck": "spotify_art",
+      "label": "Spotify player \u2014 art + volume",
+      "w": 5,
+      "h": 4,
+      "min": [
+        3,
+        3
+      ],
+      "id": "library_0111_spotify_art_5x4"
+    },
+    {
+      "index": 112,
+      "page": "library_0112_spotify_art_5x5",
+      "ck": "spotify_art",
+      "label": "Spotify player \u2014 art + volume",
+      "w": 5,
+      "h": 5,
+      "min": [
+        3,
+        3
+      ],
+      "id": "library_0112_spotify_art_5x5"
+    },
+    {
+      "index": 113,
+      "page": "library_0113_spotify_art_6x4",
+      "ck": "spotify_art",
+      "label": "Spotify player \u2014 art + volume",
+      "w": 6,
+      "h": 4,
+      "min": [
+        3,
+        3
+      ],
+      "id": "library_0113_spotify_art_6x4"
+    },
+    {
+      "index": 114,
+      "page": "library_0114_spotify_art_6x5",
+      "ck": "spotify_art",
+      "label": "Spotify player \u2014 art + volume",
+      "w": 6,
+      "h": 5,
+      "min": [
+        3,
+        3
+      ],
+      "id": "library_0114_spotify_art_6x5"
+    },
+    {
+      "index": 115,
+      "page": "library_0115_spotify_playlists_2x1",
+      "ck": "spotify_playlists",
+      "label": "Spotify playlists",
+      "w": 2,
+      "h": 1,
+      "min": [
+        2,
+        1
+      ],
+      "id": "library_0115_spotify_playlists_2x1"
+    },
+    {
+      "index": 116,
+      "page": "library_0116_spotify_playlists_3x1",
+      "ck": "spotify_playlists",
+      "label": "Spotify playlists",
+      "w": 3,
+      "h": 1,
+      "min": [
+        2,
+        1
+      ],
+      "id": "library_0116_spotify_playlists_3x1"
+    },
+    {
+      "index": 117,
+      "page": "library_0117_spotify_playlists_2x2",
+      "ck": "spotify_playlists",
+      "label": "Spotify playlists",
+      "w": 2,
+      "h": 2,
+      "min": [
+        2,
+        1
+      ],
+      "id": "library_0117_spotify_playlists_2x2"
+    },
+    {
+      "index": 118,
+      "page": "library_0118_spotify_playlists_3x2",
+      "ck": "spotify_playlists",
+      "label": "Spotify playlists",
+      "w": 3,
+      "h": 2,
+      "min": [
+        2,
+        1
+      ],
+      "id": "library_0118_spotify_playlists_3x2"
+    },
+    {
+      "index": 119,
+      "page": "library_0119_spotify_playlists_2x3",
+      "ck": "spotify_playlists",
+      "label": "Spotify playlists",
+      "w": 2,
+      "h": 3,
+      "min": [
+        2,
+        1
+      ],
+      "id": "library_0119_spotify_playlists_2x3"
+    },
+    {
+      "index": 120,
+      "page": "library_0120_spotify_playlists_3x3",
+      "ck": "spotify_playlists",
+      "label": "Spotify playlists",
+      "w": 3,
+      "h": 3,
+      "min": [
+        2,
+        1
+      ],
+      "id": "library_0120_spotify_playlists_3x3"
+    },
+    {
+      "index": 121,
+      "page": "library_0121_spotify_tracks_2x3",
+      "ck": "spotify_tracks",
+      "label": "Spotify songs",
+      "w": 2,
+      "h": 3,
+      "min": [
+        2,
+        3
+      ],
+      "id": "library_0121_spotify_tracks_2x3"
+    },
+    {
+      "index": 122,
+      "page": "library_0122_spotify_tracks_2x4",
+      "ck": "spotify_tracks",
+      "label": "Spotify songs",
+      "w": 2,
+      "h": 4,
+      "min": [
+        2,
+        3
+      ],
+      "id": "library_0122_spotify_tracks_2x4"
+    },
+    {
+      "index": 123,
+      "page": "library_0123_spotify_tracks_2x5",
+      "ck": "spotify_tracks",
+      "label": "Spotify songs",
+      "w": 2,
+      "h": 5,
+      "min": [
+        2,
+        3
+      ],
+      "id": "library_0123_spotify_tracks_2x5"
+    },
+    {
+      "index": 124,
+      "page": "library_0124_spotify_tracks_3x4",
+      "ck": "spotify_tracks",
+      "label": "Spotify songs",
+      "w": 3,
+      "h": 4,
+      "min": [
+        2,
+        3
+      ],
+      "id": "library_0124_spotify_tracks_3x4"
+    },
+    {
+      "index": 125,
+      "page": "library_0125_spotify_tracks_3x5",
+      "ck": "spotify_tracks",
+      "label": "Spotify songs",
+      "w": 3,
+      "h": 5,
+      "min": [
+        2,
+        3
+      ],
+      "id": "library_0125_spotify_tracks_3x5"
+    },
+    {
+      "index": 126,
+      "page": "library_0126_spotify_tracks_4x5",
+      "ck": "spotify_tracks",
+      "label": "Spotify songs",
+      "w": 4,
+      "h": 5,
+      "min": [
+        2,
+        3
+      ],
+      "id": "library_0126_spotify_tracks_4x5"
+    },
+    {
+      "index": 127,
+      "page": "library_0127_spotify_queue_2x3",
+      "ck": "spotify_queue",
+      "label": "Spotify queue",
+      "w": 2,
+      "h": 3,
+      "min": [
+        2,
+        3
+      ],
+      "id": "library_0127_spotify_queue_2x3"
+    },
+    {
+      "index": 128,
+      "page": "library_0128_spotify_queue_2x4",
+      "ck": "spotify_queue",
+      "label": "Spotify queue",
+      "w": 2,
+      "h": 4,
+      "min": [
+        2,
+        3
+      ],
+      "id": "library_0128_spotify_queue_2x4"
+    },
+    {
+      "index": 129,
+      "page": "library_0129_spotify_queue_2x5",
+      "ck": "spotify_queue",
+      "label": "Spotify queue",
+      "w": 2,
+      "h": 5,
+      "min": [
+        2,
+        3
+      ],
+      "id": "library_0129_spotify_queue_2x5"
+    },
+    {
+      "index": 130,
+      "page": "library_0130_spotify_queue_3x3",
+      "ck": "spotify_queue",
+      "label": "Spotify queue",
+      "w": 3,
+      "h": 3,
+      "min": [
+        2,
+        3
+      ],
+      "id": "library_0130_spotify_queue_3x3"
+    },
+    {
+      "index": 131,
+      "page": "library_0131_spotify_queue_3x4",
+      "ck": "spotify_queue",
+      "label": "Spotify queue",
+      "w": 3,
+      "h": 4,
+      "min": [
+        2,
+        3
+      ],
+      "id": "library_0131_spotify_queue_3x4"
+    },
+    {
+      "index": 132,
+      "page": "library_0132_spotify_queue_3x5",
+      "ck": "spotify_queue",
+      "label": "Spotify queue",
+      "w": 3,
+      "h": 5,
+      "min": [
+        2,
+        3
+      ],
+      "id": "library_0132_spotify_queue_3x5"
+    },
+    {
+      "index": 133,
+      "page": "library_0133_spotify_queue_4x4",
+      "ck": "spotify_queue",
+      "label": "Spotify queue",
+      "w": 4,
+      "h": 4,
+      "min": [
+        2,
+        3
+      ],
+      "id": "library_0133_spotify_queue_4x4"
+    },
+    {
+      "index": 134,
+      "page": "library_0134_spotify_queue_4x5",
+      "ck": "spotify_queue",
+      "label": "Spotify queue",
+      "w": 4,
+      "h": 5,
+      "min": [
+        2,
+        3
+      ],
+      "id": "library_0134_spotify_queue_4x5"
+    },
+    {
+      "index": 135,
+      "page": "library_0135_spotify_speakers_2x2",
+      "ck": "spotify_speakers",
+      "label": "Spotify speakers (Play on)",
+      "w": 2,
+      "h": 2,
+      "min": [
+        2,
+        2
+      ],
+      "id": "library_0135_spotify_speakers_2x2"
+    },
+    {
+      "index": 136,
+      "page": "library_0136_spotify_speakers_3x2",
+      "ck": "spotify_speakers",
+      "label": "Spotify speakers (Play on)",
+      "w": 3,
+      "h": 2,
+      "min": [
+        2,
+        2
+      ],
+      "id": "library_0136_spotify_speakers_3x2"
+    },
+    {
+      "index": 137,
+      "page": "library_0137_spotify_speakers_2x3",
+      "ck": "spotify_speakers",
+      "label": "Spotify speakers (Play on)",
+      "w": 2,
+      "h": 3,
+      "min": [
+        2,
+        2
+      ],
+      "id": "library_0137_spotify_speakers_2x3"
+    },
+    {
+      "index": 138,
+      "page": "library_0138_spotify_speakers_3x3",
+      "ck": "spotify_speakers",
+      "label": "Spotify speakers (Play on)",
+      "w": 3,
+      "h": 3,
+      "min": [
+        2,
+        2
+      ],
+      "id": "library_0138_spotify_speakers_3x3"
+    },
+    {
+      "index": 139,
+      "page": "library_0139_spotify_speakers_2x4",
+      "ck": "spotify_speakers",
+      "label": "Spotify speakers (Play on)",
+      "w": 2,
+      "h": 4,
+      "min": [
+        2,
+        2
+      ],
+      "id": "library_0139_spotify_speakers_2x4"
+    },
+    {
+      "index": 140,
+      "page": "library_0140_spotify_speakers_3x4",
+      "ck": "spotify_speakers",
+      "label": "Spotify speakers (Play on)",
+      "w": 3,
+      "h": 4,
+      "min": [
+        2,
+        2
+      ],
+      "id": "library_0140_spotify_speakers_3x4"
+    },
+    {
+      "index": 141,
+      "page": "library_0141_spotify_speaker_1x1",
+      "ck": "spotify_speaker",
+      "label": "Spotify speaker \u2014 single tile",
+      "w": 1,
+      "h": 1,
+      "min": [
+        1,
+        1
+      ],
+      "id": "library_0141_spotify_speaker_1x1"
+    },
+    {
+      "index": 142,
+      "page": "library_0142_spotify_speaker_2x1",
+      "ck": "spotify_speaker",
+      "label": "Spotify speaker \u2014 single tile",
+      "w": 2,
+      "h": 1,
+      "min": [
+        1,
+        1
+      ],
+      "id": "library_0142_spotify_speaker_2x1"
+    },
+    {
+      "index": 143,
+      "page": "library_0143_spotify_speaker_1x2",
+      "ck": "spotify_speaker",
+      "label": "Spotify speaker \u2014 single tile",
+      "w": 1,
+      "h": 2,
+      "min": [
+        1,
+        1
+      ],
+      "id": "library_0143_spotify_speaker_1x2"
+    },
+    {
+      "index": 144,
+      "page": "library_0144_spotify_speaker_2x2",
+      "ck": "spotify_speaker",
+      "label": "Spotify speaker \u2014 single tile",
+      "w": 2,
+      "h": 2,
+      "min": [
+        1,
+        1
+      ],
+      "id": "library_0144_spotify_speaker_2x2"
+    },
+    {
+      "index": 145,
+      "page": "library_0145_playlist_1x1",
+      "ck": "playlist",
+      "label": "Spotify playlist \u2014 single button",
+      "w": 1,
+      "h": 1,
+      "min": [
+        1,
+        1
+      ],
+      "id": "library_0145_playlist_1x1"
+    },
+    {
+      "index": 146,
+      "page": "library_0146_playlist_2x1",
+      "ck": "playlist",
+      "label": "Spotify playlist \u2014 single button",
+      "w": 2,
+      "h": 1,
+      "min": [
+        1,
+        1
+      ],
+      "id": "library_0146_playlist_2x1"
+    },
+    {
+      "index": 147,
+      "page": "library_0147_playlist_3x1",
+      "ck": "playlist",
+      "label": "Spotify playlist \u2014 single button",
+      "w": 3,
+      "h": 1,
+      "min": [
+        1,
+        1
+      ],
+      "id": "library_0147_playlist_3x1"
+    },
+    {
+      "index": 148,
+      "page": "library_0148_songlist_4x3",
+      "ck": "songlist",
+      "label": "Spotify song list",
+      "w": 4,
+      "h": 3,
+      "min": [
+        3,
+        3
+      ],
+      "id": "library_0148_songlist_4x3"
+    },
+    {
+      "index": 149,
+      "page": "library_0149_songlist_3x4",
+      "ck": "songlist",
+      "label": "Spotify song list",
+      "w": 3,
+      "h": 4,
+      "min": [
+        3,
+        3
+      ],
+      "id": "library_0149_songlist_3x4"
+    },
+    {
+      "index": 150,
+      "page": "library_0150_songlist_4x4",
+      "ck": "songlist",
+      "label": "Spotify song list",
+      "w": 4,
+      "h": 4,
+      "min": [
+        3,
+        3
+      ],
+      "id": "library_0150_songlist_4x4"
+    },
+    {
+      "index": 151,
+      "page": "library_0151_songlist_3x5",
+      "ck": "songlist",
+      "label": "Spotify song list",
+      "w": 3,
+      "h": 5,
+      "min": [
+        3,
+        3
+      ],
+      "id": "library_0151_songlist_3x5"
+    },
+    {
+      "index": 152,
+      "page": "library_0152_songlist_4x5",
+      "ck": "songlist",
+      "label": "Spotify song list",
+      "w": 4,
+      "h": 5,
+      "min": [
+        3,
+        3
+      ],
+      "id": "library_0152_songlist_4x5"
+    },
+    {
+      "index": 153,
+      "page": "library_0153_songlist_5x5",
+      "ck": "songlist",
+      "label": "Spotify song list",
+      "w": 5,
+      "h": 5,
+      "min": [
+        3,
+        3
+      ],
+      "id": "library_0153_songlist_5x5"
+    },
+    {
+      "index": 154,
+      "page": "library_0154_sonos_3x2",
+      "ck": "sonos",
+      "label": "Sonos now-playing",
+      "w": 3,
+      "h": 2,
+      "min": [
+        3,
+        2
+      ],
+      "id": "library_0154_sonos_3x2"
+    },
+    {
+      "index": 155,
+      "page": "library_0155_sonos_3x3",
+      "ck": "sonos",
+      "label": "Sonos now-playing",
+      "w": 3,
+      "h": 3,
+      "min": [
+        3,
+        2
+      ],
+      "id": "library_0155_sonos_3x3"
+    },
+    {
+      "index": 156,
+      "page": "library_0156_sonos_4x4",
+      "ck": "sonos",
+      "label": "Sonos now-playing",
+      "w": 4,
+      "h": 4,
+      "min": [
+        3,
+        2
+      ],
+      "id": "library_0156_sonos_4x4"
+    },
+    {
+      "index": 157,
+      "page": "library_0157_sonos_6x5",
+      "ck": "sonos",
+      "label": "Sonos now-playing",
+      "w": 6,
+      "h": 5,
+      "min": [
+        3,
+        2
+      ],
+      "id": "library_0157_sonos_6x5"
+    },
+    {
+      "index": 158,
+      "page": "library_0158_media_1x1",
+      "ck": "media",
+      "label": "Media player",
+      "w": 1,
+      "h": 1,
+      "min": [
+        1,
+        1
+      ],
+      "id": "library_0158_media_1x1"
+    },
+    {
+      "index": 159,
+      "page": "library_0159_media_2x1",
+      "ck": "media",
+      "label": "Media player",
+      "w": 2,
+      "h": 1,
+      "min": [
+        1,
+        1
+      ],
+      "id": "library_0159_media_2x1"
+    },
+    {
+      "index": 160,
+      "page": "library_0160_media_2x2",
+      "ck": "media",
+      "label": "Media player",
+      "w": 2,
+      "h": 2,
+      "min": [
+        1,
+        1
+      ],
+      "id": "library_0160_media_2x2"
+    },
+    {
+      "index": 161,
+      "page": "library_0161_media_3x2",
+      "ck": "media",
+      "label": "Media player",
+      "w": 3,
+      "h": 2,
+      "min": [
+        1,
+        1
+      ],
+      "id": "library_0161_media_3x2"
+    },
+    {
+      "index": 162,
+      "page": "library_0162_media_3x3",
+      "ck": "media",
+      "label": "Media player",
+      "w": 3,
+      "h": 3,
+      "min": [
+        1,
+        1
+      ],
+      "id": "library_0162_media_3x3"
+    },
+    {
+      "index": 163,
+      "page": "library_0163_media_4x3",
+      "ck": "media",
+      "label": "Media player",
+      "w": 4,
+      "h": 3,
+      "min": [
+        1,
+        1
+      ],
+      "id": "library_0163_media_4x3"
+    },
+    {
+      "index": 164,
+      "page": "library_0164_media_6x5",
+      "ck": "media",
+      "label": "Media player",
+      "w": 6,
+      "h": 5,
+      "min": [
+        1,
+        1
+      ],
+      "id": "library_0164_media_6x5"
+    },
+    {
+      "index": 165,
+      "page": "library_0165_volume_1x1",
+      "ck": "volume",
+      "label": "Volume",
+      "w": 1,
+      "h": 1,
+      "min": [
+        1,
+        1
+      ],
+      "id": "library_0165_volume_1x1"
+    },
+    {
+      "index": 166,
+      "page": "library_0166_volume_2x1",
+      "ck": "volume",
+      "label": "Volume",
+      "w": 2,
+      "h": 1,
+      "min": [
+        1,
+        1
+      ],
+      "id": "library_0166_volume_2x1"
+    },
+    {
+      "index": 167,
+      "page": "library_0167_volume_1x2",
+      "ck": "volume",
+      "label": "Volume",
+      "w": 1,
+      "h": 2,
+      "min": [
+        1,
+        1
+      ],
+      "id": "library_0167_volume_1x2"
+    },
+    {
+      "index": 168,
+      "page": "library_0168_volume_2x2",
+      "ck": "volume",
+      "label": "Volume",
+      "w": 2,
+      "h": 2,
+      "min": [
+        1,
+        1
+      ],
+      "id": "library_0168_volume_2x2"
+    },
+    {
+      "index": 169,
+      "page": "library_0169_volume_3x2",
+      "ck": "volume",
+      "label": "Volume",
+      "w": 3,
+      "h": 2,
+      "min": [
+        1,
+        1
+      ],
+      "id": "library_0169_volume_3x2"
+    },
+    {
+      "index": 170,
+      "page": "library_0170_volumes_2x2",
+      "ck": "volumes",
+      "label": "Volume \u2014 per-speaker list",
+      "w": 2,
+      "h": 2,
+      "min": [
+        2,
+        2
+      ],
+      "id": "library_0170_volumes_2x2"
+    },
+    {
+      "index": 171,
+      "page": "library_0171_volumes_3x2",
+      "ck": "volumes",
+      "label": "Volume \u2014 per-speaker list",
+      "w": 3,
+      "h": 2,
+      "min": [
+        2,
+        2
+      ],
+      "id": "library_0171_volumes_3x2"
+    },
+    {
+      "index": 172,
+      "page": "library_0172_volumes_2x3",
+      "ck": "volumes",
+      "label": "Volume \u2014 per-speaker list",
+      "w": 2,
+      "h": 3,
+      "min": [
+        2,
+        2
+      ],
+      "id": "library_0172_volumes_2x3"
+    },
+    {
+      "index": 173,
+      "page": "library_0173_volumes_3x3",
+      "ck": "volumes",
+      "label": "Volume \u2014 per-speaker list",
+      "w": 3,
+      "h": 3,
+      "min": [
+        2,
+        2
+      ],
+      "id": "library_0173_volumes_3x3"
+    },
+    {
+      "index": 174,
+      "page": "library_0174_volumes_2x4",
+      "ck": "volumes",
+      "label": "Volume \u2014 per-speaker list",
+      "w": 2,
+      "h": 4,
+      "min": [
+        2,
+        2
+      ],
+      "id": "library_0174_volumes_2x4"
+    },
+    {
+      "index": 175,
+      "page": "library_0175_volumes_3x4",
+      "ck": "volumes",
+      "label": "Volume \u2014 per-speaker list",
+      "w": 3,
+      "h": 4,
+      "min": [
+        2,
+        2
+      ],
+      "id": "library_0175_volumes_3x4"
+    },
+    {
+      "index": 176,
+      "page": "library_0176_tvremote_1x1",
+      "ck": "tvremote",
+      "label": "TV remote",
+      "w": 1,
+      "h": 1,
+      "min": [
+        1,
+        1
+      ],
+      "id": "library_0176_tvremote_1x1"
+    },
+    {
+      "index": 177,
+      "page": "library_0177_tvremote_2x2",
+      "ck": "tvremote",
+      "label": "TV remote",
+      "w": 2,
+      "h": 2,
+      "min": [
+        1,
+        1
+      ],
+      "id": "library_0177_tvremote_2x2"
+    },
+    {
+      "index": 178,
+      "page": "library_0178_tvremote_3x2",
+      "ck": "tvremote",
+      "label": "TV remote",
+      "w": 3,
+      "h": 2,
+      "min": [
+        1,
+        1
+      ],
+      "id": "library_0178_tvremote_3x2"
+    },
+    {
+      "index": 179,
+      "page": "library_0179_tvremote_4x4",
+      "ck": "tvremote",
+      "label": "TV remote",
+      "w": 4,
+      "h": 4,
+      "min": [
+        1,
+        1
+      ],
+      "id": "library_0179_tvremote_4x4"
+    },
+    {
+      "index": 180,
+      "page": "library_0180_tvremote_4x5",
+      "ck": "tvremote",
+      "label": "TV remote",
+      "w": 4,
+      "h": 5,
+      "min": [
+        1,
+        1
+      ],
+      "id": "library_0180_tvremote_4x5"
+    },
+    {
+      "index": 181,
+      "page": "library_0181_tvremote_5x5",
+      "ck": "tvremote",
+      "label": "TV remote",
+      "w": 5,
+      "h": 5,
+      "min": [
+        1,
+        1
+      ],
+      "id": "library_0181_tvremote_5x5"
+    },
+    {
+      "index": 182,
+      "page": "library_0182_tvremote_6x5",
+      "ck": "tvremote",
+      "label": "TV remote",
+      "w": 6,
+      "h": 5,
+      "min": [
+        1,
+        1
+      ],
+      "id": "library_0182_tvremote_6x5"
+    },
+    {
+      "index": 183,
+      "page": "library_0183_tv_dpad_2x2",
+      "ck": "tv_dpad",
+      "label": "TV D-pad",
+      "w": 2,
+      "h": 2,
+      "min": [
+        2,
+        2
+      ],
+      "id": "library_0183_tv_dpad_2x2"
+    },
+    {
+      "index": 184,
+      "page": "library_0184_tv_dpad_3x2",
+      "ck": "tv_dpad",
+      "label": "TV D-pad",
+      "w": 3,
+      "h": 2,
+      "min": [
+        2,
+        2
+      ],
+      "id": "library_0184_tv_dpad_3x2"
+    },
+    {
+      "index": 185,
+      "page": "library_0185_tv_dpad_2x3",
+      "ck": "tv_dpad",
+      "label": "TV D-pad",
+      "w": 2,
+      "h": 3,
+      "min": [
+        2,
+        2
+      ],
+      "id": "library_0185_tv_dpad_2x3"
+    },
+    {
+      "index": 186,
+      "page": "library_0186_tv_dpad_3x3",
+      "ck": "tv_dpad",
+      "label": "TV D-pad",
+      "w": 3,
+      "h": 3,
+      "min": [
+        2,
+        2
+      ],
+      "id": "library_0186_tv_dpad_3x3"
+    },
+    {
+      "index": 187,
+      "page": "library_0187_tv_transport_2x1",
+      "ck": "tv_transport",
+      "label": "TV transport",
+      "w": 2,
+      "h": 1,
+      "min": [
+        2,
+        1
+      ],
+      "id": "library_0187_tv_transport_2x1"
+    },
+    {
+      "index": 188,
+      "page": "library_0188_tv_transport_3x1",
+      "ck": "tv_transport",
+      "label": "TV transport",
+      "w": 3,
+      "h": 1,
+      "min": [
+        2,
+        1
+      ],
+      "id": "library_0188_tv_transport_3x1"
+    },
+    {
+      "index": 189,
+      "page": "library_0189_tv_transport_4x1",
+      "ck": "tv_transport",
+      "label": "TV transport",
+      "w": 4,
+      "h": 1,
+      "min": [
+        2,
+        1
+      ],
+      "id": "library_0189_tv_transport_4x1"
+    },
+    {
+      "index": 190,
+      "page": "library_0190_tv_transport_6x1",
+      "ck": "tv_transport",
+      "label": "TV transport",
+      "w": 6,
+      "h": 1,
+      "min": [
+        2,
+        1
+      ],
+      "id": "library_0190_tv_transport_6x1"
+    },
+    {
+      "index": 191,
+      "page": "library_0191_tv_transport_2x2",
+      "ck": "tv_transport",
+      "label": "TV transport",
+      "w": 2,
+      "h": 2,
+      "min": [
+        2,
+        1
+      ],
+      "id": "library_0191_tv_transport_2x2"
+    },
+    {
+      "index": 192,
+      "page": "library_0192_tv_transport_4x2",
+      "ck": "tv_transport",
+      "label": "TV transport",
+      "w": 4,
+      "h": 2,
+      "min": [
+        2,
+        1
+      ],
+      "id": "library_0192_tv_transport_4x2"
+    },
+    {
+      "index": 193,
+      "page": "library_0193_tv_channel_1x1",
+      "ck": "tv_channel",
+      "label": "TV channel +/-",
+      "w": 1,
+      "h": 1,
+      "min": [
+        1,
+        1
+      ],
+      "id": "library_0193_tv_channel_1x1"
+    },
+    {
+      "index": 194,
+      "page": "library_0194_tv_channel_1x2",
+      "ck": "tv_channel",
+      "label": "TV channel +/-",
+      "w": 1,
+      "h": 2,
+      "min": [
+        1,
+        1
+      ],
+      "id": "library_0194_tv_channel_1x2"
+    },
+    {
+      "index": 195,
+      "page": "library_0195_tv_channel_2x1",
+      "ck": "tv_channel",
+      "label": "TV channel +/-",
+      "w": 2,
+      "h": 1,
+      "min": [
+        1,
+        1
+      ],
+      "id": "library_0195_tv_channel_2x1"
+    },
+    {
+      "index": 196,
+      "page": "library_0196_tv_channel_2x2",
+      "ck": "tv_channel",
+      "label": "TV channel +/-",
+      "w": 2,
+      "h": 2,
+      "min": [
+        1,
+        1
+      ],
+      "id": "library_0196_tv_channel_2x2"
+    },
+    {
+      "index": 197,
+      "page": "library_0197_tv_volume_1x1",
+      "ck": "tv_volume",
+      "label": "TV volume",
+      "w": 1,
+      "h": 1,
+      "min": [
+        1,
+        1
+      ],
+      "id": "library_0197_tv_volume_1x1"
+    },
+    {
+      "index": 198,
+      "page": "library_0198_tv_volume_1x2",
+      "ck": "tv_volume",
+      "label": "TV volume",
+      "w": 1,
+      "h": 2,
+      "min": [
+        1,
+        1
+      ],
+      "id": "library_0198_tv_volume_1x2"
+    },
+    {
+      "index": 199,
+      "page": "library_0199_tv_volume_1x3",
+      "ck": "tv_volume",
+      "label": "TV volume",
+      "w": 1,
+      "h": 3,
+      "min": [
+        1,
+        1
+      ],
+      "id": "library_0199_tv_volume_1x3"
+    },
+    {
+      "index": 200,
+      "page": "library_0200_tv_volume_2x1",
+      "ck": "tv_volume",
+      "label": "TV volume",
+      "w": 2,
+      "h": 1,
+      "min": [
+        1,
+        1
+      ],
+      "id": "library_0200_tv_volume_2x1"
+    },
+    {
+      "index": 201,
+      "page": "library_0201_tv_volume_2x2",
+      "ck": "tv_volume",
+      "label": "TV volume",
+      "w": 2,
+      "h": 2,
+      "min": [
+        1,
+        1
+      ],
+      "id": "library_0201_tv_volume_2x2"
+    },
+    {
+      "index": 202,
+      "page": "library_0202_tv_sources_1x2",
+      "ck": "tv_sources",
+      "label": "TV sources / inputs",
+      "w": 1,
+      "h": 2,
+      "min": [
+        1,
+        2
+      ],
+      "id": "library_0202_tv_sources_1x2"
+    },
+    {
+      "index": 203,
+      "page": "library_0203_tv_sources_1x3",
+      "ck": "tv_sources",
+      "label": "TV sources / inputs",
+      "w": 1,
+      "h": 3,
+      "min": [
+        1,
+        2
+      ],
+      "id": "library_0203_tv_sources_1x3"
+    },
+    {
+      "index": 204,
+      "page": "library_0204_tv_sources_3x2",
+      "ck": "tv_sources",
+      "label": "TV sources / inputs",
+      "w": 3,
+      "h": 2,
+      "min": [
+        1,
+        2
+      ],
+      "id": "library_0204_tv_sources_3x2"
+    },
+    {
+      "index": 205,
+      "page": "library_0205_tv_sources_2x3",
+      "ck": "tv_sources",
+      "label": "TV sources / inputs",
+      "w": 2,
+      "h": 3,
+      "min": [
+        1,
+        2
+      ],
+      "id": "library_0205_tv_sources_2x3"
+    },
+    {
+      "index": 206,
+      "page": "library_0206_tv_sources_3x3",
+      "ck": "tv_sources",
+      "label": "TV sources / inputs",
+      "w": 3,
+      "h": 3,
+      "min": [
+        1,
+        2
+      ],
+      "id": "library_0206_tv_sources_3x3"
+    },
+    {
+      "index": 207,
+      "page": "library_0207_tv_sources_5x4",
+      "ck": "tv_sources",
+      "label": "TV sources / inputs",
+      "w": 5,
+      "h": 4,
+      "min": [
+        1,
+        2
+      ],
+      "id": "library_0207_tv_sources_5x4"
+    },
+    {
+      "index": 208,
+      "page": "library_0208_tv_trackpad_3x3",
+      "ck": "tv_trackpad",
+      "label": "TV trackpad",
+      "w": 3,
+      "h": 3,
+      "min": [
+        3,
+        3
+      ],
+      "id": "library_0208_tv_trackpad_3x3"
+    },
+    {
+      "index": 209,
+      "page": "library_0209_tv_trackpad_4x3",
+      "ck": "tv_trackpad",
+      "label": "TV trackpad",
+      "w": 4,
+      "h": 3,
+      "min": [
+        3,
+        3
+      ],
+      "id": "library_0209_tv_trackpad_4x3"
+    },
+    {
+      "index": 210,
+      "page": "library_0210_tv_trackpad_4x4",
+      "ck": "tv_trackpad",
+      "label": "TV trackpad",
+      "w": 4,
+      "h": 4,
+      "min": [
+        3,
+        3
+      ],
+      "id": "library_0210_tv_trackpad_4x4"
+    },
+    {
+      "index": 211,
+      "page": "library_0211_tv_trackpad_6x4",
+      "ck": "tv_trackpad",
+      "label": "TV trackpad",
+      "w": 6,
+      "h": 4,
+      "min": [
+        3,
+        3
+      ],
+      "id": "library_0211_tv_trackpad_6x4"
+    },
+    {
+      "index": 212,
+      "page": "library_0212_tv_trackpad_6x5",
+      "ck": "tv_trackpad",
+      "label": "TV trackpad",
+      "w": 6,
+      "h": 5,
+      "min": [
+        3,
+        3
+      ],
+      "id": "library_0212_tv_trackpad_6x5"
+    },
+    {
+      "index": 213,
+      "page": "library_0213_tv_app_1x1",
+      "ck": "tv_app",
+      "label": "TV app / input \u2014 launcher",
+      "w": 1,
+      "h": 1,
+      "min": [
+        1,
+        1
+      ],
+      "id": "library_0213_tv_app_1x1"
+    },
+    {
+      "index": 214,
+      "page": "library_0214_tv_app_2x1",
+      "ck": "tv_app",
+      "label": "TV app / input \u2014 launcher",
+      "w": 2,
+      "h": 1,
+      "min": [
+        1,
+        1
+      ],
+      "id": "library_0214_tv_app_2x1"
+    },
+    {
+      "index": 215,
+      "page": "library_0215_tv_app_1x2",
+      "ck": "tv_app",
+      "label": "TV app / input \u2014 launcher",
+      "w": 1,
+      "h": 2,
+      "min": [
+        1,
+        1
+      ],
+      "id": "library_0215_tv_app_1x2"
+    },
+    {
+      "index": 216,
+      "page": "library_0216_tv_app_2x2",
+      "ck": "tv_app",
+      "label": "TV app / input \u2014 launcher",
+      "w": 2,
+      "h": 2,
+      "min": [
+        1,
+        1
+      ],
+      "id": "library_0216_tv_app_2x2"
+    },
+    {
+      "index": 217,
+      "page": "library_0217_tv_app_3x2",
+      "ck": "tv_app",
+      "label": "TV app / input \u2014 launcher",
+      "w": 3,
+      "h": 2,
+      "min": [
+        1,
+        1
+      ],
+      "id": "library_0217_tv_app_3x2"
+    },
+    {
+      "index": 218,
+      "page": "library_0218_tv_apps_1x2",
+      "ck": "tv_apps",
+      "label": "TV apps / inputs \u2014 grid",
+      "w": 1,
+      "h": 2,
+      "min": [
+        1,
+        2
+      ],
+      "id": "library_0218_tv_apps_1x2"
+    },
+    {
+      "index": 219,
+      "page": "library_0219_tv_apps_2x2",
+      "ck": "tv_apps",
+      "label": "TV apps / inputs \u2014 grid",
+      "w": 2,
+      "h": 2,
+      "min": [
+        1,
+        2
+      ],
+      "id": "library_0219_tv_apps_2x2"
+    },
+    {
+      "index": 220,
+      "page": "library_0220_tv_apps_3x2",
+      "ck": "tv_apps",
+      "label": "TV apps / inputs \u2014 grid",
+      "w": 3,
+      "h": 2,
+      "min": [
+        1,
+        2
+      ],
+      "id": "library_0220_tv_apps_3x2"
+    },
+    {
+      "index": 221,
+      "page": "library_0221_tv_apps_2x3",
+      "ck": "tv_apps",
+      "label": "TV apps / inputs \u2014 grid",
+      "w": 2,
+      "h": 3,
+      "min": [
+        1,
+        2
+      ],
+      "id": "library_0221_tv_apps_2x3"
+    },
+    {
+      "index": 222,
+      "page": "library_0222_tv_apps_3x3",
+      "ck": "tv_apps",
+      "label": "TV apps / inputs \u2014 grid",
+      "w": 3,
+      "h": 3,
+      "min": [
+        1,
+        2
+      ],
+      "id": "library_0222_tv_apps_3x3"
+    },
+    {
+      "index": 223,
+      "page": "library_0223_lock_1x1",
+      "ck": "lock",
+      "label": "Lock",
+      "w": 1,
+      "h": 1,
+      "min": [
+        1,
+        1
+      ],
+      "id": "library_0223_lock_1x1"
+    },
+    {
+      "index": 224,
+      "page": "library_0224_lock_2x1",
+      "ck": "lock",
+      "label": "Lock",
+      "w": 2,
+      "h": 1,
+      "min": [
+        1,
+        1
+      ],
+      "id": "library_0224_lock_2x1"
+    },
+    {
+      "index": 225,
+      "page": "library_0225_lock_2x2",
+      "ck": "lock",
+      "label": "Lock",
+      "w": 2,
+      "h": 2,
+      "min": [
+        1,
+        1
+      ],
+      "id": "library_0225_lock_2x2"
+    },
+    {
+      "index": 226,
+      "page": "library_0226_lock_1x3",
+      "ck": "lock",
+      "label": "Lock",
+      "w": 1,
+      "h": 3,
+      "min": [
+        1,
+        1
+      ],
+      "id": "library_0226_lock_1x3"
+    },
+    {
+      "index": 227,
+      "page": "library_0227_lock_1x4",
+      "ck": "lock",
+      "label": "Lock",
+      "w": 1,
+      "h": 4,
+      "min": [
+        1,
+        1
+      ],
+      "id": "library_0227_lock_1x4"
+    },
+    {
+      "index": 228,
+      "page": "library_0228_lock_1x5",
+      "ck": "lock",
+      "label": "Lock",
+      "w": 1,
+      "h": 5,
+      "min": [
+        1,
+        1
+      ],
+      "id": "library_0228_lock_1x5"
+    },
+    {
+      "index": 229,
+      "page": "library_0229_camera_2x2",
+      "ck": "camera",
+      "label": "Camera",
+      "w": 2,
+      "h": 2,
+      "min": [
+        2,
+        2
+      ],
+      "id": "library_0229_camera_2x2"
+    },
+    {
+      "index": 230,
+      "page": "library_0230_camera_3x3",
+      "ck": "camera",
+      "label": "Camera",
+      "w": 3,
+      "h": 3,
+      "min": [
+        2,
+        2
+      ],
+      "id": "library_0230_camera_3x3"
+    },
+    {
+      "index": 231,
+      "page": "library_0231_camera_4x3",
+      "ck": "camera",
+      "label": "Camera",
+      "w": 4,
+      "h": 3,
+      "min": [
+        2,
+        2
+      ],
+      "id": "library_0231_camera_4x3"
+    },
+    {
+      "index": 232,
+      "page": "library_0232_camera_6x5",
+      "ck": "camera",
+      "label": "Camera",
+      "w": 6,
+      "h": 5,
+      "min": [
+        2,
+        2
+      ],
+      "id": "library_0232_camera_6x5"
+    },
+    {
+      "index": 233,
+      "page": "library_0233_alarm_2x2",
+      "ck": "alarm",
+      "label": "Alarm panel",
+      "w": 2,
+      "h": 2,
+      "min": [
+        2,
+        2
+      ],
+      "id": "library_0233_alarm_2x2"
+    },
+    {
+      "index": 234,
+      "page": "library_0234_alarm_3x2",
+      "ck": "alarm",
+      "label": "Alarm panel",
+      "w": 3,
+      "h": 2,
+      "min": [
+        2,
+        2
+      ],
+      "id": "library_0234_alarm_3x2"
+    },
+    {
+      "index": 235,
+      "page": "library_0235_notifications_2x2",
+      "ck": "notifications",
+      "label": "Notifications",
+      "w": 2,
+      "h": 2,
+      "min": [
+        2,
+        2
+      ],
+      "id": "library_0235_notifications_2x2"
+    },
+    {
+      "index": 236,
+      "page": "library_0236_notifications_3x2",
+      "ck": "notifications",
+      "label": "Notifications",
+      "w": 3,
+      "h": 2,
+      "min": [
+        2,
+        2
+      ],
+      "id": "library_0236_notifications_3x2"
+    },
+    {
+      "index": 237,
+      "page": "library_0237_notifications_2x3",
+      "ck": "notifications",
+      "label": "Notifications",
+      "w": 2,
+      "h": 3,
+      "min": [
+        2,
+        2
+      ],
+      "id": "library_0237_notifications_2x3"
+    },
+    {
+      "index": 238,
+      "page": "library_0238_notifications_3x3",
+      "ck": "notifications",
+      "label": "Notifications",
+      "w": 3,
+      "h": 3,
+      "min": [
+        2,
+        2
+      ],
+      "id": "library_0238_notifications_3x3"
+    },
+    {
+      "index": 239,
+      "page": "library_0239_notifications_4x3",
+      "ck": "notifications",
+      "label": "Notifications",
+      "w": 4,
+      "h": 3,
+      "min": [
+        2,
+        2
+      ],
+      "id": "library_0239_notifications_4x3"
+    },
+    {
+      "index": 240,
+      "page": "library_0240_notifications_4x4",
+      "ck": "notifications",
+      "label": "Notifications",
+      "w": 4,
+      "h": 4,
+      "min": [
+        2,
+        2
+      ],
+      "id": "library_0240_notifications_4x4"
+    },
+    {
+      "index": 241,
+      "page": "library_0241_notifications_6x5",
+      "ck": "notifications",
+      "label": "Notifications",
+      "w": 6,
+      "h": 5,
+      "min": [
+        2,
+        2
+      ],
+      "id": "library_0241_notifications_6x5"
+    },
+    {
+      "index": 242,
+      "page": "library_0242_binary_1x1",
+      "ck": "binary",
+      "label": "Binary sensor",
+      "w": 1,
+      "h": 1,
+      "min": [
+        1,
+        1
+      ],
+      "id": "library_0242_binary_1x1"
+    },
+    {
+      "index": 243,
+      "page": "library_0243_binary_2x1",
+      "ck": "binary",
+      "label": "Binary sensor",
+      "w": 2,
+      "h": 1,
+      "min": [
+        1,
+        1
+      ],
+      "id": "library_0243_binary_2x1"
+    },
+    {
+      "index": 244,
+      "page": "library_0244_binary_1x3",
+      "ck": "binary",
+      "label": "Binary sensor",
+      "w": 1,
+      "h": 3,
+      "min": [
+        1,
+        1
+      ],
+      "id": "library_0244_binary_1x3"
+    },
+    {
+      "index": 245,
+      "page": "library_0245_binary_1x4",
+      "ck": "binary",
+      "label": "Binary sensor",
+      "w": 1,
+      "h": 4,
+      "min": [
+        1,
+        1
+      ],
+      "id": "library_0245_binary_1x4"
+    },
+    {
+      "index": 246,
+      "page": "library_0246_binary_1x5",
+      "ck": "binary",
+      "label": "Binary sensor",
+      "w": 1,
+      "h": 5,
+      "min": [
+        1,
+        1
+      ],
+      "id": "library_0246_binary_1x5"
+    },
+    {
+      "index": 247,
+      "page": "library_0247_sensor_1x1",
+      "ck": "sensor",
+      "label": "Sensor",
+      "w": 1,
+      "h": 1,
+      "min": [
+        1,
+        1
+      ],
+      "id": "library_0247_sensor_1x1"
+    },
+    {
+      "index": 248,
+      "page": "library_0248_sensor_2x1",
+      "ck": "sensor",
+      "label": "Sensor",
+      "w": 2,
+      "h": 1,
+      "min": [
+        1,
+        1
+      ],
+      "id": "library_0248_sensor_2x1"
+    },
+    {
+      "index": 249,
+      "page": "library_0249_sensor_3x1",
+      "ck": "sensor",
+      "label": "Sensor",
+      "w": 3,
+      "h": 1,
+      "min": [
+        1,
+        1
+      ],
+      "id": "library_0249_sensor_3x1"
+    },
+    {
+      "index": 250,
+      "page": "library_0250_sensor_4x1",
+      "ck": "sensor",
+      "label": "Sensor",
+      "w": 4,
+      "h": 1,
+      "min": [
+        1,
+        1
+      ],
+      "id": "library_0250_sensor_4x1"
+    },
+    {
+      "index": 251,
+      "page": "library_0251_sensor_5x1",
+      "ck": "sensor",
+      "label": "Sensor",
+      "w": 5,
+      "h": 1,
+      "min": [
+        1,
+        1
+      ],
+      "id": "library_0251_sensor_5x1"
+    },
+    {
+      "index": 252,
+      "page": "library_0252_chart_2x2",
+      "ck": "chart",
+      "label": "Sensor \u2014 trend chart",
+      "w": 2,
+      "h": 2,
+      "min": [
+        2,
+        2
+      ],
+      "id": "library_0252_chart_2x2"
+    },
+    {
+      "index": 253,
+      "page": "library_0253_chart_3x2",
+      "ck": "chart",
+      "label": "Sensor \u2014 trend chart",
+      "w": 3,
+      "h": 2,
+      "min": [
+        2,
+        2
+      ],
+      "id": "library_0253_chart_3x2"
+    },
+    {
+      "index": 254,
+      "page": "library_0254_chart_4x2",
+      "ck": "chart",
+      "label": "Sensor \u2014 trend chart",
+      "w": 4,
+      "h": 2,
+      "min": [
+        2,
+        2
+      ],
+      "id": "library_0254_chart_4x2"
+    },
+    {
+      "index": 255,
+      "page": "library_0255_chart_5x2",
+      "ck": "chart",
+      "label": "Sensor \u2014 trend chart",
+      "w": 5,
+      "h": 2,
+      "min": [
+        2,
+        2
+      ],
+      "id": "library_0255_chart_5x2"
+    },
+    {
+      "index": 256,
+      "page": "library_0256_weather_6x5",
+      "ck": "weather",
+      "label": "Weather",
+      "w": 6,
+      "h": 5,
+      "min": [
+        5,
+        4
+      ],
+      "id": "library_0256_weather_6x5"
+    },
+    {
+      "index": 257,
+      "page": "library_0257_weather_5x5",
+      "ck": "weather",
+      "label": "Weather",
+      "w": 5,
+      "h": 5,
+      "min": [
+        5,
+        4
+      ],
+      "id": "library_0257_weather_5x5"
+    },
+    {
+      "index": 258,
+      "page": "library_0258_weather_6x4",
+      "ck": "weather",
+      "label": "Weather",
+      "w": 6,
+      "h": 4,
+      "min": [
+        5,
+        4
+      ],
+      "id": "library_0258_weather_6x4"
+    },
+    {
+      "index": 259,
+      "page": "library_0259_wx_current_2x2",
+      "ck": "wx_current",
+      "label": "Weather \u2014 current",
+      "w": 2,
+      "h": 2,
+      "min": [
+        2,
+        2
+      ],
+      "id": "library_0259_wx_current_2x2"
+    },
+    {
+      "index": 260,
+      "page": "library_0260_wx_current_3x2",
+      "ck": "wx_current",
+      "label": "Weather \u2014 current",
+      "w": 3,
+      "h": 2,
+      "min": [
+        2,
+        2
+      ],
+      "id": "library_0260_wx_current_3x2"
+    },
+    {
+      "index": 261,
+      "page": "library_0261_wx_current_4x2",
+      "ck": "wx_current",
+      "label": "Weather \u2014 current",
+      "w": 4,
+      "h": 2,
+      "min": [
+        2,
+        2
+      ],
+      "id": "library_0261_wx_current_4x2"
+    },
+    {
+      "index": 262,
+      "page": "library_0262_wx_current_6x2",
+      "ck": "wx_current",
+      "label": "Weather \u2014 current",
+      "w": 6,
+      "h": 2,
+      "min": [
+        2,
+        2
+      ],
+      "id": "library_0262_wx_current_6x2"
+    },
+    {
+      "index": 263,
+      "page": "library_0263_wx_current_3x3",
+      "ck": "wx_current",
+      "label": "Weather \u2014 current",
+      "w": 3,
+      "h": 3,
+      "min": [
+        2,
+        2
+      ],
+      "id": "library_0263_wx_current_3x3"
+    },
+    {
+      "index": 264,
+      "page": "library_0264_wx_hourly_3x1",
+      "ck": "wx_hourly",
+      "label": "Weather \u2014 hourly",
+      "w": 3,
+      "h": 1,
+      "min": [
+        3,
+        1
+      ],
+      "id": "library_0264_wx_hourly_3x1"
+    },
+    {
+      "index": 265,
+      "page": "library_0265_wx_hourly_4x1",
+      "ck": "wx_hourly",
+      "label": "Weather \u2014 hourly",
+      "w": 4,
+      "h": 1,
+      "min": [
+        3,
+        1
+      ],
+      "id": "library_0265_wx_hourly_4x1"
+    },
+    {
+      "index": 266,
+      "page": "library_0266_wx_hourly_6x1",
+      "ck": "wx_hourly",
+      "label": "Weather \u2014 hourly",
+      "w": 6,
+      "h": 1,
+      "min": [
+        3,
+        1
+      ],
+      "id": "library_0266_wx_hourly_6x1"
+    },
+    {
+      "index": 267,
+      "page": "library_0267_wx_hourly_4x2",
+      "ck": "wx_hourly",
+      "label": "Weather \u2014 hourly",
+      "w": 4,
+      "h": 2,
+      "min": [
+        3,
+        1
+      ],
+      "id": "library_0267_wx_hourly_4x2"
+    },
+    {
+      "index": 268,
+      "page": "library_0268_wx_hourly_6x2",
+      "ck": "wx_hourly",
+      "label": "Weather \u2014 hourly",
+      "w": 6,
+      "h": 2,
+      "min": [
+        3,
+        1
+      ],
+      "id": "library_0268_wx_hourly_6x2"
+    },
+    {
+      "index": 269,
+      "page": "library_0269_wx_daily_2x3",
+      "ck": "wx_daily",
+      "label": "Weather \u2014 forecast (H/L)",
+      "w": 2,
+      "h": 3,
+      "min": [
+        2,
+        3
+      ],
+      "id": "library_0269_wx_daily_2x3"
+    },
+    {
+      "index": 270,
+      "page": "library_0270_wx_daily_3x3",
+      "ck": "wx_daily",
+      "label": "Weather \u2014 forecast (H/L)",
+      "w": 3,
+      "h": 3,
+      "min": [
+        2,
+        3
+      ],
+      "id": "library_0270_wx_daily_3x3"
+    },
+    {
+      "index": 271,
+      "page": "library_0271_wx_daily_2x4",
+      "ck": "wx_daily",
+      "label": "Weather \u2014 forecast (H/L)",
+      "w": 2,
+      "h": 4,
+      "min": [
+        2,
+        3
+      ],
+      "id": "library_0271_wx_daily_2x4"
+    },
+    {
+      "index": 272,
+      "page": "library_0272_wx_daily_3x4",
+      "ck": "wx_daily",
+      "label": "Weather \u2014 forecast (H/L)",
+      "w": 3,
+      "h": 4,
+      "min": [
+        2,
+        3
+      ],
+      "id": "library_0272_wx_daily_3x4"
+    },
+    {
+      "index": 273,
+      "page": "library_0273_wx_daily_2x5",
+      "ck": "wx_daily",
+      "label": "Weather \u2014 forecast (H/L)",
+      "w": 2,
+      "h": 5,
+      "min": [
+        2,
+        3
+      ],
+      "id": "library_0273_wx_daily_2x5"
+    },
+    {
+      "index": 274,
+      "page": "library_0274_wx_daily_3x5",
+      "ck": "wx_daily",
+      "label": "Weather \u2014 forecast (H/L)",
+      "w": 3,
+      "h": 5,
+      "min": [
+        2,
+        3
+      ],
+      "id": "library_0274_wx_daily_3x5"
+    },
+    {
+      "index": 275,
+      "page": "library_0275_wx_stats_2x2",
+      "ck": "wx_stats",
+      "label": "Weather \u2014 stats",
+      "w": 2,
+      "h": 2,
+      "min": [
+        2,
+        2
+      ],
+      "id": "library_0275_wx_stats_2x2"
+    },
+    {
+      "index": 276,
+      "page": "library_0276_wx_stats_3x2",
+      "ck": "wx_stats",
+      "label": "Weather \u2014 stats",
+      "w": 3,
+      "h": 2,
+      "min": [
+        2,
+        2
+      ],
+      "id": "library_0276_wx_stats_3x2"
+    },
+    {
+      "index": 277,
+      "page": "library_0277_wx_stats_2x3",
+      "ck": "wx_stats",
+      "label": "Weather \u2014 stats",
+      "w": 2,
+      "h": 3,
+      "min": [
+        2,
+        2
+      ],
+      "id": "library_0277_wx_stats_2x3"
+    },
+    {
+      "index": 278,
+      "page": "library_0278_wx_stats_3x3",
+      "ck": "wx_stats",
+      "label": "Weather \u2014 stats",
+      "w": 3,
+      "h": 3,
+      "min": [
+        2,
+        2
+      ],
+      "id": "library_0278_wx_stats_3x3"
+    },
+    {
+      "index": 279,
+      "page": "library_0279_person_1x1",
+      "ck": "person",
+      "label": "Presence",
+      "w": 1,
+      "h": 1,
+      "min": [
+        1,
+        1
+      ],
+      "id": "library_0279_person_1x1"
+    },
+    {
+      "index": 280,
+      "page": "library_0280_person_2x1",
+      "ck": "person",
+      "label": "Presence",
+      "w": 2,
+      "h": 1,
+      "min": [
+        1,
+        1
+      ],
+      "id": "library_0280_person_2x1"
+    },
+    {
+      "index": 281,
+      "page": "library_0281_person_1x3",
+      "ck": "person",
+      "label": "Presence",
+      "w": 1,
+      "h": 3,
+      "min": [
+        1,
+        1
+      ],
+      "id": "library_0281_person_1x3"
+    },
+    {
+      "index": 282,
+      "page": "library_0282_person_1x4",
+      "ck": "person",
+      "label": "Presence",
+      "w": 1,
+      "h": 4,
+      "min": [
+        1,
+        1
+      ],
+      "id": "library_0282_person_1x4"
+    },
+    {
+      "index": 283,
+      "page": "library_0283_person_1x5",
+      "ck": "person",
+      "label": "Presence",
+      "w": 1,
+      "h": 5,
+      "min": [
+        1,
+        1
+      ],
+      "id": "library_0283_person_1x5"
+    },
+    {
+      "index": 284,
+      "page": "library_0284_vacuum_2x2",
+      "ck": "vacuum",
+      "label": "Vacuum",
+      "w": 2,
+      "h": 2,
+      "min": [
+        2,
+        2
+      ],
+      "id": "library_0284_vacuum_2x2"
+    },
+    {
+      "index": 285,
+      "page": "library_0285_scene_1x1",
+      "ck": "scene",
+      "label": "Scene",
+      "w": 1,
+      "h": 1,
+      "min": [
+        1,
+        1
+      ],
+      "id": "library_0285_scene_1x1"
+    },
+    {
+      "index": 286,
+      "page": "library_0286_scene_2x1",
+      "ck": "scene",
+      "label": "Scene",
+      "w": 2,
+      "h": 1,
+      "min": [
+        1,
+        1
+      ],
+      "id": "library_0286_scene_2x1"
+    },
+    {
+      "index": 287,
+      "page": "library_0287_scene_1x3",
+      "ck": "scene",
+      "label": "Scene",
+      "w": 1,
+      "h": 3,
+      "min": [
+        1,
+        1
+      ],
+      "id": "library_0287_scene_1x3"
+    },
+    {
+      "index": 288,
+      "page": "library_0288_scene_1x4",
+      "ck": "scene",
+      "label": "Scene",
+      "w": 1,
+      "h": 4,
+      "min": [
+        1,
+        1
+      ],
+      "id": "library_0288_scene_1x4"
+    },
+    {
+      "index": 289,
+      "page": "library_0289_scene_1x5",
+      "ck": "scene",
+      "label": "Scene",
+      "w": 1,
+      "h": 5,
+      "min": [
+        1,
+        1
+      ],
+      "id": "library_0289_scene_1x5"
+    },
+    {
+      "index": 290,
+      "page": "library_0290_script_1x1",
+      "ck": "script",
+      "label": "Script / button",
+      "w": 1,
+      "h": 1,
+      "min": [
+        1,
+        1
+      ],
+      "id": "library_0290_script_1x1"
+    },
+    {
+      "index": 291,
+      "page": "library_0291_script_2x1",
+      "ck": "script",
+      "label": "Script / button",
+      "w": 2,
+      "h": 1,
+      "min": [
+        1,
+        1
+      ],
+      "id": "library_0291_script_2x1"
+    },
+    {
+      "index": 292,
+      "page": "library_0292_script_1x3",
+      "ck": "script",
+      "label": "Script / button",
+      "w": 1,
+      "h": 3,
+      "min": [
+        1,
+        1
+      ],
+      "id": "library_0292_script_1x3"
+    },
+    {
+      "index": 293,
+      "page": "library_0293_script_1x4",
+      "ck": "script",
+      "label": "Script / button",
+      "w": 1,
+      "h": 4,
+      "min": [
+        1,
+        1
+      ],
+      "id": "library_0293_script_1x4"
+    },
+    {
+      "index": 294,
+      "page": "library_0294_script_1x5",
+      "ck": "script",
+      "label": "Script / button",
+      "w": 1,
+      "h": 5,
+      "min": [
+        1,
+        1
+      ],
+      "id": "library_0294_script_1x5"
+    }
+  ],
+  "emulator_dir": "emulator",
+  "web_config_dir": "web-config"
+}
