@@ -1,0 +1,46 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Aurora card comparison library</title>
+<style>
+:root{color-scheme:dark;--bg:#090b0f;--line:#2b333e;--muted:#9da8b6;--text:#f4f7fa;--accent:#61d7c3}
+*{box-sizing:border-box}body{margin:0;min-height:100vh;background:var(--bg);color:var(--text);font:15px/1.45 Inter,system-ui,sans-serif;letter-spacing:0}
+button,select{font:inherit}header{min-height:72px;display:flex;align-items:center;justify-content:space-between;gap:24px;padding:14px 24px;border-bottom:1px solid var(--line);background:#0c0f14}
+h1{margin:0;font-size:21px;letter-spacing:0}header p{margin:3px 0 0;color:var(--muted)}.controls{display:flex;align-items:end;gap:12px;flex-wrap:wrap}
+label{display:grid;gap:5px;color:var(--muted);font-size:12px}select,button{min-height:38px;border:1px solid var(--line);border-radius:5px;background:#171c23;color:var(--text);padding:7px 10px}
+select{min-width:190px}button{cursor:pointer}button:hover,button:focus-visible,select:focus-visible{border-color:var(--accent);outline:none}
+.app{display:grid;grid-template-columns:250px minmax(0,1fr);height:calc(100vh - 73px)}aside{border-right:1px solid var(--line);overflow:auto;background:#0d1015}
+.list-head{position:sticky;top:0;z-index:1;padding:16px;border-bottom:1px solid var(--line);background:#0d1015}.list-head strong{display:block;font-size:16px}.list-head span{color:var(--muted);font-size:13px}
+#variants{list-style:none;margin:0;padding:8px}#variants button{width:100%;display:grid;grid-template-columns:52px 1fr;align-items:center;text-align:left;margin:2px 0;border-color:transparent;background:transparent}
+#variants button:hover{background:#171c23}#variants button.active{border-color:#377c72;background:#142522}.size{font-weight:700;color:var(--accent)}.area{color:var(--muted);font-size:12px}
+main{min-width:0;overflow:auto;padding:20px 24px 30px}.detail-head{display:flex;align-items:center;justify-content:space-between;gap:20px;margin-bottom:16px}
+h2{margin:0;font-size:22px;letter-spacing:0}#position{color:var(--muted)}.nav{display:flex;gap:8px}.comparison{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:18px}
+figure{margin:0;min-width:0}figcaption{display:flex;justify-content:space-between;align-items:baseline;margin:0 0 8px}figcaption strong{font-size:16px}figcaption span{color:var(--muted);font-size:12px}
+.shot{display:block;width:100%;aspect-ratio:16/10;object-fit:contain;border:1px solid var(--line);border-radius:6px;background:#05070a;cursor:zoom-in}
+.hint{margin:14px 0 0;color:var(--muted);font-size:13px}dialog{width:min(96vw,1600px);max-width:none;border:1px solid var(--line);border-radius:6px;padding:10px;background:#07090c;color:var(--text)}
+dialog::backdrop{background:rgba(0,0,0,.85)}dialog img{display:block;max-width:calc(96vw - 22px);max-height:90vh;margin:auto}dialog button{position:absolute;right:14px;top:14px;background:#11151b}
+@media(max-width:900px){header{align-items:flex-start;flex-direction:column}.app{grid-template-columns:1fr;height:auto}aside{border-right:0;border-bottom:1px solid var(--line);max-height:180px}.comparison{grid-template-columns:1fr}}
+</style>
+</head>
+<body>
+<header><div><h1>Aurora card comparison library</h1><p>__COUNT__ card-size pairs from the emulator and web configurator</p></div>
+<div class="controls"><label>Card type<select id="type"></select></label><label>Sort sizes<select id="sort"><option value="catalog">Catalog order</option><option value="area-asc">Smallest first</option><option value="area-desc">Largest first</option><option value="width">Width</option><option value="height">Height</option></select></label><label>Comparison view<select id="view"><option value="focused">Focused cards</option><option value="full">Full screens</option></select></label></div></header>
+<div class="app"><aside><div class="list-head"><strong id="typeName"></strong><span id="typeCount"></span></div><ol id="variants"></ol></aside>
+<main><div class="detail-head"><div><h2 id="title"></h2><div id="position"></div></div><div class="nav"><button id="prev">Previous</button><button id="next">Next</button></div></div>
+<section class="comparison"><figure><figcaption><strong>ESPHome emulator</strong><span id="emuMeta">Focused crop</span></figcaption><img class="shot" id="emulator" alt="ESPHome emulator card"></figure>
+<figure><figcaption><strong>Web configurator</strong><span id="webMeta">Focused crop</span></figcaption><img class="shot" id="web" alt="Web configurator card"></figure></section>
+<p class="hint">Select an image to inspect it at full size. Use the left and right arrow keys to move through sizes.</p></main></div>
+<dialog id="lightbox"><button id="close">Close</button><img id="full" alt="Full-size card capture"></dialog>
+<script>
+const records=__RECORDS__,$=id=>document.getElementById(id),types=new Map(records.map(r=>[r.ck,r.label]));let currentType=location.hash.slice(1).split('/')[0]||records[0].ck,currentIndex=0,visible=[];
+for(const [value,label] of types){const o=document.createElement('option');o.value=value;o.textContent=label;$('type').append(o)}
+function filename(r){return String(r.index).padStart(4,'0')+'_'+r.ck+'_'+r.w+'x'+r.h+'.png'}
+function sorted(){const mode=$('sort').value,items=records.filter(r=>r.ck===currentType);if(mode==='area-asc')items.sort((a,b)=>a.w*a.h-b.w*b.h||a.index-b.index);if(mode==='area-desc')items.sort((a,b)=>b.w*b.h-a.w*a.h||a.index-b.index);if(mode==='width')items.sort((a,b)=>a.w-b.w||a.h-b.h);if(mode==='height')items.sort((a,b)=>a.h-b.h||a.w-b.w);return items}
+function renderList(selectedId){visible=sorted();currentIndex=Math.max(0,visible.findIndex(r=>r.id===selectedId));$('typeName').textContent=types.get(currentType);$('typeCount').textContent=visible.length+' available size'+(visible.length===1?'':'s');$('variants').replaceChildren(...visible.map((r,i)=>{const li=document.createElement('li'),b=document.createElement('button');b.className=i===currentIndex?'active':'';b.innerHTML='<span class="size">'+r.w+' x '+r.h+'</span><span class="area">'+r.w*r.h+' grid cells</span>';b.onclick=()=>select(i);li.append(b);return li}));select(currentIndex,false)}
+function select(index,updateHash=true){currentIndex=(index+visible.length)%visible.length;const r=visible[currentIndex],name=filename(r);$('title').textContent=r.label+' \u00b7 '+r.w+' x '+r.h;$('position').textContent='Size '+(currentIndex+1)+' of '+visible.length+' \u00b7 fixture '+r.index+' of '+records.length;const focused=$('view').value==='focused';$('emulator').src=(focused?'emulator-focused/':'emulator/')+name;$('web').src=(focused?'web-config-focused/':'web-config/')+name;$('emuMeta').textContent=focused?'Focused crop':'1024 x 600';$('webMeta').textContent=focused?'Focused crop':'1440 x 900';[...$('variants').querySelectorAll('button')].forEach((b,i)=>b.classList.toggle('active',i===currentIndex));$('variants').children[currentIndex]?.scrollIntoView({block:'nearest'});if(updateHash)history.replaceState(null,'','#'+r.ck+'/'+r.w+'x'+r.h)}
+$('type').value=types.has(currentType)?currentType:records[0].ck;currentType=$('type').value;$('type').onchange=()=>{currentType=$('type').value;renderList()};$('sort').onchange=()=>renderList(visible[currentIndex]?.id);$('view').onchange=()=>select(currentIndex,false);$('prev').onclick=()=>select(currentIndex-1);$('next').onclick=()=>select(currentIndex+1);
+document.onkeydown=e=>{if(e.key==='ArrowLeft')select(currentIndex-1);if(e.key==='ArrowRight')select(currentIndex+1);if(e.key==='Escape')$('lightbox').close()};for(const image of document.querySelectorAll('.shot'))image.onclick=()=>{$('full').src=image.src;$('lightbox').showModal()};$('close').onclick=()=>$('lightbox').close();$('lightbox').onclick=e=>{if(e.target===$('lightbox'))$('lightbox').close()};
+const requested=location.hash.slice(1).split('/')[1];renderList();if(requested){const i=visible.findIndex(r=>r.w+'x'+r.h===requested);if(i>=0)select(i,false)}
+</script></body></html>
