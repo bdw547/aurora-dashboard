@@ -1,0 +1,6958 @@
+{
+  "install_room": "Library",
+  "nav": [
+    {
+      "id": "library",
+      "icon": "view-grid-outline",
+      "label": "Card library",
+      "page": "library"
+    }
+  ],
+  "pages": {
+    "library": {
+      "title": "Light \u00b7 2\u00d71",
+      "type": "custom",
+      "header": {
+        "on": false
+      },
+      "subpages": [
+        [
+          {
+            "id": "library_0001_light_2x1",
+            "ck": "light",
+            "name": "Light",
+            "x": 1,
+            "y": 1,
+            "w": 2,
+            "h": 1,
+            "entity": "light.demo_living_room",
+            "rgb": true,
+            "icon": "lightbulb"
+          }
+        ]
+      ]
+    },
+    "library_0002_light_3x1": {
+      "title": "Light \u00b7 3\u00d71",
+      "type": "custom",
+      "header": {
+        "on": false
+      },
+      "subpages": [
+        [
+          {
+            "id": "library_0002_light_3x1",
+            "ck": "light",
+            "name": "Light",
+            "x": 1,
+            "y": 1,
+            "w": 3,
+            "h": 1,
+            "entity": "light.demo_living_room",
+            "rgb": true,
+            "icon": "lightbulb"
+          }
+        ]
+      ]
+    },
+    "library_0003_light_4x1": {
+      "title": "Light \u00b7 4\u00d71",
+      "type": "custom",
+      "header": {
+        "on": false
+      },
+      "subpages": [
+        [
+          {
+            "id": "library_0003_light_4x1",
+            "ck": "light",
+            "name": "Light",
+            "x": 1,
+            "y": 1,
+            "w": 4,
+            "h": 1,
+            "entity": "light.demo_living_room",
+            "rgb": true,
+            "icon": "lightbulb"
+          }
+        ]
+      ]
+    },
+    "library_0004_light_5x1": {
+      "title": "Light \u00b7 5\u00d71",
+      "type": "custom",
+      "header": {
+        "on": false
+      },
+      "subpages": [
+        [
+          {
+            "id": "library_0004_light_5x1",
+            "ck": "light",
+            "name": "Light",
+            "x": 1,
+            "y": 1,
+            "w": 5,
+            "h": 1,
+            "entity": "light.demo_living_room",
+            "rgb": true,
+            "icon": "lightbulb"
+          }
+        ]
+      ]
+    },
+    "library_0005_light_6x1": {
+      "title": "Light \u00b7 6\u00d71",
+      "type": "custom",
+      "header": {
+        "on": false
+      },
+      "subpages": [
+        [
+          {
+            "id": "library_0005_light_6x1",
+            "ck": "light",
+            "name": "Light",
+            "x": 1,
+            "y": 1,
+            "w": 6,
+            "h": 1,
+            "entity": "light.demo_living_room",
+            "rgb": true,
+            "icon": "lightbulb"
+          }
+        ]
+      ]
+    },
+    "library_0006_light_1x2": {
+      "title": "Light \u00b7 1\u00d72",
+      "type": "custom",
+      "header": {
+        "on": false
+      },
+      "subpages": [
+        [
+          {
+            "id": "library_0006_light_1x2",
+            "ck": "light",
+            "name": "Light",
+            "x": 1,
+            "y": 1,
+            "w": 1,
+            "h": 2,
+            "entity": "light.demo_living_room",
+            "rgb": true,
+            "icon": "lightbulb"
+          }
+        ]
+      ]
+    },
+    "library_0007_light_1x3": {
+      "title": "Light \u00b7 1\u00d73",
+      "type": "custom",
+      "header": {
+        "on": false
+      },
+      "subpages": [
+        [
+          {
+            "id": "library_0007_light_1x3",
+            "ck": "light",
+            "name": "Light",
+            "x": 1,
+            "y": 1,
+            "w": 1,
+            "h": 3,
+            "entity": "light.demo_living_room",
+            "rgb": true,
+            "icon": "lightbulb"
+          }
+        ]
+      ]
+    },
+    "library_0008_light_1x4": {
+      "title": "Light \u00b7 1\u00d74",
+      "type": "custom",
+      "header": {
+        "on": false
+      },
+      "subpages": [
+        [
+          {
+            "id": "library_0008_light_1x4",
+            "ck": "light",
+            "name": "Light",
+            "x": 1,
+            "y": 1,
+            "w": 1,
+            "h": 4,
+            "entity": "light.demo_living_room",
+            "rgb": true,
+            "icon": "lightbulb"
+          }
+        ]
+      ]
+    },
+    "library_0009_light_1x5": {
+      "title": "Light \u00b7 1\u00d75",
+      "type": "custom",
+      "header": {
+        "on": false
+      },
+      "subpages": [
+        [
+          {
+            "id": "library_0009_light_1x5",
+            "ck": "light",
+            "name": "Light",
+            "x": 1,
+            "y": 1,
+            "w": 1,
+            "h": 5,
+            "entity": "light.demo_living_room",
+            "rgb": true,
+            "icon": "lightbulb"
+          }
+        ]
+      ]
+    },
+    "library_0010_light_2x2": {
+      "title": "Light \u00b7 2\u00d72",
+      "type": "custom",
+      "header": {
+        "on": false
+      },
+      "subpages": [
+        [
+          {
+            "id": "library_0010_light_2x2",
+            "ck": "light",
+            "name": "Light",
+            "x": 1,
+            "y": 1,
+            "w": 2,
+            "h": 2,
+            "entity": "light.demo_living_room",
+            "rgb": true,
+            "icon": "lightbulb"
+          }
+        ]
+      ]
+    },
+    "library_0011_light_3x2": {
+      "title": "Light \u00b7 3\u00d72",
+      "type": "custom",
+      "header": {
+        "on": false
+      },
+      "subpages": [
+        [
+          {
+            "id": "library_0011_light_3x2",
+            "ck": "light",
+            "name": "Light",
+            "x": 1,
+            "y": 1,
+            "w": 3,
+            "h": 2,
+            "entity": "light.demo_living_room",
+            "rgb": true,
+            "icon": "lightbulb"
+          }
+        ]
+      ]
+    },
+    "library_0012_light_4x4": {
+      "title": "Light \u00b7 4\u00d74",
+      "type": "custom",
+      "header": {
+        "on": false
+      },
+      "subpages": [
+        [
+          {
+            "id": "library_0012_light_4x4",
+            "ck": "light",
+            "name": "Light",
+            "x": 1,
+            "y": 1,
+            "w": 4,
+            "h": 4,
+            "entity": "light.demo_living_room",
+            "rgb": true,
+            "icon": "lightbulb"
+          }
+        ]
+      ]
+    },
+    "library_0013_light_t_1x1": {
+      "title": "Light \u2014 simple toggle \u00b7 1\u00d71",
+      "type": "custom",
+      "header": {
+        "on": false
+      },
+      "subpages": [
+        [
+          {
+            "id": "library_0013_light_t_1x1",
+            "ck": "light_t",
+            "name": "Light \u2014 simple toggle",
+            "x": 1,
+            "y": 1,
+            "w": 1,
+            "h": 1,
+            "entity": "light.demo_living_room"
+          }
+        ]
+      ]
+    },
+    "library_0014_light_t_1x2": {
+      "title": "Light \u2014 simple toggle \u00b7 1\u00d72",
+      "type": "custom",
+      "header": {
+        "on": false
+      },
+      "subpages": [
+        [
+          {
+            "id": "library_0014_light_t_1x2",
+            "ck": "light_t",
+            "name": "Light \u2014 simple toggle",
+            "x": 1,
+            "y": 1,
+            "w": 1,
+            "h": 2,
+            "entity": "light.demo_living_room"
+          }
+        ]
+      ]
+    },
+    "library_0015_light_t_2x1": {
+      "title": "Light \u2014 simple toggle \u00b7 2\u00d71",
+      "type": "custom",
+      "header": {
+        "on": false
+      },
+      "subpages": [
+        [
+          {
+            "id": "library_0015_light_t_2x1",
+            "ck": "light_t",
+            "name": "Light \u2014 simple toggle",
+            "x": 1,
+            "y": 1,
+            "w": 2,
+            "h": 1,
+            "entity": "light.demo_living_room"
+          }
+        ]
+      ]
+    },
+    "library_0016_light_t_2x2": {
+      "title": "Light \u2014 simple toggle \u00b7 2\u00d72",
+      "type": "custom",
+      "header": {
+        "on": false
+      },
+      "subpages": [
+        [
+          {
+            "id": "library_0016_light_t_2x2",
+            "ck": "light_t",
+            "name": "Light \u2014 simple toggle",
+            "x": 1,
+            "y": 1,
+            "w": 2,
+            "h": 2,
+            "entity": "light.demo_living_room"
+          }
+        ]
+      ]
+    },
+    "library_0017_light_t_3x3": {
+      "title": "Light \u2014 simple toggle \u00b7 3\u00d73",
+      "type": "custom",
+      "header": {
+        "on": false
+      },
+      "subpages": [
+        [
+          {
+            "id": "library_0017_light_t_3x3",
+            "ck": "light_t",
+            "name": "Light \u2014 simple toggle",
+            "x": 1,
+            "y": 1,
+            "w": 3,
+            "h": 3,
+            "entity": "light.demo_living_room"
+          }
+        ]
+      ]
+    },
+    "library_0018_switch_1x1": {
+      "title": "Switch / outlet \u00b7 1\u00d71",
+      "type": "custom",
+      "header": {
+        "on": false
+      },
+      "subpages": [
+        [
+          {
+            "id": "library_0018_switch_1x1",
+            "ck": "switch",
+            "name": "Switch / outlet",
+            "x": 1,
+            "y": 1,
+            "w": 1,
+            "h": 1,
+            "entity": "switch.demo_outlet"
+          }
+        ]
+      ]
+    },
+    "library_0019_switch_2x1": {
+      "title": "Switch / outlet \u00b7 2\u00d71",
+      "type": "custom",
+      "header": {
+        "on": false
+      },
+      "subpages": [
+        [
+          {
+            "id": "library_0019_switch_2x1",
+            "ck": "switch",
+            "name": "Switch / outlet",
+            "x": 1,
+            "y": 1,
+            "w": 2,
+            "h": 1,
+            "entity": "switch.demo_outlet"
+          }
+        ]
+      ]
+    },
+    "library_0020_switch_2x2": {
+      "title": "Switch / outlet \u00b7 2\u00d72",
+      "type": "custom",
+      "header": {
+        "on": false
+      },
+      "subpages": [
+        [
+          {
+            "id": "library_0020_switch_2x2",
+            "ck": "switch",
+            "name": "Switch / outlet",
+            "x": 1,
+            "y": 1,
+            "w": 2,
+            "h": 2,
+            "entity": "switch.demo_outlet"
+          }
+        ]
+      ]
+    },
+    "library_0021_switch_1x3": {
+      "title": "Switch / outlet \u00b7 1\u00d73",
+      "type": "custom",
+      "header": {
+        "on": false
+      },
+      "subpages": [
+        [
+          {
+            "id": "library_0021_switch_1x3",
+            "ck": "switch",
+            "name": "Switch / outlet",
+            "x": 1,
+            "y": 1,
+            "w": 1,
+            "h": 3,
+            "entity": "switch.demo_outlet"
+          }
+        ]
+      ]
+    },
+    "library_0022_switch_1x4": {
+      "title": "Switch / outlet \u00b7 1\u00d74",
+      "type": "custom",
+      "header": {
+        "on": false
+      },
+      "subpages": [
+        [
+          {
+            "id": "library_0022_switch_1x4",
+            "ck": "switch",
+            "name": "Switch / outlet",
+            "x": 1,
+            "y": 1,
+            "w": 1,
+            "h": 4,
+            "entity": "switch.demo_outlet"
+          }
+        ]
+      ]
+    },
+    "library_0023_switch_1x5": {
+      "title": "Switch / outlet \u00b7 1\u00d75",
+      "type": "custom",
+      "header": {
+        "on": false
+      },
+      "subpages": [
+        [
+          {
+            "id": "library_0023_switch_1x5",
+            "ck": "switch",
+            "name": "Switch / outlet",
+            "x": 1,
+            "y": 1,
+            "w": 1,
+            "h": 5,
+            "entity": "switch.demo_outlet"
+          }
+        ]
+      ]
+    },
+    "library_0024_lightgroup_2x2": {
+      "title": "Light group \u00b7 2\u00d72",
+      "type": "custom",
+      "header": {
+        "on": false
+      },
+      "subpages": [
+        [
+          {
+            "id": "library_0024_lightgroup_2x2",
+            "ck": "lightgroup",
+            "name": "Light group",
+            "x": 1,
+            "y": 1,
+            "w": 2,
+            "h": 2,
+            "entity": "light.demo_living_room",
+            "entities": [
+              "light.demo_living_room",
+              "light.demo_kitchen",
+              "light.demo_office",
+              "switch.demo_outlet"
+            ]
+          }
+        ]
+      ]
+    },
+    "library_0025_lightgroup_3x2": {
+      "title": "Light group \u00b7 3\u00d72",
+      "type": "custom",
+      "header": {
+        "on": false
+      },
+      "subpages": [
+        [
+          {
+            "id": "library_0025_lightgroup_3x2",
+            "ck": "lightgroup",
+            "name": "Light group",
+            "x": 1,
+            "y": 1,
+            "w": 3,
+            "h": 2,
+            "entity": "light.demo_living_room",
+            "entities": [
+              "light.demo_living_room",
+              "light.demo_kitchen",
+              "light.demo_office",
+              "switch.demo_outlet",
+              "sensor.demo_temperature",
+              "binary_sensor.demo_motion"
+            ]
+          }
+        ]
+      ]
+    },
+    "library_0026_lightgroup_2x3": {
+      "title": "Light group \u00b7 2\u00d73",
+      "type": "custom",
+      "header": {
+        "on": false
+      },
+      "subpages": [
+        [
+          {
+            "id": "library_0026_lightgroup_2x3",
+            "ck": "lightgroup",
+            "name": "Light group",
+            "x": 1,
+            "y": 1,
+            "w": 2,
+            "h": 3,
+            "entity": "light.demo_living_room",
+            "entities": [
+              "light.demo_living_room",
+              "light.demo_kitchen",
+              "light.demo_office",
+              "switch.demo_outlet",
+              "sensor.demo_temperature",
+              "binary_sensor.demo_motion"
+            ]
+          }
+        ]
+      ]
+    },
+    "library_0027_lightgroup_3x3": {
+      "title": "Light group \u00b7 3\u00d73",
+      "type": "custom",
+      "header": {
+        "on": false
+      },
+      "subpages": [
+        [
+          {
+            "id": "library_0027_lightgroup_3x3",
+            "ck": "lightgroup",
+            "name": "Light group",
+            "x": 1,
+            "y": 1,
+            "w": 3,
+            "h": 3,
+            "entity": "light.demo_living_room",
+            "entities": [
+              "light.demo_living_room",
+              "light.demo_kitchen",
+              "light.demo_office",
+              "switch.demo_outlet",
+              "sensor.demo_temperature",
+              "binary_sensor.demo_motion"
+            ]
+          }
+        ]
+      ]
+    },
+    "library_0028_lightgroup_4x3": {
+      "title": "Light group \u00b7 4\u00d73",
+      "type": "custom",
+      "header": {
+        "on": false
+      },
+      "subpages": [
+        [
+          {
+            "id": "library_0028_lightgroup_4x3",
+            "ck": "lightgroup",
+            "name": "Light group",
+            "x": 1,
+            "y": 1,
+            "w": 4,
+            "h": 3,
+            "entity": "light.demo_living_room",
+            "entities": [
+              "light.demo_living_room",
+              "light.demo_kitchen",
+              "light.demo_office",
+              "switch.demo_outlet",
+              "sensor.demo_temperature",
+              "binary_sensor.demo_motion"
+            ]
+          }
+        ]
+      ]
+    },
+    "library_0029_lightgroup_2x4": {
+      "title": "Light group \u00b7 2\u00d74",
+      "type": "custom",
+      "header": {
+        "on": false
+      },
+      "subpages": [
+        [
+          {
+            "id": "library_0029_lightgroup_2x4",
+            "ck": "lightgroup",
+            "name": "Light group",
+            "x": 1,
+            "y": 1,
+            "w": 2,
+            "h": 4,
+            "entity": "light.demo_living_room",
+            "entities": [
+              "light.demo_living_room",
+              "light.demo_kitchen",
+              "light.demo_office",
+              "switch.demo_outlet",
+              "sensor.demo_temperature",
+              "binary_sensor.demo_motion"
+            ]
+          }
+        ]
+      ]
+    },
+    "library_0030_lightgroup_4x4": {
+      "title": "Light group \u00b7 4\u00d74",
+      "type": "custom",
+      "header": {
+        "on": false
+      },
+      "subpages": [
+        [
+          {
+            "id": "library_0030_lightgroup_4x4",
+            "ck": "lightgroup",
+            "name": "Light group",
+            "x": 1,
+            "y": 1,
+            "w": 4,
+            "h": 4,
+            "entity": "light.demo_living_room",
+            "entities": [
+              "light.demo_living_room",
+              "light.demo_kitchen",
+              "light.demo_office",
+              "switch.demo_outlet",
+              "sensor.demo_temperature",
+              "binary_sensor.demo_motion"
+            ]
+          }
+        ]
+      ]
+    },
+    "library_0031_lightgroup_2x5": {
+      "title": "Light group \u00b7 2\u00d75",
+      "type": "custom",
+      "header": {
+        "on": false
+      },
+      "subpages": [
+        [
+          {
+            "id": "library_0031_lightgroup_2x5",
+            "ck": "lightgroup",
+            "name": "Light group",
+            "x": 1,
+            "y": 1,
+            "w": 2,
+            "h": 5,
+            "entity": "light.demo_living_room",
+            "entities": [
+              "light.demo_living_room",
+              "light.demo_kitchen",
+              "light.demo_office",
+              "switch.demo_outlet",
+              "sensor.demo_temperature",
+              "binary_sensor.demo_motion"
+            ]
+          }
+        ]
+      ]
+    },
+    "library_0032_lightgroup_5x4": {
+      "title": "Light group \u00b7 5\u00d74",
+      "type": "custom",
+      "header": {
+        "on": false
+      },
+      "subpages": [
+        [
+          {
+            "id": "library_0032_lightgroup_5x4",
+            "ck": "lightgroup",
+            "name": "Light group",
+            "x": 1,
+            "y": 1,
+            "w": 5,
+            "h": 4,
+            "entity": "light.demo_living_room",
+            "entities": [
+              "light.demo_living_room",
+              "light.demo_kitchen",
+              "light.demo_office",
+              "switch.demo_outlet",
+              "sensor.demo_temperature",
+              "binary_sensor.demo_motion"
+            ]
+          }
+        ]
+      ]
+    },
+    "library_0033_lightgroup_6x4": {
+      "title": "Light group \u00b7 6\u00d74",
+      "type": "custom",
+      "header": {
+        "on": false
+      },
+      "subpages": [
+        [
+          {
+            "id": "library_0033_lightgroup_6x4",
+            "ck": "lightgroup",
+            "name": "Light group",
+            "x": 1,
+            "y": 1,
+            "w": 6,
+            "h": 4,
+            "entity": "light.demo_living_room",
+            "entities": [
+              "light.demo_living_room",
+              "light.demo_kitchen",
+              "light.demo_office",
+              "switch.demo_outlet",
+              "sensor.demo_temperature",
+              "binary_sensor.demo_motion"
+            ]
+          }
+        ]
+      ]
+    },
+    "library_0034_lightgroup_5x5": {
+      "title": "Light group \u00b7 5\u00d75",
+      "type": "custom",
+      "header": {
+        "on": false
+      },
+      "subpages": [
+        [
+          {
+            "id": "library_0034_lightgroup_5x5",
+            "ck": "lightgroup",
+            "name": "Light group",
+            "x": 1,
+            "y": 1,
+            "w": 5,
+            "h": 5,
+            "entity": "light.demo_living_room",
+            "entities": [
+              "light.demo_living_room",
+              "light.demo_kitchen",
+              "light.demo_office",
+              "switch.demo_outlet",
+              "sensor.demo_temperature",
+              "binary_sensor.demo_motion"
+            ]
+          }
+        ]
+      ]
+    },
+    "library_0035_lightgroup_6x5": {
+      "title": "Light group \u00b7 6\u00d75",
+      "type": "custom",
+      "header": {
+        "on": false
+      },
+      "subpages": [
+        [
+          {
+            "id": "library_0035_lightgroup_6x5",
+            "ck": "lightgroup",
+            "name": "Light group",
+            "x": 1,
+            "y": 1,
+            "w": 6,
+            "h": 5,
+            "entity": "light.demo_living_room",
+            "entities": [
+              "light.demo_living_room",
+              "light.demo_kitchen",
+              "light.demo_office",
+              "switch.demo_outlet",
+              "sensor.demo_temperature",
+              "binary_sensor.demo_motion"
+            ]
+          }
+        ]
+      ]
+    },
+    "library_0036_outletgroup_1x1": {
+      "title": "Outlets \u00b7 1\u00d71",
+      "type": "custom",
+      "header": {
+        "on": false
+      },
+      "subpages": [
+        [
+          {
+            "id": "library_0036_outletgroup_1x1",
+            "ck": "outletgroup",
+            "name": "Outlets",
+            "x": 1,
+            "y": 1,
+            "w": 1,
+            "h": 1,
+            "entity": "switch.demo_outlet",
+            "entities": [
+              "light.demo_living_room",
+              "light.demo_kitchen",
+              "light.demo_office"
+            ]
+          }
+        ]
+      ]
+    },
+    "library_0037_outletgroup_1x2": {
+      "title": "Outlets \u00b7 1\u00d72",
+      "type": "custom",
+      "header": {
+        "on": false
+      },
+      "subpages": [
+        [
+          {
+            "id": "library_0037_outletgroup_1x2",
+            "ck": "outletgroup",
+            "name": "Outlets",
+            "x": 1,
+            "y": 1,
+            "w": 1,
+            "h": 2,
+            "entity": "switch.demo_outlet",
+            "entities": [
+              "light.demo_living_room",
+              "light.demo_kitchen",
+              "light.demo_office"
+            ]
+          }
+        ]
+      ]
+    },
+    "library_0038_outletgroup_2x1": {
+      "title": "Outlets \u00b7 2\u00d71",
+      "type": "custom",
+      "header": {
+        "on": false
+      },
+      "subpages": [
+        [
+          {
+            "id": "library_0038_outletgroup_2x1",
+            "ck": "outletgroup",
+            "name": "Outlets",
+            "x": 1,
+            "y": 1,
+            "w": 2,
+            "h": 1,
+            "entity": "switch.demo_outlet",
+            "entities": [
+              "light.demo_living_room",
+              "light.demo_kitchen",
+              "light.demo_office"
+            ]
+          }
+        ]
+      ]
+    },
+    "library_0039_outletgroup_1x3": {
+      "title": "Outlets \u00b7 1\u00d73",
+      "type": "custom",
+      "header": {
+        "on": false
+      },
+      "subpages": [
+        [
+          {
+            "id": "library_0039_outletgroup_1x3",
+            "ck": "outletgroup",
+            "name": "Outlets",
+            "x": 1,
+            "y": 1,
+            "w": 1,
+            "h": 3,
+            "entity": "switch.demo_outlet",
+            "entities": [
+              "light.demo_living_room",
+              "light.demo_kitchen",
+              "light.demo_office"
+            ]
+          }
+        ]
+      ]
+    },
+    "library_0040_outletgroup_3x1": {
+      "title": "Outlets \u00b7 3\u00d71",
+      "type": "custom",
+      "header": {
+        "on": false
+      },
+      "subpages": [
+        [
+          {
+            "id": "library_0040_outletgroup_3x1",
+            "ck": "outletgroup",
+            "name": "Outlets",
+            "x": 1,
+            "y": 1,
+            "w": 3,
+            "h": 1,
+            "entity": "switch.demo_outlet",
+            "entities": [
+              "light.demo_living_room",
+              "light.demo_kitchen",
+              "light.demo_office"
+            ]
+          }
+        ]
+      ]
+    },
+    "library_0041_fan_1x1": {
+      "title": "Fan \u00b7 1\u00d71",
+      "type": "custom",
+      "header": {
+        "on": false
+      },
+      "subpages": [
+        [
+          {
+            "id": "library_0041_fan_1x1",
+            "ck": "fan",
+            "name": "Fan",
+            "x": 1,
+            "y": 1,
+            "w": 1,
+            "h": 1,
+            "entity": "fan.demo_ceiling"
+          }
+        ]
+      ]
+    },
+    "library_0042_fan_1x2": {
+      "title": "Fan \u00b7 1\u00d72",
+      "type": "custom",
+      "header": {
+        "on": false
+      },
+      "subpages": [
+        [
+          {
+            "id": "library_0042_fan_1x2",
+            "ck": "fan",
+            "name": "Fan",
+            "x": 1,
+            "y": 1,
+            "w": 1,
+            "h": 2,
+            "entity": "fan.demo_ceiling"
+          }
+        ]
+      ]
+    },
+    "library_0043_fan_2x1": {
+      "title": "Fan \u00b7 2\u00d71",
+      "type": "custom",
+      "header": {
+        "on": false
+      },
+      "subpages": [
+        [
+          {
+            "id": "library_0043_fan_2x1",
+            "ck": "fan",
+            "name": "Fan",
+            "x": 1,
+            "y": 1,
+            "w": 2,
+            "h": 1,
+            "entity": "fan.demo_ceiling"
+          }
+        ]
+      ]
+    },
+    "library_0044_fan_2x2": {
+      "title": "Fan \u00b7 2\u00d72",
+      "type": "custom",
+      "header": {
+        "on": false
+      },
+      "subpages": [
+        [
+          {
+            "id": "library_0044_fan_2x2",
+            "ck": "fan",
+            "name": "Fan",
+            "x": 1,
+            "y": 1,
+            "w": 2,
+            "h": 2,
+            "entity": "fan.demo_ceiling"
+          }
+        ]
+      ]
+    },
+    "library_0045_fan_3x3": {
+      "title": "Fan \u00b7 3\u00d73",
+      "type": "custom",
+      "header": {
+        "on": false
+      },
+      "subpages": [
+        [
+          {
+            "id": "library_0045_fan_3x3",
+            "ck": "fan",
+            "name": "Fan",
+            "x": 1,
+            "y": 1,
+            "w": 3,
+            "h": 3,
+            "entity": "fan.demo_ceiling"
+          }
+        ]
+      ]
+    },
+    "library_0046_cover_1x1": {
+      "title": "Cover / blinds \u00b7 1\u00d71",
+      "type": "custom",
+      "header": {
+        "on": false
+      },
+      "subpages": [
+        [
+          {
+            "id": "library_0046_cover_1x1",
+            "ck": "cover",
+            "name": "Cover / blinds",
+            "x": 1,
+            "y": 1,
+            "w": 1,
+            "h": 1,
+            "entity": "cover.demo_blinds"
+          }
+        ]
+      ]
+    },
+    "library_0047_cover_2x1": {
+      "title": "Cover / blinds \u00b7 2\u00d71",
+      "type": "custom",
+      "header": {
+        "on": false
+      },
+      "subpages": [
+        [
+          {
+            "id": "library_0047_cover_2x1",
+            "ck": "cover",
+            "name": "Cover / blinds",
+            "x": 1,
+            "y": 1,
+            "w": 2,
+            "h": 1,
+            "entity": "cover.demo_blinds"
+          }
+        ]
+      ]
+    },
+    "library_0048_cover_1x2": {
+      "title": "Cover / blinds \u00b7 1\u00d72",
+      "type": "custom",
+      "header": {
+        "on": false
+      },
+      "subpages": [
+        [
+          {
+            "id": "library_0048_cover_1x2",
+            "ck": "cover",
+            "name": "Cover / blinds",
+            "x": 1,
+            "y": 1,
+            "w": 1,
+            "h": 2,
+            "entity": "cover.demo_blinds"
+          }
+        ]
+      ]
+    },
+    "library_0049_cover_1x3": {
+      "title": "Cover / blinds \u00b7 1\u00d73",
+      "type": "custom",
+      "header": {
+        "on": false
+      },
+      "subpages": [
+        [
+          {
+            "id": "library_0049_cover_1x3",
+            "ck": "cover",
+            "name": "Cover / blinds",
+            "x": 1,
+            "y": 1,
+            "w": 1,
+            "h": 3,
+            "entity": "cover.demo_blinds"
+          }
+        ]
+      ]
+    },
+    "library_0050_cover_2x2": {
+      "title": "Cover / blinds \u00b7 2\u00d72",
+      "type": "custom",
+      "header": {
+        "on": false
+      },
+      "subpages": [
+        [
+          {
+            "id": "library_0050_cover_2x2",
+            "ck": "cover",
+            "name": "Cover / blinds",
+            "x": 1,
+            "y": 1,
+            "w": 2,
+            "h": 2,
+            "entity": "cover.demo_blinds"
+          }
+        ]
+      ]
+    },
+    "library_0051_cover_2x3": {
+      "title": "Cover / blinds \u00b7 2\u00d73",
+      "type": "custom",
+      "header": {
+        "on": false
+      },
+      "subpages": [
+        [
+          {
+            "id": "library_0051_cover_2x3",
+            "ck": "cover",
+            "name": "Cover / blinds",
+            "x": 1,
+            "y": 1,
+            "w": 2,
+            "h": 3,
+            "entity": "cover.demo_blinds"
+          }
+        ]
+      ]
+    },
+    "library_0052_climate_1x1": {
+      "title": "Climate / thermostat \u00b7 1\u00d71",
+      "type": "custom",
+      "header": {
+        "on": false
+      },
+      "subpages": [
+        [
+          {
+            "id": "library_0052_climate_1x1",
+            "ck": "climate",
+            "name": "Climate / thermostat",
+            "x": 1,
+            "y": 1,
+            "w": 1,
+            "h": 1,
+            "entity": "climate.demo_thermostat"
+          }
+        ]
+      ]
+    },
+    "library_0053_climate_2x2": {
+      "title": "Climate / thermostat \u00b7 2\u00d72",
+      "type": "custom",
+      "header": {
+        "on": false
+      },
+      "subpages": [
+        [
+          {
+            "id": "library_0053_climate_2x2",
+            "ck": "climate",
+            "name": "Climate / thermostat",
+            "x": 1,
+            "y": 1,
+            "w": 2,
+            "h": 2,
+            "entity": "climate.demo_thermostat"
+          }
+        ]
+      ]
+    },
+    "library_0054_climate_3x2": {
+      "title": "Climate / thermostat \u00b7 3\u00d72",
+      "type": "custom",
+      "header": {
+        "on": false
+      },
+      "subpages": [
+        [
+          {
+            "id": "library_0054_climate_3x2",
+            "ck": "climate",
+            "name": "Climate / thermostat",
+            "x": 1,
+            "y": 1,
+            "w": 3,
+            "h": 2,
+            "entity": "climate.demo_thermostat"
+          }
+        ]
+      ]
+    },
+    "library_0055_climate_3x3": {
+      "title": "Climate / thermostat \u00b7 3\u00d73",
+      "type": "custom",
+      "header": {
+        "on": false
+      },
+      "subpages": [
+        [
+          {
+            "id": "library_0055_climate_3x3",
+            "ck": "climate",
+            "name": "Climate / thermostat",
+            "x": 1,
+            "y": 1,
+            "w": 3,
+            "h": 3,
+            "entity": "climate.demo_thermostat"
+          }
+        ]
+      ]
+    },
+    "library_0056_climate_4x4": {
+      "title": "Climate / thermostat \u00b7 4\u00d74",
+      "type": "custom",
+      "header": {
+        "on": false
+      },
+      "subpages": [
+        [
+          {
+            "id": "library_0056_climate_4x4",
+            "ck": "climate",
+            "name": "Climate / thermostat",
+            "x": 1,
+            "y": 1,
+            "w": 4,
+            "h": 4,
+            "entity": "climate.demo_thermostat"
+          }
+        ]
+      ]
+    },
+    "library_0057_climate_6x5": {
+      "title": "Climate / thermostat \u00b7 6\u00d75",
+      "type": "custom",
+      "header": {
+        "on": false
+      },
+      "subpages": [
+        [
+          {
+            "id": "library_0057_climate_6x5",
+            "ck": "climate",
+            "name": "Climate / thermostat",
+            "x": 1,
+            "y": 1,
+            "w": 6,
+            "h": 5,
+            "entity": "climate.demo_thermostat"
+          }
+        ]
+      ]
+    },
+    "library_0058_climate_1x3": {
+      "title": "Climate / thermostat \u00b7 1\u00d73",
+      "type": "custom",
+      "header": {
+        "on": false
+      },
+      "subpages": [
+        [
+          {
+            "id": "library_0058_climate_1x3",
+            "ck": "climate",
+            "name": "Climate / thermostat",
+            "x": 1,
+            "y": 1,
+            "w": 1,
+            "h": 3,
+            "entity": "climate.demo_thermostat"
+          }
+        ]
+      ]
+    },
+    "library_0059_climate_1x4": {
+      "title": "Climate / thermostat \u00b7 1\u00d74",
+      "type": "custom",
+      "header": {
+        "on": false
+      },
+      "subpages": [
+        [
+          {
+            "id": "library_0059_climate_1x4",
+            "ck": "climate",
+            "name": "Climate / thermostat",
+            "x": 1,
+            "y": 1,
+            "w": 1,
+            "h": 4,
+            "entity": "climate.demo_thermostat"
+          }
+        ]
+      ]
+    },
+    "library_0060_climate_1x5": {
+      "title": "Climate / thermostat \u00b7 1\u00d75",
+      "type": "custom",
+      "header": {
+        "on": false
+      },
+      "subpages": [
+        [
+          {
+            "id": "library_0060_climate_1x5",
+            "ck": "climate",
+            "name": "Climate / thermostat",
+            "x": 1,
+            "y": 1,
+            "w": 1,
+            "h": 5,
+            "entity": "climate.demo_thermostat"
+          }
+        ]
+      ]
+    },
+    "library_0061_group_2x2": {
+      "title": "Status group \u00b7 2\u00d72",
+      "type": "custom",
+      "header": {
+        "on": false
+      },
+      "subpages": [
+        [
+          {
+            "id": "library_0061_group_2x2",
+            "ck": "group",
+            "name": "Status group",
+            "x": 1,
+            "y": 1,
+            "w": 2,
+            "h": 2,
+            "entities": [
+              "light.demo_living_room",
+              "light.demo_kitchen",
+              "light.demo_office",
+              "switch.demo_outlet"
+            ]
+          }
+        ]
+      ]
+    },
+    "library_0062_group_2x3": {
+      "title": "Status group \u00b7 2\u00d73",
+      "type": "custom",
+      "header": {
+        "on": false
+      },
+      "subpages": [
+        [
+          {
+            "id": "library_0062_group_2x3",
+            "ck": "group",
+            "name": "Status group",
+            "x": 1,
+            "y": 1,
+            "w": 2,
+            "h": 3,
+            "entities": [
+              "light.demo_living_room",
+              "light.demo_kitchen",
+              "light.demo_office",
+              "switch.demo_outlet",
+              "sensor.demo_temperature",
+              "binary_sensor.demo_motion"
+            ]
+          }
+        ]
+      ]
+    },
+    "library_0063_group_2x4": {
+      "title": "Status group \u00b7 2\u00d74",
+      "type": "custom",
+      "header": {
+        "on": false
+      },
+      "subpages": [
+        [
+          {
+            "id": "library_0063_group_2x4",
+            "ck": "group",
+            "name": "Status group",
+            "x": 1,
+            "y": 1,
+            "w": 2,
+            "h": 4,
+            "entities": [
+              "light.demo_living_room",
+              "light.demo_kitchen",
+              "light.demo_office",
+              "switch.demo_outlet",
+              "sensor.demo_temperature",
+              "binary_sensor.demo_motion"
+            ]
+          }
+        ]
+      ]
+    },
+    "library_0064_group_2x5": {
+      "title": "Status group \u00b7 2\u00d75",
+      "type": "custom",
+      "header": {
+        "on": false
+      },
+      "subpages": [
+        [
+          {
+            "id": "library_0064_group_2x5",
+            "ck": "group",
+            "name": "Status group",
+            "x": 1,
+            "y": 1,
+            "w": 2,
+            "h": 5,
+            "entities": [
+              "light.demo_living_room",
+              "light.demo_kitchen",
+              "light.demo_office",
+              "switch.demo_outlet",
+              "sensor.demo_temperature",
+              "binary_sensor.demo_motion"
+            ]
+          }
+        ]
+      ]
+    },
+    "library_0065_shortcuts_2x2": {
+      "title": "Shortcuts \u00b7 2\u00d72",
+      "type": "custom",
+      "header": {
+        "on": false
+      },
+      "subpages": [
+        [
+          {
+            "id": "library_0065_shortcuts_2x2",
+            "ck": "shortcuts",
+            "name": "Shortcuts",
+            "x": 1,
+            "y": 1,
+            "w": 2,
+            "h": 2,
+            "entities": [
+              "light.demo_living_room",
+              "light.demo_kitchen",
+              "light.demo_office",
+              "switch.demo_outlet"
+            ],
+            "shortcuts": [
+              {
+                "label": "Living Room",
+                "icon": "sofa",
+                "target": "page:library"
+              },
+              {
+                "label": "Kitchen",
+                "icon": "silverware-fork-knife",
+                "target": "page:library"
+              },
+              {
+                "label": "Office",
+                "icon": "desk",
+                "target": "page:library"
+              },
+              {
+                "label": "Garage",
+                "icon": "garage",
+                "target": "page:library"
+              },
+              {
+                "label": "Weather",
+                "icon": "weather-partly-cloudy",
+                "target": "page:library"
+              },
+              {
+                "label": "Music",
+                "icon": "spotify",
+                "target": "page:library"
+              }
+            ]
+          }
+        ]
+      ]
+    },
+    "library_0066_shortcuts_3x2": {
+      "title": "Shortcuts \u00b7 3\u00d72",
+      "type": "custom",
+      "header": {
+        "on": false
+      },
+      "subpages": [
+        [
+          {
+            "id": "library_0066_shortcuts_3x2",
+            "ck": "shortcuts",
+            "name": "Shortcuts",
+            "x": 1,
+            "y": 1,
+            "w": 3,
+            "h": 2,
+            "entities": [
+              "light.demo_living_room",
+              "light.demo_kitchen",
+              "light.demo_office",
+              "switch.demo_outlet",
+              "sensor.demo_temperature",
+              "binary_sensor.demo_motion"
+            ],
+            "shortcuts": [
+              {
+                "label": "Living Room",
+                "icon": "sofa",
+                "target": "page:library"
+              },
+              {
+                "label": "Kitchen",
+                "icon": "silverware-fork-knife",
+                "target": "page:library"
+              },
+              {
+                "label": "Office",
+                "icon": "desk",
+                "target": "page:library"
+              },
+              {
+                "label": "Garage",
+                "icon": "garage",
+                "target": "page:library"
+              },
+              {
+                "label": "Weather",
+                "icon": "weather-partly-cloudy",
+                "target": "page:library"
+              },
+              {
+                "label": "Music",
+                "icon": "spotify",
+                "target": "page:library"
+              }
+            ]
+          }
+        ]
+      ]
+    },
+    "library_0067_shortcuts_2x3": {
+      "title": "Shortcuts \u00b7 2\u00d73",
+      "type": "custom",
+      "header": {
+        "on": false
+      },
+      "subpages": [
+        [
+          {
+            "id": "library_0067_shortcuts_2x3",
+            "ck": "shortcuts",
+            "name": "Shortcuts",
+            "x": 1,
+            "y": 1,
+            "w": 2,
+            "h": 3,
+            "entities": [
+              "light.demo_living_room",
+              "light.demo_kitchen",
+              "light.demo_office",
+              "switch.demo_outlet",
+              "sensor.demo_temperature",
+              "binary_sensor.demo_motion"
+            ],
+            "shortcuts": [
+              {
+                "label": "Living Room",
+                "icon": "sofa",
+                "target": "page:library"
+              },
+              {
+                "label": "Kitchen",
+                "icon": "silverware-fork-knife",
+                "target": "page:library"
+              },
+              {
+                "label": "Office",
+                "icon": "desk",
+                "target": "page:library"
+              },
+              {
+                "label": "Garage",
+                "icon": "garage",
+                "target": "page:library"
+              },
+              {
+                "label": "Weather",
+                "icon": "weather-partly-cloudy",
+                "target": "page:library"
+              },
+              {
+                "label": "Music",
+                "icon": "spotify",
+                "target": "page:library"
+              }
+            ]
+          }
+        ]
+      ]
+    },
+    "library_0068_shortcuts_4x2": {
+      "title": "Shortcuts \u00b7 4\u00d72",
+      "type": "custom",
+      "header": {
+        "on": false
+      },
+      "subpages": [
+        [
+          {
+            "id": "library_0068_shortcuts_4x2",
+            "ck": "shortcuts",
+            "name": "Shortcuts",
+            "x": 1,
+            "y": 1,
+            "w": 4,
+            "h": 2,
+            "entities": [
+              "light.demo_living_room",
+              "light.demo_kitchen",
+              "light.demo_office",
+              "switch.demo_outlet",
+              "sensor.demo_temperature",
+              "binary_sensor.demo_motion"
+            ],
+            "shortcuts": [
+              {
+                "label": "Living Room",
+                "icon": "sofa",
+                "target": "page:library"
+              },
+              {
+                "label": "Kitchen",
+                "icon": "silverware-fork-knife",
+                "target": "page:library"
+              },
+              {
+                "label": "Office",
+                "icon": "desk",
+                "target": "page:library"
+              },
+              {
+                "label": "Garage",
+                "icon": "garage",
+                "target": "page:library"
+              },
+              {
+                "label": "Weather",
+                "icon": "weather-partly-cloudy",
+                "target": "page:library"
+              },
+              {
+                "label": "Music",
+                "icon": "spotify",
+                "target": "page:library"
+              }
+            ]
+          }
+        ]
+      ]
+    },
+    "library_0069_shortcuts_2x4": {
+      "title": "Shortcuts \u00b7 2\u00d74",
+      "type": "custom",
+      "header": {
+        "on": false
+      },
+      "subpages": [
+        [
+          {
+            "id": "library_0069_shortcuts_2x4",
+            "ck": "shortcuts",
+            "name": "Shortcuts",
+            "x": 1,
+            "y": 1,
+            "w": 2,
+            "h": 4,
+            "entities": [
+              "light.demo_living_room",
+              "light.demo_kitchen",
+              "light.demo_office",
+              "switch.demo_outlet",
+              "sensor.demo_temperature",
+              "binary_sensor.demo_motion"
+            ],
+            "shortcuts": [
+              {
+                "label": "Living Room",
+                "icon": "sofa",
+                "target": "page:library"
+              },
+              {
+                "label": "Kitchen",
+                "icon": "silverware-fork-knife",
+                "target": "page:library"
+              },
+              {
+                "label": "Office",
+                "icon": "desk",
+                "target": "page:library"
+              },
+              {
+                "label": "Garage",
+                "icon": "garage",
+                "target": "page:library"
+              },
+              {
+                "label": "Weather",
+                "icon": "weather-partly-cloudy",
+                "target": "page:library"
+              },
+              {
+                "label": "Music",
+                "icon": "spotify",
+                "target": "page:library"
+              }
+            ]
+          }
+        ]
+      ]
+    },
+    "library_0070_shortcuts_5x2": {
+      "title": "Shortcuts \u00b7 5\u00d72",
+      "type": "custom",
+      "header": {
+        "on": false
+      },
+      "subpages": [
+        [
+          {
+            "id": "library_0070_shortcuts_5x2",
+            "ck": "shortcuts",
+            "name": "Shortcuts",
+            "x": 1,
+            "y": 1,
+            "w": 5,
+            "h": 2,
+            "entities": [
+              "light.demo_living_room",
+              "light.demo_kitchen",
+              "light.demo_office",
+              "switch.demo_outlet",
+              "sensor.demo_temperature",
+              "binary_sensor.demo_motion"
+            ],
+            "shortcuts": [
+              {
+                "label": "Living Room",
+                "icon": "sofa",
+                "target": "page:library"
+              },
+              {
+                "label": "Kitchen",
+                "icon": "silverware-fork-knife",
+                "target": "page:library"
+              },
+              {
+                "label": "Office",
+                "icon": "desk",
+                "target": "page:library"
+              },
+              {
+                "label": "Garage",
+                "icon": "garage",
+                "target": "page:library"
+              },
+              {
+                "label": "Weather",
+                "icon": "weather-partly-cloudy",
+                "target": "page:library"
+              },
+              {
+                "label": "Music",
+                "icon": "spotify",
+                "target": "page:library"
+              }
+            ]
+          }
+        ]
+      ]
+    },
+    "library_0071_shortcuts_2x5": {
+      "title": "Shortcuts \u00b7 2\u00d75",
+      "type": "custom",
+      "header": {
+        "on": false
+      },
+      "subpages": [
+        [
+          {
+            "id": "library_0071_shortcuts_2x5",
+            "ck": "shortcuts",
+            "name": "Shortcuts",
+            "x": 1,
+            "y": 1,
+            "w": 2,
+            "h": 5,
+            "entities": [
+              "light.demo_living_room",
+              "light.demo_kitchen",
+              "light.demo_office",
+              "switch.demo_outlet",
+              "sensor.demo_temperature",
+              "binary_sensor.demo_motion"
+            ],
+            "shortcuts": [
+              {
+                "label": "Living Room",
+                "icon": "sofa",
+                "target": "page:library"
+              },
+              {
+                "label": "Kitchen",
+                "icon": "silverware-fork-knife",
+                "target": "page:library"
+              },
+              {
+                "label": "Office",
+                "icon": "desk",
+                "target": "page:library"
+              },
+              {
+                "label": "Garage",
+                "icon": "garage",
+                "target": "page:library"
+              },
+              {
+                "label": "Weather",
+                "icon": "weather-partly-cloudy",
+                "target": "page:library"
+              },
+              {
+                "label": "Music",
+                "icon": "spotify",
+                "target": "page:library"
+              }
+            ]
+          }
+        ]
+      ]
+    },
+    "library_0072_shortcuts_6x2": {
+      "title": "Shortcuts \u00b7 6\u00d72",
+      "type": "custom",
+      "header": {
+        "on": false
+      },
+      "subpages": [
+        [
+          {
+            "id": "library_0072_shortcuts_6x2",
+            "ck": "shortcuts",
+            "name": "Shortcuts",
+            "x": 1,
+            "y": 1,
+            "w": 6,
+            "h": 2,
+            "entities": [
+              "light.demo_living_room",
+              "light.demo_kitchen",
+              "light.demo_office",
+              "switch.demo_outlet",
+              "sensor.demo_temperature",
+              "binary_sensor.demo_motion"
+            ],
+            "shortcuts": [
+              {
+                "label": "Living Room",
+                "icon": "sofa",
+                "target": "page:library"
+              },
+              {
+                "label": "Kitchen",
+                "icon": "silverware-fork-knife",
+                "target": "page:library"
+              },
+              {
+                "label": "Office",
+                "icon": "desk",
+                "target": "page:library"
+              },
+              {
+                "label": "Garage",
+                "icon": "garage",
+                "target": "page:library"
+              },
+              {
+                "label": "Weather",
+                "icon": "weather-partly-cloudy",
+                "target": "page:library"
+              },
+              {
+                "label": "Music",
+                "icon": "spotify",
+                "target": "page:library"
+              }
+            ]
+          }
+        ]
+      ]
+    },
+    "library_0073_speakers_1x1": {
+      "title": "Speakers (multi-room + volume) \u00b7 1\u00d71",
+      "type": "custom",
+      "header": {
+        "on": false
+      },
+      "subpages": [
+        [
+          {
+            "id": "library_0073_speakers_1x1",
+            "ck": "speakers",
+            "name": "Speakers (multi-room + volume)",
+            "x": 1,
+            "y": 1,
+            "w": 1,
+            "h": 1,
+            "entity": "media_player.demo_spotify",
+            "entities": [
+              "light.demo_living_room",
+              "light.demo_kitchen",
+              "light.demo_office"
+            ]
+          }
+        ]
+      ]
+    },
+    "library_0074_speakers_2x2": {
+      "title": "Speakers (multi-room + volume) \u00b7 2\u00d72",
+      "type": "custom",
+      "header": {
+        "on": false
+      },
+      "subpages": [
+        [
+          {
+            "id": "library_0074_speakers_2x2",
+            "ck": "speakers",
+            "name": "Speakers (multi-room + volume)",
+            "x": 1,
+            "y": 1,
+            "w": 2,
+            "h": 2,
+            "entity": "media_player.demo_spotify",
+            "entities": [
+              "light.demo_living_room",
+              "light.demo_kitchen",
+              "light.demo_office",
+              "switch.demo_outlet"
+            ]
+          }
+        ]
+      ]
+    },
+    "library_0075_speakers_3x2": {
+      "title": "Speakers (multi-room + volume) \u00b7 3\u00d72",
+      "type": "custom",
+      "header": {
+        "on": false
+      },
+      "subpages": [
+        [
+          {
+            "id": "library_0075_speakers_3x2",
+            "ck": "speakers",
+            "name": "Speakers (multi-room + volume)",
+            "x": 1,
+            "y": 1,
+            "w": 3,
+            "h": 2,
+            "entity": "media_player.demo_spotify",
+            "entities": [
+              "light.demo_living_room",
+              "light.demo_kitchen",
+              "light.demo_office",
+              "switch.demo_outlet",
+              "sensor.demo_temperature",
+              "binary_sensor.demo_motion"
+            ]
+          }
+        ]
+      ]
+    },
+    "library_0076_speakers_2x3": {
+      "title": "Speakers (multi-room + volume) \u00b7 2\u00d73",
+      "type": "custom",
+      "header": {
+        "on": false
+      },
+      "subpages": [
+        [
+          {
+            "id": "library_0076_speakers_2x3",
+            "ck": "speakers",
+            "name": "Speakers (multi-room + volume)",
+            "x": 1,
+            "y": 1,
+            "w": 2,
+            "h": 3,
+            "entity": "media_player.demo_spotify",
+            "entities": [
+              "light.demo_living_room",
+              "light.demo_kitchen",
+              "light.demo_office",
+              "switch.demo_outlet",
+              "sensor.demo_temperature",
+              "binary_sensor.demo_motion"
+            ]
+          }
+        ]
+      ]
+    },
+    "library_0077_speakers_3x3": {
+      "title": "Speakers (multi-room + volume) \u00b7 3\u00d73",
+      "type": "custom",
+      "header": {
+        "on": false
+      },
+      "subpages": [
+        [
+          {
+            "id": "library_0077_speakers_3x3",
+            "ck": "speakers",
+            "name": "Speakers (multi-room + volume)",
+            "x": 1,
+            "y": 1,
+            "w": 3,
+            "h": 3,
+            "entity": "media_player.demo_spotify",
+            "entities": [
+              "light.demo_living_room",
+              "light.demo_kitchen",
+              "light.demo_office",
+              "switch.demo_outlet",
+              "sensor.demo_temperature",
+              "binary_sensor.demo_motion"
+            ]
+          }
+        ]
+      ]
+    },
+    "library_0078_speakers_4x4": {
+      "title": "Speakers (multi-room + volume) \u00b7 4\u00d74",
+      "type": "custom",
+      "header": {
+        "on": false
+      },
+      "subpages": [
+        [
+          {
+            "id": "library_0078_speakers_4x4",
+            "ck": "speakers",
+            "name": "Speakers (multi-room + volume)",
+            "x": 1,
+            "y": 1,
+            "w": 4,
+            "h": 4,
+            "entity": "media_player.demo_spotify",
+            "entities": [
+              "light.demo_living_room",
+              "light.demo_kitchen",
+              "light.demo_office",
+              "switch.demo_outlet",
+              "sensor.demo_temperature",
+              "binary_sensor.demo_motion"
+            ]
+          }
+        ]
+      ]
+    },
+    "library_0079_speakers_3x4": {
+      "title": "Speakers (multi-room + volume) \u00b7 3\u00d74",
+      "type": "custom",
+      "header": {
+        "on": false
+      },
+      "subpages": [
+        [
+          {
+            "id": "library_0079_speakers_3x4",
+            "ck": "speakers",
+            "name": "Speakers (multi-room + volume)",
+            "x": 1,
+            "y": 1,
+            "w": 3,
+            "h": 4,
+            "entity": "media_player.demo_spotify",
+            "entities": [
+              "light.demo_living_room",
+              "light.demo_kitchen",
+              "light.demo_office",
+              "switch.demo_outlet",
+              "sensor.demo_temperature",
+              "binary_sensor.demo_motion"
+            ]
+          }
+        ]
+      ]
+    },
+    "library_0080_speakers_5x4": {
+      "title": "Speakers (multi-room + volume) \u00b7 5\u00d74",
+      "type": "custom",
+      "header": {
+        "on": false
+      },
+      "subpages": [
+        [
+          {
+            "id": "library_0080_speakers_5x4",
+            "ck": "speakers",
+            "name": "Speakers (multi-room + volume)",
+            "x": 1,
+            "y": 1,
+            "w": 5,
+            "h": 4,
+            "entity": "media_player.demo_spotify",
+            "entities": [
+              "light.demo_living_room",
+              "light.demo_kitchen",
+              "light.demo_office",
+              "switch.demo_outlet",
+              "sensor.demo_temperature",
+              "binary_sensor.demo_motion"
+            ]
+          }
+        ]
+      ]
+    },
+    "library_0081_speakers_6x5": {
+      "title": "Speakers (multi-room + volume) \u00b7 6\u00d75",
+      "type": "custom",
+      "header": {
+        "on": false
+      },
+      "subpages": [
+        [
+          {
+            "id": "library_0081_speakers_6x5",
+            "ck": "speakers",
+            "name": "Speakers (multi-room + volume)",
+            "x": 1,
+            "y": 1,
+            "w": 6,
+            "h": 5,
+            "entity": "media_player.demo_spotify",
+            "entities": [
+              "light.demo_living_room",
+              "light.demo_kitchen",
+              "light.demo_office",
+              "switch.demo_outlet",
+              "sensor.demo_temperature",
+              "binary_sensor.demo_motion"
+            ]
+          }
+        ]
+      ]
+    },
+    "library_0082_sonos_sources_1x1": {
+      "title": "Sonos sources \u00b7 1\u00d71",
+      "type": "custom",
+      "header": {
+        "on": false
+      },
+      "subpages": [
+        [
+          {
+            "id": "library_0082_sonos_sources_1x1",
+            "ck": "sonos_sources",
+            "name": "Sonos sources",
+            "x": 1,
+            "y": 1,
+            "w": 1,
+            "h": 1,
+            "entity": "media_player.demo_spotify",
+            "entities": [
+              "media_player.demo_tv",
+              "HDMI 1",
+              "Nintendo Switch",
+              "Spotify",
+              "YouTube",
+              "Plex"
+            ]
+          }
+        ]
+      ]
+    },
+    "library_0083_sonos_sources_2x1": {
+      "title": "Sonos sources \u00b7 2\u00d71",
+      "type": "custom",
+      "header": {
+        "on": false
+      },
+      "subpages": [
+        [
+          {
+            "id": "library_0083_sonos_sources_2x1",
+            "ck": "sonos_sources",
+            "name": "Sonos sources",
+            "x": 1,
+            "y": 1,
+            "w": 2,
+            "h": 1,
+            "entity": "media_player.demo_spotify",
+            "entities": [
+              "media_player.demo_tv",
+              "HDMI 1",
+              "Nintendo Switch",
+              "Spotify",
+              "YouTube",
+              "Plex"
+            ]
+          }
+        ]
+      ]
+    },
+    "library_0084_sonos_sources_3x1": {
+      "title": "Sonos sources \u00b7 3\u00d71",
+      "type": "custom",
+      "header": {
+        "on": false
+      },
+      "subpages": [
+        [
+          {
+            "id": "library_0084_sonos_sources_3x1",
+            "ck": "sonos_sources",
+            "name": "Sonos sources",
+            "x": 1,
+            "y": 1,
+            "w": 3,
+            "h": 1,
+            "entity": "media_player.demo_spotify",
+            "entities": [
+              "media_player.demo_tv",
+              "HDMI 1",
+              "Nintendo Switch",
+              "Spotify",
+              "YouTube",
+              "Plex"
+            ]
+          }
+        ]
+      ]
+    },
+    "library_0085_sonos_sources_1x2": {
+      "title": "Sonos sources \u00b7 1\u00d72",
+      "type": "custom",
+      "header": {
+        "on": false
+      },
+      "subpages": [
+        [
+          {
+            "id": "library_0085_sonos_sources_1x2",
+            "ck": "sonos_sources",
+            "name": "Sonos sources",
+            "x": 1,
+            "y": 1,
+            "w": 1,
+            "h": 2,
+            "entity": "media_player.demo_spotify",
+            "entities": [
+              "media_player.demo_tv",
+              "HDMI 1",
+              "Nintendo Switch",
+              "Spotify",
+              "YouTube",
+              "Plex"
+            ]
+          }
+        ]
+      ]
+    },
+    "library_0086_sonos_sources_1x3": {
+      "title": "Sonos sources \u00b7 1\u00d73",
+      "type": "custom",
+      "header": {
+        "on": false
+      },
+      "subpages": [
+        [
+          {
+            "id": "library_0086_sonos_sources_1x3",
+            "ck": "sonos_sources",
+            "name": "Sonos sources",
+            "x": 1,
+            "y": 1,
+            "w": 1,
+            "h": 3,
+            "entity": "media_player.demo_spotify",
+            "entities": [
+              "media_player.demo_tv",
+              "HDMI 1",
+              "Nintendo Switch",
+              "Spotify",
+              "YouTube",
+              "Plex"
+            ]
+          }
+        ]
+      ]
+    },
+    "library_0087_sonos_sources_3x2": {
+      "title": "Sonos sources \u00b7 3\u00d72",
+      "type": "custom",
+      "header": {
+        "on": false
+      },
+      "subpages": [
+        [
+          {
+            "id": "library_0087_sonos_sources_3x2",
+            "ck": "sonos_sources",
+            "name": "Sonos sources",
+            "x": 1,
+            "y": 1,
+            "w": 3,
+            "h": 2,
+            "entity": "media_player.demo_spotify",
+            "entities": [
+              "media_player.demo_tv",
+              "HDMI 1",
+              "Nintendo Switch",
+              "Spotify",
+              "YouTube",
+              "Plex"
+            ]
+          }
+        ]
+      ]
+    },
+    "library_0088_sonos_sources_2x3": {
+      "title": "Sonos sources \u00b7 2\u00d73",
+      "type": "custom",
+      "header": {
+        "on": false
+      },
+      "subpages": [
+        [
+          {
+            "id": "library_0088_sonos_sources_2x3",
+            "ck": "sonos_sources",
+            "name": "Sonos sources",
+            "x": 1,
+            "y": 1,
+            "w": 2,
+            "h": 3,
+            "entity": "media_player.demo_spotify",
+            "entities": [
+              "media_player.demo_tv",
+              "HDMI 1",
+              "Nintendo Switch",
+              "Spotify",
+              "YouTube",
+              "Plex"
+            ]
+          }
+        ]
+      ]
+    },
+    "library_0089_sonos_sources_3x3": {
+      "title": "Sonos sources \u00b7 3\u00d73",
+      "type": "custom",
+      "header": {
+        "on": false
+      },
+      "subpages": [
+        [
+          {
+            "id": "library_0089_sonos_sources_3x3",
+            "ck": "sonos_sources",
+            "name": "Sonos sources",
+            "x": 1,
+            "y": 1,
+            "w": 3,
+            "h": 3,
+            "entity": "media_player.demo_spotify",
+            "entities": [
+              "media_player.demo_tv",
+              "HDMI 1",
+              "Nintendo Switch",
+              "Spotify",
+              "YouTube",
+              "Plex"
+            ]
+          }
+        ]
+      ]
+    },
+    "library_0090_sonos_sources_5x4": {
+      "title": "Sonos sources \u00b7 5\u00d74",
+      "type": "custom",
+      "header": {
+        "on": false
+      },
+      "subpages": [
+        [
+          {
+            "id": "library_0090_sonos_sources_5x4",
+            "ck": "sonos_sources",
+            "name": "Sonos sources",
+            "x": 1,
+            "y": 1,
+            "w": 5,
+            "h": 4,
+            "entity": "media_player.demo_spotify",
+            "entities": [
+              "media_player.demo_tv",
+              "HDMI 1",
+              "Nintendo Switch",
+              "Spotify",
+              "YouTube",
+              "Plex"
+            ]
+          }
+        ]
+      ]
+    },
+    "library_0091_sonos_library_4x3": {
+      "title": "Sonos library \u00b7 4\u00d73",
+      "type": "custom",
+      "header": {
+        "on": false
+      },
+      "subpages": [
+        [
+          {
+            "id": "library_0091_sonos_library_4x3",
+            "ck": "sonos_library",
+            "name": "Sonos library",
+            "x": 1,
+            "y": 1,
+            "w": 4,
+            "h": 3,
+            "entity": "media_player.demo_spotify"
+          }
+        ]
+      ]
+    },
+    "library_0092_sonos_library_3x4": {
+      "title": "Sonos library \u00b7 3\u00d74",
+      "type": "custom",
+      "header": {
+        "on": false
+      },
+      "subpages": [
+        [
+          {
+            "id": "library_0092_sonos_library_3x4",
+            "ck": "sonos_library",
+            "name": "Sonos library",
+            "x": 1,
+            "y": 1,
+            "w": 3,
+            "h": 4,
+            "entity": "media_player.demo_spotify"
+          }
+        ]
+      ]
+    },
+    "library_0093_sonos_library_4x4": {
+      "title": "Sonos library \u00b7 4\u00d74",
+      "type": "custom",
+      "header": {
+        "on": false
+      },
+      "subpages": [
+        [
+          {
+            "id": "library_0093_sonos_library_4x4",
+            "ck": "sonos_library",
+            "name": "Sonos library",
+            "x": 1,
+            "y": 1,
+            "w": 4,
+            "h": 4,
+            "entity": "media_player.demo_spotify"
+          }
+        ]
+      ]
+    },
+    "library_0094_sonos_library_3x5": {
+      "title": "Sonos library \u00b7 3\u00d75",
+      "type": "custom",
+      "header": {
+        "on": false
+      },
+      "subpages": [
+        [
+          {
+            "id": "library_0094_sonos_library_3x5",
+            "ck": "sonos_library",
+            "name": "Sonos library",
+            "x": 1,
+            "y": 1,
+            "w": 3,
+            "h": 5,
+            "entity": "media_player.demo_spotify"
+          }
+        ]
+      ]
+    },
+    "library_0095_sonos_library_4x5": {
+      "title": "Sonos library \u00b7 4\u00d75",
+      "type": "custom",
+      "header": {
+        "on": false
+      },
+      "subpages": [
+        [
+          {
+            "id": "library_0095_sonos_library_4x5",
+            "ck": "sonos_library",
+            "name": "Sonos library",
+            "x": 1,
+            "y": 1,
+            "w": 4,
+            "h": 5,
+            "entity": "media_player.demo_spotify"
+          }
+        ]
+      ]
+    },
+    "library_0096_sonos_library_5x5": {
+      "title": "Sonos library \u00b7 5\u00d75",
+      "type": "custom",
+      "header": {
+        "on": false
+      },
+      "subpages": [
+        [
+          {
+            "id": "library_0096_sonos_library_5x5",
+            "ck": "sonos_library",
+            "name": "Sonos library",
+            "x": 1,
+            "y": 1,
+            "w": 5,
+            "h": 5,
+            "entity": "media_player.demo_spotify"
+          }
+        ]
+      ]
+    },
+    "library_0097_sonos_fav_1x1": {
+      "title": "Sonos favorite \u00b7 1\u00d71",
+      "type": "custom",
+      "header": {
+        "on": false
+      },
+      "subpages": [
+        [
+          {
+            "id": "library_0097_sonos_fav_1x1",
+            "ck": "sonos_fav",
+            "name": "Sonos favorite",
+            "x": 1,
+            "y": 1,
+            "w": 1,
+            "h": 1,
+            "entity": "media_player.demo_spotify",
+            "playlist": "Demo Favorites"
+          }
+        ]
+      ]
+    },
+    "library_0098_sonos_fav_2x1": {
+      "title": "Sonos favorite \u00b7 2\u00d71",
+      "type": "custom",
+      "header": {
+        "on": false
+      },
+      "subpages": [
+        [
+          {
+            "id": "library_0098_sonos_fav_2x1",
+            "ck": "sonos_fav",
+            "name": "Sonos favorite",
+            "x": 1,
+            "y": 1,
+            "w": 2,
+            "h": 1,
+            "entity": "media_player.demo_spotify",
+            "playlist": "Demo Favorites"
+          }
+        ]
+      ]
+    },
+    "library_0099_sonos_fav_3x1": {
+      "title": "Sonos favorite \u00b7 3\u00d71",
+      "type": "custom",
+      "header": {
+        "on": false
+      },
+      "subpages": [
+        [
+          {
+            "id": "library_0099_sonos_fav_3x1",
+            "ck": "sonos_fav",
+            "name": "Sonos favorite",
+            "x": 1,
+            "y": 1,
+            "w": 3,
+            "h": 1,
+            "entity": "media_player.demo_spotify",
+            "playlist": "Demo Favorites"
+          }
+        ]
+      ]
+    },
+    "library_0100_spotify_1x1": {
+      "title": "Spotify player \u00b7 1\u00d71",
+      "type": "custom",
+      "header": {
+        "on": false
+      },
+      "subpages": [
+        [
+          {
+            "id": "library_0100_spotify_1x1",
+            "ck": "spotify",
+            "name": "Spotify player",
+            "x": 1,
+            "y": 1,
+            "w": 1,
+            "h": 1,
+            "entity": "media_player.demo_spotify"
+          }
+        ]
+      ]
+    },
+    "library_0101_spotify_2x2": {
+      "title": "Spotify player \u00b7 2\u00d72",
+      "type": "custom",
+      "header": {
+        "on": false
+      },
+      "subpages": [
+        [
+          {
+            "id": "library_0101_spotify_2x2",
+            "ck": "spotify",
+            "name": "Spotify player",
+            "x": 1,
+            "y": 1,
+            "w": 2,
+            "h": 2,
+            "entity": "media_player.demo_spotify"
+          }
+        ]
+      ]
+    },
+    "library_0102_spotify_3x2": {
+      "title": "Spotify player \u00b7 3\u00d72",
+      "type": "custom",
+      "header": {
+        "on": false
+      },
+      "subpages": [
+        [
+          {
+            "id": "library_0102_spotify_3x2",
+            "ck": "spotify",
+            "name": "Spotify player",
+            "x": 1,
+            "y": 1,
+            "w": 3,
+            "h": 2,
+            "entity": "media_player.demo_spotify"
+          }
+        ]
+      ]
+    },
+    "library_0103_spotify_4x3": {
+      "title": "Spotify player \u00b7 4\u00d73",
+      "type": "custom",
+      "header": {
+        "on": false
+      },
+      "subpages": [
+        [
+          {
+            "id": "library_0103_spotify_4x3",
+            "ck": "spotify",
+            "name": "Spotify player",
+            "x": 1,
+            "y": 1,
+            "w": 4,
+            "h": 3,
+            "entity": "media_player.demo_spotify"
+          }
+        ]
+      ]
+    },
+    "library_0104_spotify_6x5": {
+      "title": "Spotify player \u00b7 6\u00d75",
+      "type": "custom",
+      "header": {
+        "on": false
+      },
+      "subpages": [
+        [
+          {
+            "id": "library_0104_spotify_6x5",
+            "ck": "spotify",
+            "name": "Spotify player",
+            "x": 1,
+            "y": 1,
+            "w": 6,
+            "h": 5,
+            "entity": "media_player.demo_spotify"
+          }
+        ]
+      ]
+    },
+    "library_0105_spotify_art_3x3": {
+      "title": "Spotify player \u2014 art + volume \u00b7 3\u00d73",
+      "type": "custom",
+      "header": {
+        "on": false
+      },
+      "subpages": [
+        [
+          {
+            "id": "library_0105_spotify_art_3x3",
+            "ck": "spotify_art",
+            "name": "Spotify player \u2014 art + volume",
+            "x": 1,
+            "y": 1,
+            "w": 3,
+            "h": 3,
+            "entity": "media_player.demo_spotify"
+          }
+        ]
+      ]
+    },
+    "library_0106_spotify_art_4x3": {
+      "title": "Spotify player \u2014 art + volume \u00b7 4\u00d73",
+      "type": "custom",
+      "header": {
+        "on": false
+      },
+      "subpages": [
+        [
+          {
+            "id": "library_0106_spotify_art_4x3",
+            "ck": "spotify_art",
+            "name": "Spotify player \u2014 art + volume",
+            "x": 1,
+            "y": 1,
+            "w": 4,
+            "h": 3,
+            "entity": "media_player.demo_spotify"
+          }
+        ]
+      ]
+    },
+    "library_0107_spotify_art_3x4": {
+      "title": "Spotify player \u2014 art + volume \u00b7 3\u00d74",
+      "type": "custom",
+      "header": {
+        "on": false
+      },
+      "subpages": [
+        [
+          {
+            "id": "library_0107_spotify_art_3x4",
+            "ck": "spotify_art",
+            "name": "Spotify player \u2014 art + volume",
+            "x": 1,
+            "y": 1,
+            "w": 3,
+            "h": 4,
+            "entity": "media_player.demo_spotify"
+          }
+        ]
+      ]
+    },
+    "library_0108_spotify_art_4x4": {
+      "title": "Spotify player \u2014 art + volume \u00b7 4\u00d74",
+      "type": "custom",
+      "header": {
+        "on": false
+      },
+      "subpages": [
+        [
+          {
+            "id": "library_0108_spotify_art_4x4",
+            "ck": "spotify_art",
+            "name": "Spotify player \u2014 art + volume",
+            "x": 1,
+            "y": 1,
+            "w": 4,
+            "h": 4,
+            "entity": "media_player.demo_spotify"
+          }
+        ]
+      ]
+    },
+    "library_0109_spotify_art_3x5": {
+      "title": "Spotify player \u2014 art + volume \u00b7 3\u00d75",
+      "type": "custom",
+      "header": {
+        "on": false
+      },
+      "subpages": [
+        [
+          {
+            "id": "library_0109_spotify_art_3x5",
+            "ck": "spotify_art",
+            "name": "Spotify player \u2014 art + volume",
+            "x": 1,
+            "y": 1,
+            "w": 3,
+            "h": 5,
+            "entity": "media_player.demo_spotify"
+          }
+        ]
+      ]
+    },
+    "library_0110_spotify_art_4x5": {
+      "title": "Spotify player \u2014 art + volume \u00b7 4\u00d75",
+      "type": "custom",
+      "header": {
+        "on": false
+      },
+      "subpages": [
+        [
+          {
+            "id": "library_0110_spotify_art_4x5",
+            "ck": "spotify_art",
+            "name": "Spotify player \u2014 art + volume",
+            "x": 1,
+            "y": 1,
+            "w": 4,
+            "h": 5,
+            "entity": "media_player.demo_spotify"
+          }
+        ]
+      ]
+    },
+    "library_0111_spotify_art_5x4": {
+      "title": "Spotify player \u2014 art + volume \u00b7 5\u00d74",
+      "type": "custom",
+      "header": {
+        "on": false
+      },
+      "subpages": [
+        [
+          {
+            "id": "library_0111_spotify_art_5x4",
+            "ck": "spotify_art",
+            "name": "Spotify player \u2014 art + volume",
+            "x": 1,
+            "y": 1,
+            "w": 5,
+            "h": 4,
+            "entity": "media_player.demo_spotify"
+          }
+        ]
+      ]
+    },
+    "library_0112_spotify_art_5x5": {
+      "title": "Spotify player \u2014 art + volume \u00b7 5\u00d75",
+      "type": "custom",
+      "header": {
+        "on": false
+      },
+      "subpages": [
+        [
+          {
+            "id": "library_0112_spotify_art_5x5",
+            "ck": "spotify_art",
+            "name": "Spotify player \u2014 art + volume",
+            "x": 1,
+            "y": 1,
+            "w": 5,
+            "h": 5,
+            "entity": "media_player.demo_spotify"
+          }
+        ]
+      ]
+    },
+    "library_0113_spotify_art_6x4": {
+      "title": "Spotify player \u2014 art + volume \u00b7 6\u00d74",
+      "type": "custom",
+      "header": {
+        "on": false
+      },
+      "subpages": [
+        [
+          {
+            "id": "library_0113_spotify_art_6x4",
+            "ck": "spotify_art",
+            "name": "Spotify player \u2014 art + volume",
+            "x": 1,
+            "y": 1,
+            "w": 6,
+            "h": 4,
+            "entity": "media_player.demo_spotify"
+          }
+        ]
+      ]
+    },
+    "library_0114_spotify_art_6x5": {
+      "title": "Spotify player \u2014 art + volume \u00b7 6\u00d75",
+      "type": "custom",
+      "header": {
+        "on": false
+      },
+      "subpages": [
+        [
+          {
+            "id": "library_0114_spotify_art_6x5",
+            "ck": "spotify_art",
+            "name": "Spotify player \u2014 art + volume",
+            "x": 1,
+            "y": 1,
+            "w": 6,
+            "h": 5,
+            "entity": "media_player.demo_spotify"
+          }
+        ]
+      ]
+    },
+    "library_0115_spotify_playlists_2x1": {
+      "title": "Spotify playlists \u00b7 2\u00d71",
+      "type": "custom",
+      "header": {
+        "on": false
+      },
+      "subpages": [
+        [
+          {
+            "id": "library_0115_spotify_playlists_2x1",
+            "ck": "spotify_playlists",
+            "name": "Spotify playlists",
+            "x": 1,
+            "y": 1,
+            "w": 2,
+            "h": 1,
+            "entity": "media_player.demo_spotify"
+          }
+        ]
+      ]
+    },
+    "library_0116_spotify_playlists_3x1": {
+      "title": "Spotify playlists \u00b7 3\u00d71",
+      "type": "custom",
+      "header": {
+        "on": false
+      },
+      "subpages": [
+        [
+          {
+            "id": "library_0116_spotify_playlists_3x1",
+            "ck": "spotify_playlists",
+            "name": "Spotify playlists",
+            "x": 1,
+            "y": 1,
+            "w": 3,
+            "h": 1,
+            "entity": "media_player.demo_spotify"
+          }
+        ]
+      ]
+    },
+    "library_0117_spotify_playlists_2x2": {
+      "title": "Spotify playlists \u00b7 2\u00d72",
+      "type": "custom",
+      "header": {
+        "on": false
+      },
+      "subpages": [
+        [
+          {
+            "id": "library_0117_spotify_playlists_2x2",
+            "ck": "spotify_playlists",
+            "name": "Spotify playlists",
+            "x": 1,
+            "y": 1,
+            "w": 2,
+            "h": 2,
+            "entity": "media_player.demo_spotify"
+          }
+        ]
+      ]
+    },
+    "library_0118_spotify_playlists_3x2": {
+      "title": "Spotify playlists \u00b7 3\u00d72",
+      "type": "custom",
+      "header": {
+        "on": false
+      },
+      "subpages": [
+        [
+          {
+            "id": "library_0118_spotify_playlists_3x2",
+            "ck": "spotify_playlists",
+            "name": "Spotify playlists",
+            "x": 1,
+            "y": 1,
+            "w": 3,
+            "h": 2,
+            "entity": "media_player.demo_spotify"
+          }
+        ]
+      ]
+    },
+    "library_0119_spotify_playlists_2x3": {
+      "title": "Spotify playlists \u00b7 2\u00d73",
+      "type": "custom",
+      "header": {
+        "on": false
+      },
+      "subpages": [
+        [
+          {
+            "id": "library_0119_spotify_playlists_2x3",
+            "ck": "spotify_playlists",
+            "name": "Spotify playlists",
+            "x": 1,
+            "y": 1,
+            "w": 2,
+            "h": 3,
+            "entity": "media_player.demo_spotify"
+          }
+        ]
+      ]
+    },
+    "library_0120_spotify_playlists_3x3": {
+      "title": "Spotify playlists \u00b7 3\u00d73",
+      "type": "custom",
+      "header": {
+        "on": false
+      },
+      "subpages": [
+        [
+          {
+            "id": "library_0120_spotify_playlists_3x3",
+            "ck": "spotify_playlists",
+            "name": "Spotify playlists",
+            "x": 1,
+            "y": 1,
+            "w": 3,
+            "h": 3,
+            "entity": "media_player.demo_spotify"
+          }
+        ]
+      ]
+    },
+    "library_0121_spotify_tracks_2x3": {
+      "title": "Spotify songs \u00b7 2\u00d73",
+      "type": "custom",
+      "header": {
+        "on": false
+      },
+      "subpages": [
+        [
+          {
+            "id": "library_0121_spotify_tracks_2x3",
+            "ck": "spotify_tracks",
+            "name": "Spotify songs",
+            "x": 1,
+            "y": 1,
+            "w": 2,
+            "h": 3,
+            "entity": "media_player.demo_spotify"
+          }
+        ]
+      ]
+    },
+    "library_0122_spotify_tracks_2x4": {
+      "title": "Spotify songs \u00b7 2\u00d74",
+      "type": "custom",
+      "header": {
+        "on": false
+      },
+      "subpages": [
+        [
+          {
+            "id": "library_0122_spotify_tracks_2x4",
+            "ck": "spotify_tracks",
+            "name": "Spotify songs",
+            "x": 1,
+            "y": 1,
+            "w": 2,
+            "h": 4,
+            "entity": "media_player.demo_spotify"
+          }
+        ]
+      ]
+    },
+    "library_0123_spotify_tracks_2x5": {
+      "title": "Spotify songs \u00b7 2\u00d75",
+      "type": "custom",
+      "header": {
+        "on": false
+      },
+      "subpages": [
+        [
+          {
+            "id": "library_0123_spotify_tracks_2x5",
+            "ck": "spotify_tracks",
+            "name": "Spotify songs",
+            "x": 1,
+            "y": 1,
+            "w": 2,
+            "h": 5,
+            "entity": "media_player.demo_spotify"
+          }
+        ]
+      ]
+    },
+    "library_0124_spotify_tracks_3x4": {
+      "title": "Spotify songs \u00b7 3\u00d74",
+      "type": "custom",
+      "header": {
+        "on": false
+      },
+      "subpages": [
+        [
+          {
+            "id": "library_0124_spotify_tracks_3x4",
+            "ck": "spotify_tracks",
+            "name": "Spotify songs",
+            "x": 1,
+            "y": 1,
+            "w": 3,
+            "h": 4,
+            "entity": "media_player.demo_spotify"
+          }
+        ]
+      ]
+    },
+    "library_0125_spotify_tracks_3x5": {
+      "title": "Spotify songs \u00b7 3\u00d75",
+      "type": "custom",
+      "header": {
+        "on": false
+      },
+      "subpages": [
+        [
+          {
+            "id": "library_0125_spotify_tracks_3x5",
+            "ck": "spotify_tracks",
+            "name": "Spotify songs",
+            "x": 1,
+            "y": 1,
+            "w": 3,
+            "h": 5,
+            "entity": "media_player.demo_spotify"
+          }
+        ]
+      ]
+    },
+    "library_0126_spotify_tracks_4x5": {
+      "title": "Spotify songs \u00b7 4\u00d75",
+      "type": "custom",
+      "header": {
+        "on": false
+      },
+      "subpages": [
+        [
+          {
+            "id": "library_0126_spotify_tracks_4x5",
+            "ck": "spotify_tracks",
+            "name": "Spotify songs",
+            "x": 1,
+            "y": 1,
+            "w": 4,
+            "h": 5,
+            "entity": "media_player.demo_spotify"
+          }
+        ]
+      ]
+    },
+    "library_0127_spotify_queue_2x3": {
+      "title": "Spotify queue \u00b7 2\u00d73",
+      "type": "custom",
+      "header": {
+        "on": false
+      },
+      "subpages": [
+        [
+          {
+            "id": "library_0127_spotify_queue_2x3",
+            "ck": "spotify_queue",
+            "name": "Spotify queue",
+            "x": 1,
+            "y": 1,
+            "w": 2,
+            "h": 3,
+            "entity": "media_player.demo_spotify"
+          }
+        ]
+      ]
+    },
+    "library_0128_spotify_queue_2x4": {
+      "title": "Spotify queue \u00b7 2\u00d74",
+      "type": "custom",
+      "header": {
+        "on": false
+      },
+      "subpages": [
+        [
+          {
+            "id": "library_0128_spotify_queue_2x4",
+            "ck": "spotify_queue",
+            "name": "Spotify queue",
+            "x": 1,
+            "y": 1,
+            "w": 2,
+            "h": 4,
+            "entity": "media_player.demo_spotify"
+          }
+        ]
+      ]
+    },
+    "library_0129_spotify_queue_2x5": {
+      "title": "Spotify queue \u00b7 2\u00d75",
+      "type": "custom",
+      "header": {
+        "on": false
+      },
+      "subpages": [
+        [
+          {
+            "id": "library_0129_spotify_queue_2x5",
+            "ck": "spotify_queue",
+            "name": "Spotify queue",
+            "x": 1,
+            "y": 1,
+            "w": 2,
+            "h": 5,
+            "entity": "media_player.demo_spotify"
+          }
+        ]
+      ]
+    },
+    "library_0130_spotify_queue_3x3": {
+      "title": "Spotify queue \u00b7 3\u00d73",
+      "type": "custom",
+      "header": {
+        "on": false
+      },
+      "subpages": [
+        [
+          {
+            "id": "library_0130_spotify_queue_3x3",
+            "ck": "spotify_queue",
+            "name": "Spotify queue",
+            "x": 1,
+            "y": 1,
+            "w": 3,
+            "h": 3,
+            "entity": "media_player.demo_spotify"
+          }
+        ]
+      ]
+    },
+    "library_0131_spotify_queue_3x4": {
+      "title": "Spotify queue \u00b7 3\u00d74",
+      "type": "custom",
+      "header": {
+        "on": false
+      },
+      "subpages": [
+        [
+          {
+            "id": "library_0131_spotify_queue_3x4",
+            "ck": "spotify_queue",
+            "name": "Spotify queue",
+            "x": 1,
+            "y": 1,
+            "w": 3,
+            "h": 4,
+            "entity": "media_player.demo_spotify"
+          }
+        ]
+      ]
+    },
+    "library_0132_spotify_queue_3x5": {
+      "title": "Spotify queue \u00b7 3\u00d75",
+      "type": "custom",
+      "header": {
+        "on": false
+      },
+      "subpages": [
+        [
+          {
+            "id": "library_0132_spotify_queue_3x5",
+            "ck": "spotify_queue",
+            "name": "Spotify queue",
+            "x": 1,
+            "y": 1,
+            "w": 3,
+            "h": 5,
+            "entity": "media_player.demo_spotify"
+          }
+        ]
+      ]
+    },
+    "library_0133_spotify_queue_4x4": {
+      "title": "Spotify queue \u00b7 4\u00d74",
+      "type": "custom",
+      "header": {
+        "on": false
+      },
+      "subpages": [
+        [
+          {
+            "id": "library_0133_spotify_queue_4x4",
+            "ck": "spotify_queue",
+            "name": "Spotify queue",
+            "x": 1,
+            "y": 1,
+            "w": 4,
+            "h": 4,
+            "entity": "media_player.demo_spotify"
+          }
+        ]
+      ]
+    },
+    "library_0134_spotify_queue_4x5": {
+      "title": "Spotify queue \u00b7 4\u00d75",
+      "type": "custom",
+      "header": {
+        "on": false
+      },
+      "subpages": [
+        [
+          {
+            "id": "library_0134_spotify_queue_4x5",
+            "ck": "spotify_queue",
+            "name": "Spotify queue",
+            "x": 1,
+            "y": 1,
+            "w": 4,
+            "h": 5,
+            "entity": "media_player.demo_spotify"
+          }
+        ]
+      ]
+    },
+    "library_0135_spotify_speakers_2x2": {
+      "title": "Spotify speakers (Play on) \u00b7 2\u00d72",
+      "type": "custom",
+      "header": {
+        "on": false
+      },
+      "subpages": [
+        [
+          {
+            "id": "library_0135_spotify_speakers_2x2",
+            "ck": "spotify_speakers",
+            "name": "Spotify speakers (Play on)",
+            "x": 1,
+            "y": 1,
+            "w": 2,
+            "h": 2,
+            "entity": "media_player.demo_spotify"
+          }
+        ]
+      ]
+    },
+    "library_0136_spotify_speakers_3x2": {
+      "title": "Spotify speakers (Play on) \u00b7 3\u00d72",
+      "type": "custom",
+      "header": {
+        "on": false
+      },
+      "subpages": [
+        [
+          {
+            "id": "library_0136_spotify_speakers_3x2",
+            "ck": "spotify_speakers",
+            "name": "Spotify speakers (Play on)",
+            "x": 1,
+            "y": 1,
+            "w": 3,
+            "h": 2,
+            "entity": "media_player.demo_spotify"
+          }
+        ]
+      ]
+    },
+    "library_0137_spotify_speakers_2x3": {
+      "title": "Spotify speakers (Play on) \u00b7 2\u00d73",
+      "type": "custom",
+      "header": {
+        "on": false
+      },
+      "subpages": [
+        [
+          {
+            "id": "library_0137_spotify_speakers_2x3",
+            "ck": "spotify_speakers",
+            "name": "Spotify speakers (Play on)",
+            "x": 1,
+            "y": 1,
+            "w": 2,
+            "h": 3,
+            "entity": "media_player.demo_spotify"
+          }
+        ]
+      ]
+    },
+    "library_0138_spotify_speakers_3x3": {
+      "title": "Spotify speakers (Play on) \u00b7 3\u00d73",
+      "type": "custom",
+      "header": {
+        "on": false
+      },
+      "subpages": [
+        [
+          {
+            "id": "library_0138_spotify_speakers_3x3",
+            "ck": "spotify_speakers",
+            "name": "Spotify speakers (Play on)",
+            "x": 1,
+            "y": 1,
+            "w": 3,
+            "h": 3,
+            "entity": "media_player.demo_spotify"
+          }
+        ]
+      ]
+    },
+    "library_0139_spotify_speakers_2x4": {
+      "title": "Spotify speakers (Play on) \u00b7 2\u00d74",
+      "type": "custom",
+      "header": {
+        "on": false
+      },
+      "subpages": [
+        [
+          {
+            "id": "library_0139_spotify_speakers_2x4",
+            "ck": "spotify_speakers",
+            "name": "Spotify speakers (Play on)",
+            "x": 1,
+            "y": 1,
+            "w": 2,
+            "h": 4,
+            "entity": "media_player.demo_spotify"
+          }
+        ]
+      ]
+    },
+    "library_0140_spotify_speakers_3x4": {
+      "title": "Spotify speakers (Play on) \u00b7 3\u00d74",
+      "type": "custom",
+      "header": {
+        "on": false
+      },
+      "subpages": [
+        [
+          {
+            "id": "library_0140_spotify_speakers_3x4",
+            "ck": "spotify_speakers",
+            "name": "Spotify speakers (Play on)",
+            "x": 1,
+            "y": 1,
+            "w": 3,
+            "h": 4,
+            "entity": "media_player.demo_spotify"
+          }
+        ]
+      ]
+    },
+    "library_0141_spotify_speaker_1x1": {
+      "title": "Spotify speaker \u2014 single tile \u00b7 1\u00d71",
+      "type": "custom",
+      "header": {
+        "on": false
+      },
+      "subpages": [
+        [
+          {
+            "id": "library_0141_spotify_speaker_1x1",
+            "ck": "spotify_speaker",
+            "name": "Spotify speaker \u2014 single tile",
+            "x": 1,
+            "y": 1,
+            "w": 1,
+            "h": 1,
+            "entity": "media_player.demo_spotify"
+          }
+        ]
+      ]
+    },
+    "library_0142_spotify_speaker_2x1": {
+      "title": "Spotify speaker \u2014 single tile \u00b7 2\u00d71",
+      "type": "custom",
+      "header": {
+        "on": false
+      },
+      "subpages": [
+        [
+          {
+            "id": "library_0142_spotify_speaker_2x1",
+            "ck": "spotify_speaker",
+            "name": "Spotify speaker \u2014 single tile",
+            "x": 1,
+            "y": 1,
+            "w": 2,
+            "h": 1,
+            "entity": "media_player.demo_spotify"
+          }
+        ]
+      ]
+    },
+    "library_0143_spotify_speaker_1x2": {
+      "title": "Spotify speaker \u2014 single tile \u00b7 1\u00d72",
+      "type": "custom",
+      "header": {
+        "on": false
+      },
+      "subpages": [
+        [
+          {
+            "id": "library_0143_spotify_speaker_1x2",
+            "ck": "spotify_speaker",
+            "name": "Spotify speaker \u2014 single tile",
+            "x": 1,
+            "y": 1,
+            "w": 1,
+            "h": 2,
+            "entity": "media_player.demo_spotify"
+          }
+        ]
+      ]
+    },
+    "library_0144_spotify_speaker_2x2": {
+      "title": "Spotify speaker \u2014 single tile \u00b7 2\u00d72",
+      "type": "custom",
+      "header": {
+        "on": false
+      },
+      "subpages": [
+        [
+          {
+            "id": "library_0144_spotify_speaker_2x2",
+            "ck": "spotify_speaker",
+            "name": "Spotify speaker \u2014 single tile",
+            "x": 1,
+            "y": 1,
+            "w": 2,
+            "h": 2,
+            "entity": "media_player.demo_spotify"
+          }
+        ]
+      ]
+    },
+    "library_0145_playlist_1x1": {
+      "title": "Spotify playlist \u2014 single button \u00b7 1\u00d71",
+      "type": "custom",
+      "header": {
+        "on": false
+      },
+      "subpages": [
+        [
+          {
+            "id": "library_0145_playlist_1x1",
+            "ck": "playlist",
+            "name": "Spotify playlist \u2014 single button",
+            "x": 1,
+            "y": 1,
+            "w": 1,
+            "h": 1,
+            "entity": "media_player.demo_spotify",
+            "playlist": "Demo Favorites"
+          }
+        ]
+      ]
+    },
+    "library_0146_playlist_2x1": {
+      "title": "Spotify playlist \u2014 single button \u00b7 2\u00d71",
+      "type": "custom",
+      "header": {
+        "on": false
+      },
+      "subpages": [
+        [
+          {
+            "id": "library_0146_playlist_2x1",
+            "ck": "playlist",
+            "name": "Spotify playlist \u2014 single button",
+            "x": 1,
+            "y": 1,
+            "w": 2,
+            "h": 1,
+            "entity": "media_player.demo_spotify",
+            "playlist": "Demo Favorites"
+          }
+        ]
+      ]
+    },
+    "library_0147_playlist_3x1": {
+      "title": "Spotify playlist \u2014 single button \u00b7 3\u00d71",
+      "type": "custom",
+      "header": {
+        "on": false
+      },
+      "subpages": [
+        [
+          {
+            "id": "library_0147_playlist_3x1",
+            "ck": "playlist",
+            "name": "Spotify playlist \u2014 single button",
+            "x": 1,
+            "y": 1,
+            "w": 3,
+            "h": 1,
+            "entity": "media_player.demo_spotify",
+            "playlist": "Demo Favorites"
+          }
+        ]
+      ]
+    },
+    "library_0148_songlist_4x3": {
+      "title": "Spotify song list \u00b7 4\u00d73",
+      "type": "custom",
+      "header": {
+        "on": false
+      },
+      "subpages": [
+        [
+          {
+            "id": "library_0148_songlist_4x3",
+            "ck": "songlist",
+            "name": "Spotify song list",
+            "x": 1,
+            "y": 1,
+            "w": 4,
+            "h": 3,
+            "entity": "media_player.demo_spotify"
+          }
+        ]
+      ]
+    },
+    "library_0149_songlist_3x4": {
+      "title": "Spotify song list \u00b7 3\u00d74",
+      "type": "custom",
+      "header": {
+        "on": false
+      },
+      "subpages": [
+        [
+          {
+            "id": "library_0149_songlist_3x4",
+            "ck": "songlist",
+            "name": "Spotify song list",
+            "x": 1,
+            "y": 1,
+            "w": 3,
+            "h": 4,
+            "entity": "media_player.demo_spotify"
+          }
+        ]
+      ]
+    },
+    "library_0150_songlist_4x4": {
+      "title": "Spotify song list \u00b7 4\u00d74",
+      "type": "custom",
+      "header": {
+        "on": false
+      },
+      "subpages": [
+        [
+          {
+            "id": "library_0150_songlist_4x4",
+            "ck": "songlist",
+            "name": "Spotify song list",
+            "x": 1,
+            "y": 1,
+            "w": 4,
+            "h": 4,
+            "entity": "media_player.demo_spotify"
+          }
+        ]
+      ]
+    },
+    "library_0151_songlist_3x5": {
+      "title": "Spotify song list \u00b7 3\u00d75",
+      "type": "custom",
+      "header": {
+        "on": false
+      },
+      "subpages": [
+        [
+          {
+            "id": "library_0151_songlist_3x5",
+            "ck": "songlist",
+            "name": "Spotify song list",
+            "x": 1,
+            "y": 1,
+            "w": 3,
+            "h": 5,
+            "entity": "media_player.demo_spotify"
+          }
+        ]
+      ]
+    },
+    "library_0152_songlist_4x5": {
+      "title": "Spotify song list \u00b7 4\u00d75",
+      "type": "custom",
+      "header": {
+        "on": false
+      },
+      "subpages": [
+        [
+          {
+            "id": "library_0152_songlist_4x5",
+            "ck": "songlist",
+            "name": "Spotify song list",
+            "x": 1,
+            "y": 1,
+            "w": 4,
+            "h": 5,
+            "entity": "media_player.demo_spotify"
+          }
+        ]
+      ]
+    },
+    "library_0153_songlist_5x5": {
+      "title": "Spotify song list \u00b7 5\u00d75",
+      "type": "custom",
+      "header": {
+        "on": false
+      },
+      "subpages": [
+        [
+          {
+            "id": "library_0153_songlist_5x5",
+            "ck": "songlist",
+            "name": "Spotify song list",
+            "x": 1,
+            "y": 1,
+            "w": 5,
+            "h": 5,
+            "entity": "media_player.demo_spotify"
+          }
+        ]
+      ]
+    },
+    "library_0154_sonos_3x2": {
+      "title": "Sonos now-playing \u00b7 3\u00d72",
+      "type": "custom",
+      "header": {
+        "on": false
+      },
+      "subpages": [
+        [
+          {
+            "id": "library_0154_sonos_3x2",
+            "ck": "sonos",
+            "name": "Sonos now-playing",
+            "x": 1,
+            "y": 1,
+            "w": 3,
+            "h": 2,
+            "entity": "media_player.demo_spotify"
+          }
+        ]
+      ]
+    },
+    "library_0155_sonos_3x3": {
+      "title": "Sonos now-playing \u00b7 3\u00d73",
+      "type": "custom",
+      "header": {
+        "on": false
+      },
+      "subpages": [
+        [
+          {
+            "id": "library_0155_sonos_3x3",
+            "ck": "sonos",
+            "name": "Sonos now-playing",
+            "x": 1,
+            "y": 1,
+            "w": 3,
+            "h": 3,
+            "entity": "media_player.demo_spotify"
+          }
+        ]
+      ]
+    },
+    "library_0156_sonos_4x4": {
+      "title": "Sonos now-playing \u00b7 4\u00d74",
+      "type": "custom",
+      "header": {
+        "on": false
+      },
+      "subpages": [
+        [
+          {
+            "id": "library_0156_sonos_4x4",
+            "ck": "sonos",
+            "name": "Sonos now-playing",
+            "x": 1,
+            "y": 1,
+            "w": 4,
+            "h": 4,
+            "entity": "media_player.demo_spotify"
+          }
+        ]
+      ]
+    },
+    "library_0157_sonos_6x5": {
+      "title": "Sonos now-playing \u00b7 6\u00d75",
+      "type": "custom",
+      "header": {
+        "on": false
+      },
+      "subpages": [
+        [
+          {
+            "id": "library_0157_sonos_6x5",
+            "ck": "sonos",
+            "name": "Sonos now-playing",
+            "x": 1,
+            "y": 1,
+            "w": 6,
+            "h": 5,
+            "entity": "media_player.demo_spotify"
+          }
+        ]
+      ]
+    },
+    "library_0158_media_1x1": {
+      "title": "Media player \u00b7 1\u00d71",
+      "type": "custom",
+      "header": {
+        "on": false
+      },
+      "subpages": [
+        [
+          {
+            "id": "library_0158_media_1x1",
+            "ck": "media",
+            "name": "Media player",
+            "x": 1,
+            "y": 1,
+            "w": 1,
+            "h": 1,
+            "entity": "media_player.demo_spotify"
+          }
+        ]
+      ]
+    },
+    "library_0159_media_2x1": {
+      "title": "Media player \u00b7 2\u00d71",
+      "type": "custom",
+      "header": {
+        "on": false
+      },
+      "subpages": [
+        [
+          {
+            "id": "library_0159_media_2x1",
+            "ck": "media",
+            "name": "Media player",
+            "x": 1,
+            "y": 1,
+            "w": 2,
+            "h": 1,
+            "entity": "media_player.demo_spotify"
+          }
+        ]
+      ]
+    },
+    "library_0160_media_2x2": {
+      "title": "Media player \u00b7 2\u00d72",
+      "type": "custom",
+      "header": {
+        "on": false
+      },
+      "subpages": [
+        [
+          {
+            "id": "library_0160_media_2x2",
+            "ck": "media",
+            "name": "Media player",
+            "x": 1,
+            "y": 1,
+            "w": 2,
+            "h": 2,
+            "entity": "media_player.demo_spotify"
+          }
+        ]
+      ]
+    },
+    "library_0161_media_3x2": {
+      "title": "Media player \u00b7 3\u00d72",
+      "type": "custom",
+      "header": {
+        "on": false
+      },
+      "subpages": [
+        [
+          {
+            "id": "library_0161_media_3x2",
+            "ck": "media",
+            "name": "Media player",
+            "x": 1,
+            "y": 1,
+            "w": 3,
+            "h": 2,
+            "entity": "media_player.demo_spotify"
+          }
+        ]
+      ]
+    },
+    "library_0162_media_3x3": {
+      "title": "Media player \u00b7 3\u00d73",
+      "type": "custom",
+      "header": {
+        "on": false
+      },
+      "subpages": [
+        [
+          {
+            "id": "library_0162_media_3x3",
+            "ck": "media",
+            "name": "Media player",
+            "x": 1,
+            "y": 1,
+            "w": 3,
+            "h": 3,
+            "entity": "media_player.demo_spotify"
+          }
+        ]
+      ]
+    },
+    "library_0163_media_4x3": {
+      "title": "Media player \u00b7 4\u00d73",
+      "type": "custom",
+      "header": {
+        "on": false
+      },
+      "subpages": [
+        [
+          {
+            "id": "library_0163_media_4x3",
+            "ck": "media",
+            "name": "Media player",
+            "x": 1,
+            "y": 1,
+            "w": 4,
+            "h": 3,
+            "entity": "media_player.demo_spotify"
+          }
+        ]
+      ]
+    },
+    "library_0164_media_6x5": {
+      "title": "Media player \u00b7 6\u00d75",
+      "type": "custom",
+      "header": {
+        "on": false
+      },
+      "subpages": [
+        [
+          {
+            "id": "library_0164_media_6x5",
+            "ck": "media",
+            "name": "Media player",
+            "x": 1,
+            "y": 1,
+            "w": 6,
+            "h": 5,
+            "entity": "media_player.demo_spotify"
+          }
+        ]
+      ]
+    },
+    "library_0165_volume_1x1": {
+      "title": "Volume \u00b7 1\u00d71",
+      "type": "custom",
+      "header": {
+        "on": false
+      },
+      "subpages": [
+        [
+          {
+            "id": "library_0165_volume_1x1",
+            "ck": "volume",
+            "name": "Volume",
+            "x": 1,
+            "y": 1,
+            "w": 1,
+            "h": 1,
+            "entity": "media_player.demo_spotify"
+          }
+        ]
+      ]
+    },
+    "library_0166_volume_2x1": {
+      "title": "Volume \u00b7 2\u00d71",
+      "type": "custom",
+      "header": {
+        "on": false
+      },
+      "subpages": [
+        [
+          {
+            "id": "library_0166_volume_2x1",
+            "ck": "volume",
+            "name": "Volume",
+            "x": 1,
+            "y": 1,
+            "w": 2,
+            "h": 1,
+            "entity": "media_player.demo_spotify"
+          }
+        ]
+      ]
+    },
+    "library_0167_volume_1x2": {
+      "title": "Volume \u00b7 1\u00d72",
+      "type": "custom",
+      "header": {
+        "on": false
+      },
+      "subpages": [
+        [
+          {
+            "id": "library_0167_volume_1x2",
+            "ck": "volume",
+            "name": "Volume",
+            "x": 1,
+            "y": 1,
+            "w": 1,
+            "h": 2,
+            "entity": "media_player.demo_spotify"
+          }
+        ]
+      ]
+    },
+    "library_0168_volume_2x2": {
+      "title": "Volume \u00b7 2\u00d72",
+      "type": "custom",
+      "header": {
+        "on": false
+      },
+      "subpages": [
+        [
+          {
+            "id": "library_0168_volume_2x2",
+            "ck": "volume",
+            "name": "Volume",
+            "x": 1,
+            "y": 1,
+            "w": 2,
+            "h": 2,
+            "entity": "media_player.demo_spotify"
+          }
+        ]
+      ]
+    },
+    "library_0169_volume_3x2": {
+      "title": "Volume \u00b7 3\u00d72",
+      "type": "custom",
+      "header": {
+        "on": false
+      },
+      "subpages": [
+        [
+          {
+            "id": "library_0169_volume_3x2",
+            "ck": "volume",
+            "name": "Volume",
+            "x": 1,
+            "y": 1,
+            "w": 3,
+            "h": 2,
+            "entity": "media_player.demo_spotify"
+          }
+        ]
+      ]
+    },
+    "library_0170_volumes_2x2": {
+      "title": "Volume \u2014 per-speaker list \u00b7 2\u00d72",
+      "type": "custom",
+      "header": {
+        "on": false
+      },
+      "subpages": [
+        [
+          {
+            "id": "library_0170_volumes_2x2",
+            "ck": "volumes",
+            "name": "Volume \u2014 per-speaker list",
+            "x": 1,
+            "y": 1,
+            "w": 2,
+            "h": 2,
+            "entity": "media_player.demo_spotify",
+            "entities": [
+              "light.demo_living_room",
+              "light.demo_kitchen",
+              "light.demo_office",
+              "switch.demo_outlet"
+            ]
+          }
+        ]
+      ]
+    },
+    "library_0171_volumes_3x2": {
+      "title": "Volume \u2014 per-speaker list \u00b7 3\u00d72",
+      "type": "custom",
+      "header": {
+        "on": false
+      },
+      "subpages": [
+        [
+          {
+            "id": "library_0171_volumes_3x2",
+            "ck": "volumes",
+            "name": "Volume \u2014 per-speaker list",
+            "x": 1,
+            "y": 1,
+            "w": 3,
+            "h": 2,
+            "entity": "media_player.demo_spotify",
+            "entities": [
+              "light.demo_living_room",
+              "light.demo_kitchen",
+              "light.demo_office",
+              "switch.demo_outlet",
+              "sensor.demo_temperature",
+              "binary_sensor.demo_motion"
+            ]
+          }
+        ]
+      ]
+    },
+    "library_0172_volumes_2x3": {
+      "title": "Volume \u2014 per-speaker list \u00b7 2\u00d73",
+      "type": "custom",
+      "header": {
+        "on": false
+      },
+      "subpages": [
+        [
+          {
+            "id": "library_0172_volumes_2x3",
+            "ck": "volumes",
+            "name": "Volume \u2014 per-speaker list",
+            "x": 1,
+            "y": 1,
+            "w": 2,
+            "h": 3,
+            "entity": "media_player.demo_spotify",
+            "entities": [
+              "light.demo_living_room",
+              "light.demo_kitchen",
+              "light.demo_office",
+              "switch.demo_outlet",
+              "sensor.demo_temperature",
+              "binary_sensor.demo_motion"
+            ]
+          }
+        ]
+      ]
+    },
+    "library_0173_volumes_3x3": {
+      "title": "Volume \u2014 per-speaker list \u00b7 3\u00d73",
+      "type": "custom",
+      "header": {
+        "on": false
+      },
+      "subpages": [
+        [
+          {
+            "id": "library_0173_volumes_3x3",
+            "ck": "volumes",
+            "name": "Volume \u2014 per-speaker list",
+            "x": 1,
+            "y": 1,
+            "w": 3,
+            "h": 3,
+            "entity": "media_player.demo_spotify",
+            "entities": [
+              "light.demo_living_room",
+              "light.demo_kitchen",
+              "light.demo_office",
+              "switch.demo_outlet",
+              "sensor.demo_temperature",
+              "binary_sensor.demo_motion"
+            ]
+          }
+        ]
+      ]
+    },
+    "library_0174_volumes_2x4": {
+      "title": "Volume \u2014 per-speaker list \u00b7 2\u00d74",
+      "type": "custom",
+      "header": {
+        "on": false
+      },
+      "subpages": [
+        [
+          {
+            "id": "library_0174_volumes_2x4",
+            "ck": "volumes",
+            "name": "Volume \u2014 per-speaker list",
+            "x": 1,
+            "y": 1,
+            "w": 2,
+            "h": 4,
+            "entity": "media_player.demo_spotify",
+            "entities": [
+              "light.demo_living_room",
+              "light.demo_kitchen",
+              "light.demo_office",
+              "switch.demo_outlet",
+              "sensor.demo_temperature",
+              "binary_sensor.demo_motion"
+            ]
+          }
+        ]
+      ]
+    },
+    "library_0175_volumes_3x4": {
+      "title": "Volume \u2014 per-speaker list \u00b7 3\u00d74",
+      "type": "custom",
+      "header": {
+        "on": false
+      },
+      "subpages": [
+        [
+          {
+            "id": "library_0175_volumes_3x4",
+            "ck": "volumes",
+            "name": "Volume \u2014 per-speaker list",
+            "x": 1,
+            "y": 1,
+            "w": 3,
+            "h": 4,
+            "entity": "media_player.demo_spotify",
+            "entities": [
+              "light.demo_living_room",
+              "light.demo_kitchen",
+              "light.demo_office",
+              "switch.demo_outlet",
+              "sensor.demo_temperature",
+              "binary_sensor.demo_motion"
+            ]
+          }
+        ]
+      ]
+    },
+    "library_0176_tvremote_1x1": {
+      "title": "TV remote \u00b7 1\u00d71",
+      "type": "custom",
+      "header": {
+        "on": false
+      },
+      "subpages": [
+        [
+          {
+            "id": "library_0176_tvremote_1x1",
+            "ck": "tvremote",
+            "name": "TV remote",
+            "x": 1,
+            "y": 1,
+            "w": 1,
+            "h": 1,
+            "entity": "media_player.demo_spotify"
+          }
+        ]
+      ]
+    },
+    "library_0177_tvremote_2x2": {
+      "title": "TV remote \u00b7 2\u00d72",
+      "type": "custom",
+      "header": {
+        "on": false
+      },
+      "subpages": [
+        [
+          {
+            "id": "library_0177_tvremote_2x2",
+            "ck": "tvremote",
+            "name": "TV remote",
+            "x": 1,
+            "y": 1,
+            "w": 2,
+            "h": 2,
+            "entity": "media_player.demo_spotify"
+          }
+        ]
+      ]
+    },
+    "library_0178_tvremote_3x2": {
+      "title": "TV remote \u00b7 3\u00d72",
+      "type": "custom",
+      "header": {
+        "on": false
+      },
+      "subpages": [
+        [
+          {
+            "id": "library_0178_tvremote_3x2",
+            "ck": "tvremote",
+            "name": "TV remote",
+            "x": 1,
+            "y": 1,
+            "w": 3,
+            "h": 2,
+            "entity": "media_player.demo_spotify"
+          }
+        ]
+      ]
+    },
+    "library_0179_tvremote_4x4": {
+      "title": "TV remote \u00b7 4\u00d74",
+      "type": "custom",
+      "header": {
+        "on": false
+      },
+      "subpages": [
+        [
+          {
+            "id": "library_0179_tvremote_4x4",
+            "ck": "tvremote",
+            "name": "TV remote",
+            "x": 1,
+            "y": 1,
+            "w": 4,
+            "h": 4,
+            "entity": "media_player.demo_spotify"
+          }
+        ]
+      ]
+    },
+    "library_0180_tvremote_4x5": {
+      "title": "TV remote \u00b7 4\u00d75",
+      "type": "custom",
+      "header": {
+        "on": false
+      },
+      "subpages": [
+        [
+          {
+            "id": "library_0180_tvremote_4x5",
+            "ck": "tvremote",
+            "name": "TV remote",
+            "x": 1,
+            "y": 1,
+            "w": 4,
+            "h": 5,
+            "entity": "media_player.demo_spotify"
+          }
+        ]
+      ]
+    },
+    "library_0181_tvremote_5x5": {
+      "title": "TV remote \u00b7 5\u00d75",
+      "type": "custom",
+      "header": {
+        "on": false
+      },
+      "subpages": [
+        [
+          {
+            "id": "library_0181_tvremote_5x5",
+            "ck": "tvremote",
+            "name": "TV remote",
+            "x": 1,
+            "y": 1,
+            "w": 5,
+            "h": 5,
+            "entity": "media_player.demo_spotify"
+          }
+        ]
+      ]
+    },
+    "library_0182_tvremote_6x5": {
+      "title": "TV remote \u00b7 6\u00d75",
+      "type": "custom",
+      "header": {
+        "on": false
+      },
+      "subpages": [
+        [
+          {
+            "id": "library_0182_tvremote_6x5",
+            "ck": "tvremote",
+            "name": "TV remote",
+            "x": 1,
+            "y": 1,
+            "w": 6,
+            "h": 5,
+            "entity": "media_player.demo_spotify"
+          }
+        ]
+      ]
+    },
+    "library_0183_tv_dpad_2x2": {
+      "title": "TV D-pad \u00b7 2\u00d72",
+      "type": "custom",
+      "header": {
+        "on": false
+      },
+      "subpages": [
+        [
+          {
+            "id": "library_0183_tv_dpad_2x2",
+            "ck": "tv_dpad",
+            "name": "TV D-pad",
+            "x": 1,
+            "y": 1,
+            "w": 2,
+            "h": 2,
+            "entity": "media_player.demo_spotify"
+          }
+        ]
+      ]
+    },
+    "library_0184_tv_dpad_3x2": {
+      "title": "TV D-pad \u00b7 3\u00d72",
+      "type": "custom",
+      "header": {
+        "on": false
+      },
+      "subpages": [
+        [
+          {
+            "id": "library_0184_tv_dpad_3x2",
+            "ck": "tv_dpad",
+            "name": "TV D-pad",
+            "x": 1,
+            "y": 1,
+            "w": 3,
+            "h": 2,
+            "entity": "media_player.demo_spotify"
+          }
+        ]
+      ]
+    },
+    "library_0185_tv_dpad_2x3": {
+      "title": "TV D-pad \u00b7 2\u00d73",
+      "type": "custom",
+      "header": {
+        "on": false
+      },
+      "subpages": [
+        [
+          {
+            "id": "library_0185_tv_dpad_2x3",
+            "ck": "tv_dpad",
+            "name": "TV D-pad",
+            "x": 1,
+            "y": 1,
+            "w": 2,
+            "h": 3,
+            "entity": "media_player.demo_spotify"
+          }
+        ]
+      ]
+    },
+    "library_0186_tv_dpad_3x3": {
+      "title": "TV D-pad \u00b7 3\u00d73",
+      "type": "custom",
+      "header": {
+        "on": false
+      },
+      "subpages": [
+        [
+          {
+            "id": "library_0186_tv_dpad_3x3",
+            "ck": "tv_dpad",
+            "name": "TV D-pad",
+            "x": 1,
+            "y": 1,
+            "w": 3,
+            "h": 3,
+            "entity": "media_player.demo_spotify"
+          }
+        ]
+      ]
+    },
+    "library_0187_tv_transport_2x1": {
+      "title": "TV transport \u00b7 2\u00d71",
+      "type": "custom",
+      "header": {
+        "on": false
+      },
+      "subpages": [
+        [
+          {
+            "id": "library_0187_tv_transport_2x1",
+            "ck": "tv_transport",
+            "name": "TV transport",
+            "x": 1,
+            "y": 1,
+            "w": 2,
+            "h": 1,
+            "entity": "media_player.demo_spotify"
+          }
+        ]
+      ]
+    },
+    "library_0188_tv_transport_3x1": {
+      "title": "TV transport \u00b7 3\u00d71",
+      "type": "custom",
+      "header": {
+        "on": false
+      },
+      "subpages": [
+        [
+          {
+            "id": "library_0188_tv_transport_3x1",
+            "ck": "tv_transport",
+            "name": "TV transport",
+            "x": 1,
+            "y": 1,
+            "w": 3,
+            "h": 1,
+            "entity": "media_player.demo_spotify"
+          }
+        ]
+      ]
+    },
+    "library_0189_tv_transport_4x1": {
+      "title": "TV transport \u00b7 4\u00d71",
+      "type": "custom",
+      "header": {
+        "on": false
+      },
+      "subpages": [
+        [
+          {
+            "id": "library_0189_tv_transport_4x1",
+            "ck": "tv_transport",
+            "name": "TV transport",
+            "x": 1,
+            "y": 1,
+            "w": 4,
+            "h": 1,
+            "entity": "media_player.demo_spotify"
+          }
+        ]
+      ]
+    },
+    "library_0190_tv_transport_6x1": {
+      "title": "TV transport \u00b7 6\u00d71",
+      "type": "custom",
+      "header": {
+        "on": false
+      },
+      "subpages": [
+        [
+          {
+            "id": "library_0190_tv_transport_6x1",
+            "ck": "tv_transport",
+            "name": "TV transport",
+            "x": 1,
+            "y": 1,
+            "w": 6,
+            "h": 1,
+            "entity": "media_player.demo_spotify"
+          }
+        ]
+      ]
+    },
+    "library_0191_tv_transport_2x2": {
+      "title": "TV transport \u00b7 2\u00d72",
+      "type": "custom",
+      "header": {
+        "on": false
+      },
+      "subpages": [
+        [
+          {
+            "id": "library_0191_tv_transport_2x2",
+            "ck": "tv_transport",
+            "name": "TV transport",
+            "x": 1,
+            "y": 1,
+            "w": 2,
+            "h": 2,
+            "entity": "media_player.demo_spotify"
+          }
+        ]
+      ]
+    },
+    "library_0192_tv_transport_4x2": {
+      "title": "TV transport \u00b7 4\u00d72",
+      "type": "custom",
+      "header": {
+        "on": false
+      },
+      "subpages": [
+        [
+          {
+            "id": "library_0192_tv_transport_4x2",
+            "ck": "tv_transport",
+            "name": "TV transport",
+            "x": 1,
+            "y": 1,
+            "w": 4,
+            "h": 2,
+            "entity": "media_player.demo_spotify"
+          }
+        ]
+      ]
+    },
+    "library_0193_tv_channel_1x1": {
+      "title": "TV channel +/- \u00b7 1\u00d71",
+      "type": "custom",
+      "header": {
+        "on": false
+      },
+      "subpages": [
+        [
+          {
+            "id": "library_0193_tv_channel_1x1",
+            "ck": "tv_channel",
+            "name": "TV channel +/-",
+            "x": 1,
+            "y": 1,
+            "w": 1,
+            "h": 1,
+            "entity": "media_player.demo_spotify"
+          }
+        ]
+      ]
+    },
+    "library_0194_tv_channel_1x2": {
+      "title": "TV channel +/- \u00b7 1\u00d72",
+      "type": "custom",
+      "header": {
+        "on": false
+      },
+      "subpages": [
+        [
+          {
+            "id": "library_0194_tv_channel_1x2",
+            "ck": "tv_channel",
+            "name": "TV channel +/-",
+            "x": 1,
+            "y": 1,
+            "w": 1,
+            "h": 2,
+            "entity": "media_player.demo_spotify"
+          }
+        ]
+      ]
+    },
+    "library_0195_tv_channel_2x1": {
+      "title": "TV channel +/- \u00b7 2\u00d71",
+      "type": "custom",
+      "header": {
+        "on": false
+      },
+      "subpages": [
+        [
+          {
+            "id": "library_0195_tv_channel_2x1",
+            "ck": "tv_channel",
+            "name": "TV channel +/-",
+            "x": 1,
+            "y": 1,
+            "w": 2,
+            "h": 1,
+            "entity": "media_player.demo_spotify"
+          }
+        ]
+      ]
+    },
+    "library_0196_tv_channel_2x2": {
+      "title": "TV channel +/- \u00b7 2\u00d72",
+      "type": "custom",
+      "header": {
+        "on": false
+      },
+      "subpages": [
+        [
+          {
+            "id": "library_0196_tv_channel_2x2",
+            "ck": "tv_channel",
+            "name": "TV channel +/-",
+            "x": 1,
+            "y": 1,
+            "w": 2,
+            "h": 2,
+            "entity": "media_player.demo_spotify"
+          }
+        ]
+      ]
+    },
+    "library_0197_tv_volume_1x1": {
+      "title": "TV volume \u00b7 1\u00d71",
+      "type": "custom",
+      "header": {
+        "on": false
+      },
+      "subpages": [
+        [
+          {
+            "id": "library_0197_tv_volume_1x1",
+            "ck": "tv_volume",
+            "name": "TV volume",
+            "x": 1,
+            "y": 1,
+            "w": 1,
+            "h": 1,
+            "entity": "media_player.demo_spotify"
+          }
+        ]
+      ]
+    },
+    "library_0198_tv_volume_1x2": {
+      "title": "TV volume \u00b7 1\u00d72",
+      "type": "custom",
+      "header": {
+        "on": false
+      },
+      "subpages": [
+        [
+          {
+            "id": "library_0198_tv_volume_1x2",
+            "ck": "tv_volume",
+            "name": "TV volume",
+            "x": 1,
+            "y": 1,
+            "w": 1,
+            "h": 2,
+            "entity": "media_player.demo_spotify"
+          }
+        ]
+      ]
+    },
+    "library_0199_tv_volume_1x3": {
+      "title": "TV volume \u00b7 1\u00d73",
+      "type": "custom",
+      "header": {
+        "on": false
+      },
+      "subpages": [
+        [
+          {
+            "id": "library_0199_tv_volume_1x3",
+            "ck": "tv_volume",
+            "name": "TV volume",
+            "x": 1,
+            "y": 1,
+            "w": 1,
+            "h": 3,
+            "entity": "media_player.demo_spotify"
+          }
+        ]
+      ]
+    },
+    "library_0200_tv_volume_2x1": {
+      "title": "TV volume \u00b7 2\u00d71",
+      "type": "custom",
+      "header": {
+        "on": false
+      },
+      "subpages": [
+        [
+          {
+            "id": "library_0200_tv_volume_2x1",
+            "ck": "tv_volume",
+            "name": "TV volume",
+            "x": 1,
+            "y": 1,
+            "w": 2,
+            "h": 1,
+            "entity": "media_player.demo_spotify"
+          }
+        ]
+      ]
+    },
+    "library_0201_tv_volume_2x2": {
+      "title": "TV volume \u00b7 2\u00d72",
+      "type": "custom",
+      "header": {
+        "on": false
+      },
+      "subpages": [
+        [
+          {
+            "id": "library_0201_tv_volume_2x2",
+            "ck": "tv_volume",
+            "name": "TV volume",
+            "x": 1,
+            "y": 1,
+            "w": 2,
+            "h": 2,
+            "entity": "media_player.demo_spotify"
+          }
+        ]
+      ]
+    },
+    "library_0202_tv_sources_1x2": {
+      "title": "TV sources / inputs \u00b7 1\u00d72",
+      "type": "custom",
+      "header": {
+        "on": false
+      },
+      "subpages": [
+        [
+          {
+            "id": "library_0202_tv_sources_1x2",
+            "ck": "tv_sources",
+            "name": "TV sources / inputs",
+            "x": 1,
+            "y": 1,
+            "w": 1,
+            "h": 2,
+            "entity": "media_player.demo_spotify",
+            "entities": [
+              "media_player.demo_tv",
+              "HDMI 1",
+              "Nintendo Switch",
+              "Spotify",
+              "YouTube",
+              "Plex"
+            ]
+          }
+        ]
+      ]
+    },
+    "library_0203_tv_sources_1x3": {
+      "title": "TV sources / inputs \u00b7 1\u00d73",
+      "type": "custom",
+      "header": {
+        "on": false
+      },
+      "subpages": [
+        [
+          {
+            "id": "library_0203_tv_sources_1x3",
+            "ck": "tv_sources",
+            "name": "TV sources / inputs",
+            "x": 1,
+            "y": 1,
+            "w": 1,
+            "h": 3,
+            "entity": "media_player.demo_spotify",
+            "entities": [
+              "media_player.demo_tv",
+              "HDMI 1",
+              "Nintendo Switch",
+              "Spotify",
+              "YouTube",
+              "Plex"
+            ]
+          }
+        ]
+      ]
+    },
+    "library_0204_tv_sources_3x2": {
+      "title": "TV sources / inputs \u00b7 3\u00d72",
+      "type": "custom",
+      "header": {
+        "on": false
+      },
+      "subpages": [
+        [
+          {
+            "id": "library_0204_tv_sources_3x2",
+            "ck": "tv_sources",
+            "name": "TV sources / inputs",
+            "x": 1,
+            "y": 1,
+            "w": 3,
+            "h": 2,
+            "entity": "media_player.demo_spotify",
+            "entities": [
+              "media_player.demo_tv",
+              "HDMI 1",
+              "Nintendo Switch",
+              "Spotify",
+              "YouTube",
+              "Plex"
+            ]
+          }
+        ]
+      ]
+    },
+    "library_0205_tv_sources_2x3": {
+      "title": "TV sources / inputs \u00b7 2\u00d73",
+      "type": "custom",
+      "header": {
+        "on": false
+      },
+      "subpages": [
+        [
+          {
+            "id": "library_0205_tv_sources_2x3",
+            "ck": "tv_sources",
+            "name": "TV sources / inputs",
+            "x": 1,
+            "y": 1,
+            "w": 2,
+            "h": 3,
+            "entity": "media_player.demo_spotify",
+            "entities": [
+              "media_player.demo_tv",
+              "HDMI 1",
+              "Nintendo Switch",
+              "Spotify",
+              "YouTube",
+              "Plex"
+            ]
+          }
+        ]
+      ]
+    },
+    "library_0206_tv_sources_3x3": {
+      "title": "TV sources / inputs \u00b7 3\u00d73",
+      "type": "custom",
+      "header": {
+        "on": false
+      },
+      "subpages": [
+        [
+          {
+            "id": "library_0206_tv_sources_3x3",
+            "ck": "tv_sources",
+            "name": "TV sources / inputs",
+            "x": 1,
+            "y": 1,
+            "w": 3,
+            "h": 3,
+            "entity": "media_player.demo_spotify",
+            "entities": [
+              "media_player.demo_tv",
+              "HDMI 1",
+              "Nintendo Switch",
+              "Spotify",
+              "YouTube",
+              "Plex"
+            ]
+          }
+        ]
+      ]
+    },
+    "library_0207_tv_sources_5x4": {
+      "title": "TV sources / inputs \u00b7 5\u00d74",
+      "type": "custom",
+      "header": {
+        "on": false
+      },
+      "subpages": [
+        [
+          {
+            "id": "library_0207_tv_sources_5x4",
+            "ck": "tv_sources",
+            "name": "TV sources / inputs",
+            "x": 1,
+            "y": 1,
+            "w": 5,
+            "h": 4,
+            "entity": "media_player.demo_spotify",
+            "entities": [
+              "media_player.demo_tv",
+              "HDMI 1",
+              "Nintendo Switch",
+              "Spotify",
+              "YouTube",
+              "Plex"
+            ]
+          }
+        ]
+      ]
+    },
+    "library_0208_tv_trackpad_3x3": {
+      "title": "TV trackpad \u00b7 3\u00d73",
+      "type": "custom",
+      "header": {
+        "on": false
+      },
+      "subpages": [
+        [
+          {
+            "id": "library_0208_tv_trackpad_3x3",
+            "ck": "tv_trackpad",
+            "name": "TV trackpad",
+            "x": 1,
+            "y": 1,
+            "w": 3,
+            "h": 3,
+            "entity": "media_player.demo_spotify"
+          }
+        ]
+      ]
+    },
+    "library_0209_tv_trackpad_4x3": {
+      "title": "TV trackpad \u00b7 4\u00d73",
+      "type": "custom",
+      "header": {
+        "on": false
+      },
+      "subpages": [
+        [
+          {
+            "id": "library_0209_tv_trackpad_4x3",
+            "ck": "tv_trackpad",
+            "name": "TV trackpad",
+            "x": 1,
+            "y": 1,
+            "w": 4,
+            "h": 3,
+            "entity": "media_player.demo_spotify"
+          }
+        ]
+      ]
+    },
+    "library_0210_tv_trackpad_4x4": {
+      "title": "TV trackpad \u00b7 4\u00d74",
+      "type": "custom",
+      "header": {
+        "on": false
+      },
+      "subpages": [
+        [
+          {
+            "id": "library_0210_tv_trackpad_4x4",
+            "ck": "tv_trackpad",
+            "name": "TV trackpad",
+            "x": 1,
+            "y": 1,
+            "w": 4,
+            "h": 4,
+            "entity": "media_player.demo_spotify"
+          }
+        ]
+      ]
+    },
+    "library_0211_tv_trackpad_6x4": {
+      "title": "TV trackpad \u00b7 6\u00d74",
+      "type": "custom",
+      "header": {
+        "on": false
+      },
+      "subpages": [
+        [
+          {
+            "id": "library_0211_tv_trackpad_6x4",
+            "ck": "tv_trackpad",
+            "name": "TV trackpad",
+            "x": 1,
+            "y": 1,
+            "w": 6,
+            "h": 4,
+            "entity": "media_player.demo_spotify"
+          }
+        ]
+      ]
+    },
+    "library_0212_tv_trackpad_6x5": {
+      "title": "TV trackpad \u00b7 6\u00d75",
+      "type": "custom",
+      "header": {
+        "on": false
+      },
+      "subpages": [
+        [
+          {
+            "id": "library_0212_tv_trackpad_6x5",
+            "ck": "tv_trackpad",
+            "name": "TV trackpad",
+            "x": 1,
+            "y": 1,
+            "w": 6,
+            "h": 5,
+            "entity": "media_player.demo_spotify"
+          }
+        ]
+      ]
+    },
+    "library_0213_tv_app_1x1": {
+      "title": "TV app / input \u2014 launcher \u00b7 1\u00d71",
+      "type": "custom",
+      "header": {
+        "on": false
+      },
+      "subpages": [
+        [
+          {
+            "id": "library_0213_tv_app_1x1",
+            "ck": "tv_app",
+            "name": "TV app / input \u2014 launcher",
+            "x": 1,
+            "y": 1,
+            "w": 1,
+            "h": 1,
+            "entity": "media_player.demo_spotify",
+            "source": "Netflix"
+          }
+        ]
+      ]
+    },
+    "library_0214_tv_app_2x1": {
+      "title": "TV app / input \u2014 launcher \u00b7 2\u00d71",
+      "type": "custom",
+      "header": {
+        "on": false
+      },
+      "subpages": [
+        [
+          {
+            "id": "library_0214_tv_app_2x1",
+            "ck": "tv_app",
+            "name": "TV app / input \u2014 launcher",
+            "x": 1,
+            "y": 1,
+            "w": 2,
+            "h": 1,
+            "entity": "media_player.demo_spotify",
+            "source": "Netflix"
+          }
+        ]
+      ]
+    },
+    "library_0215_tv_app_1x2": {
+      "title": "TV app / input \u2014 launcher \u00b7 1\u00d72",
+      "type": "custom",
+      "header": {
+        "on": false
+      },
+      "subpages": [
+        [
+          {
+            "id": "library_0215_tv_app_1x2",
+            "ck": "tv_app",
+            "name": "TV app / input \u2014 launcher",
+            "x": 1,
+            "y": 1,
+            "w": 1,
+            "h": 2,
+            "entity": "media_player.demo_spotify",
+            "source": "Netflix"
+          }
+        ]
+      ]
+    },
+    "library_0216_tv_app_2x2": {
+      "title": "TV app / input \u2014 launcher \u00b7 2\u00d72",
+      "type": "custom",
+      "header": {
+        "on": false
+      },
+      "subpages": [
+        [
+          {
+            "id": "library_0216_tv_app_2x2",
+            "ck": "tv_app",
+            "name": "TV app / input \u2014 launcher",
+            "x": 1,
+            "y": 1,
+            "w": 2,
+            "h": 2,
+            "entity": "media_player.demo_spotify",
+            "source": "Netflix"
+          }
+        ]
+      ]
+    },
+    "library_0217_tv_app_3x2": {
+      "title": "TV app / input \u2014 launcher \u00b7 3\u00d72",
+      "type": "custom",
+      "header": {
+        "on": false
+      },
+      "subpages": [
+        [
+          {
+            "id": "library_0217_tv_app_3x2",
+            "ck": "tv_app",
+            "name": "TV app / input \u2014 launcher",
+            "x": 1,
+            "y": 1,
+            "w": 3,
+            "h": 2,
+            "entity": "media_player.demo_spotify",
+            "source": "Netflix"
+          }
+        ]
+      ]
+    },
+    "library_0218_tv_apps_1x2": {
+      "title": "TV apps / inputs \u2014 grid \u00b7 1\u00d72",
+      "type": "custom",
+      "header": {
+        "on": false
+      },
+      "subpages": [
+        [
+          {
+            "id": "library_0218_tv_apps_1x2",
+            "ck": "tv_apps",
+            "name": "TV apps / inputs \u2014 grid",
+            "x": 1,
+            "y": 1,
+            "w": 1,
+            "h": 2,
+            "entity": "media_player.demo_spotify",
+            "sources": [
+              "Netflix",
+              "YouTube",
+              "Plex",
+              "Spotify",
+              "Prime Video"
+            ]
+          }
+        ]
+      ]
+    },
+    "library_0219_tv_apps_2x2": {
+      "title": "TV apps / inputs \u2014 grid \u00b7 2\u00d72",
+      "type": "custom",
+      "header": {
+        "on": false
+      },
+      "subpages": [
+        [
+          {
+            "id": "library_0219_tv_apps_2x2",
+            "ck": "tv_apps",
+            "name": "TV apps / inputs \u2014 grid",
+            "x": 1,
+            "y": 1,
+            "w": 2,
+            "h": 2,
+            "entity": "media_player.demo_spotify",
+            "sources": [
+              "Netflix",
+              "YouTube",
+              "Plex",
+              "Spotify",
+              "Prime Video"
+            ]
+          }
+        ]
+      ]
+    },
+    "library_0220_tv_apps_3x2": {
+      "title": "TV apps / inputs \u2014 grid \u00b7 3\u00d72",
+      "type": "custom",
+      "header": {
+        "on": false
+      },
+      "subpages": [
+        [
+          {
+            "id": "library_0220_tv_apps_3x2",
+            "ck": "tv_apps",
+            "name": "TV apps / inputs \u2014 grid",
+            "x": 1,
+            "y": 1,
+            "w": 3,
+            "h": 2,
+            "entity": "media_player.demo_spotify",
+            "sources": [
+              "Netflix",
+              "YouTube",
+              "Plex",
+              "Spotify",
+              "Prime Video"
+            ]
+          }
+        ]
+      ]
+    },
+    "library_0221_tv_apps_2x3": {
+      "title": "TV apps / inputs \u2014 grid \u00b7 2\u00d73",
+      "type": "custom",
+      "header": {
+        "on": false
+      },
+      "subpages": [
+        [
+          {
+            "id": "library_0221_tv_apps_2x3",
+            "ck": "tv_apps",
+            "name": "TV apps / inputs \u2014 grid",
+            "x": 1,
+            "y": 1,
+            "w": 2,
+            "h": 3,
+            "entity": "media_player.demo_spotify",
+            "sources": [
+              "Netflix",
+              "YouTube",
+              "Plex",
+              "Spotify",
+              "Prime Video"
+            ]
+          }
+        ]
+      ]
+    },
+    "library_0222_tv_apps_3x3": {
+      "title": "TV apps / inputs \u2014 grid \u00b7 3\u00d73",
+      "type": "custom",
+      "header": {
+        "on": false
+      },
+      "subpages": [
+        [
+          {
+            "id": "library_0222_tv_apps_3x3",
+            "ck": "tv_apps",
+            "name": "TV apps / inputs \u2014 grid",
+            "x": 1,
+            "y": 1,
+            "w": 3,
+            "h": 3,
+            "entity": "media_player.demo_spotify",
+            "sources": [
+              "Netflix",
+              "YouTube",
+              "Plex",
+              "Spotify",
+              "Prime Video"
+            ]
+          }
+        ]
+      ]
+    },
+    "library_0223_lock_1x1": {
+      "title": "Lock \u00b7 1\u00d71",
+      "type": "custom",
+      "header": {
+        "on": false
+      },
+      "subpages": [
+        [
+          {
+            "id": "library_0223_lock_1x1",
+            "ck": "lock",
+            "name": "Lock",
+            "x": 1,
+            "y": 1,
+            "w": 1,
+            "h": 1,
+            "entity": "lock.demo_front_door"
+          }
+        ]
+      ]
+    },
+    "library_0224_lock_2x1": {
+      "title": "Lock \u00b7 2\u00d71",
+      "type": "custom",
+      "header": {
+        "on": false
+      },
+      "subpages": [
+        [
+          {
+            "id": "library_0224_lock_2x1",
+            "ck": "lock",
+            "name": "Lock",
+            "x": 1,
+            "y": 1,
+            "w": 2,
+            "h": 1,
+            "entity": "lock.demo_front_door"
+          }
+        ]
+      ]
+    },
+    "library_0225_lock_2x2": {
+      "title": "Lock \u00b7 2\u00d72",
+      "type": "custom",
+      "header": {
+        "on": false
+      },
+      "subpages": [
+        [
+          {
+            "id": "library_0225_lock_2x2",
+            "ck": "lock",
+            "name": "Lock",
+            "x": 1,
+            "y": 1,
+            "w": 2,
+            "h": 2,
+            "entity": "lock.demo_front_door"
+          }
+        ]
+      ]
+    },
+    "library_0226_lock_1x3": {
+      "title": "Lock \u00b7 1\u00d73",
+      "type": "custom",
+      "header": {
+        "on": false
+      },
+      "subpages": [
+        [
+          {
+            "id": "library_0226_lock_1x3",
+            "ck": "lock",
+            "name": "Lock",
+            "x": 1,
+            "y": 1,
+            "w": 1,
+            "h": 3,
+            "entity": "lock.demo_front_door"
+          }
+        ]
+      ]
+    },
+    "library_0227_lock_1x4": {
+      "title": "Lock \u00b7 1\u00d74",
+      "type": "custom",
+      "header": {
+        "on": false
+      },
+      "subpages": [
+        [
+          {
+            "id": "library_0227_lock_1x4",
+            "ck": "lock",
+            "name": "Lock",
+            "x": 1,
+            "y": 1,
+            "w": 1,
+            "h": 4,
+            "entity": "lock.demo_front_door"
+          }
+        ]
+      ]
+    },
+    "library_0228_lock_1x5": {
+      "title": "Lock \u00b7 1\u00d75",
+      "type": "custom",
+      "header": {
+        "on": false
+      },
+      "subpages": [
+        [
+          {
+            "id": "library_0228_lock_1x5",
+            "ck": "lock",
+            "name": "Lock",
+            "x": 1,
+            "y": 1,
+            "w": 1,
+            "h": 5,
+            "entity": "lock.demo_front_door"
+          }
+        ]
+      ]
+    },
+    "library_0229_camera_2x2": {
+      "title": "Camera \u00b7 2\u00d72",
+      "type": "custom",
+      "header": {
+        "on": false
+      },
+      "subpages": [
+        [
+          {
+            "id": "library_0229_camera_2x2",
+            "ck": "camera",
+            "name": "Camera",
+            "x": 1,
+            "y": 1,
+            "w": 2,
+            "h": 2,
+            "entity": "camera.demo_front_door"
+          }
+        ]
+      ]
+    },
+    "library_0230_camera_3x3": {
+      "title": "Camera \u00b7 3\u00d73",
+      "type": "custom",
+      "header": {
+        "on": false
+      },
+      "subpages": [
+        [
+          {
+            "id": "library_0230_camera_3x3",
+            "ck": "camera",
+            "name": "Camera",
+            "x": 1,
+            "y": 1,
+            "w": 3,
+            "h": 3,
+            "entity": "camera.demo_front_door"
+          }
+        ]
+      ]
+    },
+    "library_0231_camera_4x3": {
+      "title": "Camera \u00b7 4\u00d73",
+      "type": "custom",
+      "header": {
+        "on": false
+      },
+      "subpages": [
+        [
+          {
+            "id": "library_0231_camera_4x3",
+            "ck": "camera",
+            "name": "Camera",
+            "x": 1,
+            "y": 1,
+            "w": 4,
+            "h": 3,
+            "entity": "camera.demo_front_door"
+          }
+        ]
+      ]
+    },
+    "library_0232_camera_6x5": {
+      "title": "Camera \u00b7 6\u00d75",
+      "type": "custom",
+      "header": {
+        "on": false
+      },
+      "subpages": [
+        [
+          {
+            "id": "library_0232_camera_6x5",
+            "ck": "camera",
+            "name": "Camera",
+            "x": 1,
+            "y": 1,
+            "w": 6,
+            "h": 5,
+            "entity": "camera.demo_front_door"
+          }
+        ]
+      ]
+    },
+    "library_0233_alarm_2x2": {
+      "title": "Alarm panel \u00b7 2\u00d72",
+      "type": "custom",
+      "header": {
+        "on": false
+      },
+      "subpages": [
+        [
+          {
+            "id": "library_0233_alarm_2x2",
+            "ck": "alarm",
+            "name": "Alarm panel",
+            "x": 1,
+            "y": 1,
+            "w": 2,
+            "h": 2,
+            "entity": "alarm_control_panel.demo_alarm"
+          }
+        ]
+      ]
+    },
+    "library_0234_alarm_3x2": {
+      "title": "Alarm panel \u00b7 3\u00d72",
+      "type": "custom",
+      "header": {
+        "on": false
+      },
+      "subpages": [
+        [
+          {
+            "id": "library_0234_alarm_3x2",
+            "ck": "alarm",
+            "name": "Alarm panel",
+            "x": 1,
+            "y": 1,
+            "w": 3,
+            "h": 2,
+            "entity": "alarm_control_panel.demo_alarm"
+          }
+        ]
+      ]
+    },
+    "library_0235_notifications_2x2": {
+      "title": "Notifications \u00b7 2\u00d72",
+      "type": "custom",
+      "header": {
+        "on": false
+      },
+      "subpages": [
+        [
+          {
+            "id": "library_0235_notifications_2x2",
+            "ck": "notifications",
+            "name": "Notifications",
+            "x": 1,
+            "y": 1,
+            "w": 2,
+            "h": 2
+          }
+        ]
+      ]
+    },
+    "library_0236_notifications_3x2": {
+      "title": "Notifications \u00b7 3\u00d72",
+      "type": "custom",
+      "header": {
+        "on": false
+      },
+      "subpages": [
+        [
+          {
+            "id": "library_0236_notifications_3x2",
+            "ck": "notifications",
+            "name": "Notifications",
+            "x": 1,
+            "y": 1,
+            "w": 3,
+            "h": 2
+          }
+        ]
+      ]
+    },
+    "library_0237_notifications_2x3": {
+      "title": "Notifications \u00b7 2\u00d73",
+      "type": "custom",
+      "header": {
+        "on": false
+      },
+      "subpages": [
+        [
+          {
+            "id": "library_0237_notifications_2x3",
+            "ck": "notifications",
+            "name": "Notifications",
+            "x": 1,
+            "y": 1,
+            "w": 2,
+            "h": 3
+          }
+        ]
+      ]
+    },
+    "library_0238_notifications_3x3": {
+      "title": "Notifications \u00b7 3\u00d73",
+      "type": "custom",
+      "header": {
+        "on": false
+      },
+      "subpages": [
+        [
+          {
+            "id": "library_0238_notifications_3x3",
+            "ck": "notifications",
+            "name": "Notifications",
+            "x": 1,
+            "y": 1,
+            "w": 3,
+            "h": 3
+          }
+        ]
+      ]
+    },
+    "library_0239_notifications_4x3": {
+      "title": "Notifications \u00b7 4\u00d73",
+      "type": "custom",
+      "header": {
+        "on": false
+      },
+      "subpages": [
+        [
+          {
+            "id": "library_0239_notifications_4x3",
+            "ck": "notifications",
+            "name": "Notifications",
+            "x": 1,
+            "y": 1,
+            "w": 4,
+            "h": 3
+          }
+        ]
+      ]
+    },
+    "library_0240_notifications_4x4": {
+      "title": "Notifications \u00b7 4\u00d74",
+      "type": "custom",
+      "header": {
+        "on": false
+      },
+      "subpages": [
+        [
+          {
+            "id": "library_0240_notifications_4x4",
+            "ck": "notifications",
+            "name": "Notifications",
+            "x": 1,
+            "y": 1,
+            "w": 4,
+            "h": 4
+          }
+        ]
+      ]
+    },
+    "library_0241_notifications_6x5": {
+      "title": "Notifications \u00b7 6\u00d75",
+      "type": "custom",
+      "header": {
+        "on": false
+      },
+      "subpages": [
+        [
+          {
+            "id": "library_0241_notifications_6x5",
+            "ck": "notifications",
+            "name": "Notifications",
+            "x": 1,
+            "y": 1,
+            "w": 6,
+            "h": 5
+          }
+        ]
+      ]
+    },
+    "library_0242_binary_1x1": {
+      "title": "Binary sensor \u00b7 1\u00d71",
+      "type": "custom",
+      "header": {
+        "on": false
+      },
+      "subpages": [
+        [
+          {
+            "id": "library_0242_binary_1x1",
+            "ck": "binary",
+            "name": "Binary sensor",
+            "x": 1,
+            "y": 1,
+            "w": 1,
+            "h": 1,
+            "entity": "binary_sensor.demo_motion",
+            "unit": ""
+          }
+        ]
+      ]
+    },
+    "library_0243_binary_2x1": {
+      "title": "Binary sensor \u00b7 2\u00d71",
+      "type": "custom",
+      "header": {
+        "on": false
+      },
+      "subpages": [
+        [
+          {
+            "id": "library_0243_binary_2x1",
+            "ck": "binary",
+            "name": "Binary sensor",
+            "x": 1,
+            "y": 1,
+            "w": 2,
+            "h": 1,
+            "entity": "binary_sensor.demo_motion",
+            "unit": ""
+          }
+        ]
+      ]
+    },
+    "library_0244_binary_1x3": {
+      "title": "Binary sensor \u00b7 1\u00d73",
+      "type": "custom",
+      "header": {
+        "on": false
+      },
+      "subpages": [
+        [
+          {
+            "id": "library_0244_binary_1x3",
+            "ck": "binary",
+            "name": "Binary sensor",
+            "x": 1,
+            "y": 1,
+            "w": 1,
+            "h": 3,
+            "entity": "binary_sensor.demo_motion",
+            "unit": ""
+          }
+        ]
+      ]
+    },
+    "library_0245_binary_1x4": {
+      "title": "Binary sensor \u00b7 1\u00d74",
+      "type": "custom",
+      "header": {
+        "on": false
+      },
+      "subpages": [
+        [
+          {
+            "id": "library_0245_binary_1x4",
+            "ck": "binary",
+            "name": "Binary sensor",
+            "x": 1,
+            "y": 1,
+            "w": 1,
+            "h": 4,
+            "entity": "binary_sensor.demo_motion",
+            "unit": ""
+          }
+        ]
+      ]
+    },
+    "library_0246_binary_1x5": {
+      "title": "Binary sensor \u00b7 1\u00d75",
+      "type": "custom",
+      "header": {
+        "on": false
+      },
+      "subpages": [
+        [
+          {
+            "id": "library_0246_binary_1x5",
+            "ck": "binary",
+            "name": "Binary sensor",
+            "x": 1,
+            "y": 1,
+            "w": 1,
+            "h": 5,
+            "entity": "binary_sensor.demo_motion",
+            "unit": ""
+          }
+        ]
+      ]
+    },
+    "library_0247_sensor_1x1": {
+      "title": "Sensor \u00b7 1\u00d71",
+      "type": "custom",
+      "header": {
+        "on": false
+      },
+      "subpages": [
+        [
+          {
+            "id": "library_0247_sensor_1x1",
+            "ck": "sensor",
+            "name": "Sensor",
+            "x": 1,
+            "y": 1,
+            "w": 1,
+            "h": 1,
+            "entity": "sensor.demo_temperature",
+            "unit": "\u00b0C"
+          }
+        ]
+      ]
+    },
+    "library_0248_sensor_2x1": {
+      "title": "Sensor \u00b7 2\u00d71",
+      "type": "custom",
+      "header": {
+        "on": false
+      },
+      "subpages": [
+        [
+          {
+            "id": "library_0248_sensor_2x1",
+            "ck": "sensor",
+            "name": "Sensor",
+            "x": 1,
+            "y": 1,
+            "w": 2,
+            "h": 1,
+            "entity": "sensor.demo_temperature",
+            "unit": "\u00b0C"
+          }
+        ]
+      ]
+    },
+    "library_0249_sensor_3x1": {
+      "title": "Sensor \u00b7 3\u00d71",
+      "type": "custom",
+      "header": {
+        "on": false
+      },
+      "subpages": [
+        [
+          {
+            "id": "library_0249_sensor_3x1",
+            "ck": "sensor",
+            "name": "Sensor",
+            "x": 1,
+            "y": 1,
+            "w": 3,
+            "h": 1,
+            "entity": "sensor.demo_temperature",
+            "unit": "\u00b0C"
+          }
+        ]
+      ]
+    },
+    "library_0250_sensor_4x1": {
+      "title": "Sensor \u00b7 4\u00d71",
+      "type": "custom",
+      "header": {
+        "on": false
+      },
+      "subpages": [
+        [
+          {
+            "id": "library_0250_sensor_4x1",
+            "ck": "sensor",
+            "name": "Sensor",
+            "x": 1,
+            "y": 1,
+            "w": 4,
+            "h": 1,
+            "entity": "sensor.demo_temperature",
+            "unit": "\u00b0C"
+          }
+        ]
+      ]
+    },
+    "library_0251_sensor_5x1": {
+      "title": "Sensor \u00b7 5\u00d71",
+      "type": "custom",
+      "header": {
+        "on": false
+      },
+      "subpages": [
+        [
+          {
+            "id": "library_0251_sensor_5x1",
+            "ck": "sensor",
+            "name": "Sensor",
+            "x": 1,
+            "y": 1,
+            "w": 5,
+            "h": 1,
+            "entity": "sensor.demo_temperature",
+            "unit": "\u00b0C"
+          }
+        ]
+      ]
+    },
+    "library_0252_chart_2x2": {
+      "title": "Sensor \u2014 trend chart \u00b7 2\u00d72",
+      "type": "custom",
+      "header": {
+        "on": false
+      },
+      "subpages": [
+        [
+          {
+            "id": "library_0252_chart_2x2",
+            "ck": "chart",
+            "name": "Sensor \u2014 trend chart",
+            "x": 1,
+            "y": 1,
+            "w": 2,
+            "h": 2,
+            "entity": "sensor.demo_temperature",
+            "unit": ""
+          }
+        ]
+      ]
+    },
+    "library_0253_chart_3x2": {
+      "title": "Sensor \u2014 trend chart \u00b7 3\u00d72",
+      "type": "custom",
+      "header": {
+        "on": false
+      },
+      "subpages": [
+        [
+          {
+            "id": "library_0253_chart_3x2",
+            "ck": "chart",
+            "name": "Sensor \u2014 trend chart",
+            "x": 1,
+            "y": 1,
+            "w": 3,
+            "h": 2,
+            "entity": "sensor.demo_temperature",
+            "unit": ""
+          }
+        ]
+      ]
+    },
+    "library_0254_chart_4x2": {
+      "title": "Sensor \u2014 trend chart \u00b7 4\u00d72",
+      "type": "custom",
+      "header": {
+        "on": false
+      },
+      "subpages": [
+        [
+          {
+            "id": "library_0254_chart_4x2",
+            "ck": "chart",
+            "name": "Sensor \u2014 trend chart",
+            "x": 1,
+            "y": 1,
+            "w": 4,
+            "h": 2,
+            "entity": "sensor.demo_temperature",
+            "unit": ""
+          }
+        ]
+      ]
+    },
+    "library_0255_chart_5x2": {
+      "title": "Sensor \u2014 trend chart \u00b7 5\u00d72",
+      "type": "custom",
+      "header": {
+        "on": false
+      },
+      "subpages": [
+        [
+          {
+            "id": "library_0255_chart_5x2",
+            "ck": "chart",
+            "name": "Sensor \u2014 trend chart",
+            "x": 1,
+            "y": 1,
+            "w": 5,
+            "h": 2,
+            "entity": "sensor.demo_temperature",
+            "unit": ""
+          }
+        ]
+      ]
+    },
+    "library_0256_weather_6x5": {
+      "title": "Weather \u00b7 6\u00d75",
+      "type": "custom",
+      "header": {
+        "on": false
+      },
+      "subpages": [
+        [
+          {
+            "id": "library_0256_weather_6x5",
+            "ck": "weather",
+            "name": "Weather",
+            "x": 1,
+            "y": 1,
+            "w": 6,
+            "h": 5,
+            "entity": "weather.forecast_home"
+          }
+        ]
+      ]
+    },
+    "library_0257_weather_5x5": {
+      "title": "Weather \u00b7 5\u00d75",
+      "type": "custom",
+      "header": {
+        "on": false
+      },
+      "subpages": [
+        [
+          {
+            "id": "library_0257_weather_5x5",
+            "ck": "weather",
+            "name": "Weather",
+            "x": 1,
+            "y": 1,
+            "w": 5,
+            "h": 5,
+            "entity": "weather.forecast_home"
+          }
+        ]
+      ]
+    },
+    "library_0258_weather_6x4": {
+      "title": "Weather \u00b7 6\u00d74",
+      "type": "custom",
+      "header": {
+        "on": false
+      },
+      "subpages": [
+        [
+          {
+            "id": "library_0258_weather_6x4",
+            "ck": "weather",
+            "name": "Weather",
+            "x": 1,
+            "y": 1,
+            "w": 6,
+            "h": 4,
+            "entity": "weather.forecast_home"
+          }
+        ]
+      ]
+    },
+    "library_0259_wx_current_2x2": {
+      "title": "Weather \u2014 current \u00b7 2\u00d72",
+      "type": "custom",
+      "header": {
+        "on": false
+      },
+      "subpages": [
+        [
+          {
+            "id": "library_0259_wx_current_2x2",
+            "ck": "wx_current",
+            "name": "Weather \u2014 current",
+            "x": 1,
+            "y": 1,
+            "w": 2,
+            "h": 2,
+            "entity": "weather.forecast_home"
+          }
+        ]
+      ]
+    },
+    "library_0260_wx_current_3x2": {
+      "title": "Weather \u2014 current \u00b7 3\u00d72",
+      "type": "custom",
+      "header": {
+        "on": false
+      },
+      "subpages": [
+        [
+          {
+            "id": "library_0260_wx_current_3x2",
+            "ck": "wx_current",
+            "name": "Weather \u2014 current",
+            "x": 1,
+            "y": 1,
+            "w": 3,
+            "h": 2,
+            "entity": "weather.forecast_home"
+          }
+        ]
+      ]
+    },
+    "library_0261_wx_current_4x2": {
+      "title": "Weather \u2014 current \u00b7 4\u00d72",
+      "type": "custom",
+      "header": {
+        "on": false
+      },
+      "subpages": [
+        [
+          {
+            "id": "library_0261_wx_current_4x2",
+            "ck": "wx_current",
+            "name": "Weather \u2014 current",
+            "x": 1,
+            "y": 1,
+            "w": 4,
+            "h": 2,
+            "entity": "weather.forecast_home"
+          }
+        ]
+      ]
+    },
+    "library_0262_wx_current_6x2": {
+      "title": "Weather \u2014 current \u00b7 6\u00d72",
+      "type": "custom",
+      "header": {
+        "on": false
+      },
+      "subpages": [
+        [
+          {
+            "id": "library_0262_wx_current_6x2",
+            "ck": "wx_current",
+            "name": "Weather \u2014 current",
+            "x": 1,
+            "y": 1,
+            "w": 6,
+            "h": 2,
+            "entity": "weather.forecast_home"
+          }
+        ]
+      ]
+    },
+    "library_0263_wx_current_3x3": {
+      "title": "Weather \u2014 current \u00b7 3\u00d73",
+      "type": "custom",
+      "header": {
+        "on": false
+      },
+      "subpages": [
+        [
+          {
+            "id": "library_0263_wx_current_3x3",
+            "ck": "wx_current",
+            "name": "Weather \u2014 current",
+            "x": 1,
+            "y": 1,
+            "w": 3,
+            "h": 3,
+            "entity": "weather.forecast_home"
+          }
+        ]
+      ]
+    },
+    "library_0264_wx_hourly_3x1": {
+      "title": "Weather \u2014 hourly \u00b7 3\u00d71",
+      "type": "custom",
+      "header": {
+        "on": false
+      },
+      "subpages": [
+        [
+          {
+            "id": "library_0264_wx_hourly_3x1",
+            "ck": "wx_hourly",
+            "name": "Weather \u2014 hourly",
+            "x": 1,
+            "y": 1,
+            "w": 3,
+            "h": 1,
+            "entity": "weather.forecast_home"
+          }
+        ]
+      ]
+    },
+    "library_0265_wx_hourly_4x1": {
+      "title": "Weather \u2014 hourly \u00b7 4\u00d71",
+      "type": "custom",
+      "header": {
+        "on": false
+      },
+      "subpages": [
+        [
+          {
+            "id": "library_0265_wx_hourly_4x1",
+            "ck": "wx_hourly",
+            "name": "Weather \u2014 hourly",
+            "x": 1,
+            "y": 1,
+            "w": 4,
+            "h": 1,
+            "entity": "weather.forecast_home"
+          }
+        ]
+      ]
+    },
+    "library_0266_wx_hourly_6x1": {
+      "title": "Weather \u2014 hourly \u00b7 6\u00d71",
+      "type": "custom",
+      "header": {
+        "on": false
+      },
+      "subpages": [
+        [
+          {
+            "id": "library_0266_wx_hourly_6x1",
+            "ck": "wx_hourly",
+            "name": "Weather \u2014 hourly",
+            "x": 1,
+            "y": 1,
+            "w": 6,
+            "h": 1,
+            "entity": "weather.forecast_home"
+          }
+        ]
+      ]
+    },
+    "library_0267_wx_hourly_4x2": {
+      "title": "Weather \u2014 hourly \u00b7 4\u00d72",
+      "type": "custom",
+      "header": {
+        "on": false
+      },
+      "subpages": [
+        [
+          {
+            "id": "library_0267_wx_hourly_4x2",
+            "ck": "wx_hourly",
+            "name": "Weather \u2014 hourly",
+            "x": 1,
+            "y": 1,
+            "w": 4,
+            "h": 2,
+            "entity": "weather.forecast_home"
+          }
+        ]
+      ]
+    },
+    "library_0268_wx_hourly_6x2": {
+      "title": "Weather \u2014 hourly \u00b7 6\u00d72",
+      "type": "custom",
+      "header": {
+        "on": false
+      },
+      "subpages": [
+        [
+          {
+            "id": "library_0268_wx_hourly_6x2",
+            "ck": "wx_hourly",
+            "name": "Weather \u2014 hourly",
+            "x": 1,
+            "y": 1,
+            "w": 6,
+            "h": 2,
+            "entity": "weather.forecast_home"
+          }
+        ]
+      ]
+    },
+    "library_0269_wx_daily_2x3": {
+      "title": "Weather \u2014 forecast (H/L) \u00b7 2\u00d73",
+      "type": "custom",
+      "header": {
+        "on": false
+      },
+      "subpages": [
+        [
+          {
+            "id": "library_0269_wx_daily_2x3",
+            "ck": "wx_daily",
+            "name": "Weather \u2014 forecast (H/L)",
+            "x": 1,
+            "y": 1,
+            "w": 2,
+            "h": 3,
+            "entity": "weather.forecast_home"
+          }
+        ]
+      ]
+    },
+    "library_0270_wx_daily_3x3": {
+      "title": "Weather \u2014 forecast (H/L) \u00b7 3\u00d73",
+      "type": "custom",
+      "header": {
+        "on": false
+      },
+      "subpages": [
+        [
+          {
+            "id": "library_0270_wx_daily_3x3",
+            "ck": "wx_daily",
+            "name": "Weather \u2014 forecast (H/L)",
+            "x": 1,
+            "y": 1,
+            "w": 3,
+            "h": 3,
+            "entity": "weather.forecast_home"
+          }
+        ]
+      ]
+    },
+    "library_0271_wx_daily_2x4": {
+      "title": "Weather \u2014 forecast (H/L) \u00b7 2\u00d74",
+      "type": "custom",
+      "header": {
+        "on": false
+      },
+      "subpages": [
+        [
+          {
+            "id": "library_0271_wx_daily_2x4",
+            "ck": "wx_daily",
+            "name": "Weather \u2014 forecast (H/L)",
+            "x": 1,
+            "y": 1,
+            "w": 2,
+            "h": 4,
+            "entity": "weather.forecast_home"
+          }
+        ]
+      ]
+    },
+    "library_0272_wx_daily_3x4": {
+      "title": "Weather \u2014 forecast (H/L) \u00b7 3\u00d74",
+      "type": "custom",
+      "header": {
+        "on": false
+      },
+      "subpages": [
+        [
+          {
+            "id": "library_0272_wx_daily_3x4",
+            "ck": "wx_daily",
+            "name": "Weather \u2014 forecast (H/L)",
+            "x": 1,
+            "y": 1,
+            "w": 3,
+            "h": 4,
+            "entity": "weather.forecast_home"
+          }
+        ]
+      ]
+    },
+    "library_0273_wx_daily_2x5": {
+      "title": "Weather \u2014 forecast (H/L) \u00b7 2\u00d75",
+      "type": "custom",
+      "header": {
+        "on": false
+      },
+      "subpages": [
+        [
+          {
+            "id": "library_0273_wx_daily_2x5",
+            "ck": "wx_daily",
+            "name": "Weather \u2014 forecast (H/L)",
+            "x": 1,
+            "y": 1,
+            "w": 2,
+            "h": 5,
+            "entity": "weather.forecast_home"
+          }
+        ]
+      ]
+    },
+    "library_0274_wx_daily_3x5": {
+      "title": "Weather \u2014 forecast (H/L) \u00b7 3\u00d75",
+      "type": "custom",
+      "header": {
+        "on": false
+      },
+      "subpages": [
+        [
+          {
+            "id": "library_0274_wx_daily_3x5",
+            "ck": "wx_daily",
+            "name": "Weather \u2014 forecast (H/L)",
+            "x": 1,
+            "y": 1,
+            "w": 3,
+            "h": 5,
+            "entity": "weather.forecast_home"
+          }
+        ]
+      ]
+    },
+    "library_0275_wx_stats_2x2": {
+      "title": "Weather \u2014 stats \u00b7 2\u00d72",
+      "type": "custom",
+      "header": {
+        "on": false
+      },
+      "subpages": [
+        [
+          {
+            "id": "library_0275_wx_stats_2x2",
+            "ck": "wx_stats",
+            "name": "Weather \u2014 stats",
+            "x": 1,
+            "y": 1,
+            "w": 2,
+            "h": 2,
+            "entity": "weather.forecast_home"
+          }
+        ]
+      ]
+    },
+    "library_0276_wx_stats_3x2": {
+      "title": "Weather \u2014 stats \u00b7 3\u00d72",
+      "type": "custom",
+      "header": {
+        "on": false
+      },
+      "subpages": [
+        [
+          {
+            "id": "library_0276_wx_stats_3x2",
+            "ck": "wx_stats",
+            "name": "Weather \u2014 stats",
+            "x": 1,
+            "y": 1,
+            "w": 3,
+            "h": 2,
+            "entity": "weather.forecast_home"
+          }
+        ]
+      ]
+    },
+    "library_0277_wx_stats_2x3": {
+      "title": "Weather \u2014 stats \u00b7 2\u00d73",
+      "type": "custom",
+      "header": {
+        "on": false
+      },
+      "subpages": [
+        [
+          {
+            "id": "library_0277_wx_stats_2x3",
+            "ck": "wx_stats",
+            "name": "Weather \u2014 stats",
+            "x": 1,
+            "y": 1,
+            "w": 2,
+            "h": 3,
+            "entity": "weather.forecast_home"
+          }
+        ]
+      ]
+    },
+    "library_0278_wx_stats_3x3": {
+      "title": "Weather \u2014 stats \u00b7 3\u00d73",
+      "type": "custom",
+      "header": {
+        "on": false
+      },
+      "subpages": [
+        [
+          {
+            "id": "library_0278_wx_stats_3x3",
+            "ck": "wx_stats",
+            "name": "Weather \u2014 stats",
+            "x": 1,
+            "y": 1,
+            "w": 3,
+            "h": 3,
+            "entity": "weather.forecast_home"
+          }
+        ]
+      ]
+    },
+    "library_0279_person_1x1": {
+      "title": "Presence \u00b7 1\u00d71",
+      "type": "custom",
+      "header": {
+        "on": false
+      },
+      "subpages": [
+        [
+          {
+            "id": "library_0279_person_1x1",
+            "ck": "person",
+            "name": "Presence",
+            "x": 1,
+            "y": 1,
+            "w": 1,
+            "h": 1,
+            "entity": "person.demo",
+            "unit": ""
+          }
+        ]
+      ]
+    },
+    "library_0280_person_2x1": {
+      "title": "Presence \u00b7 2\u00d71",
+      "type": "custom",
+      "header": {
+        "on": false
+      },
+      "subpages": [
+        [
+          {
+            "id": "library_0280_person_2x1",
+            "ck": "person",
+            "name": "Presence",
+            "x": 1,
+            "y": 1,
+            "w": 2,
+            "h": 1,
+            "entity": "person.demo",
+            "unit": ""
+          }
+        ]
+      ]
+    },
+    "library_0281_person_1x3": {
+      "title": "Presence \u00b7 1\u00d73",
+      "type": "custom",
+      "header": {
+        "on": false
+      },
+      "subpages": [
+        [
+          {
+            "id": "library_0281_person_1x3",
+            "ck": "person",
+            "name": "Presence",
+            "x": 1,
+            "y": 1,
+            "w": 1,
+            "h": 3,
+            "entity": "person.demo",
+            "unit": ""
+          }
+        ]
+      ]
+    },
+    "library_0282_person_1x4": {
+      "title": "Presence \u00b7 1\u00d74",
+      "type": "custom",
+      "header": {
+        "on": false
+      },
+      "subpages": [
+        [
+          {
+            "id": "library_0282_person_1x4",
+            "ck": "person",
+            "name": "Presence",
+            "x": 1,
+            "y": 1,
+            "w": 1,
+            "h": 4,
+            "entity": "person.demo",
+            "unit": ""
+          }
+        ]
+      ]
+    },
+    "library_0283_person_1x5": {
+      "title": "Presence \u00b7 1\u00d75",
+      "type": "custom",
+      "header": {
+        "on": false
+      },
+      "subpages": [
+        [
+          {
+            "id": "library_0283_person_1x5",
+            "ck": "person",
+            "name": "Presence",
+            "x": 1,
+            "y": 1,
+            "w": 1,
+            "h": 5,
+            "entity": "person.demo",
+            "unit": ""
+          }
+        ]
+      ]
+    },
+    "library_0284_vacuum_2x2": {
+      "title": "Vacuum \u00b7 2\u00d72",
+      "type": "custom",
+      "header": {
+        "on": false
+      },
+      "subpages": [
+        [
+          {
+            "id": "library_0284_vacuum_2x2",
+            "ck": "vacuum",
+            "name": "Vacuum",
+            "x": 1,
+            "y": 1,
+            "w": 2,
+            "h": 2,
+            "entity": "vacuum.demo_robot",
+            "unit": ""
+          }
+        ]
+      ]
+    },
+    "library_0285_scene_1x1": {
+      "title": "Scene \u00b7 1\u00d71",
+      "type": "custom",
+      "header": {
+        "on": false
+      },
+      "subpages": [
+        [
+          {
+            "id": "library_0285_scene_1x1",
+            "ck": "scene",
+            "name": "Scene",
+            "x": 1,
+            "y": 1,
+            "w": 1,
+            "h": 1,
+            "entity": "scene.demo_evening"
+          }
+        ]
+      ]
+    },
+    "library_0286_scene_2x1": {
+      "title": "Scene \u00b7 2\u00d71",
+      "type": "custom",
+      "header": {
+        "on": false
+      },
+      "subpages": [
+        [
+          {
+            "id": "library_0286_scene_2x1",
+            "ck": "scene",
+            "name": "Scene",
+            "x": 1,
+            "y": 1,
+            "w": 2,
+            "h": 1,
+            "entity": "scene.demo_evening"
+          }
+        ]
+      ]
+    },
+    "library_0287_scene_1x3": {
+      "title": "Scene \u00b7 1\u00d73",
+      "type": "custom",
+      "header": {
+        "on": false
+      },
+      "subpages": [
+        [
+          {
+            "id": "library_0287_scene_1x3",
+            "ck": "scene",
+            "name": "Scene",
+            "x": 1,
+            "y": 1,
+            "w": 1,
+            "h": 3,
+            "entity": "scene.demo_evening"
+          }
+        ]
+      ]
+    },
+    "library_0288_scene_1x4": {
+      "title": "Scene \u00b7 1\u00d74",
+      "type": "custom",
+      "header": {
+        "on": false
+      },
+      "subpages": [
+        [
+          {
+            "id": "library_0288_scene_1x4",
+            "ck": "scene",
+            "name": "Scene",
+            "x": 1,
+            "y": 1,
+            "w": 1,
+            "h": 4,
+            "entity": "scene.demo_evening"
+          }
+        ]
+      ]
+    },
+    "library_0289_scene_1x5": {
+      "title": "Scene \u00b7 1\u00d75",
+      "type": "custom",
+      "header": {
+        "on": false
+      },
+      "subpages": [
+        [
+          {
+            "id": "library_0289_scene_1x5",
+            "ck": "scene",
+            "name": "Scene",
+            "x": 1,
+            "y": 1,
+            "w": 1,
+            "h": 5,
+            "entity": "scene.demo_evening"
+          }
+        ]
+      ]
+    },
+    "library_0290_script_1x1": {
+      "title": "Script / button \u00b7 1\u00d71",
+      "type": "custom",
+      "header": {
+        "on": false
+      },
+      "subpages": [
+        [
+          {
+            "id": "library_0290_script_1x1",
+            "ck": "script",
+            "name": "Script / button",
+            "x": 1,
+            "y": 1,
+            "w": 1,
+            "h": 1,
+            "entity": "script.demo_scene"
+          }
+        ]
+      ]
+    },
+    "library_0291_script_2x1": {
+      "title": "Script / button \u00b7 2\u00d71",
+      "type": "custom",
+      "header": {
+        "on": false
+      },
+      "subpages": [
+        [
+          {
+            "id": "library_0291_script_2x1",
+            "ck": "script",
+            "name": "Script / button",
+            "x": 1,
+            "y": 1,
+            "w": 2,
+            "h": 1,
+            "entity": "script.demo_scene"
+          }
+        ]
+      ]
+    },
+    "library_0292_script_1x3": {
+      "title": "Script / button \u00b7 1\u00d73",
+      "type": "custom",
+      "header": {
+        "on": false
+      },
+      "subpages": [
+        [
+          {
+            "id": "library_0292_script_1x3",
+            "ck": "script",
+            "name": "Script / button",
+            "x": 1,
+            "y": 1,
+            "w": 1,
+            "h": 3,
+            "entity": "script.demo_scene"
+          }
+        ]
+      ]
+    },
+    "library_0293_script_1x4": {
+      "title": "Script / button \u00b7 1\u00d74",
+      "type": "custom",
+      "header": {
+        "on": false
+      },
+      "subpages": [
+        [
+          {
+            "id": "library_0293_script_1x4",
+            "ck": "script",
+            "name": "Script / button",
+            "x": 1,
+            "y": 1,
+            "w": 1,
+            "h": 4,
+            "entity": "script.demo_scene"
+          }
+        ]
+      ]
+    },
+    "library_0294_script_1x5": {
+      "title": "Script / button \u00b7 1\u00d75",
+      "type": "custom",
+      "header": {
+        "on": false
+      },
+      "subpages": [
+        [
+          {
+            "id": "library_0294_script_1x5",
+            "ck": "script",
+            "name": "Script / button",
+            "x": 1,
+            "y": 1,
+            "w": 1,
+            "h": 5,
+            "entity": "script.demo_scene"
+          }
+        ]
+      ]
+    }
+  }
+}
