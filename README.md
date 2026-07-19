@@ -330,6 +330,21 @@ Use `script.aurora_notifications_clear` to clear the queue. The panel's
 
 ---
 
+## Weather radar card
+
+Add **Weather radar** from the configurator's **Info** category. No camera or
+weather entity is required: the configurator reads Home Assistant's configured
+latitude and longitude, while the card inspector allows the location and map
+zoom to be adjusted per card.
+
+The panel displays the latest public RainViewer radar frame over an
+OpenStreetMap base tile. It refreshes when its page opens, when the refresh
+button is tapped, and every five minutes. RainViewer requires no API key for
+personal and educational use; the generated card includes source attribution.
+Radar zoom is limited to levels 4 through 7 by RainViewer's public tile API.
+
+---
+
 ## Project layout (Aurora-relevant)
 
 ```
@@ -374,6 +389,7 @@ RTP is sent **TCP‑interleaved**, so it works through Home Assistant / ffmpeg's
 ## Status & roadmap
 
 **Recently shipped:**
+- **Weather radar card** - selectable Home Assistant camera source with background JPEG decode, page/manual refresh, and five-minute updates.
 - **Notification center** - restored five-alert queue, configurator card/top-bar item, safe action buttons, and urgent wake-up popups.
 - **No-code web configurator** — entity-rebind wizard + drag-and-drop page builder (6×5 grid, per-card type/entity selection, live preview) + a `layout.json → aurora-gen.yaml` generator, so you can point Aurora at your own HA and design screens without editing YAML. See **[Design it your way](#-design-it-your-way--no-yaml-required)**. ✅
 - **Live camera** — OV02C10 → hardware H.264 → on-device RTSP, viewable in Home Assistant. ✅
@@ -384,7 +400,6 @@ RTP is sent **TCP‑interleaved**, so it works through Home Assistant / ffmpeg's
 - **Photo screensaver** with clock + outdoor-temperature overlay. ✅
 
 **In progress / planned:**
-- **Weather radar** on the Climate screen.
 - **Intercom** — video calls between multiple panels *(long-term)*.
 - **Voice control** *(long-term)*.
 
