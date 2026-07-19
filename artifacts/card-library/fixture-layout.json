@@ -5639,7 +5639,122 @@
         ]
       ]
     },
-    "library_0233_alarm_2x2": {
+    "library_0233_radar_2x2": {
+      "title": "Weather radar \u00b7 2\u00d72",
+      "type": "custom",
+      "header": {
+        "on": false
+      },
+      "subpages": [
+        [
+          {
+            "id": "library_0233_radar_2x2",
+            "ck": "radar",
+            "name": "Weather radar",
+            "x": 1,
+            "y": 1,
+            "w": 2,
+            "h": 2,
+            "lat": 41.8781,
+            "lon": -87.6298,
+            "zoom": 6
+          }
+        ]
+      ]
+    },
+    "library_0234_radar_3x2": {
+      "title": "Weather radar \u00b7 3\u00d72",
+      "type": "custom",
+      "header": {
+        "on": false
+      },
+      "subpages": [
+        [
+          {
+            "id": "library_0234_radar_3x2",
+            "ck": "radar",
+            "name": "Weather radar",
+            "x": 1,
+            "y": 1,
+            "w": 3,
+            "h": 2,
+            "lat": 41.8781,
+            "lon": -87.6298,
+            "zoom": 6
+          }
+        ]
+      ]
+    },
+    "library_0235_radar_3x3": {
+      "title": "Weather radar \u00b7 3\u00d73",
+      "type": "custom",
+      "header": {
+        "on": false
+      },
+      "subpages": [
+        [
+          {
+            "id": "library_0235_radar_3x3",
+            "ck": "radar",
+            "name": "Weather radar",
+            "x": 1,
+            "y": 1,
+            "w": 3,
+            "h": 3,
+            "lat": 41.8781,
+            "lon": -87.6298,
+            "zoom": 6
+          }
+        ]
+      ]
+    },
+    "library_0236_radar_4x3": {
+      "title": "Weather radar \u00b7 4\u00d73",
+      "type": "custom",
+      "header": {
+        "on": false
+      },
+      "subpages": [
+        [
+          {
+            "id": "library_0236_radar_4x3",
+            "ck": "radar",
+            "name": "Weather radar",
+            "x": 1,
+            "y": 1,
+            "w": 4,
+            "h": 3,
+            "lat": 41.8781,
+            "lon": -87.6298,
+            "zoom": 6
+          }
+        ]
+      ]
+    },
+    "library_0237_radar_6x5": {
+      "title": "Weather radar \u00b7 6\u00d75",
+      "type": "custom",
+      "header": {
+        "on": false
+      },
+      "subpages": [
+        [
+          {
+            "id": "library_0237_radar_6x5",
+            "ck": "radar",
+            "name": "Weather radar",
+            "x": 1,
+            "y": 1,
+            "w": 6,
+            "h": 5,
+            "lat": 41.8781,
+            "lon": -87.6298,
+            "zoom": 6
+          }
+        ]
+      ]
+    },
+    "library_0238_alarm_2x2": {
       "title": "Alarm panel \u00b7 2\u00d72",
       "type": "custom",
       "header": {
@@ -5648,7 +5763,7 @@
       "subpages": [
         [
           {
-            "id": "library_0233_alarm_2x2",
+            "id": "library_0238_alarm_2x2",
             "ck": "alarm",
             "name": "Alarm panel",
             "x": 1,
@@ -5660,7 +5775,7 @@
         ]
       ]
     },
-    "library_0234_alarm_3x2": {
+    "library_0239_alarm_3x2": {
       "title": "Alarm panel \u00b7 3\u00d72",
       "type": "custom",
       "header": {
@@ -5669,7 +5784,7 @@
       "subpages": [
         [
           {
-            "id": "library_0234_alarm_3x2",
+            "id": "library_0239_alarm_3x2",
             "ck": "alarm",
             "name": "Alarm panel",
             "x": 1,
@@ -5681,7 +5796,7 @@
         ]
       ]
     },
-    "library_0235_notifications_2x2": {
+    "library_0240_notifications_2x2": {
       "title": "Notifications \u00b7 2\u00d72",
       "type": "custom",
       "header": {
@@ -5690,7 +5805,7 @@
       "subpages": [
         [
           {
-            "id": "library_0235_notifications_2x2",
+            "id": "library_0240_notifications_2x2",
             "ck": "notifications",
             "name": "Notifications",
             "x": 1,
@@ -5701,7 +5816,7 @@
         ]
       ]
     },
-    "library_0236_notifications_3x2": {
+    "library_0241_notifications_3x2": {
       "title": "Notifications \u00b7 3\u00d72",
       "type": "custom",
       "header": {
@@ -5710,7 +5825,7 @@
       "subpages": [
         [
           {
-            "id": "library_0236_notifications_3x2",
+            "id": "library_0241_notifications_3x2",
             "ck": "notifications",
             "name": "Notifications",
             "x": 1,
@@ -5721,7 +5836,7 @@
         ]
       ]
     },
-    "library_0237_notifications_2x3": {
+    "library_0242_notifications_2x3": {
       "title": "Notifications \u00b7 2\u00d73",
       "type": "custom",
       "header": {
@@ -5730,7 +5845,7 @@
       "subpages": [
         [
           {
-            "id": "library_0237_notifications_2x3",
+            "id": "library_0242_notifications_2x3",
             "ck": "notifications",
             "name": "Notifications",
             "x": 1,
@@ -5741,7 +5856,7 @@
         ]
       ]
     },
-    "library_0238_notifications_3x3": {
+    "library_0243_notifications_3x3": {
       "title": "Notifications \u00b7 3\u00d73",
       "type": "custom",
       "header": {
@@ -5750,7 +5865,7 @@
       "subpages": [
         [
           {
-            "id": "library_0238_notifications_3x3",
+            "id": "library_0243_notifications_3x3",
             "ck": "notifications",
             "name": "Notifications",
             "x": 1,
@@ -5761,7 +5876,7 @@
         ]
       ]
     },
-    "library_0239_notifications_4x3": {
+    "library_0244_notifications_4x3": {
       "title": "Notifications \u00b7 4\u00d73",
       "type": "custom",
       "header": {
@@ -5770,7 +5885,7 @@
       "subpages": [
         [
           {
-            "id": "library_0239_notifications_4x3",
+            "id": "library_0244_notifications_4x3",
             "ck": "notifications",
             "name": "Notifications",
             "x": 1,
@@ -5781,7 +5896,7 @@
         ]
       ]
     },
-    "library_0240_notifications_4x4": {
+    "library_0245_notifications_4x4": {
       "title": "Notifications \u00b7 4\u00d74",
       "type": "custom",
       "header": {
@@ -5790,7 +5905,7 @@
       "subpages": [
         [
           {
-            "id": "library_0240_notifications_4x4",
+            "id": "library_0245_notifications_4x4",
             "ck": "notifications",
             "name": "Notifications",
             "x": 1,
@@ -5801,7 +5916,7 @@
         ]
       ]
     },
-    "library_0241_notifications_6x5": {
+    "library_0246_notifications_6x5": {
       "title": "Notifications \u00b7 6\u00d75",
       "type": "custom",
       "header": {
@@ -5810,7 +5925,7 @@
       "subpages": [
         [
           {
-            "id": "library_0241_notifications_6x5",
+            "id": "library_0246_notifications_6x5",
             "ck": "notifications",
             "name": "Notifications",
             "x": 1,
@@ -5821,7 +5936,7 @@
         ]
       ]
     },
-    "library_0242_binary_1x1": {
+    "library_0247_binary_1x1": {
       "title": "Binary sensor \u00b7 1\u00d71",
       "type": "custom",
       "header": {
@@ -5830,7 +5945,7 @@
       "subpages": [
         [
           {
-            "id": "library_0242_binary_1x1",
+            "id": "library_0247_binary_1x1",
             "ck": "binary",
             "name": "Binary sensor",
             "x": 1,
@@ -5843,7 +5958,7 @@
         ]
       ]
     },
-    "library_0243_binary_2x1": {
+    "library_0248_binary_2x1": {
       "title": "Binary sensor \u00b7 2\u00d71",
       "type": "custom",
       "header": {
@@ -5852,7 +5967,7 @@
       "subpages": [
         [
           {
-            "id": "library_0243_binary_2x1",
+            "id": "library_0248_binary_2x1",
             "ck": "binary",
             "name": "Binary sensor",
             "x": 1,
@@ -5865,7 +5980,7 @@
         ]
       ]
     },
-    "library_0244_binary_1x3": {
+    "library_0249_binary_1x3": {
       "title": "Binary sensor \u00b7 1\u00d73",
       "type": "custom",
       "header": {
@@ -5874,7 +5989,7 @@
       "subpages": [
         [
           {
-            "id": "library_0244_binary_1x3",
+            "id": "library_0249_binary_1x3",
             "ck": "binary",
             "name": "Binary sensor",
             "x": 1,
@@ -5887,7 +6002,7 @@
         ]
       ]
     },
-    "library_0245_binary_1x4": {
+    "library_0250_binary_1x4": {
       "title": "Binary sensor \u00b7 1\u00d74",
       "type": "custom",
       "header": {
@@ -5896,7 +6011,7 @@
       "subpages": [
         [
           {
-            "id": "library_0245_binary_1x4",
+            "id": "library_0250_binary_1x4",
             "ck": "binary",
             "name": "Binary sensor",
             "x": 1,
@@ -5909,7 +6024,7 @@
         ]
       ]
     },
-    "library_0246_binary_1x5": {
+    "library_0251_binary_1x5": {
       "title": "Binary sensor \u00b7 1\u00d75",
       "type": "custom",
       "header": {
@@ -5918,7 +6033,7 @@
       "subpages": [
         [
           {
-            "id": "library_0246_binary_1x5",
+            "id": "library_0251_binary_1x5",
             "ck": "binary",
             "name": "Binary sensor",
             "x": 1,
@@ -5931,7 +6046,7 @@
         ]
       ]
     },
-    "library_0247_sensor_1x1": {
+    "library_0252_sensor_1x1": {
       "title": "Sensor \u00b7 1\u00d71",
       "type": "custom",
       "header": {
@@ -5940,7 +6055,7 @@
       "subpages": [
         [
           {
-            "id": "library_0247_sensor_1x1",
+            "id": "library_0252_sensor_1x1",
             "ck": "sensor",
             "name": "Sensor",
             "x": 1,
@@ -5953,7 +6068,7 @@
         ]
       ]
     },
-    "library_0248_sensor_2x1": {
+    "library_0253_sensor_2x1": {
       "title": "Sensor \u00b7 2\u00d71",
       "type": "custom",
       "header": {
@@ -5962,7 +6077,7 @@
       "subpages": [
         [
           {
-            "id": "library_0248_sensor_2x1",
+            "id": "library_0253_sensor_2x1",
             "ck": "sensor",
             "name": "Sensor",
             "x": 1,
@@ -5975,7 +6090,7 @@
         ]
       ]
     },
-    "library_0249_sensor_3x1": {
+    "library_0254_sensor_3x1": {
       "title": "Sensor \u00b7 3\u00d71",
       "type": "custom",
       "header": {
@@ -5984,7 +6099,7 @@
       "subpages": [
         [
           {
-            "id": "library_0249_sensor_3x1",
+            "id": "library_0254_sensor_3x1",
             "ck": "sensor",
             "name": "Sensor",
             "x": 1,
@@ -5997,7 +6112,7 @@
         ]
       ]
     },
-    "library_0250_sensor_4x1": {
+    "library_0255_sensor_4x1": {
       "title": "Sensor \u00b7 4\u00d71",
       "type": "custom",
       "header": {
@@ -6006,7 +6121,7 @@
       "subpages": [
         [
           {
-            "id": "library_0250_sensor_4x1",
+            "id": "library_0255_sensor_4x1",
             "ck": "sensor",
             "name": "Sensor",
             "x": 1,
@@ -6019,7 +6134,7 @@
         ]
       ]
     },
-    "library_0251_sensor_5x1": {
+    "library_0256_sensor_5x1": {
       "title": "Sensor \u00b7 5\u00d71",
       "type": "custom",
       "header": {
@@ -6028,7 +6143,7 @@
       "subpages": [
         [
           {
-            "id": "library_0251_sensor_5x1",
+            "id": "library_0256_sensor_5x1",
             "ck": "sensor",
             "name": "Sensor",
             "x": 1,
@@ -6041,7 +6156,7 @@
         ]
       ]
     },
-    "library_0252_chart_2x2": {
+    "library_0257_chart_2x2": {
       "title": "Sensor \u2014 trend chart \u00b7 2\u00d72",
       "type": "custom",
       "header": {
@@ -6050,7 +6165,7 @@
       "subpages": [
         [
           {
-            "id": "library_0252_chart_2x2",
+            "id": "library_0257_chart_2x2",
             "ck": "chart",
             "name": "Sensor \u2014 trend chart",
             "x": 1,
@@ -6063,7 +6178,7 @@
         ]
       ]
     },
-    "library_0253_chart_3x2": {
+    "library_0258_chart_3x2": {
       "title": "Sensor \u2014 trend chart \u00b7 3\u00d72",
       "type": "custom",
       "header": {
@@ -6072,7 +6187,7 @@
       "subpages": [
         [
           {
-            "id": "library_0253_chart_3x2",
+            "id": "library_0258_chart_3x2",
             "ck": "chart",
             "name": "Sensor \u2014 trend chart",
             "x": 1,
@@ -6085,7 +6200,7 @@
         ]
       ]
     },
-    "library_0254_chart_4x2": {
+    "library_0259_chart_4x2": {
       "title": "Sensor \u2014 trend chart \u00b7 4\u00d72",
       "type": "custom",
       "header": {
@@ -6094,7 +6209,7 @@
       "subpages": [
         [
           {
-            "id": "library_0254_chart_4x2",
+            "id": "library_0259_chart_4x2",
             "ck": "chart",
             "name": "Sensor \u2014 trend chart",
             "x": 1,
@@ -6107,7 +6222,7 @@
         ]
       ]
     },
-    "library_0255_chart_5x2": {
+    "library_0260_chart_5x2": {
       "title": "Sensor \u2014 trend chart \u00b7 5\u00d72",
       "type": "custom",
       "header": {
@@ -6116,7 +6231,7 @@
       "subpages": [
         [
           {
-            "id": "library_0255_chart_5x2",
+            "id": "library_0260_chart_5x2",
             "ck": "chart",
             "name": "Sensor \u2014 trend chart",
             "x": 1,
@@ -6129,7 +6244,7 @@
         ]
       ]
     },
-    "library_0256_weather_6x5": {
+    "library_0261_weather_6x5": {
       "title": "Weather \u00b7 6\u00d75",
       "type": "custom",
       "header": {
@@ -6138,7 +6253,7 @@
       "subpages": [
         [
           {
-            "id": "library_0256_weather_6x5",
+            "id": "library_0261_weather_6x5",
             "ck": "weather",
             "name": "Weather",
             "x": 1,
@@ -6150,7 +6265,7 @@
         ]
       ]
     },
-    "library_0257_weather_5x5": {
+    "library_0262_weather_5x5": {
       "title": "Weather \u00b7 5\u00d75",
       "type": "custom",
       "header": {
@@ -6159,7 +6274,7 @@
       "subpages": [
         [
           {
-            "id": "library_0257_weather_5x5",
+            "id": "library_0262_weather_5x5",
             "ck": "weather",
             "name": "Weather",
             "x": 1,
@@ -6171,7 +6286,7 @@
         ]
       ]
     },
-    "library_0258_weather_6x4": {
+    "library_0263_weather_6x4": {
       "title": "Weather \u00b7 6\u00d74",
       "type": "custom",
       "header": {
@@ -6180,7 +6295,7 @@
       "subpages": [
         [
           {
-            "id": "library_0258_weather_6x4",
+            "id": "library_0263_weather_6x4",
             "ck": "weather",
             "name": "Weather",
             "x": 1,
@@ -6192,7 +6307,7 @@
         ]
       ]
     },
-    "library_0259_wx_current_2x2": {
+    "library_0264_wx_current_2x2": {
       "title": "Weather \u2014 current \u00b7 2\u00d72",
       "type": "custom",
       "header": {
@@ -6201,7 +6316,7 @@
       "subpages": [
         [
           {
-            "id": "library_0259_wx_current_2x2",
+            "id": "library_0264_wx_current_2x2",
             "ck": "wx_current",
             "name": "Weather \u2014 current",
             "x": 1,
@@ -6213,7 +6328,7 @@
         ]
       ]
     },
-    "library_0260_wx_current_3x2": {
+    "library_0265_wx_current_3x2": {
       "title": "Weather \u2014 current \u00b7 3\u00d72",
       "type": "custom",
       "header": {
@@ -6222,7 +6337,7 @@
       "subpages": [
         [
           {
-            "id": "library_0260_wx_current_3x2",
+            "id": "library_0265_wx_current_3x2",
             "ck": "wx_current",
             "name": "Weather \u2014 current",
             "x": 1,
@@ -6234,7 +6349,7 @@
         ]
       ]
     },
-    "library_0261_wx_current_4x2": {
+    "library_0266_wx_current_4x2": {
       "title": "Weather \u2014 current \u00b7 4\u00d72",
       "type": "custom",
       "header": {
@@ -6243,7 +6358,7 @@
       "subpages": [
         [
           {
-            "id": "library_0261_wx_current_4x2",
+            "id": "library_0266_wx_current_4x2",
             "ck": "wx_current",
             "name": "Weather \u2014 current",
             "x": 1,
@@ -6255,7 +6370,7 @@
         ]
       ]
     },
-    "library_0262_wx_current_6x2": {
+    "library_0267_wx_current_6x2": {
       "title": "Weather \u2014 current \u00b7 6\u00d72",
       "type": "custom",
       "header": {
@@ -6264,7 +6379,7 @@
       "subpages": [
         [
           {
-            "id": "library_0262_wx_current_6x2",
+            "id": "library_0267_wx_current_6x2",
             "ck": "wx_current",
             "name": "Weather \u2014 current",
             "x": 1,
@@ -6276,7 +6391,7 @@
         ]
       ]
     },
-    "library_0263_wx_current_3x3": {
+    "library_0268_wx_current_3x3": {
       "title": "Weather \u2014 current \u00b7 3\u00d73",
       "type": "custom",
       "header": {
@@ -6285,7 +6400,7 @@
       "subpages": [
         [
           {
-            "id": "library_0263_wx_current_3x3",
+            "id": "library_0268_wx_current_3x3",
             "ck": "wx_current",
             "name": "Weather \u2014 current",
             "x": 1,
@@ -6297,7 +6412,7 @@
         ]
       ]
     },
-    "library_0264_wx_hourly_3x1": {
+    "library_0269_wx_hourly_3x1": {
       "title": "Weather \u2014 hourly \u00b7 3\u00d71",
       "type": "custom",
       "header": {
@@ -6306,7 +6421,7 @@
       "subpages": [
         [
           {
-            "id": "library_0264_wx_hourly_3x1",
+            "id": "library_0269_wx_hourly_3x1",
             "ck": "wx_hourly",
             "name": "Weather \u2014 hourly",
             "x": 1,
@@ -6318,7 +6433,7 @@
         ]
       ]
     },
-    "library_0265_wx_hourly_4x1": {
+    "library_0270_wx_hourly_4x1": {
       "title": "Weather \u2014 hourly \u00b7 4\u00d71",
       "type": "custom",
       "header": {
@@ -6327,7 +6442,7 @@
       "subpages": [
         [
           {
-            "id": "library_0265_wx_hourly_4x1",
+            "id": "library_0270_wx_hourly_4x1",
             "ck": "wx_hourly",
             "name": "Weather \u2014 hourly",
             "x": 1,
@@ -6339,7 +6454,7 @@
         ]
       ]
     },
-    "library_0266_wx_hourly_6x1": {
+    "library_0271_wx_hourly_6x1": {
       "title": "Weather \u2014 hourly \u00b7 6\u00d71",
       "type": "custom",
       "header": {
@@ -6348,7 +6463,7 @@
       "subpages": [
         [
           {
-            "id": "library_0266_wx_hourly_6x1",
+            "id": "library_0271_wx_hourly_6x1",
             "ck": "wx_hourly",
             "name": "Weather \u2014 hourly",
             "x": 1,
@@ -6360,7 +6475,7 @@
         ]
       ]
     },
-    "library_0267_wx_hourly_4x2": {
+    "library_0272_wx_hourly_4x2": {
       "title": "Weather \u2014 hourly \u00b7 4\u00d72",
       "type": "custom",
       "header": {
@@ -6369,7 +6484,7 @@
       "subpages": [
         [
           {
-            "id": "library_0267_wx_hourly_4x2",
+            "id": "library_0272_wx_hourly_4x2",
             "ck": "wx_hourly",
             "name": "Weather \u2014 hourly",
             "x": 1,
@@ -6381,7 +6496,7 @@
         ]
       ]
     },
-    "library_0268_wx_hourly_6x2": {
+    "library_0273_wx_hourly_6x2": {
       "title": "Weather \u2014 hourly \u00b7 6\u00d72",
       "type": "custom",
       "header": {
@@ -6390,7 +6505,7 @@
       "subpages": [
         [
           {
-            "id": "library_0268_wx_hourly_6x2",
+            "id": "library_0273_wx_hourly_6x2",
             "ck": "wx_hourly",
             "name": "Weather \u2014 hourly",
             "x": 1,
@@ -6402,7 +6517,7 @@
         ]
       ]
     },
-    "library_0269_wx_daily_2x3": {
+    "library_0274_wx_daily_2x3": {
       "title": "Weather \u2014 forecast (H/L) \u00b7 2\u00d73",
       "type": "custom",
       "header": {
@@ -6411,7 +6526,7 @@
       "subpages": [
         [
           {
-            "id": "library_0269_wx_daily_2x3",
+            "id": "library_0274_wx_daily_2x3",
             "ck": "wx_daily",
             "name": "Weather \u2014 forecast (H/L)",
             "x": 1,
@@ -6423,7 +6538,7 @@
         ]
       ]
     },
-    "library_0270_wx_daily_3x3": {
+    "library_0275_wx_daily_3x3": {
       "title": "Weather \u2014 forecast (H/L) \u00b7 3\u00d73",
       "type": "custom",
       "header": {
@@ -6432,7 +6547,7 @@
       "subpages": [
         [
           {
-            "id": "library_0270_wx_daily_3x3",
+            "id": "library_0275_wx_daily_3x3",
             "ck": "wx_daily",
             "name": "Weather \u2014 forecast (H/L)",
             "x": 1,
@@ -6444,7 +6559,7 @@
         ]
       ]
     },
-    "library_0271_wx_daily_2x4": {
+    "library_0276_wx_daily_2x4": {
       "title": "Weather \u2014 forecast (H/L) \u00b7 2\u00d74",
       "type": "custom",
       "header": {
@@ -6453,7 +6568,7 @@
       "subpages": [
         [
           {
-            "id": "library_0271_wx_daily_2x4",
+            "id": "library_0276_wx_daily_2x4",
             "ck": "wx_daily",
             "name": "Weather \u2014 forecast (H/L)",
             "x": 1,
@@ -6465,7 +6580,7 @@
         ]
       ]
     },
-    "library_0272_wx_daily_3x4": {
+    "library_0277_wx_daily_3x4": {
       "title": "Weather \u2014 forecast (H/L) \u00b7 3\u00d74",
       "type": "custom",
       "header": {
@@ -6474,7 +6589,7 @@
       "subpages": [
         [
           {
-            "id": "library_0272_wx_daily_3x4",
+            "id": "library_0277_wx_daily_3x4",
             "ck": "wx_daily",
             "name": "Weather \u2014 forecast (H/L)",
             "x": 1,
@@ -6486,7 +6601,7 @@
         ]
       ]
     },
-    "library_0273_wx_daily_2x5": {
+    "library_0278_wx_daily_2x5": {
       "title": "Weather \u2014 forecast (H/L) \u00b7 2\u00d75",
       "type": "custom",
       "header": {
@@ -6495,7 +6610,7 @@
       "subpages": [
         [
           {
-            "id": "library_0273_wx_daily_2x5",
+            "id": "library_0278_wx_daily_2x5",
             "ck": "wx_daily",
             "name": "Weather \u2014 forecast (H/L)",
             "x": 1,
@@ -6507,7 +6622,7 @@
         ]
       ]
     },
-    "library_0274_wx_daily_3x5": {
+    "library_0279_wx_daily_3x5": {
       "title": "Weather \u2014 forecast (H/L) \u00b7 3\u00d75",
       "type": "custom",
       "header": {
@@ -6516,7 +6631,7 @@
       "subpages": [
         [
           {
-            "id": "library_0274_wx_daily_3x5",
+            "id": "library_0279_wx_daily_3x5",
             "ck": "wx_daily",
             "name": "Weather \u2014 forecast (H/L)",
             "x": 1,
@@ -6528,7 +6643,7 @@
         ]
       ]
     },
-    "library_0275_wx_stats_2x2": {
+    "library_0280_wx_stats_2x2": {
       "title": "Weather \u2014 stats \u00b7 2\u00d72",
       "type": "custom",
       "header": {
@@ -6537,7 +6652,7 @@
       "subpages": [
         [
           {
-            "id": "library_0275_wx_stats_2x2",
+            "id": "library_0280_wx_stats_2x2",
             "ck": "wx_stats",
             "name": "Weather \u2014 stats",
             "x": 1,
@@ -6549,7 +6664,7 @@
         ]
       ]
     },
-    "library_0276_wx_stats_3x2": {
+    "library_0281_wx_stats_3x2": {
       "title": "Weather \u2014 stats \u00b7 3\u00d72",
       "type": "custom",
       "header": {
@@ -6558,7 +6673,7 @@
       "subpages": [
         [
           {
-            "id": "library_0276_wx_stats_3x2",
+            "id": "library_0281_wx_stats_3x2",
             "ck": "wx_stats",
             "name": "Weather \u2014 stats",
             "x": 1,
@@ -6570,7 +6685,7 @@
         ]
       ]
     },
-    "library_0277_wx_stats_2x3": {
+    "library_0282_wx_stats_2x3": {
       "title": "Weather \u2014 stats \u00b7 2\u00d73",
       "type": "custom",
       "header": {
@@ -6579,7 +6694,7 @@
       "subpages": [
         [
           {
-            "id": "library_0277_wx_stats_2x3",
+            "id": "library_0282_wx_stats_2x3",
             "ck": "wx_stats",
             "name": "Weather \u2014 stats",
             "x": 1,
@@ -6591,7 +6706,7 @@
         ]
       ]
     },
-    "library_0278_wx_stats_3x3": {
+    "library_0283_wx_stats_3x3": {
       "title": "Weather \u2014 stats \u00b7 3\u00d73",
       "type": "custom",
       "header": {
@@ -6600,7 +6715,7 @@
       "subpages": [
         [
           {
-            "id": "library_0278_wx_stats_3x3",
+            "id": "library_0283_wx_stats_3x3",
             "ck": "wx_stats",
             "name": "Weather \u2014 stats",
             "x": 1,
@@ -6612,7 +6727,7 @@
         ]
       ]
     },
-    "library_0279_person_1x1": {
+    "library_0284_person_1x1": {
       "title": "Presence \u00b7 1\u00d71",
       "type": "custom",
       "header": {
@@ -6621,7 +6736,7 @@
       "subpages": [
         [
           {
-            "id": "library_0279_person_1x1",
+            "id": "library_0284_person_1x1",
             "ck": "person",
             "name": "Presence",
             "x": 1,
@@ -6634,7 +6749,7 @@
         ]
       ]
     },
-    "library_0280_person_2x1": {
+    "library_0285_person_2x1": {
       "title": "Presence \u00b7 2\u00d71",
       "type": "custom",
       "header": {
@@ -6643,7 +6758,7 @@
       "subpages": [
         [
           {
-            "id": "library_0280_person_2x1",
+            "id": "library_0285_person_2x1",
             "ck": "person",
             "name": "Presence",
             "x": 1,
@@ -6656,7 +6771,7 @@
         ]
       ]
     },
-    "library_0281_person_1x3": {
+    "library_0286_person_1x3": {
       "title": "Presence \u00b7 1\u00d73",
       "type": "custom",
       "header": {
@@ -6665,7 +6780,7 @@
       "subpages": [
         [
           {
-            "id": "library_0281_person_1x3",
+            "id": "library_0286_person_1x3",
             "ck": "person",
             "name": "Presence",
             "x": 1,
@@ -6678,7 +6793,7 @@
         ]
       ]
     },
-    "library_0282_person_1x4": {
+    "library_0287_person_1x4": {
       "title": "Presence \u00b7 1\u00d74",
       "type": "custom",
       "header": {
@@ -6687,7 +6802,7 @@
       "subpages": [
         [
           {
-            "id": "library_0282_person_1x4",
+            "id": "library_0287_person_1x4",
             "ck": "person",
             "name": "Presence",
             "x": 1,
@@ -6700,7 +6815,7 @@
         ]
       ]
     },
-    "library_0283_person_1x5": {
+    "library_0288_person_1x5": {
       "title": "Presence \u00b7 1\u00d75",
       "type": "custom",
       "header": {
@@ -6709,7 +6824,7 @@
       "subpages": [
         [
           {
-            "id": "library_0283_person_1x5",
+            "id": "library_0288_person_1x5",
             "ck": "person",
             "name": "Presence",
             "x": 1,
@@ -6722,7 +6837,7 @@
         ]
       ]
     },
-    "library_0284_vacuum_2x2": {
+    "library_0289_vacuum_2x2": {
       "title": "Vacuum \u00b7 2\u00d72",
       "type": "custom",
       "header": {
@@ -6731,7 +6846,7 @@
       "subpages": [
         [
           {
-            "id": "library_0284_vacuum_2x2",
+            "id": "library_0289_vacuum_2x2",
             "ck": "vacuum",
             "name": "Vacuum",
             "x": 1,
@@ -6744,7 +6859,7 @@
         ]
       ]
     },
-    "library_0285_scene_1x1": {
+    "library_0290_scene_1x1": {
       "title": "Scene \u00b7 1\u00d71",
       "type": "custom",
       "header": {
@@ -6753,7 +6868,7 @@
       "subpages": [
         [
           {
-            "id": "library_0285_scene_1x1",
+            "id": "library_0290_scene_1x1",
             "ck": "scene",
             "name": "Scene",
             "x": 1,
@@ -6765,7 +6880,7 @@
         ]
       ]
     },
-    "library_0286_scene_2x1": {
+    "library_0291_scene_2x1": {
       "title": "Scene \u00b7 2\u00d71",
       "type": "custom",
       "header": {
@@ -6774,7 +6889,7 @@
       "subpages": [
         [
           {
-            "id": "library_0286_scene_2x1",
+            "id": "library_0291_scene_2x1",
             "ck": "scene",
             "name": "Scene",
             "x": 1,
@@ -6786,7 +6901,7 @@
         ]
       ]
     },
-    "library_0287_scene_1x3": {
+    "library_0292_scene_1x3": {
       "title": "Scene \u00b7 1\u00d73",
       "type": "custom",
       "header": {
@@ -6795,7 +6910,7 @@
       "subpages": [
         [
           {
-            "id": "library_0287_scene_1x3",
+            "id": "library_0292_scene_1x3",
             "ck": "scene",
             "name": "Scene",
             "x": 1,
@@ -6807,7 +6922,7 @@
         ]
       ]
     },
-    "library_0288_scene_1x4": {
+    "library_0293_scene_1x4": {
       "title": "Scene \u00b7 1\u00d74",
       "type": "custom",
       "header": {
@@ -6816,7 +6931,7 @@
       "subpages": [
         [
           {
-            "id": "library_0288_scene_1x4",
+            "id": "library_0293_scene_1x4",
             "ck": "scene",
             "name": "Scene",
             "x": 1,
@@ -6828,7 +6943,7 @@
         ]
       ]
     },
-    "library_0289_scene_1x5": {
+    "library_0294_scene_1x5": {
       "title": "Scene \u00b7 1\u00d75",
       "type": "custom",
       "header": {
@@ -6837,7 +6952,7 @@
       "subpages": [
         [
           {
-            "id": "library_0289_scene_1x5",
+            "id": "library_0294_scene_1x5",
             "ck": "scene",
             "name": "Scene",
             "x": 1,
@@ -6849,7 +6964,7 @@
         ]
       ]
     },
-    "library_0290_script_1x1": {
+    "library_0295_script_1x1": {
       "title": "Script / button \u00b7 1\u00d71",
       "type": "custom",
       "header": {
@@ -6858,7 +6973,7 @@
       "subpages": [
         [
           {
-            "id": "library_0290_script_1x1",
+            "id": "library_0295_script_1x1",
             "ck": "script",
             "name": "Script / button",
             "x": 1,
@@ -6870,7 +6985,7 @@
         ]
       ]
     },
-    "library_0291_script_2x1": {
+    "library_0296_script_2x1": {
       "title": "Script / button \u00b7 2\u00d71",
       "type": "custom",
       "header": {
@@ -6879,7 +6994,7 @@
       "subpages": [
         [
           {
-            "id": "library_0291_script_2x1",
+            "id": "library_0296_script_2x1",
             "ck": "script",
             "name": "Script / button",
             "x": 1,
@@ -6891,7 +7006,7 @@
         ]
       ]
     },
-    "library_0292_script_1x3": {
+    "library_0297_script_1x3": {
       "title": "Script / button \u00b7 1\u00d73",
       "type": "custom",
       "header": {
@@ -6900,7 +7015,7 @@
       "subpages": [
         [
           {
-            "id": "library_0292_script_1x3",
+            "id": "library_0297_script_1x3",
             "ck": "script",
             "name": "Script / button",
             "x": 1,
@@ -6912,7 +7027,7 @@
         ]
       ]
     },
-    "library_0293_script_1x4": {
+    "library_0298_script_1x4": {
       "title": "Script / button \u00b7 1\u00d74",
       "type": "custom",
       "header": {
@@ -6921,7 +7036,7 @@
       "subpages": [
         [
           {
-            "id": "library_0293_script_1x4",
+            "id": "library_0298_script_1x4",
             "ck": "script",
             "name": "Script / button",
             "x": 1,
@@ -6933,7 +7048,7 @@
         ]
       ]
     },
-    "library_0294_script_1x5": {
+    "library_0299_script_1x5": {
       "title": "Script / button \u00b7 1\u00d75",
       "type": "custom",
       "header": {
@@ -6942,7 +7057,7 @@
       "subpages": [
         [
           {
-            "id": "library_0294_script_1x5",
+            "id": "library_0299_script_1x5",
             "ck": "script",
             "name": "Script / button",
             "x": 1,

@@ -1448,6 +1448,33 @@ def c_radar(card, x, y, w, h, base):
                radar_widget, radar_src, img_x, img_y, tile_px, tile_px,
                marker_x - 7, marker_y - 7)
         )
+    elif location:
+        # Host builds cannot load online radar tiles. Keep their preview
+        # deterministic while preserving the same composition as the builder.
+        for px, py, pw, ph, color in (
+            (18, 52, 18, 16, "0x4FA8F5"),
+            (40, 30, 24, 22, "0x2ED5B8"),
+            (62, 58, 14, 18, "0xF2B84B"),
+        ):
+            inner += (
+                "                    - obj:\n"
+                "                        x: %d\n                        y: %d\n"
+                "                        width: %d\n                        height: %d\n"
+                "                        bg_color: %s\n                        bg_opa: 74%%\n"
+                "                        border_width: 0\n                        radius: 2\n"
+                "                        pad_all: 0\n                        clickable: false\n"
+                % (inner_w * px // 100, inner_h * py // 100,
+                   max(8, inner_w * pw // 100), max(8, inner_h * ph // 100), color)
+            )
+        inner += (
+            "                    - obj:\n"
+            "                        x: %d\n                        y: %d\n"
+            "                        width: 14\n                        height: 14\n"
+            "                        radius: 7\n                        bg_opa: 0%%\n"
+            "                        border_width: 3\n                        border_color: 0x2E7CF6\n"
+            "                        pad_all: 0\n                        clickable: false\n"
+            % (inner_w // 2 - 7, inner_h // 2 - 7)
+        )
     else:
         inner += (
             "                    - label:\n"
@@ -1478,6 +1505,9 @@ def c_radar(card, x, y, w, h, base):
             "                  on_click:\n                    - script.execute: radar_refresh\n"
             % (w - 54, glyph_for("refresh"))
         )
+    elif location:
+        inner += lbl(glyph_for("refresh"), w - 42, 25, "f_iconsm", "0xFFFFFF",
+                     width=20, align="top_right", height=20)
 
     if h >= 160:
         inner += (

@@ -14,7 +14,11 @@ const password = process.env.AURORA_PASSWORD || 'Admin';
 
 (async () => {
   for (const dir of ['web-config', 'web-config-focused']) {
-    fs.mkdirSync(path.join(base, dir), {recursive: true});
+    const target = path.join(base, dir);
+    fs.mkdirSync(target, {recursive: true});
+    for (const name of fs.readdirSync(target)) {
+      if (name.endsWith('.png')) fs.unlinkSync(path.join(target, name));
+    }
   }
   const browser = await chromium.launch({headless: true});
   const page = await browser.newPage({viewport: {width: 1440, height: 900}, deviceScaleFactor: 1});
