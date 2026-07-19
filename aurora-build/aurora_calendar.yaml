@@ -1,0 +1,288 @@
+# =============================================================================
+# Aurora · Calendar package
+# -----------------------------------------------------------------------------
+# Aggregates one or more Home Assistant calendars (Google, Apple/iCloud, local,
+# ...) into packed sensor attributes the Aurora panel's calendar cards read.
+# The panel does no date math — everything is bucketed/formatted here.
+#
+# Publishes:
+#   - sensor.aurora_calendar_month   — month grid for the SHOWN month
+#       month_title : "July 2026"
+#       month_map   : 42 lines "D|C|F" (day label, event count 0-9,
+#                     flags bit0=in shown month, bit1=today)
+#   - sensor.aurora_calendar_events  — this week + upcoming agenda (today-anchored)
+#       cal_names   : one linked-calendar friendly name per line (accent order)
+#       w_range     : "Jul 13 - Jul 19"
+#       w_days      : 7 lines "Sun 13|0"  (label, is_today 0/1)
+#       w_rows      : 35 lines, row-major (5 rows x 7 days) "ci|7:00A|Title"
+#                     (ci = calendar accent index, empty line = no event)
+#       w_cnt       : 7 lines — total events per weekday (panel derives "+N")
+#       a_events    : up to 40 lines "ci|Today · 9:00 AM|Title", soonest first
+#   - input_number.aurora_calendar_month_offset — the shown month, relative to
+#       the current month. The panel's ‹ › buttons increment/decrement it and
+#       tapping the month title resets it to 0; changing it re-fetches the grid.
+#   - script.aurora_calendar_refresh — fires the aurora_calendar_refresh event;
+#       the panel's refresh buttons call it (also handy for automations).
+#
+# LINK YOUR CALENDARS (both produce calendar.* entities this package reads):
+#   Google  — HA Settings → Devices & Services → Add Integration → "Google
+#             Calendar" and complete the OAuth flow (see the HA docs for the
+#             Google Cloud OAuth client setup). Enable the per-calendar
+#             entities you want in the integration's entity list.
+#   Apple / iCloud — Add Integration → "CalDAV". URL: https://caldav.icloud.com
+#             Username: your Apple ID email. Password: an APP-SPECIFIC password
+#             generated at https://account.apple.com (Sign-In and Security →
+#             App-Specific Passwords). One calendar.* entity per iCloud calendar.
+#
+# THEN: replace the entity list under `&aurora_cal_entities` below with your
+# own calendar.* entities (the single edit point — the YAML anchor reuses it
+# in both blocks). Accent colors on the panel follow the ALPHABETICAL order of
+# the entity ids (teal, amber, blue, violet; 5th+ reuse the last).
+#
+# INSTALL: in configuration.yaml:
+#     homeassistant:
+#       packages:
+#         aurora_calendar: !include aurora_calendar.yaml
+# then restart HA.
+#
+# Notes: weeks start on Sunday (US convention). The month grid covers the
+# shown month's full 6-week span; week + agenda always follow today regardless
+# of the month being browsed.
+# =============================================================================
+
+input_number:
+  aurora_calendar_month_offset:
+    name: Aurora Calendar Month Offset
+    icon: mdi:calendar-arrow-right
+    min: -12
+    max: 12
+    step: 1
+    mode: box
+
+script:
+  aurora_calendar_refresh:
+    alias: Aurora Calendar - Refresh
+    icon: mdi:calendar-sync
+    sequence:
+      - event: aurora_calendar_refresh
+
+template:
+  # ---- Month grid (follows the month-offset input) --------------------------
+  - trigger:
+      - platform: homeassistant
+        event: start
+      - platform: time_pattern
+        minutes: "/15"
+      - platform: time
+        at: "00:00:30"
+      - platform: event
+        event_type: aurora_calendar_refresh
+      - platform: state
+        entity_id: input_number.aurora_calendar_month_offset
+    action:
+      - variables:
+          moff: "{{ states('input_number.aurora_calendar_month_offset') | float(0) | int }}"
+          myr: "{{ now().year + ((now().month - 1 + moff) // 12) }}"
+          mno: "{{ ((now().month - 1 + moff) % 12) + 1 }}"
+          m1: "{{ now().replace(day=1, hour=0, minute=0, second=0, microsecond=0).replace(year=myr | int, month=mno | int) }}"
+          t0: "{{ (m1 | as_datetime) - timedelta(days=((m1 | as_datetime).weekday() + 1) % 7) }}"
+      - service: calendar.get_events
+        target:
+          entity_id: &aurora_cal_entities
+            # <<< EDIT: your linked calendar entities >>>
+            - calendar.personal
+        data:
+          start_date_time: "{{ t0 }}"
+          end_date_time: "{{ (t0 | as_datetime) + timedelta(days=42) }}"
+        response_variable: ev
+    sensor:
+      - name: Aurora Calendar Month
+        unique_id: aurora_calendar_month
+        icon: mdi:calendar-month
+        state: >-
+          {{ ev.values() | map(attribute='events') | map('count') | sum }}
+        attributes:
+          month_title: >-
+            {%- set moff = states('input_number.aurora_calendar_month_offset') | float(0) | int -%}
+            {%- set myr = now().year + ((now().month - 1 + moff) // 12) -%}
+            {%- set mno = ((now().month - 1 + moff) % 12) + 1 -%}
+            {{ now().replace(day=1).replace(year=myr, month=mno).strftime('%B %Y') }}
+          month_map: >-
+            {%- set moff = states('input_number.aurora_calendar_month_offset') | float(0) | int -%}
+            {%- set myr = now().year + ((now().month - 1 + moff) // 12) -%}
+            {%- set mno = ((now().month - 1 + moff) % 12) + 1 -%}
+            {%- set m1 = now().replace(day=1, hour=0, minute=0, second=0, microsecond=0).replace(year=myr, month=mno) -%}
+            {%- set t0d = (m1 - timedelta(days=(m1.weekday() + 1) % 7)).date() -%}
+            {%- set today = now().date() -%}
+            {%- set ns = namespace(out=[]) -%}
+            {%- for i in range(42) -%}
+              {%- set d = t0d + timedelta(days=i) -%}
+              {%- set c = namespace(n=0) -%}
+              {%- for cal in ev -%}
+                {%- for e in ev[cal]['events'] -%}
+                  {%- set ad = 'T' not in e.start -%}
+                  {%- if ad -%}
+                    {%- set sd = strptime(e.start, '%Y-%m-%d').date() -%}
+                    {%- set last = strptime(e.end, '%Y-%m-%d').date() - timedelta(days=1) -%}
+                  {%- else -%}
+                    {%- set sdt = e.start | as_datetime | as_local -%}
+                    {%- set edt = e.end | as_datetime | as_local -%}
+                    {%- set sd = sdt.date() -%}
+                    {%- set last = edt.date() - timedelta(days=1) if (edt.hour == 0 and edt.minute == 0) else edt.date() -%}
+                  {%- endif -%}
+                  {%- if sd <= d and d <= last -%}{%- set c.n = c.n + 1 -%}{%- endif -%}
+                {%- endfor -%}
+              {%- endfor -%}
+              {%- set f = (1 if d.month == mno else 0) + (2 if d == today else 0) -%}
+              {%- set ns.out = ns.out + [d.day ~ '|' ~ ([c.n, 9] | min) ~ '|' ~ f] -%}
+            {%- endfor -%}
+            {{ ns.out | join('\n') }}
+
+  # ---- This week + upcoming agenda (always anchored on today) ---------------
+  - trigger:
+      - platform: homeassistant
+        event: start
+      - platform: time_pattern
+        minutes: "/15"
+      - platform: time
+        at: "00:00:30"
+      - platform: event
+        event_type: aurora_calendar_refresh
+    action:
+      - variables:
+          t0w: "{{ (now() - timedelta(days=(now().weekday() + 1) % 7)).replace(hour=0, minute=0, second=0, microsecond=0) }}"
+      - service: calendar.get_events
+        target:
+          entity_id: *aurora_cal_entities
+        data:
+          start_date_time: "{{ t0w }}"
+          end_date_time: "{{ (t0w | as_datetime) + timedelta(days=15) }}"
+        response_variable: ev
+    sensor:
+      - name: Aurora Calendar Events
+        unique_id: aurora_calendar_events
+        icon: mdi:calendar-text
+        state: >-
+          {{ ev.values() | map(attribute='events') | map('count') | sum }}
+        attributes:
+          cal_names: >-
+            {%- set ns = namespace(out=[]) -%}
+            {%- for cal in ev.keys() | sort -%}
+              {%- set ns.out = ns.out + [(state_attr(cal, 'friendly_name') or cal) | replace('|',' ') | replace('\n',' ')] -%}
+            {%- endfor -%}
+            {{ ns.out | join('\n') }}
+          w_range: >-
+            {%- set t0d = (now() - timedelta(days=(now().weekday() + 1) % 7)).date() -%}
+            {{ t0d.strftime('%b %-d') }} - {{ (t0d + timedelta(days=6)).strftime('%b %-d') }}
+          w_days: >-
+            {%- set t0d = (now() - timedelta(days=(now().weekday() + 1) % 7)).date() -%}
+            {%- set today = now().date() -%}
+            {%- set ns = namespace(out=[]) -%}
+            {%- for j in range(7) -%}
+              {%- set d = t0d + timedelta(days=j) -%}
+              {%- set ns.out = ns.out + [d.strftime('%a %-d') ~ '|' ~ (1 if d == today else 0)] -%}
+            {%- endfor -%}
+            {{ ns.out | join('\n') }}
+          w_rows: >-
+            {%- set t0d = (now() - timedelta(days=(now().weekday() + 1) % 7)).date() -%}
+            {%- set days = namespace(l=[]) -%}
+            {%- for j in range(7) -%}
+              {%- set d = t0d + timedelta(days=j) -%}
+              {%- set day = namespace(evs=[]) -%}
+              {%- for cal in ev.keys() | sort -%}
+                {%- set ci = [loop.index0, 3] | min -%}
+                {%- for e in ev[cal]['events'] -%}
+                  {%- set ad = 'T' not in e.start -%}
+                  {%- if ad -%}
+                    {%- set sd = strptime(e.start, '%Y-%m-%d').date() -%}
+                    {%- set last = strptime(e.end, '%Y-%m-%d').date() - timedelta(days=1) -%}
+                  {%- else -%}
+                    {%- set sdt = e.start | as_datetime | as_local -%}
+                    {%- set edt = e.end | as_datetime | as_local -%}
+                    {%- set sd = sdt.date() -%}
+                    {%- set last = edt.date() - timedelta(days=1) if (edt.hour == 0 and edt.minute == 0) else edt.date() -%}
+                  {%- endif -%}
+                  {%- if sd <= d and d <= last -%}
+                    {%- set ttl = (e.summary | default('(no title)', true)) | replace('|',' ') | replace('\n',' ') | trim | truncate(38, true, '') -%}
+                    {%- if ad -%}
+                      {%- set key = '0' -%}{%- set tm = 'All day' -%}
+                    {%- else -%}
+                      {%- set key = '1' ~ sdt.strftime('%H%M') -%}
+                      {%- set tm = (sdt.strftime('%I') | int) ~ ':' ~ sdt.strftime('%M') ~ ('A' if sdt.hour < 12 else 'P') -%}
+                    {%- endif -%}
+                    {%- set day.evs = day.evs + [key ~ '~' ~ ci ~ '|' ~ tm ~ '|' ~ ttl] -%}
+                  {%- endif -%}
+                {%- endfor -%}
+              {%- endfor -%}
+              {%- set days.l = days.l + [day.evs | sort] -%}
+            {%- endfor -%}
+            {%- set out = namespace(l=[]) -%}
+            {%- for k in range(5) -%}
+              {%- for j in range(7) -%}
+                {%- set sl = days.l[j] -%}
+                {%- set out.l = out.l + [sl[k].split('~', 1)[1] if sl | length > k else ''] -%}
+              {%- endfor -%}
+            {%- endfor -%}
+            {{ out.l | join('\n') }}
+          w_cnt: >-
+            {%- set t0d = (now() - timedelta(days=(now().weekday() + 1) % 7)).date() -%}
+            {%- set ns = namespace(out=[]) -%}
+            {%- for j in range(7) -%}
+              {%- set d = t0d + timedelta(days=j) -%}
+              {%- set c = namespace(n=0) -%}
+              {%- for cal in ev -%}
+                {%- for e in ev[cal]['events'] -%}
+                  {%- set ad = 'T' not in e.start -%}
+                  {%- if ad -%}
+                    {%- set sd = strptime(e.start, '%Y-%m-%d').date() -%}
+                    {%- set last = strptime(e.end, '%Y-%m-%d').date() - timedelta(days=1) -%}
+                  {%- else -%}
+                    {%- set sdt = e.start | as_datetime | as_local -%}
+                    {%- set edt = e.end | as_datetime | as_local -%}
+                    {%- set sd = sdt.date() -%}
+                    {%- set last = edt.date() - timedelta(days=1) if (edt.hour == 0 and edt.minute == 0) else edt.date() -%}
+                  {%- endif -%}
+                  {%- if sd <= d and d <= last -%}{%- set c.n = c.n + 1 -%}{%- endif -%}
+                {%- endfor -%}
+              {%- endfor -%}
+              {%- set ns.out = ns.out + [c.n] -%}
+            {%- endfor -%}
+            {{ ns.out | join('\n') }}
+          a_events: >-
+            {%- set nowt = now() -%}
+            {%- set today = nowt.date() -%}
+            {%- set ns = namespace(evs=[]) -%}
+            {%- for cal in ev.keys() | sort -%}
+              {%- set ci = [loop.index0, 3] | min -%}
+              {%- for e in ev[cal]['events'] -%}
+                {%- set ad = 'T' not in e.start -%}
+                {%- if ad -%}
+                  {%- set sd = strptime(e.start, '%Y-%m-%d').date() -%}
+                  {%- set ongoing = strptime(e.end, '%Y-%m-%d').date() > today -%}
+                {%- else -%}
+                  {%- set sdt = e.start | as_datetime | as_local -%}
+                  {%- set sd = sdt.date() -%}
+                  {%- set ongoing = (e.end | as_datetime | as_local) > nowt -%}
+                {%- endif -%}
+                {%- if ongoing -%}
+                  {%- set ttl = (e.summary | default('(no title)', true)) | replace('|',' ') | replace('\n',' ') | trim | truncate(38, true, '') -%}
+                  {%- if sd == today -%}{%- set dl = 'Today' -%}
+                  {%- elif sd == today + timedelta(days=1) -%}{%- set dl = 'Tomorrow' -%}
+                  {%- else -%}{%- set dl = sd.strftime('%a %b %-d') -%}{%- endif -%}
+                  {%- if ad -%}
+                    {%- set key = sd.strftime('%Y%m%d') ~ '0000' -%}
+                    {%- set when = dl ~ ' · All day' -%}
+                  {%- else -%}
+                    {%- set key = sd.strftime('%Y%m%d') ~ sdt.strftime('%H%M') -%}
+                    {%- set when = dl ~ ' · ' ~ (sdt.strftime('%I') | int) ~ ':' ~ sdt.strftime('%M') ~ (' AM' if sdt.hour < 12 else ' PM') -%}
+                  {%- endif -%}
+                  {%- set ns.evs = ns.evs + [key ~ '~' ~ ci ~ '|' ~ when ~ '|' ~ ttl] -%}
+                {%- endif -%}
+              {%- endfor -%}
+            {%- endfor -%}
+            {%- set ns.evs = ns.evs | sort -%}
+            {%- set out = namespace(l=[]) -%}
+            {%- for s in ns.evs[:40] -%}
+              {%- set out.l = out.l + [s.split('~', 1)[1]] -%}
+            {%- endfor -%}
+            {{ out.l | join('\n') }}

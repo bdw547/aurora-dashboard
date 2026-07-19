@@ -338,6 +338,9 @@ const C = {
   wx_hourly:{label:'Weather — hourly', domain:'weather', icon:'clock-time-four-outline', color:'var(--blue)', spans:[[3,1],[4,1],[6,1],[4,2],[6,2]], def:[6,1], min:[3,1], ctrl:'wx'},
   wx_daily: {label:'Weather — forecast (H/L)', domain:'weather', icon:'calendar-week', color:'var(--blue)', spans:[[2,3],[3,3],[2,4],[3,4],[2,5],[3,5]], def:[3,3], min:[2,3], ctrl:'wx'},
   wx_stats: {label:'Weather — stats', domain:'weather', icon:'gauge', color:'var(--teal)', spans:[[2,2],[3,2],[2,3],[3,3]], def:[3,2], min:[2,2], ctrl:'wx'},
+  cal_month:{label:'Calendar — month', domain:'calendar', icon:'calendar-month', color:'var(--violet)', spans:[[4,4],[5,4],[6,4],[4,5],[5,5],[6,5]], def:[6,5], min:[4,4], ctrl:'cal'},
+  cal_week: {label:'Calendar — week', domain:'calendar', icon:'calendar-week', color:'var(--violet)', spans:[[4,3],[5,3],[6,3],[4,4],[5,4],[6,4],[6,5]], def:[6,4], min:[4,3], ctrl:'cal'},
+  cal_agenda:{label:'Calendar — agenda', domain:'calendar', icon:'calendar-text', color:'var(--violet)', spans:[[2,2],[3,2],[2,3],[3,3],[2,4],[3,4],[2,5],[3,5]], def:[2,4], min:[2,2], ctrl:'cal'},
   person:   {label:'Presence', domain:'person', icon:'account', color:'var(--blue)', spans:[[1,1],[2,1],...V], def:[1,1], min:[1,1], ctrl:'val'},
   vacuum:   {label:'Vacuum', domain:'vacuum', icon:'robot-vacuum', color:'var(--blue)', spans:[[2,2]], def:[2,2], min:[2,2], ctrl:'val'},
   scene:    {label:'Scene', domain:'scene', icon:'palette', color:'var(--violet)', spans:[[1,1],[2,1],...V], def:[1,1], min:[1,1], ctrl:'tile'},
@@ -352,7 +355,7 @@ const CATS = [
   ['Media', ['media','volume']],
   ['Groups', ['group','shortcuts']],
   ['Safety', ['lock','camera','alarm','notifications','binary']],
-  ['Info', ['sensor','weather','person','vacuum']],
+  ['Info', ['sensor','weather','cal_month','person','vacuum']],
   ['Actions', ['scene','script']],
 ];
 // --- Card styles: duplicate palette entries merged into ONE card + a style option.
@@ -368,6 +371,7 @@ const STYLE_GROUPS=[
   {label:'Speakers style', opts:[['spotify_speakers','All speakers (list)'],['spotify_speaker','Single speaker tile']]},
   {label:'Volume style', opts:[['volume','Single player'],['volumes','Per-speaker list']]},
   {label:'Weather section', opts:[['weather','Full page (6×5)'],['wx_current','Current conditions'],['wx_hourly','Hourly strip'],['wx_daily','Forecast (High/Low)'],['wx_stats','Stats (wind / humidity / pressure)']]},
+  {label:'Calendar view', opts:[['cal_month','Month grid'],['cal_week','Week board'],['cal_agenda','Agenda list']]},
   {label:'Remote piece', opts:[['tvremote','Full remote'],['tv_dpad','D-pad'],['tv_transport','Transport row'],['tv_channel','Channel +/-'],['tv_volume','Volume'],['tv_sources','Sources / inputs'],['tv_trackpad','Trackpad']]},
 ];
 const STYLE_OF={}; STYLE_GROUPS.forEach(g=>g.opts.forEach(o=>STYLE_OF[o[0]]=g));
@@ -405,6 +409,7 @@ const DESC={
   binary:'Motion / door / occupancy — lights up when active',
   sensor:'Numeric reading — plain value or a trend chart, with units + color rules',
   weather:'Forecast — the full page or compact sections',
+  cal_month:'Your Google + Apple calendars — month grid, week board or agenda list',
   person:'Who is home / away',
   vacuum:'Vacuum status',
   scene:'One-tap scene button',
@@ -614,7 +619,7 @@ function renderNav(){ const el=document.getElementById('navbuild'); el.innerHTML
     d.querySelector('.x').onclick=(e)=>{e.stopPropagation(); L.nav.splice(i,1); if(curPage===n.page){curPage=L.nav[0]?L.nav[0].page:Object.keys(L.pages)[0];} renderAll();};
     d.onclick=()=>editNav(i); el.appendChild(d); });
   const set=document.createElement('div'); set.className='navitem locked'; set.innerHTML=`<span class="mdi mdi-cog"></span>Settings`; el.appendChild(set);
-  if(L.nav.length<7){ const a=document.createElement('button'); a.className='addnav'; a.textContent='+ Nav item'; a.onclick=addNav; el.appendChild(a); } }
+  if(L.nav.length<8){ const a=document.createElement('button'); a.className='addnav'; a.textContent='+ Nav item'; a.onclick=addNav; el.appendChild(a); } }
 function renderTabs(){ const el=document.getElementById('tabs'); el.innerHTML='';
   const lab=document.createElement('span'); lab.style.cssText='font-size:12px;color:var(--t2);margin-right:4px'; lab.textContent=L.pages[curPage].title+' · sub-pages:'; el.appendChild(lab);
   L.pages[curPage].subpages.forEach((sp,i)=>{ const t=document.createElement('div'); t.className='tab'+(i===curSub?' on':''); t.textContent=(i+1);
@@ -708,6 +713,17 @@ function cardInner(c){ const def=C[c.ck], nm=c.name||def.label, big=c.w>=3, ctrl
     if(c.ck==='wx_stats'){ const rs=[['Air pressure','30.05 inHg'],['Humidity','44%'],['Wind speed','7 mph NW']].map(([l,v])=>`<div style="display:flex;justify-content:space-between;align-items:center;padding:7px 4px"><span style="font-size:14px;color:${G2}">${l}</span><span style="font-size:14px;font-weight:600;color:${T}">${v}</span></div>`).join('');
       return head+`<div style="display:flex;flex-direction:column;justify-content:center;height:100%;padding:0 10px">${rs}</div>`; }
   }
+  if(c.ck&&c.ck.startsWith('cal_')){ const T='#F3F5F8', G='#868CA0', TL='#2ED5B8', VC=['#2ED5B8','#F2B84B','#4FA8F5','#8FA6FF'];
+    if(c.ck==='cal_month'){ const dows='SMTWTFS'.split('').map(d=>`<span style="flex:1;text-align:center;font-size:9px;color:#5D6470">${d}</span>`).join('');
+      const cells=Array.from({length:35},(_,i)=>{ const d=i<3?28+i:i-2, inm=i>=3&&i<34, tod=inm&&d===19, cnt={2:1,4:2,7:1,10:3,13:1,15:2,19:3,20:2,22:2}[inm?d:0]||0;
+        return `<div style="background:${tod?'#11201C':(inm?'#14161C':'#101218')};border:1px solid ${tod?TL:'transparent'};border-radius:5px;position:relative;min-height:0"><span style="position:absolute;left:3px;top:1px;font-size:9px;color:${tod?TL:(inm?T:'#5D6470')}">${d}</span>${cnt?`<span style="position:absolute;left:3px;bottom:1px;font-size:8px;color:${TL}">${cnt}</span>`:''}</div>`; }).join('');
+      return head+`<div style="display:flex;flex-direction:column;height:100%;gap:4px"><div style="display:flex;align-items:center;gap:8px"><span class="mdi mdi-calendar-month" style="color:var(--violet);font-size:17px"></span><span style="font-weight:700;font-size:14px;color:${T}">July 2026</span><span style="margin-left:auto;display:flex;gap:4px"><span class="mdi mdi-chevron-left" style="color:${G}"></span><span class="mdi mdi-chevron-right" style="color:${G}"></span></span></div><div style="display:flex">${dows}</div><div style="flex:1;display:grid;grid-template-columns:repeat(7,1fr);grid-template-rows:repeat(5,1fr);gap:3px;min-height:0">${cells}</div></div>`; }
+    if(c.ck==='cal_week'){ const chip=(ci,tm,tt)=>`<div style="background:#0F1117;border-radius:5px;padding:3px 4px 3px 7px;position:relative;overflow:hidden"><span style="position:absolute;left:2px;top:4px;bottom:4px;width:2px;border-radius:1px;background:${VC[ci]}"></span><div style="font-size:8px;color:${G}">${tm}</div><div style="font-size:9px;color:${T};white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${tt}</div></div>`;
+      const day=(dl,tod,chips)=>`<div style="flex:1;min-width:0;display:flex;flex-direction:column;gap:4px"><div style="text-align:center;font-size:9px;color:${tod?TL:G}">${dl}</div>${chips}</div>`;
+      const cols=[day('S 19',1,chip(1,'9:00A','Standup')+chip(0,'12:30P','Lunch')),day('M 20',0,chip(0,'All day','Trash')),day('T 21',0,chip(2,'7:00A','Gym')),day('W 22',0,chip(0,'All day','Beach')),day('T 23',0,''),day('F 24',0,chip(1,'6:30P','Date')),day('S 25',0,'')].join('');
+      return head+`<div style="display:flex;flex-direction:column;height:100%;gap:6px"><div style="display:flex;align-items:center;gap:8px"><span class="mdi mdi-calendar-week" style="color:var(--violet);font-size:16px"></span><span style="font-size:10px;letter-spacing:1px;color:${G}">THIS WEEK</span><span style="margin-left:auto;font-size:10px;color:${G}">Jul 19 - Jul 25</span></div><div style="flex:1;display:flex;gap:4px;min-height:0;overflow:hidden">${cols}</div></div>`; }
+    const rows=[[0,'Today · 12:30 PM','Lunch with Sam'],[1,'Today · 7:00 PM','Dinner'],[0,'Tomorrow · All day','Trash pickup'],[1,'Tomorrow · 2:00 PM','1:1 with Alex'],[0,'Wed · All day','Beach trip']].slice(0,Math.max(2,c.h+1)).map(([ci,wn,tt])=>`<div style="background:#0F1117;border-radius:6px;padding:5px 8px 5px 12px;position:relative;margin-bottom:5px"><span style="position:absolute;left:5px;top:7px;bottom:7px;width:3px;border-radius:2px;background:${VC[ci]}"></span><div style="font-size:9px;color:${G}">${wn}</div><div style="font-size:11px;color:${T};white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${tt}</div></div>`).join('');
+    return head+`<div class="toprow"><span class="mdi mdi-calendar-text" style="color:var(--violet)"></span><span class="csub" style="letter-spacing:1px">UPCOMING</span></div><div style="margin-top:6px;flex:1;overflow:hidden">${rows}</div>`; }
   if(ctrl==='toggle'){ if(c.w===1) return head+`<div style="display:flex;flex-direction:column;align-items:center;gap:10px;height:100%">${ico}<div style="font-size:12px;font-weight:600;text-align:center">${nm}</div>${tog(true)}</div>`;
     return head+`<div class="toprow">${ico}${tog(true)}</div>${nme}<div class="csub" style="color:var(--teal)">On</div>`; }
   if(ctrl==='light'){ const AM='#E6A62B';
@@ -1128,6 +1144,7 @@ function renderInspector(){ const el=document.getElementById('insp'); const c=se
     ${(c.ck==='sensor'||c.ck==='chart')?`<div class="field"><label>Sensor type</label><select id="fStype">${SENSOR_TYPE_OPTS.map(o=>`<option value="${o[0]}" ${(c.stype||'')===o[0]?'selected':''}>${o[1]}</option>`).join('')}</select></div>`:''}
     ${c.ck==='switch'?`<div class="field"><label>Switch type <span style="color:var(--t3);font-weight:400">— sets the icon</span></label><select id="fStype">${SWITCH_TYPE_OPTS.map(o=>`<option value="${o[0]}" ${(c.stype||'')===o[0]?'selected':''}>${o[1]}</option>`).join('')}</select></div>`:''}
     ${c.ck==='chart'?`<div class="csub" style="padding:2px 0 8px;color:var(--t3)">Live trend — the panel samples this sensor over time (a scrolling sparkline). % types plot 0–100; others auto-scale.</div>`:''}
+    ${c.ck&&c.ck.startsWith('cal_')?`<div class="csub" style="padding:2px 0 8px;color:var(--t3);white-space:normal">Uses sensor.aurora_calendar_* from the aurora_calendar.yaml HA package (which aggregates ALL your linked calendars — Google via the Google Calendar integration, Apple/iCloud via CalDAV). The entity above only drives availability.</div>`:''}
     ${c.ck==='sensor'?`<div class="field"><label>Color rules (value → color)</label><div id="ruleList"></div><button class="btn ghost" id="addRule" style="width:100%;margin-top:6px">+ Add rule</button></div>`:''}
     ${(c.ck==='binary'||c.ck==='person')?`<div class="field"><label>Active color <span style="color:var(--t3);font-weight:400">— dims when inactive</span></label><input id="fActive" type="color" value="${hexToInput(c.activeColor||'0x2ED5B8')}" style="width:56px;height:34px;padding:2px;border:1px solid var(--bd);border-radius:8px;background:#0F1117"></div>`:''}
     ${def.playlistField?`<div class="field"><label>${c.ck==='sonos_fav'?'Favorite':'Playlist'} name (used as the button label)</label><input id="fPl" value="${(c.pl||'').replace(/"/g,'&quot;')}" placeholder="e.g. Liked Songs"></div>`:''}
@@ -1170,7 +1187,7 @@ const LOAD_W={ tvremote:8, chart:6, speakers:5,
 // Cards whose pre-built row count is a per-card 'rows' option. per = load per row,
 // set so the default count matches the old fixed weight (tracks 50->8, speakers 14->5),
 // so the meter's calibration is unchanged at defaults but drops as you trim rows.
-const ROW_CFG={ spotify_tracks:{def:50,max:50,per:0.16}, spotify_queue:{def:30,max:30,per:0.16}, spotify_speakers:{def:14,max:24,per:0.357} };
+const ROW_CFG={ spotify_tracks:{def:50,max:50,per:0.16}, spotify_queue:{def:30,max:30,per:0.16}, spotify_speakers:{def:14,max:24,per:0.357}, cal_agenda:{def:8,max:20,per:0.16} };
 const LOAD_DEFAULT=1, LOAD_BUDGET=600, LOAD_WARN=0.75, LOAD_DANGER=0.90;
 function cardRows(c){ const cf=ROW_CFG[c.ck]; if(!cf) return null; let v=parseInt(c.rows,10); if(isNaN(v)) v=cf.def; return Math.max(4,Math.min(cf.max,v)); }
 function layoutLoad(){ let s=0; if(!L||!L.pages) return 0;
@@ -1338,7 +1355,7 @@ function addNav(){ navModal({id:uid(),icon:'star',label:'New',page:''},true); }
 function editNav(i){ navModal(L.nav[i],false,i); }
 function navModal(n,isNew,idx){ const mbox=document.getElementById('mbox');
   const pageOpts=Object.keys(L.pages).map(p=>`<option value="${p}" ${n.page===p?'selected':''}>${L.pages[p].title} (${p})</option>`).join('');
-  mbox.innerHTML=`<h2>${isNew?'Add':'Edit'} nav item</h2><p>Up to 7 items. Settings is always present.</p>
+  mbox.innerHTML=`<h2>${isNew?'Add':'Edit'} nav item</h2><p>Up to 8 items. Settings is always present.</p>
     <div class="field"><label>Label</label><input id="nLabel" value="${n.label}"></div>
     <div class="field"><label>Icon</label><div class="szrow" id="nIcons"></div></div>
     <div class="field"><label>Opens page</label><select id="nPage">${pageOpts}<option value="__new">+ new blank page…</option></select></div>
@@ -1348,7 +1365,7 @@ function navModal(n,isNew,idx){ const mbox=document.getElementById('mbox');
   document.getElementById('modal').style.display='flex'; mbox.querySelector('#mCancel').onclick=closeModal;
   mbox.querySelector('#mOk').onclick=()=>{ const label=mbox.querySelector('#nLabel').value||'Page'; let page=mbox.querySelector('#nPage').value;
     if(page==='__new'){ page=label.toLowerCase().replace(/[^a-z0-9]+/g,'_').replace(/^_|_$/g,'')||uid(); L.pages[page]=blankPage(label); }
-    const item={id:n.id,icon,label,page}; if(isNew){ if(L.nav.length>=7){toast('Max 7 nav items');return;} L.nav.push(item); } else { L.nav[idx]=item; }
+    const item={id:n.id,icon,label,page}; if(isNew){ if(L.nav.length>=8){toast('Max 8 nav items');return;} L.nav.push(item); } else { L.nav[idx]=item; }
     closeModal(); curPage=page; curSub=0; renderAll(); }; }
 
 function openTemplates(){ const mbox=document.getElementById('mbox');
@@ -1372,8 +1389,8 @@ function insertPageTemplate(page,name){ const pg=normPage(JSON.parse(JSON.string
   const b=(pg.title||name||'page').toLowerCase().replace(/[^a-z0-9]+/g,'_').replace(/^_|_$/g,'')||'page';
   let key=b, i=2; while(L.pages[key]){ key=b+'_'+i; i++; }
   L.pages[key]=pg;
-  if(L.nav.length<7){ L.nav.push({id:uid(),icon:'view-dashboard-variant',label:pg.title||name,page:key}); toast('Inserted “'+name+'” as a new page ✓'); }
-  else{ toast('Page added — nav is full (7); open it from the Pages manager'); }
+  if(L.nav.length<8){ L.nav.push({id:uid(),icon:'view-dashboard-variant',label:pg.title||name,page:key}); toast('Inserted “'+name+'” as a new page ✓'); }
+  else{ toast('Page added — nav is full (8); open it from the Pages manager'); }
   curPage=key; curSub=0; sel=null; closeModal(); renderAll(); }
 
 // ===== Build-a-Room wizard: a Home Assistant area -> a laid-out room page =====
@@ -1516,8 +1533,8 @@ function ensureRoomsHub(roomName, key){
     const sc=mk('shortcuts','','Rooms',1,1,6,4);        // 6x4 = 24 tiles, fills a header-on page
     hub=normPage({title:'Rooms', type:'custom', header:defHeader(true), subpages:[[sc]]});
     L.pages['rooms']=hub;
-    if(L.nav.length<7) L.nav.push({id:uid(),icon:'sofa',label:'Rooms',page:'rooms'});
-    else toast('Rooms hub added — nav is full (7); open it from the Pages manager');
+    if(L.nav.length<8) L.nav.push({id:uid(),icon:'sofa',label:'Rooms',page:'rooms'});
+    else toast('Rooms hub added — nav is full (8); open it from the Pages manager');
   }
   let card=null; (hub.subpages||[]).forEach((sp,si)=>(sp||[]).forEach(c=>{ if(!card && c.ck==='shortcuts'){ card=c; sub=si; } }));
   const usable=(hub.header&&hub.header.on)?4:5;
@@ -1541,7 +1558,7 @@ function ensureRoomsHub(roomName, key){
 }
 
 // Page manager: lists EVERY page in L.pages (nav + orphan) and makes each one
-// selectable/editable, so pages that aren't wired into the 7-slot nav rail are
+// selectable/editable, so pages that aren't wired into the 8-slot nav rail are
 // still reachable. slug() mirrors gen.py's slug() so room-shortcut references
 // (target "room:<area name>" -> page key slug(area name)) are detected on delete.
 function pagesModal(){ const mbox=document.getElementById('mbox');
@@ -1575,7 +1592,7 @@ function pagesModal(){ const mbox=document.getElementById('mbox');
       if(inNav) bar.appendChild(mkBtn('<span class="mdi mdi-star"></span>','btn ghost',()=>{
           const i=L.nav.findIndex(x=>x.page===key); if(i>=0) L.nav.splice(i,1); renderAll(); draw(); },'In nav — click to remove from the rail'));
       else bar.appendChild(mkBtn('<span class="mdi mdi-star-outline"></span>','btn ghost',()=>{
-          if(L.nav.length>=7){ toast('Nav is full (7) — remove an item first'); return; }
+          if(L.nav.length>=8){ toast('Nav is full (8) — remove an item first'); return; }
           L.nav.push({id:uid(),icon:'view-dashboard-variant',label:p.title||key,page:key}); renderAll(); draw(); },'Not in nav — click to add to the rail'));
       // Rename — display title only; the page KEY is left alone (shortcuts/nav reference it).
       bar.appendChild(mkBtn('<span class="mdi mdi-pencil"></span>','btn ghost',()=>{

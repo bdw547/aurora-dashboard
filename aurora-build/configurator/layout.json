@@ -42,6 +42,12 @@
       "icon": "cctv",
       "label": "Cameras",
       "page": "cameras"
+    },
+    {
+      "id": "calendar",
+      "icon": "calendar-month",
+      "label": "Calendar",
+      "page": "calendar"
     }
   ],
   "pages": {
@@ -861,6 +867,56 @@
             "w": 1,
             "h": 1,
             "speaker": "Dining Room"
+          }
+        ]
+      ]
+    },
+    "calendar": {
+      "title": "Calendar",
+      "type": "custom",
+      "header": {
+        "on": false,
+        "left": "greeting",
+        "right": [
+          "weather_current",
+          "secured"
+        ]
+      },
+      "subpages": [
+        [
+          {
+            "id": "calm1",
+            "ck": "cal_month",
+            "entity": "calendar.personal",
+            "name": "Calendar",
+            "x": 1,
+            "y": 1,
+            "w": 6,
+            "h": 5
+          }
+        ],
+        [
+          {
+            "id": "calw1",
+            "ck": "cal_week",
+            "entity": "calendar.personal",
+            "name": "This Week",
+            "x": 1,
+            "y": 1,
+            "w": 6,
+            "h": 5
+          }
+        ],
+        [
+          {
+            "id": "cala1",
+            "ck": "cal_agenda",
+            "entity": "calendar.personal",
+            "name": "Upcoming",
+            "x": 1,
+            "y": 1,
+            "w": 3,
+            "h": 5
           }
         ]
       ]

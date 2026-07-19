@@ -1374,6 +1374,279 @@ def c_wx_stats(card, x, y, w, h, base):
     return [card_obj(x, y, w, h, inner)], sensors, text_sensors
 
 
+# --- Calendar cards (aurora_calendar.yaml package sensors) -------------------
+# Google / Apple calendars are linked in Home Assistant (Google Calendar
+# integration / CalDAV); the aurora_calendar.yaml package aggregates them and
+# packs events into \n-joined sensor attributes the cards split here — the
+# weather-package pattern. Month browsing is HA-side too: the ‹ › buttons move
+# input_number.aurora_calendar_month_offset and the package republishes the
+# grid, so the device does zero date math.
+CAL_SENSOR_MONTH = "sensor.aurora_calendar_month"    # attrs: month_title / month_map
+CAL_SENSOR_EVENTS = "sensor.aurora_calendar_events"  # attrs: cal_names / w_* / a_events
+CAL_OFFSET = "input_number.aurora_calendar_month_offset"
+CAL_REFRESH = "homeassistant.action: { action: script.aurora_calendar_refresh }"
+CAL_COLORS = ["0x2ED5B8", "0xF2B84B", "0x4FA8F5", "0x8FA6FF"]   # cal_idx -> accent
+CAL_COLS_C = "static const uint32_t cal_cols[4] = {0x2ED5B8, 0xF2B84B, 0x4FA8F5, 0x8FA6FF};"
+
+# Demo data (July 2026, "today" = Sun the 19th) — pre-baked like WX_DAILY so
+# host-emulator / entity-less cards render a populated layout.
+CAL_DEMO_TITLE = "July 2026"
+_CAL_DEMO_COUNTS = {2: 1, 4: 2, 7: 1, 10: 3, 13: 1, 15: 2, 19: 3, 20: 2, 21: 1, 22: 2, 24: 1, 28: 1, 31: 1}
+CAL_DEMO_MAP = ([("%d" % d, 0, 0) for d in (28, 29, 30)] +
+                [("%d" % d, _CAL_DEMO_COUNTS.get(d, 0), 3 if d == 19 else 1) for d in range(1, 32)] +
+                [("%d" % d, 0, 0) for d in range(1, 9)])
+CAL_DEMO_RANGE = "Jul 19 - Jul 25"
+CAL_DEMO_DAYS = [("Sun 19", 1), ("Mon 20", 0), ("Tue 21", 0), ("Wed 22", 0),
+                 ("Thu 23", 0), ("Fri 24", 0), ("Sat 25", 0)]
+CAL_DEMO_ROWS = [  # row-major (5 chip rows x 7 days, matches w_rows); None = no chip
+    (1, "9:00A", "Team standup"), (0, "All day", "Trash pickup"), (2, "7:00A", "Gym"),
+    (0, "All day", "Beach trip"), None, (1, "6:30P", "Date night"), None,
+    (0, "12:30P", "Lunch with Sam"), (1, "2:00P", "1:1 with Alex"), None,
+    (1, "11:00A", "Design review"), None, None, None,
+    (1, "7:00P", "Dinner"), None, None, None, None, None, None,
+] + [None] * 14
+CAL_DEMO_CNT = [3, 2, 1, 2, 0, 1, 0]
+CAL_DEMO_AGENDA = [
+    (0, "Today \\u00B7 12:30 PM", "Lunch with Sam"), (1, "Today \\u00B7 7:00 PM", "Dinner"),
+    (0, "Tomorrow \\u00B7 All day", "Trash pickup"), (1, "Tomorrow \\u00B7 2:00 PM", "1:1 with Alex"),
+    (0, "Wed Jul 22 \\u00B7 All day", "Beach trip"), (1, "Fri Jul 24 \\u00B7 6:30 PM", "Date night"),
+]
+
+
+def _cal_split_ts(base, sfx, sensor, attr, arrays, body_lines):
+    """_wx_split_ts with several PARALLEL widget arrays: `arrays` maps C array\n    name -> id list (all the same length) so one packed attribute can drive a\n    chip's row/accent/time/title widgets per token."""
+    n = len(next(iter(arrays.values())))
+    lines = ["lv_obj_t* %s[%d] = { %s };" % (name, n, ", ".join("id(%s)" % i for i in ids))
+             for name, ids in arrays.items()]
+    lines += ["std::string s = x; size_t p = 0;",
+              "for (int i = 0; i < %d; i++) {" % n,
+              "  size_t nl = s.find('\\n', p);",
+              "  std::string t = (nl==std::string::npos)?s.substr(p):s.substr(p,nl-p);"]
+    lines += ["  " + bl for bl in body_lines]
+    lines += ["  if (nl==std::string::npos) break; p = nl+1;", "}"]
+    return ("  - platform: homeassistant\n    id: ha_%s_%s\n    entity_id: %s\n    attribute: %s\n"
+            "    on_value:\n      then:\n        - lambda: |-\n%s"
+            % (base, sfx, sensor, attr, _indent(lines, 12)))
+
+
+def _cal_chip_lines():
+    """Per-token chip painter (token `t` = "ci|time|title"; arrays R/A/T/L in\n    scope): an empty token hides the chip row, otherwise accent-bar color by\n    calendar index + time/title labels."""
+    return [
+        "size_t p1 = t.find('|'); size_t p2 = (p1==std::string::npos)?p1:t.find('|', p1+1);",
+        "if (t.empty() || p2 == std::string::npos) { lv_obj_add_flag(R[i], LV_OBJ_FLAG_HIDDEN); }",
+        "else {",
+        "  int ci = t[0] - '0'; if (ci < 0) ci = 0; if (ci > 3) ci = 3;",
+        "  " + CAL_COLS_C,
+        "  lv_obj_set_style_bg_color(A[i], lv_color_hex(cal_cols[ci]), 0);",
+        "  lv_label_set_text(T[i], t.substr(p1+1, p2-p1-1).c_str());",
+        "  lv_label_set_text(L[i], t.substr(p2+1).c_str());",
+        "  lv_obj_clear_flag(R[i], LV_OBJ_FLAG_HIDDEN);",
+        "}",
+    ]
+
+
+CAL_MAX_AGENDA = 20
+
+
+def c_cal_agenda(card, x, y, w, h, base):
+    """Upcoming-events list backed by sensor.aurora_calendar_events / a_events\n    (spot_queue pattern): pre-built rows shown/hidden by the populate lambda,\n    each an accent bar (per-calendar color) + when + title. Demo rows keep the\n    host emulator / entity-less cards populated."""
+    e = card.get("entity", "")
+    n = _card_rows(card, 8, CAL_MAX_AGENDA)
+    inner = ic("", color="0x8FA6FF", glyph=glyph_for("calendar-text"))
+    inner += lbl("UPCOMING", 50, 18, "f_micro", "0x868CA0")
+    inner += ("              - button:\n                  x: %d\n                  y: 10\n                  width: 40\n                  height: 30\n"
+              "                  bg_color: 0x161B24\n                  radius: 10\n                  pad_all: 0\n                  scrollable: false\n"
+              "                  widgets: [label: { text: \"%s\", align: center, text_font: f_icon, text_color: 0x8FA6FF }]\n"
+              "                  on_click: [%s]\n" % (w - 54, glyph_for("reload"), CAL_REFRESH))
+    rh, gap, list_y = 52, 6, 48
+    inner += ("              - obj:\n                  id: %s_lst\n                  x: 14\n                  y: %d\n                  width: %d\n                  height: %d\n"
+              "                  bg_opa: 0\n                  border_width: 0\n                  radius: 0\n                  pad_all: 0\n                  widgets:\n"
+              % (base, list_y, w - 28, h - list_y - 12))
+    rw = w - 32
+    for i in range(n):
+        demo = CAL_DEMO_AGENDA[i] if i < len(CAL_DEMO_AGENDA) else None
+        ci, when, ttl = demo if demo else (0, "", "")
+        inner += ("                    - obj:\n                        id: %s_r%d\n                        x: 0\n                        y: %d\n"
+                  "                        width: %d\n                        height: %d\n                        bg_color: 0x0F1117\n"
+                  "                        radius: 8\n                        border_width: 0\n                        pad_all: 0\n                        scrollable: false\n%s"
+                  "                        widgets:\n"
+                  "                          - obj: { id: %s_a%d, x: 8, y: 10, width: 4, height: %d, bg_color: %s, radius: 2, border_width: 0, pad_all: 0, scrollable: false }\n"
+                  "                          - label: { id: %s_t%d, text: %s, x: 22, y: 8, text_font: f_micro, text_color: 0x868CA0 }\n"
+                  "                          - label: { id: %s_l%d, text: %s, x: 22, y: 24, width: %d, long_mode: dot, text_font: f_body, text_color: 0xF3F5F8 }\n"
+                  % (base, i, i * (rh + gap), rw, rh,
+                     "" if demo else "                        hidden: true\n",
+                     base, i, rh - 20, CAL_COLORS[ci],
+                     base, i, esc(when),
+                     base, i, esc(ttl), rw - 34))
+    inner += ("                    - label: { id: %s_empty, text: \"No upcoming events\", align: top_mid, y: 12, text_font: f_small, text_color: 0x5D6470, hidden: true }\n" % base)
+    ts = []
+    if e:
+        Rarr = ", ".join("id(%s_r%d)" % (base, i) for i in range(n))
+        Aarr = ", ".join("id(%s_a%d)" % (base, i) for i in range(n))
+        Tarr = ", ".join("id(%s_t%d)" % (base, i) for i in range(n))
+        Larr = ", ".join("id(%s_l%d)" % (base, i) for i in range(n))
+        populate = [
+            "const std::string &str = x;",
+            "lv_obj_t* R[%d] = { %s };" % (n, Rarr),
+            "lv_obj_t* A[%d] = { %s };" % (n, Aarr),
+            "lv_obj_t* T[%d] = { %s };" % (n, Tarr),
+            "lv_obj_t* L[%d] = { %s };" % (n, Larr),
+            "int idx = 0; size_t st = 0;",
+            "for (size_t i2 = 0; i2 <= str.size() && idx < %d; i2++) {" % n,
+            "  if (i2 == str.size() || str[i2] == '\\n') {",
+            "    std::string t = str.substr(st, i2 - st);",
+            "    size_t p1 = t.find('|'); size_t p2 = (p1==std::string::npos)?p1:t.find('|', p1+1);",
+            "    if (!t.empty() && p2 != std::string::npos) {",
+            "      int ci = t[0] - '0'; if (ci < 0) ci = 0; if (ci > 3) ci = 3;",
+            "      " + CAL_COLS_C,
+            "      lv_obj_set_style_bg_color(A[idx], lv_color_hex(cal_cols[ci]), 0);",
+            "      lv_label_set_text(T[idx], t.substr(p1+1, p2-p1-1).c_str());",
+            "      lv_label_set_text(L[idx], t.substr(p2+1).c_str());",
+            "      lv_obj_clear_flag(R[idx], LV_OBJ_FLAG_HIDDEN); idx++;",
+            "    }",
+            "    st = i2 + 1;",
+            "  }",
+            "}",
+            "for (int j = idx; j < %d; j++) lv_obj_add_flag(R[j], LV_OBJ_FLAG_HIDDEN);" % n,
+            "if (idx > 0) lv_obj_add_flag(id(%s_empty), LV_OBJ_FLAG_HIDDEN);" % base,
+            "else lv_obj_clear_flag(id(%s_empty), LV_OBJ_FLAG_HIDDEN);" % base,
+        ]
+        ts = ["  - platform: homeassistant\n    id: ha_%s_ag\n    entity_id: %s\n    attribute: a_events\n"
+              "    on_value:\n      then:\n        - lambda: |-\n%s" % (base, CAL_SENSOR_EVENTS, _indent(populate, 12))]
+    return [card_obj(x, y, w, h, inner)], [], ts
+
+
+def c_cal_week(card, x, y, w, h, base):
+    """Week board: 7 day columns (today highlighted teal) with up to 5 event\n    chips each + a per-day "+N" overflow, fed row-major by w_rows / w_cnt /\n    w_days so the chip count adapts to the card height."""
+    e = card.get("entity", "")
+    pad, gap = 14, 6
+    cw = (w - 2 * pad - 6 * gap) // 7
+    rgid = base + "_rg"
+    inner = ic("", color="0x8FA6FF", glyph=glyph_for("calendar-week"))
+    inner += lbl("THIS WEEK", 50, 18, "f_micro", "0x868CA0")
+    inner += lbl(CAL_DEMO_RANGE, -62, 18, "f_small", "0x868CA0", wid=rgid, align="top_right")
+    inner += ("              - button:\n                  x: %d\n                  y: 10\n                  width: 40\n                  height: 30\n"
+              "                  bg_color: 0x161B24\n                  radius: 10\n                  pad_all: 0\n                  scrollable: false\n"
+              "                  widgets: [label: { text: \"%s\", align: center, text_font: f_icon, text_color: 0x8FA6FF }]\n"
+              "                  on_click: [%s]\n" % (w - 54, glyph_for("reload"), CAL_REFRESH))
+    hy = 48
+    hdr_ids = []
+    for j, (dl, tod) in enumerate(CAL_DEMO_DAYS):
+        hid_ = base + "_wd%d" % j
+        inner += lbl(dl, pad + j * (cw + gap), hy, "f_micro",
+                     "0x2ED5B8" if tod else "0x868CA0", wid=hid_, width=cw, text_align="center")
+        hdr_ids.append(hid_)
+    cy0 = hy + 24
+    crh, cgap = 56, 8
+    nchip = max(1, min(5, (h - cy0 - pad - 12) // (crh + cgap)))
+    R, A, T, L = [], [], [], []
+    for k in range(nchip):
+        for j in range(7):
+            i = k * 7 + j
+            demo = CAL_DEMO_ROWS[i]
+            ci, tm, ttl = demo if demo else (0, "", "")
+            rid_, aid_, tid_, lid_ = (base + "_wr%d" % i, base + "_wa%d" % i,
+                                      base + "_wt%d" % i, base + "_wl%d" % i)
+            inner += ("              - obj:\n                  id: %s\n                  x: %d\n                  y: %d\n"
+                      "                  width: %d\n                  height: %d\n                  bg_color: 0x0F1117\n"
+                      "                  radius: 8\n                  border_width: 0\n                  pad_all: 0\n                  scrollable: false\n%s"
+                      "                  widgets:\n"
+                      "                    - obj: { id: %s, x: 6, y: 8, width: 3, height: %d, bg_color: %s, radius: 2, border_width: 0, pad_all: 0, scrollable: false }\n"
+                      "                    - label: { id: %s, text: %s, x: 14, y: 6, text_font: f_micro, text_color: 0x868CA0 }\n"
+                      "                    - label: { id: %s, text: %s, x: 14, y: 22, width: %d, long_mode: dot, text_font: f_small, text_color: 0xF3F5F8 }\n"
+                      % (rid_, pad + j * (cw + gap), cy0 + k * (crh + cgap), cw, crh,
+                         "" if demo else "                  hidden: true\n",
+                         aid_, crh - 16, CAL_COLORS[ci],
+                         tid_, esc(tm), lid_, esc(ttl), cw - 20))
+            R.append(rid_); A.append(aid_); T.append(tid_); L.append(lid_)
+    my = cy0 + nchip * (crh + cgap) - cgap + 4
+    more_ids = []
+    for j in range(7):
+        mid_ = base + "_wm%d" % j
+        extra = CAL_DEMO_CNT[j] - nchip
+        inner += lbl("+%d" % extra if extra > 0 else "", pad + j * (cw + gap), my,
+                     "f_micro", "0x5D6470", wid=mid_, width=cw, text_align="center")
+        more_ids.append(mid_)
+    ts = []
+    if e:
+        ts.append(_wx_attr_ts(base, "rg", CAL_SENSOR_EVENTS, "w_range", rgid))
+        ts.append(_cal_split_ts(base, "wd", CAL_SENSOR_EVENTS, "w_days", {"L": hdr_ids}, [
+            "size_t p1 = t.find('|');",
+            "if (p1 != std::string::npos) {",
+            "  bool tod = t[p1+1] == '1';",
+            "  lv_label_set_text(L[i], t.substr(0, p1).c_str());",
+            "  lv_obj_set_style_text_color(L[i], lv_color_hex(tod ? 0x2ED5B8 : 0x868CA0), 0);",
+            "}",
+        ]))
+        ts.append(_cal_split_ts(base, "wr", CAL_SENSOR_EVENTS, "w_rows",
+                                {"R": R, "A": A, "T": T, "L": L}, _cal_chip_lines()))
+        ts.append(_cal_split_ts(base, "wc", CAL_SENSOR_EVENTS, "w_cnt", {"M": more_ids}, [
+            "int total = t.empty() ? 0 : atoi(t.c_str());",
+            "int extra = total - %d;" % nchip,
+            "if (extra > 0) { char b[8]; snprintf(b, sizeof(b), \"+%d\", extra); lv_label_set_text(M[i], b); }",
+            "else lv_label_set_text(M[i], \"\");",
+        ]))
+    return [card_obj(x, y, w, h, inner)], [], ts
+
+
+def c_cal_month(card, x, y, w, h, base):
+    """Month grid for the SHOWN month: 42 day cells fed by month_map (count\n    badge, today ring, out-of-month dimming). Browsing is HA-side: ‹ › move\n    input_number.aurora_calendar_month_offset (the package republishes the\n    grid ~1s later), calendar-today snaps back to the current month. Small\n    spans fall back to the agenda list (c_weather compact pattern)."""
+    if w < 590 or h < 380:
+        return c_cal_agenda(card, x, y, w, h, base)
+    e = card.get("entity", "")
+    pad, gap = 14, 6
+    mtid = base + "_mt"
+    inner = ic("", color="0x8FA6FF", glyph=glyph_for("calendar-month"))
+    inner += lbl(CAL_DEMO_TITLE, 54, 14, "f_h1", "0xF3F5F8", wid=mtid)
+    bx = w - 54
+    inner += btn(bx, 10, 40, 30, glyph_for("reload"), CAL_REFRESH, color="0x8FA6FF", font="f_icon")
+    inner += btn(bx - 48, 10, 40, 30, glyph_for("calendar-today"),
+                 ha("input_number.set_value", CAL_OFFSET, "value: \"0\""), color="0xC2C7D2", font="f_icon")
+    inner += btn(bx - 96, 10, 40, 30, glyph_for("chevron-right"),
+                 ha("input_number.increment", CAL_OFFSET), color="0xC2C7D2", font="f_icon")
+    inner += btn(bx - 144, 10, 40, 30, glyph_for("chevron-left"),
+                 ha("input_number.decrement", CAL_OFFSET), color="0xC2C7D2", font="f_icon")
+    cw = (w - 2 * pad - 6 * gap) // 7
+    for j, dn in enumerate(("SUN", "MON", "TUE", "WED", "THU", "FRI", "SAT")):
+        inner += lbl(dn, pad + j * (cw + gap), 56, "f_micro", "0x5D6470", width=cw, text_align="center")
+    gy0 = 80
+    rh = (h - gy0 - pad - 5 * gap) // 6
+    dfont = "f_title" if cw >= 100 else "f_body"
+    B, D, C = [], [], []
+    for i, (dl, cnt, f) in enumerate(CAL_DEMO_MAP):
+        r, c = divmod(i, 7)
+        inm, tod = bool(f & 1), bool(f & 2)
+        bg = "0x11201C" if tod else ("0x14161C" if inm else "0x101218")
+        dcol = "0x2ED5B8" if tod else ("0xF3F5F8" if inm else "0x5D6470")
+        bid, did, cid_ = base + "_b%d" % i, base + "_d%d" % i, base + "_c%d" % i
+        inner += ("              - obj: { id: %s, x: %d, y: %d, width: %d, height: %d, bg_color: %s, "
+                  "border_width: %d, border_color: 0x2ED5B8, radius: 10, pad_all: 0, scrollable: false, widgets: ["
+                  "label: { id: %s, text: %s, x: 8, y: 6, text_font: %s, text_color: %s }, "
+                  "label: { id: %s, text: \"%d\", x: 8, y: %d, text_font: f_micro, text_color: 0x2ED5B8%s }] }\n"
+                  % (bid, pad + c * (cw + gap), gy0 + r * (rh + gap), cw, rh, bg,
+                     1 if tod else 0, did, esc(dl), dfont, dcol,
+                     cid_, cnt, rh - 24, ", hidden: true" if cnt == 0 else ""))
+        B.append(bid); D.append(did); C.append(cid_)
+    ts = []
+    if e:
+        ts.append(_wx_attr_ts(base, "mt", CAL_SENSOR_MONTH, "month_title", mtid))
+        ts.append(_cal_split_ts(base, "mm", CAL_SENSOR_MONTH, "month_map",
+                                {"B": B, "D": D, "C": C}, [
+            "size_t p1 = t.find('|'); size_t p2 = (p1==std::string::npos)?p1:t.find('|', p1+1);",
+            "if (p2 != std::string::npos) {",
+            "  lv_label_set_text(D[i], t.substr(0, p1).c_str());",
+            "  int cnt = t[p1+1] - '0'; int f = t[p2+1] - '0';",
+            "  if (cnt > 0) { char b[4]; snprintf(b, sizeof(b), \"%d\", cnt); lv_label_set_text(C[i], b); lv_obj_clear_flag(C[i], LV_OBJ_FLAG_HIDDEN); }",
+            "  else lv_obj_add_flag(C[i], LV_OBJ_FLAG_HIDDEN);",
+            "  bool inm = (f & 1) != 0; bool tod = (f & 2) != 0;",
+            "  lv_obj_set_style_bg_color(B[i], lv_color_hex(tod ? 0x11201C : (inm ? 0x14161C : 0x101218)), 0);",
+            "  lv_obj_set_style_border_width(B[i], tod ? 1 : 0, 0);",
+            "  lv_obj_set_style_text_color(D[i], lv_color_hex(tod ? 0x2ED5B8 : (inm ? 0xF3F5F8 : 0x5D6470)), 0);",
+            "}",
+        ]))
+    return [card_obj(x, y, w, h, inner)], [], ts
+
+
 def c_camera(card, x, y, w, h, base):
     """Live camera card (aurora.yaml btn_cam_card pattern): a tappable black inner\n    button hosting the mjpeg_stream target-0 image + a status pill driven by the\n    stream's on_state. Tap -> generated page_camera_full. Only the FIRST camera\n    card goes live; extras and host builds (SDL has no mjpeg_stream component)\n    keep the static placeholder."""
     e = card.get("entity", "")
@@ -2778,6 +3051,7 @@ CTRL = {
     "spotify_art": c_spotify_art,
     "lock": c_lock, "weather": c_weather, "camera": c_camera, "group": c_group,
     "wx_current": c_wx_current, "wx_hourly": c_wx_hourly, "wx_daily": c_wx_daily, "wx_stats": c_wx_stats,
+    "cal_month": c_cal_month, "cal_week": c_cal_week, "cal_agenda": c_cal_agenda,
     "lightgroup": c_group, "outletgroup": c_outlet, "speakers": c_speakers,
     "sonos_sources": c_btngrid, "tv_sources": c_btngrid,
     "tv_app": c_tv_app, "tv_apps": c_tv_apps,
@@ -2819,7 +3093,8 @@ def emit_card(card, header, pagemap):
 
 def gen_nav(layout, pagemap):
     out = ""
-    nav = layout.get("nav", [])[:7]
+    nav = layout.get("nav", [])[:8]
+    pitch = 68 if len(nav) <= 7 else 62   # 8 items: tighten so the rail clears Settings
     for i, n in enumerate(nav):
         g = glyph_for(n.get("icon", ""))
         pid = pagemap.get(n.get("page", ""), "page_home")
@@ -2830,7 +3105,7 @@ def gen_nav(layout, pagemap):
             "                width: 58\n                height: 58\n                radius: 14\n                bg_color: 0x2ED5B8\n                bg_opa: 0%%\n"
             "                widgets: [label: { id: nav_%s_i, text: \"%s\", align: center, text_font: f_icon, text_color: 0x5D6470 }]\n"
             "                on_click: [lvgl.page.show: %s]\n"
-            % (nid, 14 + i * 68, nid, g, pid))
+            % (nid, 14 + i * pitch, nid, g, pid))
     # Settings (always present) -> settings page
     out += (
         "            - button:\n                id: nav_settings\n                align: bottom_mid\n                y: -14\n"

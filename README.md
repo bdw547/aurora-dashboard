@@ -330,6 +330,36 @@ Use `script.aurora_notifications_clear` to clear the queue. The panel's
 
 ---
 
+## Calendar setup (HA package)
+
+The calendar cards (month grid, week board, agenda list — pick the view in the
+configurator's inspector) show every calendar you've linked in Home Assistant.
+The panel can't talk to Google or Apple directly — HA holds the accounts and
+the package packs the events into sensors the panel reads.
+
+1. Link your calendars in HA (both produce `calendar.*` entities):
+   - **Google** — Settings → Devices & Services → Add Integration → **Google
+     Calendar**, complete the OAuth flow (see the HA docs for the Google Cloud
+     OAuth client), then enable the per-calendar entities you want.
+   - **Apple / iCloud** — Add Integration → **CalDAV** with URL
+     `https://caldav.icloud.com`, your Apple ID email, and an *app-specific
+     password* from [account.apple.com](https://account.apple.com) (Sign-In and
+     Security → App-Specific Passwords).
+2. Copy **`aurora-build/aurora_calendar.yaml`** to your HA config at
+   `packages/aurora_calendar.yaml` (package loading as in the Spotify Library
+   setup above).
+3. Edit the `entity_id:` list under `&aurora_cal_entities` in that file to your
+   `calendar.*` entities — the one edit point; each calendar gets its own accent
+   color on the panel.
+4. Check the HA configuration, then restart Home Assistant.
+5. Add a **Calendar** card in the configurator (Info group). The month card's
+   **‹ ›** buttons browse months (they move
+   `input_number.aurora_calendar_month_offset`; HA re-packs the grid), the
+   calendar-today button snaps back, and events refresh every 15 minutes or via
+   the card's refresh button (`script.aurora_calendar_refresh`).
+
+---
+
 ## Project layout (Aurora-relevant)
 
 ```
@@ -342,6 +372,7 @@ components/
 aurora-build/
   aurora_notifications.yaml     (HA package for restored panel alerts)
   aurora_spotify_library.yaml   ← HA package for the Spotify Library
+  aurora_calendar.yaml          ← HA package for the calendar cards (Google/CalDAV)
   configurator/        ← no-code web configurator:
                           serve.py     (local server, entity-rebind wizard, flash)
                           builder.html (drag-drop page builder, 6×5 grid)
