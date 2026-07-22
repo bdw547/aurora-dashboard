@@ -6,6 +6,7 @@ from __future__ import annotations
 import argparse
 import json
 import re
+import subprocess
 import sys
 from dataclasses import dataclass
 from pathlib import Path
@@ -508,7 +509,12 @@ def check_referenced_paths(errors: list[str]) -> None:
                 if "/example." in token or token.endswith("/example"):
                     continue
                 full = ROOT / token
-                if not full.exists():
+                ignored = subprocess.run(
+                    ["git", "check-ignore", "--quiet", "--", token],
+                    cwd=ROOT,
+                    check=False,
+                ).returncode == 0
+                if not full.exists() and not ignored:
                     errors.append(f"{rel(path)} references missing path: {token}")
 
 

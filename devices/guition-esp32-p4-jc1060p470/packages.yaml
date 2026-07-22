@@ -30,15 +30,13 @@ substitutions:
   padding: 16px
   radius: 16px
   main_page_card_gap: "16"
-  main_page_pad_top: "42"
-  # --- High-end "sophisticated system" restyle (device-local overrides of
-  #     common/theme/button.yaml; shadows shared defaults, keeps upstream merges clean) ---
-  button_control_color: "0x161B24"   # elevated graphite card surface
-  button_text_color: "0xE6E9EF"      # refined off-white (not pure white)
-  button_on_color: "0xC8A45D"        # restrained champagne-gold accent
-  button_on_text_color: "0x0B0E14"   # dark text on the gold accent
-  button_border_color: "0x2A313D"    # hairline edge for card definition
+  button_control_color: "0x161B24"
+  button_text_color: "0xE6E9EF"
+  button_on_color: "0xC8A45D"
+  button_on_text_color: "0x0B0E14"
+  button_border_color: "0x2A313D"
   button_border_width: "1"
+  main_page_pad_top: "42"
   main_page_compact_pad_top: "5"
   clock_bar_item_gap: "80"
   clock_bar_visual_gap: "10"
