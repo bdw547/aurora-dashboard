@@ -352,8 +352,9 @@ the package packs the events into sensors the panel reads.
    `calendar.*` entities — the one edit point; each calendar gets its own accent
    color on the panel.
 4. Check the HA configuration, then restart Home Assistant.
-5. Add a **Calendar** card in the configurator (Info group). The month card's
-   **‹ ›** buttons browse months (they move
+5. Add a **Calendar** card in the configurator (Info group). Tap any date in the
+   month grid to open that day's events; use the Back button to return to the
+   month. The **‹ ›** buttons browse months (they move
    `input_number.aurora_calendar_month_offset`; HA re-packs the grid), the
    calendar-today button snaps back, and events refresh every 15 minutes or via
    the card's refresh button (`script.aurora_calendar_refresh`).
