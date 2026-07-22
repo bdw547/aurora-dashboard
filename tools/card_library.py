@@ -128,6 +128,8 @@ def sample_card(ck: str, definition: dict, w: int, h: int, index: int) -> dict:
         card["source"] = "Netflix"
     if ck == "camera":
         card["entity"] = "camera.demo_front_door"
+    if ck == "radar":
+        card.update({"lat": 41.8781, "lon": -87.6298, "zoom": 6})
     if ck in {"chart", "sensor", "binary", "person", "vacuum"}:
         card["unit"] = "°C" if ck == "sensor" else ""
     return card

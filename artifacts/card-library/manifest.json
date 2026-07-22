@@ -1,6 +1,6 @@
 {
   "generated_from": "aurora-build/configurator/builder.html",
-  "count": 294,
+  "count": 299,
   "records": [
     {
       "index": 1,
@@ -3020,20 +3020,85 @@
     },
     {
       "index": 233,
-      "page": "library_0233_alarm_2x2",
-      "ck": "alarm",
-      "label": "Alarm panel",
+      "page": "library_0233_radar_2x2",
+      "ck": "radar",
+      "label": "Weather radar",
       "w": 2,
       "h": 2,
       "min": [
         2,
         2
       ],
-      "id": "library_0233_alarm_2x2"
+      "id": "library_0233_radar_2x2"
     },
     {
       "index": 234,
-      "page": "library_0234_alarm_3x2",
+      "page": "library_0234_radar_3x2",
+      "ck": "radar",
+      "label": "Weather radar",
+      "w": 3,
+      "h": 2,
+      "min": [
+        2,
+        2
+      ],
+      "id": "library_0234_radar_3x2"
+    },
+    {
+      "index": 235,
+      "page": "library_0235_radar_3x3",
+      "ck": "radar",
+      "label": "Weather radar",
+      "w": 3,
+      "h": 3,
+      "min": [
+        2,
+        2
+      ],
+      "id": "library_0235_radar_3x3"
+    },
+    {
+      "index": 236,
+      "page": "library_0236_radar_4x3",
+      "ck": "radar",
+      "label": "Weather radar",
+      "w": 4,
+      "h": 3,
+      "min": [
+        2,
+        2
+      ],
+      "id": "library_0236_radar_4x3"
+    },
+    {
+      "index": 237,
+      "page": "library_0237_radar_6x5",
+      "ck": "radar",
+      "label": "Weather radar",
+      "w": 6,
+      "h": 5,
+      "min": [
+        2,
+        2
+      ],
+      "id": "library_0237_radar_6x5"
+    },
+    {
+      "index": 238,
+      "page": "library_0238_alarm_2x2",
+      "ck": "alarm",
+      "label": "Alarm panel",
+      "w": 2,
+      "h": 2,
+      "min": [
+        2,
+        2
+      ],
+      "id": "library_0238_alarm_2x2"
+    },
+    {
+      "index": 239,
+      "page": "library_0239_alarm_3x2",
       "ck": "alarm",
       "label": "Alarm panel",
       "w": 3,
@@ -3042,89 +3107,89 @@
         2,
         2
       ],
-      "id": "library_0234_alarm_3x2"
-    },
-    {
-      "index": 235,
-      "page": "library_0235_notifications_2x2",
-      "ck": "notifications",
-      "label": "Notifications",
-      "w": 2,
-      "h": 2,
-      "min": [
-        2,
-        2
-      ],
-      "id": "library_0235_notifications_2x2"
-    },
-    {
-      "index": 236,
-      "page": "library_0236_notifications_3x2",
-      "ck": "notifications",
-      "label": "Notifications",
-      "w": 3,
-      "h": 2,
-      "min": [
-        2,
-        2
-      ],
-      "id": "library_0236_notifications_3x2"
-    },
-    {
-      "index": 237,
-      "page": "library_0237_notifications_2x3",
-      "ck": "notifications",
-      "label": "Notifications",
-      "w": 2,
-      "h": 3,
-      "min": [
-        2,
-        2
-      ],
-      "id": "library_0237_notifications_2x3"
-    },
-    {
-      "index": 238,
-      "page": "library_0238_notifications_3x3",
-      "ck": "notifications",
-      "label": "Notifications",
-      "w": 3,
-      "h": 3,
-      "min": [
-        2,
-        2
-      ],
-      "id": "library_0238_notifications_3x3"
-    },
-    {
-      "index": 239,
-      "page": "library_0239_notifications_4x3",
-      "ck": "notifications",
-      "label": "Notifications",
-      "w": 4,
-      "h": 3,
-      "min": [
-        2,
-        2
-      ],
-      "id": "library_0239_notifications_4x3"
+      "id": "library_0239_alarm_3x2"
     },
     {
       "index": 240,
-      "page": "library_0240_notifications_4x4",
+      "page": "library_0240_notifications_2x2",
       "ck": "notifications",
       "label": "Notifications",
-      "w": 4,
-      "h": 4,
+      "w": 2,
+      "h": 2,
       "min": [
         2,
         2
       ],
-      "id": "library_0240_notifications_4x4"
+      "id": "library_0240_notifications_2x2"
     },
     {
       "index": 241,
-      "page": "library_0241_notifications_6x5",
+      "page": "library_0241_notifications_3x2",
+      "ck": "notifications",
+      "label": "Notifications",
+      "w": 3,
+      "h": 2,
+      "min": [
+        2,
+        2
+      ],
+      "id": "library_0241_notifications_3x2"
+    },
+    {
+      "index": 242,
+      "page": "library_0242_notifications_2x3",
+      "ck": "notifications",
+      "label": "Notifications",
+      "w": 2,
+      "h": 3,
+      "min": [
+        2,
+        2
+      ],
+      "id": "library_0242_notifications_2x3"
+    },
+    {
+      "index": 243,
+      "page": "library_0243_notifications_3x3",
+      "ck": "notifications",
+      "label": "Notifications",
+      "w": 3,
+      "h": 3,
+      "min": [
+        2,
+        2
+      ],
+      "id": "library_0243_notifications_3x3"
+    },
+    {
+      "index": 244,
+      "page": "library_0244_notifications_4x3",
+      "ck": "notifications",
+      "label": "Notifications",
+      "w": 4,
+      "h": 3,
+      "min": [
+        2,
+        2
+      ],
+      "id": "library_0244_notifications_4x3"
+    },
+    {
+      "index": 245,
+      "page": "library_0245_notifications_4x4",
+      "ck": "notifications",
+      "label": "Notifications",
+      "w": 4,
+      "h": 4,
+      "min": [
+        2,
+        2
+      ],
+      "id": "library_0245_notifications_4x4"
+    },
+    {
+      "index": 246,
+      "page": "library_0246_notifications_6x5",
       "ck": "notifications",
       "label": "Notifications",
       "w": 6,
@@ -3133,128 +3198,128 @@
         2,
         2
       ],
-      "id": "library_0241_notifications_6x5"
-    },
-    {
-      "index": 242,
-      "page": "library_0242_binary_1x1",
-      "ck": "binary",
-      "label": "Binary sensor",
-      "w": 1,
-      "h": 1,
-      "min": [
-        1,
-        1
-      ],
-      "id": "library_0242_binary_1x1"
-    },
-    {
-      "index": 243,
-      "page": "library_0243_binary_2x1",
-      "ck": "binary",
-      "label": "Binary sensor",
-      "w": 2,
-      "h": 1,
-      "min": [
-        1,
-        1
-      ],
-      "id": "library_0243_binary_2x1"
-    },
-    {
-      "index": 244,
-      "page": "library_0244_binary_1x3",
-      "ck": "binary",
-      "label": "Binary sensor",
-      "w": 1,
-      "h": 3,
-      "min": [
-        1,
-        1
-      ],
-      "id": "library_0244_binary_1x3"
-    },
-    {
-      "index": 245,
-      "page": "library_0245_binary_1x4",
-      "ck": "binary",
-      "label": "Binary sensor",
-      "w": 1,
-      "h": 4,
-      "min": [
-        1,
-        1
-      ],
-      "id": "library_0245_binary_1x4"
-    },
-    {
-      "index": 246,
-      "page": "library_0246_binary_1x5",
-      "ck": "binary",
-      "label": "Binary sensor",
-      "w": 1,
-      "h": 5,
-      "min": [
-        1,
-        1
-      ],
-      "id": "library_0246_binary_1x5"
+      "id": "library_0246_notifications_6x5"
     },
     {
       "index": 247,
-      "page": "library_0247_sensor_1x1",
-      "ck": "sensor",
-      "label": "Sensor",
+      "page": "library_0247_binary_1x1",
+      "ck": "binary",
+      "label": "Binary sensor",
       "w": 1,
       "h": 1,
       "min": [
         1,
         1
       ],
-      "id": "library_0247_sensor_1x1"
+      "id": "library_0247_binary_1x1"
     },
     {
       "index": 248,
-      "page": "library_0248_sensor_2x1",
-      "ck": "sensor",
-      "label": "Sensor",
+      "page": "library_0248_binary_2x1",
+      "ck": "binary",
+      "label": "Binary sensor",
       "w": 2,
       "h": 1,
       "min": [
         1,
         1
       ],
-      "id": "library_0248_sensor_2x1"
+      "id": "library_0248_binary_2x1"
     },
     {
       "index": 249,
-      "page": "library_0249_sensor_3x1",
-      "ck": "sensor",
-      "label": "Sensor",
-      "w": 3,
-      "h": 1,
+      "page": "library_0249_binary_1x3",
+      "ck": "binary",
+      "label": "Binary sensor",
+      "w": 1,
+      "h": 3,
       "min": [
         1,
         1
       ],
-      "id": "library_0249_sensor_3x1"
+      "id": "library_0249_binary_1x3"
     },
     {
       "index": 250,
-      "page": "library_0250_sensor_4x1",
-      "ck": "sensor",
-      "label": "Sensor",
-      "w": 4,
-      "h": 1,
+      "page": "library_0250_binary_1x4",
+      "ck": "binary",
+      "label": "Binary sensor",
+      "w": 1,
+      "h": 4,
       "min": [
         1,
         1
       ],
-      "id": "library_0250_sensor_4x1"
+      "id": "library_0250_binary_1x4"
     },
     {
       "index": 251,
-      "page": "library_0251_sensor_5x1",
+      "page": "library_0251_binary_1x5",
+      "ck": "binary",
+      "label": "Binary sensor",
+      "w": 1,
+      "h": 5,
+      "min": [
+        1,
+        1
+      ],
+      "id": "library_0251_binary_1x5"
+    },
+    {
+      "index": 252,
+      "page": "library_0252_sensor_1x1",
+      "ck": "sensor",
+      "label": "Sensor",
+      "w": 1,
+      "h": 1,
+      "min": [
+        1,
+        1
+      ],
+      "id": "library_0252_sensor_1x1"
+    },
+    {
+      "index": 253,
+      "page": "library_0253_sensor_2x1",
+      "ck": "sensor",
+      "label": "Sensor",
+      "w": 2,
+      "h": 1,
+      "min": [
+        1,
+        1
+      ],
+      "id": "library_0253_sensor_2x1"
+    },
+    {
+      "index": 254,
+      "page": "library_0254_sensor_3x1",
+      "ck": "sensor",
+      "label": "Sensor",
+      "w": 3,
+      "h": 1,
+      "min": [
+        1,
+        1
+      ],
+      "id": "library_0254_sensor_3x1"
+    },
+    {
+      "index": 255,
+      "page": "library_0255_sensor_4x1",
+      "ck": "sensor",
+      "label": "Sensor",
+      "w": 4,
+      "h": 1,
+      "min": [
+        1,
+        1
+      ],
+      "id": "library_0255_sensor_4x1"
+    },
+    {
+      "index": 256,
+      "page": "library_0256_sensor_5x1",
       "ck": "sensor",
       "label": "Sensor",
       "w": 5,
@@ -3263,76 +3328,76 @@
         1,
         1
       ],
-      "id": "library_0251_sensor_5x1"
-    },
-    {
-      "index": 252,
-      "page": "library_0252_chart_2x2",
-      "ck": "chart",
-      "label": "Sensor \u2014 trend chart",
-      "w": 2,
-      "h": 2,
-      "min": [
-        2,
-        2
-      ],
-      "id": "library_0252_chart_2x2"
-    },
-    {
-      "index": 253,
-      "page": "library_0253_chart_3x2",
-      "ck": "chart",
-      "label": "Sensor \u2014 trend chart",
-      "w": 3,
-      "h": 2,
-      "min": [
-        2,
-        2
-      ],
-      "id": "library_0253_chart_3x2"
-    },
-    {
-      "index": 254,
-      "page": "library_0254_chart_4x2",
-      "ck": "chart",
-      "label": "Sensor \u2014 trend chart",
-      "w": 4,
-      "h": 2,
-      "min": [
-        2,
-        2
-      ],
-      "id": "library_0254_chart_4x2"
-    },
-    {
-      "index": 255,
-      "page": "library_0255_chart_5x2",
-      "ck": "chart",
-      "label": "Sensor \u2014 trend chart",
-      "w": 5,
-      "h": 2,
-      "min": [
-        2,
-        2
-      ],
-      "id": "library_0255_chart_5x2"
-    },
-    {
-      "index": 256,
-      "page": "library_0256_weather_6x5",
-      "ck": "weather",
-      "label": "Weather",
-      "w": 6,
-      "h": 5,
-      "min": [
-        5,
-        4
-      ],
-      "id": "library_0256_weather_6x5"
+      "id": "library_0256_sensor_5x1"
     },
     {
       "index": 257,
-      "page": "library_0257_weather_5x5",
+      "page": "library_0257_chart_2x2",
+      "ck": "chart",
+      "label": "Sensor \u2014 trend chart",
+      "w": 2,
+      "h": 2,
+      "min": [
+        2,
+        2
+      ],
+      "id": "library_0257_chart_2x2"
+    },
+    {
+      "index": 258,
+      "page": "library_0258_chart_3x2",
+      "ck": "chart",
+      "label": "Sensor \u2014 trend chart",
+      "w": 3,
+      "h": 2,
+      "min": [
+        2,
+        2
+      ],
+      "id": "library_0258_chart_3x2"
+    },
+    {
+      "index": 259,
+      "page": "library_0259_chart_4x2",
+      "ck": "chart",
+      "label": "Sensor \u2014 trend chart",
+      "w": 4,
+      "h": 2,
+      "min": [
+        2,
+        2
+      ],
+      "id": "library_0259_chart_4x2"
+    },
+    {
+      "index": 260,
+      "page": "library_0260_chart_5x2",
+      "ck": "chart",
+      "label": "Sensor \u2014 trend chart",
+      "w": 5,
+      "h": 2,
+      "min": [
+        2,
+        2
+      ],
+      "id": "library_0260_chart_5x2"
+    },
+    {
+      "index": 261,
+      "page": "library_0261_weather_6x5",
+      "ck": "weather",
+      "label": "Weather",
+      "w": 6,
+      "h": 5,
+      "min": [
+        5,
+        4
+      ],
+      "id": "library_0261_weather_6x5"
+    },
+    {
+      "index": 262,
+      "page": "library_0262_weather_5x5",
       "ck": "weather",
       "label": "Weather",
       "w": 5,
@@ -3341,11 +3406,11 @@
         5,
         4
       ],
-      "id": "library_0257_weather_5x5"
+      "id": "library_0262_weather_5x5"
     },
     {
-      "index": 258,
-      "page": "library_0258_weather_6x4",
+      "index": 263,
+      "page": "library_0263_weather_6x4",
       "ck": "weather",
       "label": "Weather",
       "w": 6,
@@ -3354,102 +3419,102 @@
         5,
         4
       ],
-      "id": "library_0258_weather_6x4"
-    },
-    {
-      "index": 259,
-      "page": "library_0259_wx_current_2x2",
-      "ck": "wx_current",
-      "label": "Weather \u2014 current",
-      "w": 2,
-      "h": 2,
-      "min": [
-        2,
-        2
-      ],
-      "id": "library_0259_wx_current_2x2"
-    },
-    {
-      "index": 260,
-      "page": "library_0260_wx_current_3x2",
-      "ck": "wx_current",
-      "label": "Weather \u2014 current",
-      "w": 3,
-      "h": 2,
-      "min": [
-        2,
-        2
-      ],
-      "id": "library_0260_wx_current_3x2"
-    },
-    {
-      "index": 261,
-      "page": "library_0261_wx_current_4x2",
-      "ck": "wx_current",
-      "label": "Weather \u2014 current",
-      "w": 4,
-      "h": 2,
-      "min": [
-        2,
-        2
-      ],
-      "id": "library_0261_wx_current_4x2"
-    },
-    {
-      "index": 262,
-      "page": "library_0262_wx_current_6x2",
-      "ck": "wx_current",
-      "label": "Weather \u2014 current",
-      "w": 6,
-      "h": 2,
-      "min": [
-        2,
-        2
-      ],
-      "id": "library_0262_wx_current_6x2"
-    },
-    {
-      "index": 263,
-      "page": "library_0263_wx_current_3x3",
-      "ck": "wx_current",
-      "label": "Weather \u2014 current",
-      "w": 3,
-      "h": 3,
-      "min": [
-        2,
-        2
-      ],
-      "id": "library_0263_wx_current_3x3"
+      "id": "library_0263_weather_6x4"
     },
     {
       "index": 264,
-      "page": "library_0264_wx_hourly_3x1",
-      "ck": "wx_hourly",
-      "label": "Weather \u2014 hourly",
-      "w": 3,
-      "h": 1,
+      "page": "library_0264_wx_current_2x2",
+      "ck": "wx_current",
+      "label": "Weather \u2014 current",
+      "w": 2,
+      "h": 2,
       "min": [
-        3,
-        1
+        2,
+        2
       ],
-      "id": "library_0264_wx_hourly_3x1"
+      "id": "library_0264_wx_current_2x2"
     },
     {
       "index": 265,
-      "page": "library_0265_wx_hourly_4x1",
-      "ck": "wx_hourly",
-      "label": "Weather \u2014 hourly",
-      "w": 4,
-      "h": 1,
+      "page": "library_0265_wx_current_3x2",
+      "ck": "wx_current",
+      "label": "Weather \u2014 current",
+      "w": 3,
+      "h": 2,
       "min": [
-        3,
-        1
+        2,
+        2
       ],
-      "id": "library_0265_wx_hourly_4x1"
+      "id": "library_0265_wx_current_3x2"
     },
     {
       "index": 266,
-      "page": "library_0266_wx_hourly_6x1",
+      "page": "library_0266_wx_current_4x2",
+      "ck": "wx_current",
+      "label": "Weather \u2014 current",
+      "w": 4,
+      "h": 2,
+      "min": [
+        2,
+        2
+      ],
+      "id": "library_0266_wx_current_4x2"
+    },
+    {
+      "index": 267,
+      "page": "library_0267_wx_current_6x2",
+      "ck": "wx_current",
+      "label": "Weather \u2014 current",
+      "w": 6,
+      "h": 2,
+      "min": [
+        2,
+        2
+      ],
+      "id": "library_0267_wx_current_6x2"
+    },
+    {
+      "index": 268,
+      "page": "library_0268_wx_current_3x3",
+      "ck": "wx_current",
+      "label": "Weather \u2014 current",
+      "w": 3,
+      "h": 3,
+      "min": [
+        2,
+        2
+      ],
+      "id": "library_0268_wx_current_3x3"
+    },
+    {
+      "index": 269,
+      "page": "library_0269_wx_hourly_3x1",
+      "ck": "wx_hourly",
+      "label": "Weather \u2014 hourly",
+      "w": 3,
+      "h": 1,
+      "min": [
+        3,
+        1
+      ],
+      "id": "library_0269_wx_hourly_3x1"
+    },
+    {
+      "index": 270,
+      "page": "library_0270_wx_hourly_4x1",
+      "ck": "wx_hourly",
+      "label": "Weather \u2014 hourly",
+      "w": 4,
+      "h": 1,
+      "min": [
+        3,
+        1
+      ],
+      "id": "library_0270_wx_hourly_4x1"
+    },
+    {
+      "index": 271,
+      "page": "library_0271_wx_hourly_6x1",
       "ck": "wx_hourly",
       "label": "Weather \u2014 hourly",
       "w": 6,
@@ -3458,11 +3523,11 @@
         3,
         1
       ],
-      "id": "library_0266_wx_hourly_6x1"
+      "id": "library_0271_wx_hourly_6x1"
     },
     {
-      "index": 267,
-      "page": "library_0267_wx_hourly_4x2",
+      "index": 272,
+      "page": "library_0272_wx_hourly_4x2",
       "ck": "wx_hourly",
       "label": "Weather \u2014 hourly",
       "w": 4,
@@ -3471,11 +3536,11 @@
         3,
         1
       ],
-      "id": "library_0267_wx_hourly_4x2"
+      "id": "library_0272_wx_hourly_4x2"
     },
     {
-      "index": 268,
-      "page": "library_0268_wx_hourly_6x2",
+      "index": 273,
+      "page": "library_0273_wx_hourly_6x2",
       "ck": "wx_hourly",
       "label": "Weather \u2014 hourly",
       "w": 6,
@@ -3484,76 +3549,76 @@
         3,
         1
       ],
-      "id": "library_0268_wx_hourly_6x2"
-    },
-    {
-      "index": 269,
-      "page": "library_0269_wx_daily_2x3",
-      "ck": "wx_daily",
-      "label": "Weather \u2014 forecast (H/L)",
-      "w": 2,
-      "h": 3,
-      "min": [
-        2,
-        3
-      ],
-      "id": "library_0269_wx_daily_2x3"
-    },
-    {
-      "index": 270,
-      "page": "library_0270_wx_daily_3x3",
-      "ck": "wx_daily",
-      "label": "Weather \u2014 forecast (H/L)",
-      "w": 3,
-      "h": 3,
-      "min": [
-        2,
-        3
-      ],
-      "id": "library_0270_wx_daily_3x3"
-    },
-    {
-      "index": 271,
-      "page": "library_0271_wx_daily_2x4",
-      "ck": "wx_daily",
-      "label": "Weather \u2014 forecast (H/L)",
-      "w": 2,
-      "h": 4,
-      "min": [
-        2,
-        3
-      ],
-      "id": "library_0271_wx_daily_2x4"
-    },
-    {
-      "index": 272,
-      "page": "library_0272_wx_daily_3x4",
-      "ck": "wx_daily",
-      "label": "Weather \u2014 forecast (H/L)",
-      "w": 3,
-      "h": 4,
-      "min": [
-        2,
-        3
-      ],
-      "id": "library_0272_wx_daily_3x4"
-    },
-    {
-      "index": 273,
-      "page": "library_0273_wx_daily_2x5",
-      "ck": "wx_daily",
-      "label": "Weather \u2014 forecast (H/L)",
-      "w": 2,
-      "h": 5,
-      "min": [
-        2,
-        3
-      ],
-      "id": "library_0273_wx_daily_2x5"
+      "id": "library_0273_wx_hourly_6x2"
     },
     {
       "index": 274,
-      "page": "library_0274_wx_daily_3x5",
+      "page": "library_0274_wx_daily_2x3",
+      "ck": "wx_daily",
+      "label": "Weather \u2014 forecast (H/L)",
+      "w": 2,
+      "h": 3,
+      "min": [
+        2,
+        3
+      ],
+      "id": "library_0274_wx_daily_2x3"
+    },
+    {
+      "index": 275,
+      "page": "library_0275_wx_daily_3x3",
+      "ck": "wx_daily",
+      "label": "Weather \u2014 forecast (H/L)",
+      "w": 3,
+      "h": 3,
+      "min": [
+        2,
+        3
+      ],
+      "id": "library_0275_wx_daily_3x3"
+    },
+    {
+      "index": 276,
+      "page": "library_0276_wx_daily_2x4",
+      "ck": "wx_daily",
+      "label": "Weather \u2014 forecast (H/L)",
+      "w": 2,
+      "h": 4,
+      "min": [
+        2,
+        3
+      ],
+      "id": "library_0276_wx_daily_2x4"
+    },
+    {
+      "index": 277,
+      "page": "library_0277_wx_daily_3x4",
+      "ck": "wx_daily",
+      "label": "Weather \u2014 forecast (H/L)",
+      "w": 3,
+      "h": 4,
+      "min": [
+        2,
+        3
+      ],
+      "id": "library_0277_wx_daily_3x4"
+    },
+    {
+      "index": 278,
+      "page": "library_0278_wx_daily_2x5",
+      "ck": "wx_daily",
+      "label": "Weather \u2014 forecast (H/L)",
+      "w": 2,
+      "h": 5,
+      "min": [
+        2,
+        3
+      ],
+      "id": "library_0278_wx_daily_2x5"
+    },
+    {
+      "index": 279,
+      "page": "library_0279_wx_daily_3x5",
       "ck": "wx_daily",
       "label": "Weather \u2014 forecast (H/L)",
       "w": 3,
@@ -3562,76 +3627,76 @@
         2,
         3
       ],
-      "id": "library_0274_wx_daily_3x5"
-    },
-    {
-      "index": 275,
-      "page": "library_0275_wx_stats_2x2",
-      "ck": "wx_stats",
-      "label": "Weather \u2014 stats",
-      "w": 2,
-      "h": 2,
-      "min": [
-        2,
-        2
-      ],
-      "id": "library_0275_wx_stats_2x2"
-    },
-    {
-      "index": 276,
-      "page": "library_0276_wx_stats_3x2",
-      "ck": "wx_stats",
-      "label": "Weather \u2014 stats",
-      "w": 3,
-      "h": 2,
-      "min": [
-        2,
-        2
-      ],
-      "id": "library_0276_wx_stats_3x2"
-    },
-    {
-      "index": 277,
-      "page": "library_0277_wx_stats_2x3",
-      "ck": "wx_stats",
-      "label": "Weather \u2014 stats",
-      "w": 2,
-      "h": 3,
-      "min": [
-        2,
-        2
-      ],
-      "id": "library_0277_wx_stats_2x3"
-    },
-    {
-      "index": 278,
-      "page": "library_0278_wx_stats_3x3",
-      "ck": "wx_stats",
-      "label": "Weather \u2014 stats",
-      "w": 3,
-      "h": 3,
-      "min": [
-        2,
-        2
-      ],
-      "id": "library_0278_wx_stats_3x3"
-    },
-    {
-      "index": 279,
-      "page": "library_0279_person_1x1",
-      "ck": "person",
-      "label": "Presence",
-      "w": 1,
-      "h": 1,
-      "min": [
-        1,
-        1
-      ],
-      "id": "library_0279_person_1x1"
+      "id": "library_0279_wx_daily_3x5"
     },
     {
       "index": 280,
-      "page": "library_0280_person_2x1",
+      "page": "library_0280_wx_stats_2x2",
+      "ck": "wx_stats",
+      "label": "Weather \u2014 stats",
+      "w": 2,
+      "h": 2,
+      "min": [
+        2,
+        2
+      ],
+      "id": "library_0280_wx_stats_2x2"
+    },
+    {
+      "index": 281,
+      "page": "library_0281_wx_stats_3x2",
+      "ck": "wx_stats",
+      "label": "Weather \u2014 stats",
+      "w": 3,
+      "h": 2,
+      "min": [
+        2,
+        2
+      ],
+      "id": "library_0281_wx_stats_3x2"
+    },
+    {
+      "index": 282,
+      "page": "library_0282_wx_stats_2x3",
+      "ck": "wx_stats",
+      "label": "Weather \u2014 stats",
+      "w": 2,
+      "h": 3,
+      "min": [
+        2,
+        2
+      ],
+      "id": "library_0282_wx_stats_2x3"
+    },
+    {
+      "index": 283,
+      "page": "library_0283_wx_stats_3x3",
+      "ck": "wx_stats",
+      "label": "Weather \u2014 stats",
+      "w": 3,
+      "h": 3,
+      "min": [
+        2,
+        2
+      ],
+      "id": "library_0283_wx_stats_3x3"
+    },
+    {
+      "index": 284,
+      "page": "library_0284_person_1x1",
+      "ck": "person",
+      "label": "Presence",
+      "w": 1,
+      "h": 1,
+      "min": [
+        1,
+        1
+      ],
+      "id": "library_0284_person_1x1"
+    },
+    {
+      "index": 285,
+      "page": "library_0285_person_2x1",
       "ck": "person",
       "label": "Presence",
       "w": 2,
@@ -3640,11 +3705,11 @@
         1,
         1
       ],
-      "id": "library_0280_person_2x1"
+      "id": "library_0285_person_2x1"
     },
     {
-      "index": 281,
-      "page": "library_0281_person_1x3",
+      "index": 286,
+      "page": "library_0286_person_1x3",
       "ck": "person",
       "label": "Presence",
       "w": 1,
@@ -3653,11 +3718,11 @@
         1,
         1
       ],
-      "id": "library_0281_person_1x3"
+      "id": "library_0286_person_1x3"
     },
     {
-      "index": 282,
-      "page": "library_0282_person_1x4",
+      "index": 287,
+      "page": "library_0287_person_1x4",
       "ck": "person",
       "label": "Presence",
       "w": 1,
@@ -3666,11 +3731,11 @@
         1,
         1
       ],
-      "id": "library_0282_person_1x4"
+      "id": "library_0287_person_1x4"
     },
     {
-      "index": 283,
-      "page": "library_0283_person_1x5",
+      "index": 288,
+      "page": "library_0288_person_1x5",
       "ck": "person",
       "label": "Presence",
       "w": 1,
@@ -3679,11 +3744,11 @@
         1,
         1
       ],
-      "id": "library_0283_person_1x5"
+      "id": "library_0288_person_1x5"
     },
     {
-      "index": 284,
-      "page": "library_0284_vacuum_2x2",
+      "index": 289,
+      "page": "library_0289_vacuum_2x2",
       "ck": "vacuum",
       "label": "Vacuum",
       "w": 2,
@@ -3692,76 +3757,76 @@
         2,
         2
       ],
-      "id": "library_0284_vacuum_2x2"
-    },
-    {
-      "index": 285,
-      "page": "library_0285_scene_1x1",
-      "ck": "scene",
-      "label": "Scene",
-      "w": 1,
-      "h": 1,
-      "min": [
-        1,
-        1
-      ],
-      "id": "library_0285_scene_1x1"
-    },
-    {
-      "index": 286,
-      "page": "library_0286_scene_2x1",
-      "ck": "scene",
-      "label": "Scene",
-      "w": 2,
-      "h": 1,
-      "min": [
-        1,
-        1
-      ],
-      "id": "library_0286_scene_2x1"
-    },
-    {
-      "index": 287,
-      "page": "library_0287_scene_1x3",
-      "ck": "scene",
-      "label": "Scene",
-      "w": 1,
-      "h": 3,
-      "min": [
-        1,
-        1
-      ],
-      "id": "library_0287_scene_1x3"
-    },
-    {
-      "index": 288,
-      "page": "library_0288_scene_1x4",
-      "ck": "scene",
-      "label": "Scene",
-      "w": 1,
-      "h": 4,
-      "min": [
-        1,
-        1
-      ],
-      "id": "library_0288_scene_1x4"
-    },
-    {
-      "index": 289,
-      "page": "library_0289_scene_1x5",
-      "ck": "scene",
-      "label": "Scene",
-      "w": 1,
-      "h": 5,
-      "min": [
-        1,
-        1
-      ],
-      "id": "library_0289_scene_1x5"
+      "id": "library_0289_vacuum_2x2"
     },
     {
       "index": 290,
-      "page": "library_0290_script_1x1",
+      "page": "library_0290_scene_1x1",
+      "ck": "scene",
+      "label": "Scene",
+      "w": 1,
+      "h": 1,
+      "min": [
+        1,
+        1
+      ],
+      "id": "library_0290_scene_1x1"
+    },
+    {
+      "index": 291,
+      "page": "library_0291_scene_2x1",
+      "ck": "scene",
+      "label": "Scene",
+      "w": 2,
+      "h": 1,
+      "min": [
+        1,
+        1
+      ],
+      "id": "library_0291_scene_2x1"
+    },
+    {
+      "index": 292,
+      "page": "library_0292_scene_1x3",
+      "ck": "scene",
+      "label": "Scene",
+      "w": 1,
+      "h": 3,
+      "min": [
+        1,
+        1
+      ],
+      "id": "library_0292_scene_1x3"
+    },
+    {
+      "index": 293,
+      "page": "library_0293_scene_1x4",
+      "ck": "scene",
+      "label": "Scene",
+      "w": 1,
+      "h": 4,
+      "min": [
+        1,
+        1
+      ],
+      "id": "library_0293_scene_1x4"
+    },
+    {
+      "index": 294,
+      "page": "library_0294_scene_1x5",
+      "ck": "scene",
+      "label": "Scene",
+      "w": 1,
+      "h": 5,
+      "min": [
+        1,
+        1
+      ],
+      "id": "library_0294_scene_1x5"
+    },
+    {
+      "index": 295,
+      "page": "library_0295_script_1x1",
       "ck": "script",
       "label": "Script / button",
       "w": 1,
@@ -3770,11 +3835,11 @@
         1,
         1
       ],
-      "id": "library_0290_script_1x1"
+      "id": "library_0295_script_1x1"
     },
     {
-      "index": 291,
-      "page": "library_0291_script_2x1",
+      "index": 296,
+      "page": "library_0296_script_2x1",
       "ck": "script",
       "label": "Script / button",
       "w": 2,
@@ -3783,11 +3848,11 @@
         1,
         1
       ],
-      "id": "library_0291_script_2x1"
+      "id": "library_0296_script_2x1"
     },
     {
-      "index": 292,
-      "page": "library_0292_script_1x3",
+      "index": 297,
+      "page": "library_0297_script_1x3",
       "ck": "script",
       "label": "Script / button",
       "w": 1,
@@ -3796,11 +3861,11 @@
         1,
         1
       ],
-      "id": "library_0292_script_1x3"
+      "id": "library_0297_script_1x3"
     },
     {
-      "index": 293,
-      "page": "library_0293_script_1x4",
+      "index": 298,
+      "page": "library_0298_script_1x4",
       "ck": "script",
       "label": "Script / button",
       "w": 1,
@@ -3809,11 +3874,11 @@
         1,
         1
       ],
-      "id": "library_0293_script_1x4"
+      "id": "library_0298_script_1x4"
     },
     {
-      "index": 294,
-      "page": "library_0294_script_1x5",
+      "index": 299,
+      "page": "library_0299_script_1x5",
       "ck": "script",
       "label": "Script / button",
       "w": 1,
@@ -3822,7 +3887,7 @@
         1,
         1
       ],
-      "id": "library_0294_script_1x5"
+      "id": "library_0299_script_1x5"
     }
   ],
   "emulator_dir": "emulator",
