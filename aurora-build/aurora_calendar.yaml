@@ -8,8 +8,10 @@
 # Publishes:
 #   - sensor.aurora_calendar_month   — month grid for the SHOWN month
 #       month_title : "July 2026"
-#       month_map   : 42 lines "D|C|F" (day label, event count 0-9,
-#                     flags bit0=in shown month, bit1=today)
+#       month_map   : 42 lines "D|C|F|DATE" (day label, event count 0-9,
+#                     flags bit0=in shown month, bit1=today, full date label)
+#       month_events: up to 160 lines "day-index|ci|time|title" for the
+#                     selectable day agenda in the month card
 #   - sensor.aurora_calendar_events  — this week + upcoming agenda (today-anchored)
 #       cal_names   : one linked-calendar friendly name per line (accent order)
 #       w_range     : "Jul 13 - Jul 19"
@@ -134,9 +136,51 @@ template:
                 {%- endfor -%}
               {%- endfor -%}
               {%- set f = (1 if d.month == mno else 0) + (2 if d == today else 0) -%}
-              {%- set ns.out = ns.out + [d.day ~ '|' ~ ([c.n, 9] | min) ~ '|' ~ f] -%}
+              {%- set ns.out = ns.out + [d.day ~ '|' ~ ([c.n, 9] | min) ~ '|' ~ f ~ '|' ~ d.strftime('%a, %b %-d')] -%}
             {%- endfor -%}
             {{ ns.out | join('\n') }}
+          month_events: >-
+            {%- set moff = states('input_number.aurora_calendar_month_offset') | float(0) | int -%}
+            {%- set myr = now().year + ((now().month - 1 + moff) // 12) -%}
+            {%- set mno = ((now().month - 1 + moff) % 12) + 1 -%}
+            {%- set m1 = now().replace(day=1, hour=0, minute=0, second=0, microsecond=0).replace(year=myr, month=mno) -%}
+            {%- set t0d = (m1 - timedelta(days=(m1.weekday() + 1) % 7)).date() -%}
+            {%- set out = namespace(l=[]) -%}
+            {%- for i in range(42) -%}
+              {%- set d = t0d + timedelta(days=i) -%}
+              {%- set day = namespace(evs=[]) -%}
+              {%- for cal in ev.keys() | sort -%}
+                {%- set ci = [loop.index0, 3] | min -%}
+                {%- for e in ev[cal]['events'] -%}
+                  {%- set ad = 'T' not in e.start -%}
+                  {%- if ad -%}
+                    {%- set sd = strptime(e.start, '%Y-%m-%d').date() -%}
+                    {%- set last = strptime(e.end, '%Y-%m-%d').date() - timedelta(days=1) -%}
+                  {%- else -%}
+                    {%- set sdt = e.start | as_datetime | as_local -%}
+                    {%- set edt = e.end | as_datetime | as_local -%}
+                    {%- set sd = sdt.date() -%}
+                    {%- set last = edt.date() - timedelta(days=1) if (edt.hour == 0 and edt.minute == 0) else edt.date() -%}
+                  {%- endif -%}
+                  {%- if sd <= d and d <= last -%}
+                    {%- set ttl = (e.summary | default('(no title)', true)) | replace('|',' ') | replace('\n',' ') | trim | truncate(58, true, '') -%}
+                    {%- if ad -%}
+                      {%- set key = '0' -%}{%- set tm = 'All day' -%}
+                    {%- elif sd < d -%}
+                      {%- set key = '1' -%}{%- set tm = 'Ongoing' -%}
+                    {%- else -%}
+                      {%- set key = '2' ~ sdt.strftime('%H%M') -%}
+                      {%- set tm = (sdt.strftime('%I') | int) ~ ':' ~ sdt.strftime('%M') ~ (' AM' if sdt.hour < 12 else ' PM') -%}
+                    {%- endif -%}
+                    {%- set day.evs = day.evs + [key ~ '~' ~ i ~ '|' ~ ci ~ '|' ~ tm ~ '|' ~ ttl] -%}
+                  {%- endif -%}
+                {%- endfor -%}
+              {%- endfor -%}
+              {%- for packed in day.evs | sort -%}
+                {%- set out.l = out.l + [packed.split('~', 1)[1]] -%}
+              {%- endfor -%}
+            {%- endfor -%}
+            {{ out.l[:160] | join('\n') }}
 
   # ---- This week + upcoming agenda (always anchored on today) ---------------
   - trigger:

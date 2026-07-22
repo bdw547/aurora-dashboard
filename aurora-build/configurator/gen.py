@@ -1413,6 +1413,33 @@ CAL_DEMO_AGENDA = [
     (0, "Tomorrow \\u00B7 All day", "Trash pickup"), (1, "Tomorrow \\u00B7 2:00 PM", "1:1 with Alex"),
     (0, "Wed Jul 22 \\u00B7 All day", "Beach trip"), (1, "Fri Jul 24 \\u00B7 6:30 PM", "Date night"),
 ]
+CAL_DEMO_MONTH_EVENTS = [
+    (4, 0, "9:00 AM", "Dentist appointment"),
+    (6, 2, "All day", "Independence Day"), (6, 0, "5:00 PM", "Family cookout"),
+    (9, 1, "10:00 AM", "Project sync"),
+    (12, 0, "All day", "Summer camp"), (12, 1, "11:00 AM", "Design review"),
+    (12, 2, "6:30 PM", "Dinner reservation"),
+    (15, 0, "8:30 AM", "School appointment"),
+    (17, 1, "9:00 AM", "Team standup"), (17, 2, "3:00 PM", "Vet appointment"),
+    (21, 1, "9:00 AM", "Team standup"), (21, 0, "12:30 PM", "Lunch with Sam"),
+    (21, 1, "7:00 PM", "Dinner"),
+    (22, 0, "All day", "Trash pickup"), (22, 1, "2:00 PM", "1:1 with Alex"),
+    (23, 2, "7:00 AM", "Gym"),
+    (24, 0, "All day", "Beach trip"), (24, 1, "11:00 AM", "Design review"),
+    (26, 1, "6:30 PM", "Date night"), (30, 2, "4:00 PM", "Haircut"),
+    (33, 0, "All day", "Month-end planning"),
+]
+CAL_MAX_DAY_EVENTS = 20
+
+
+def _cal_demo_date_label(index):
+    dow = ("Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat")[index % 7]
+    if index < 3:
+        return "%s, Jun %d" % (dow, 28 + index)
+    if index < 34:
+        return "%s, Jul %d" % (dow, index - 2)
+    return "%s, Aug %d" % (dow, index - 33)
+
 
 
 def _cal_split_ts(base, sfx, sensor, attr, arrays, body_lines):
@@ -1591,11 +1618,189 @@ def c_cal_week(card, x, y, w, h, base):
     return [card_obj(x, y, w, h, inner)], [], ts
 
 
+def _cal_month_open_lines(base, live, row_count):
+    """Build the one shared click handler used by all 42 month cells."""
+    map_demo = "\\n".join("%s|%d|%d|%s" % (
+        dl, cnt, flag, _cal_demo_date_label(i))
+        for i, (dl, cnt, flag) in enumerate(CAL_DEMO_MAP))
+    events_demo = "\\n".join("%d|%d|%s|%s" % row for row in CAL_DEMO_MONTH_EVENTS)
+    row_ids = [base + "_dr%d" % i for i in range(row_count)]
+    accent_ids = [base + "_da%d" % i for i in range(row_count)]
+    time_ids = [base + "_dt%d" % i for i in range(row_count)]
+    label_ids = [base + "_dl%d" % i for i in range(row_count)]
+    lines = [
+        "int day = static_cast<int>(reinterpret_cast<intptr_t>(lv_event_get_param(event)));",
+        "if (day < 0 || day >= 42) return;",
+    ]
+    if live:
+        lines += [
+            "std::string map = id(ha_%s_mm).state;" % base,
+            "std::string packed = id(ha_%s_me).state;" % base,
+        ]
+    else:
+        lines += [
+            "std::string map = %s;" % esc(map_demo),
+            "std::string packed = %s;" % esc(events_demo),
+        ]
+    lines += [
+        "std::string date;",
+        "size_t mp = 0;",
+        "for (int i = 0; i <= day && mp <= map.size(); i++) {",
+        "  size_t nl = map.find('\\n', mp);",
+        "  std::string t = (nl == std::string::npos) ? map.substr(mp) : map.substr(mp, nl-mp);",
+        "  if (i == day) {",
+        "    size_t p1=t.find('|'); size_t p2=(p1==std::string::npos)?p1:t.find('|',p1+1);",
+        "    size_t p3=(p2==std::string::npos)?p2:t.find('|',p2+1);",
+        "    if (p3 != std::string::npos) date=t.substr(p3+1);",
+        "    break;",
+        "  }",
+        "  if (nl == std::string::npos) break; mp=nl+1;",
+        "}",
+        "if (date.empty()) date=\"Selected day\";",
+        "lv_label_set_text(id(%s_day_title), date.c_str());" % base,
+        "lv_obj_t* R[%d] = { %s };" % (
+            row_count, ", ".join("id(%s)" % rid for rid in row_ids)),
+        "lv_obj_t* A[%d] = { %s };" % (
+            row_count, ", ".join("id(%s)" % aid for aid in accent_ids)),
+        "lv_obj_t* T[%d] = { %s };" % (
+            row_count, ", ".join("id(%s)" % tid for tid in time_ids)),
+        "lv_obj_t* L[%d] = { %s };" % (
+            row_count, ", ".join("id(%s)" % lid for lid in label_ids)),
+        "for (int i=0; i<%d; i++) lv_obj_add_flag(R[i], LV_OBJ_FLAG_HIDDEN);" % row_count,
+        CAL_COLS_C,
+        "int total=0; int shown=0; size_t p=0;",
+        "while (p <= packed.size()) {",
+        "  size_t nl=packed.find('\\n',p);",
+        "  std::string t=(nl==std::string::npos)?packed.substr(p):packed.substr(p,nl-p);",
+        "  size_t p1=t.find('|'); size_t p2=(p1==std::string::npos)?p1:t.find('|',p1+1);",
+        "  size_t p3=(p2==std::string::npos)?p2:t.find('|',p2+1);",
+        "  if (p3 != std::string::npos && atoi(t.substr(0,p1).c_str()) == day) {",
+        "    total++;",
+        "    if (shown < %d) {" % row_count,
+        "      int ci=atoi(t.substr(p1+1,p2-p1-1).c_str()); if (ci<0 || ci>3) ci=0;",
+        "      std::string tm=t.substr(p2+1,p3-p2-1); std::string ttl=t.substr(p3+1);",
+        "      lv_obj_set_style_bg_color(A[shown], lv_color_hex(cal_cols[ci]), 0);",
+        "      lv_label_set_text(T[shown], tm.c_str()); lv_label_set_text(L[shown], ttl.c_str());",
+        "      lv_obj_clear_flag(R[shown], LV_OBJ_FLAG_HIDDEN); shown++;",
+        "    }",
+        "  }",
+        "  if (nl == std::string::npos) break; p=nl+1;",
+        "}",
+        "char count[48];",
+        "if (total > shown) snprintf(count,sizeof(count),\"Showing %d of %d events\",shown,total);",
+        "else snprintf(count,sizeof(count),\"%d event%s\",total,total==1?\"\":\"s\");",
+        "lv_label_set_text(id(%s_day_count), count);" % base,
+        "if (total == 0) lv_obj_clear_flag(id(%s_day_empty), LV_OBJ_FLAG_HIDDEN);" % base,
+        "else lv_obj_add_flag(id(%s_day_empty), LV_OBJ_FLAG_HIDDEN);" % base,
+        "lv_obj_scroll_to_y(id(%s_day_list), 0, LV_ANIM_OFF);" % base,
+        "lv_obj_clear_flag(id(%s_day_detail), LV_OBJ_FLAG_HIDDEN);" % base,
+        "lv_obj_move_foreground(id(%s_day_detail));" % base,
+    ]
+    return lines
+
+
+def _cal_month_detail(base, w, h, live):
+    """Hidden in-card day agenda plus the shared synthetic click target."""
+    open_lines = _cal_month_open_lines(base, live, CAL_MAX_DAY_EVENTS)
+    out = (
+        "              - button:\n"
+        "                  id: %s_open\n"
+        "                  hidden: true\n"
+        "                  width: 1\n"
+        "                  height: 1\n"
+        "                  on_click:\n"
+        "                    - lambda: |-\n%s"
+        % (base, _indent(open_lines, 24))
+    )
+    out += (
+        "              - obj:\n"
+        "                  id: %s_day_detail\n"
+        "                  hidden: true\n"
+        "                  x: 0\n"
+        "                  y: 0\n"
+        "                  width: %d\n"
+        "                  height: %d\n"
+        "                  bg_color: 0x13151B\n"
+        "                  bg_opa: 100%%\n"
+        "                  border_width: 0\n"
+        "                  radius: 14\n"
+        "                  pad_all: 0\n"
+        "                  scrollable: false\n"
+        "                  clickable: true\n"
+        "                  widgets:\n"
+        "                    - button:\n"
+        "                        x: 14\n"
+        "                        y: 10\n"
+        "                        width: 40\n"
+        "                        height: 34\n"
+        "                        bg_color: 0x1B2029\n"
+        "                        radius: 10\n"
+        "                        pad_all: 0\n"
+        "                        scrollable: false\n"
+        "                        widgets:\n"
+        "                          - label: { text: %s, align: center, text_font: f_icon, text_color: 0xC2C7D2 }\n"
+        "                        on_click:\n"
+        "                          - lambda: |-\n"
+        "                              lv_obj_add_flag(id(%s_day_detail), LV_OBJ_FLAG_HIDDEN);\n"
+        "                    - label: { id: %s_day_title, text: \"Selected day\", x: 66, y: 14, width: %d, height: 28, long_mode: dot, text_font: f_title, text_color: 0xF3F5F8 }\n"
+        "                    - label: { id: %s_day_count, text: \"0 events\", align: top_right, x: -16, y: 19, text_font: f_micro, text_color: 0x868CA0 }\n"
+        "                    - obj:\n"
+        "                        id: %s_day_list\n"
+        "                        x: 14\n"
+        "                        y: 56\n"
+        "                        width: %d\n"
+        "                        height: %d\n"
+        "                        bg_opa: 0%%\n"
+        "                        border_width: 0\n"
+        "                        pad_all: 0\n"
+        "                        scrollable: true\n"
+        "                        scrollbar_mode: auto\n"
+        "                        widgets:\n"
+        % (base, w, h, esc(glyph_for("chevron-left")), base, base, w - 250,
+           base, base, w - 28, h - 70)
+    )
+    row_w = w - 42
+    for i in range(CAL_MAX_DAY_EVENTS):
+        out += (
+            "                          - obj:\n"
+            "                              id: %s_dr%d\n"
+            "                              hidden: true\n"
+            "                              x: 0\n"
+            "                              y: %d\n"
+            "                              width: %d\n"
+            "                              height: 46\n"
+            "                              bg_color: 0x181B22\n"
+            "                              border_width: 0\n"
+            "                              radius: 8\n"
+            "                              pad_all: 0\n"
+            "                              scrollable: false\n"
+            "                              widgets:\n"
+            "                                - obj: { id: %s_da%d, x: 0, y: 7, width: 4, height: 32, bg_color: 0x2ED5B8, border_width: 0, radius: 2, pad_all: 0, scrollable: false }\n"
+            "                                - label: { id: %s_dt%d, text: \"\", x: 14, y: 8, width: 92, text_font: f_micro, text_color: 0x868CA0 }\n"
+            "                                - label: { id: %s_dl%d, text: \"\", x: 112, y: 8, width: %d, height: 28, long_mode: dot, text_font: f_body, text_color: 0xF3F5F8 }\n"
+            % (base, i, i * 52, row_w, base, i, base, i, base, i, row_w - 126)
+        )
+    out += (
+        "                          - label:\n"
+        "                              id: %s_day_empty\n"
+        "                              text: \"No events scheduled\"\n"
+        "                              x: 0\n"
+        "                              y: 44\n"
+        "                              width: %d\n"
+        "                              text_align: center\n"
+        "                              text_font: f_body\n"
+        "                              text_color: 0x868CA0\n"
+        % (base, row_w)
+    )
+    return out
+
+
 def c_cal_month(card, x, y, w, h, base):
-    """Month grid for the SHOWN month: 42 day cells fed by month_map (count\n    badge, today ring, out-of-month dimming). Browsing is HA-side: ‹ › move\n    input_number.aurora_calendar_month_offset (the package republishes the\n    grid ~1s later), calendar-today snaps back to the current month. Small\n    spans fall back to the agenda list (c_weather compact pattern)."""
+    """Month grid with tappable date cells and an in-card agenda for that day."""
     if w < 590 or h < 380:
         return c_cal_agenda(card, x, y, w, h, base)
     e = card.get("entity", "")
+    live = bool(e and ART_ENABLED)
     pad, gap = 14, 6
     mtid = base + "_mt"
     inner = ic("", color="0x8FA6FF", glyph=glyph_for("calendar-month"))
@@ -1621,32 +1826,58 @@ def c_cal_month(card, x, y, w, h, base):
         bg = "0x11201C" if tod else ("0x14161C" if inm else "0x101218")
         dcol = "0x2ED5B8" if tod else ("0xF3F5F8" if inm else "0x5D6470")
         bid, did, cid_ = base + "_b%d" % i, base + "_d%d" % i, base + "_c%d" % i
-        inner += ("              - obj: { id: %s, x: %d, y: %d, width: %d, height: %d, bg_color: %s, "
-                  "border_width: %d, border_color: 0x2ED5B8, radius: 10, pad_all: 0, scrollable: false, widgets: ["
-                  "label: { id: %s, text: %s, x: 8, y: 6, text_font: %s, text_color: %s }, "
-                  "label: { id: %s, text: \"%d\", x: 8, y: %d, text_font: f_micro, text_color: 0x2ED5B8%s }] }\n"
-                  % (bid, pad + c * (cw + gap), gy0 + r * (rh + gap), cw, rh, bg,
-                     1 if tod else 0, did, esc(dl), dfont, dcol,
-                     cid_, cnt, rh - 24, ", hidden: true" if cnt == 0 else ""))
+        inner += (
+            "              - obj:\n"
+            "                  id: %s\n"
+            "                  x: %d\n"
+            "                  y: %d\n"
+            "                  width: %d\n"
+            "                  height: %d\n"
+            "                  bg_color: %s\n"
+            "                  border_width: %d\n"
+            "                  border_color: 0x2ED5B8\n"
+            "                  radius: 10\n"
+            "                  pad_all: 0\n"
+            "                  scrollable: false\n"
+            "                  clickable: true\n"
+            "                  gesture_bubble: true\n"
+            "                  widgets:\n"
+            "                    - label: { id: %s, text: %s, x: 8, y: 6, text_font: %s, text_color: %s }\n"
+            "                    - label: { id: %s, text: \"%d\", x: 8, y: %d, text_font: f_micro, text_color: 0x2ED5B8%s }\n"
+            "                  on_click:\n"
+            "                    - lambda: |-\n"
+            "                        lv_obj_send_event(id(%s_open), LV_EVENT_CLICKED, reinterpret_cast<void *>(static_cast<intptr_t>(%d)));\n"
+            % (bid, pad + c * (cw + gap), gy0 + r * (rh + gap), cw, rh, bg,
+               1 if tod else 0, did, esc(dl), dfont, dcol, cid_, cnt, rh - 24,
+               ", hidden: true" if cnt == 0 else "", base, i)
+        )
         B.append(bid); D.append(did); C.append(cid_)
+    inner += _cal_month_detail(base, w, h, live)
     ts = []
-    if e:
+    if live:
         ts.append(_wx_attr_ts(base, "mt", CAL_SENSOR_MONTH, "month_title", mtid))
         ts.append(_cal_split_ts(base, "mm", CAL_SENSOR_MONTH, "month_map",
                                 {"B": B, "D": D, "C": C}, [
-            "size_t p1 = t.find('|'); size_t p2 = (p1==std::string::npos)?p1:t.find('|', p1+1);",
+            "size_t p1=t.find('|'); size_t p2=(p1==std::string::npos)?p1:t.find('|',p1+1);",
             "if (p2 != std::string::npos) {",
-            "  lv_label_set_text(D[i], t.substr(0, p1).c_str());",
-            "  int cnt = t[p1+1] - '0'; int f = t[p2+1] - '0';",
-            "  if (cnt > 0) { char b[4]; snprintf(b, sizeof(b), \"%d\", cnt); lv_label_set_text(C[i], b); lv_obj_clear_flag(C[i], LV_OBJ_FLAG_HIDDEN); }",
+            "  lv_label_set_text(D[i], t.substr(0,p1).c_str());",
+            "  int cnt=atoi(t.substr(p1+1,p2-p1-1).c_str()); int f=atoi(t.substr(p2+1).c_str());",
+            "  if (cnt > 0) { char b[6]; snprintf(b,sizeof(b),\"%d\",cnt); lv_label_set_text(C[i],b); lv_obj_clear_flag(C[i],LV_OBJ_FLAG_HIDDEN); }",
             "  else lv_obj_add_flag(C[i], LV_OBJ_FLAG_HIDDEN);",
-            "  bool inm = (f & 1) != 0; bool tod = (f & 2) != 0;",
-            "  lv_obj_set_style_bg_color(B[i], lv_color_hex(tod ? 0x11201C : (inm ? 0x14161C : 0x101218)), 0);",
-            "  lv_obj_set_style_border_width(B[i], tod ? 1 : 0, 0);",
-            "  lv_obj_set_style_text_color(D[i], lv_color_hex(tod ? 0x2ED5B8 : (inm ? 0xF3F5F8 : 0x5D6470)), 0);",
+            "  bool inm=(f & 1) != 0; bool tod=(f & 2) != 0;",
+            "  lv_obj_set_style_bg_color(B[i],lv_color_hex(tod ? 0x11201C : (inm ? 0x14161C : 0x101218)),0);",
+            "  lv_obj_set_style_border_width(B[i],tod ? 1 : 0,0);",
+            "  lv_obj_set_style_text_color(D[i],lv_color_hex(tod ? 0x2ED5B8 : (inm ? 0xF3F5F8 : 0x5D6470)),0);",
             "}",
         ]))
+        ts.append(
+            "  - platform: homeassistant\n"
+            "    id: ha_%s_me\n"
+            "    entity_id: %s\n"
+            "    attribute: month_events\n" % (base, CAL_SENSOR_MONTH)
+        )
     return [card_obj(x, y, w, h, inner)], [], ts
+
 def _radar_location(card):
     """Return Web Mercator tile coordinates for a configured radar card."""
     try:

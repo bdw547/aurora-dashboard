@@ -716,10 +716,22 @@ function cardInner(c){ const def=C[c.ck], nm=c.name||def.label, big=c.w>=3, ctrl
       return head+`<div style="display:flex;flex-direction:column;justify-content:center;height:100%;padding:0 10px">${rs}</div>`; }
   }
   if(c.ck&&c.ck.startsWith('cal_')){ const T='#F3F5F8', G='#868CA0', TL='#2ED5B8', VC=['#2ED5B8','#F2B84B','#4FA8F5','#8FA6FF'];
-    if(c.ck==='cal_month'){ const dows='SMTWTFS'.split('').map(d=>`<span style="flex:1;text-align:center;font-size:9px;color:#5D6470">${d}</span>`).join('');
-      const cells=Array.from({length:35},(_,i)=>{ const d=i<3?28+i:i-2, inm=i>=3&&i<34, tod=inm&&d===19, cnt={2:1,4:2,7:1,10:3,13:1,15:2,19:3,20:2,22:2}[inm?d:0]||0;
-        return `<div style="background:${tod?'#11201C':(inm?'#14161C':'#101218')};border:1px solid ${tod?TL:'transparent'};border-radius:5px;position:relative;min-height:0"><span style="position:absolute;left:3px;top:1px;font-size:9px;color:${tod?TL:(inm?T:'#5D6470')}">${d}</span>${cnt?`<span style="position:absolute;left:3px;bottom:1px;font-size:8px;color:${TL}">${cnt}</span>`:''}</div>`; }).join('');
-      return head+`<div style="display:flex;flex-direction:column;height:100%;gap:4px"><div style="display:flex;align-items:center;gap:8px"><span class="mdi mdi-calendar-month" style="color:var(--violet);font-size:17px"></span><span style="font-weight:700;font-size:14px;color:${T}">July 2026</span><span style="margin-left:auto;display:flex;gap:4px"><span class="mdi mdi-chevron-left" style="color:${G}"></span><span class="mdi mdi-chevron-right" style="color:${G}"></span></span></div><div style="display:flex">${dows}</div><div style="flex:1;display:grid;grid-template-columns:repeat(7,1fr);grid-template-rows:repeat(5,1fr);gap:3px;min-height:0">${cells}</div></div>`; }
+    if(c.ck==='cal_month'){
+      const counts={4:1,6:2,9:1,12:3,15:1,17:2,21:3,22:2,23:1,24:2,26:1,30:1,33:1};
+      const dows=['SUN','MON','TUE','WED','THU','FRI','SAT'].map(d=>`<span style="flex:1;text-align:center;font-size:9px;color:#5D6470">${d}</span>`).join('');
+      const cells=Array.from({length:42},(_,i)=>{ const jun=i<3, aug=i>=34, d=jun?28+i:(aug?i-33:i-2), inm=!jun&&!aug, tod=inm&&d===19, cnt=counts[i]||0, mon=jun?'Jun':(aug?'Aug':'Jul'), date=`${['Sun','Mon','Tue','Wed','Thu','Fri','Sat'][i%7]}, ${mon} ${d}`;
+        return `<button type="button" class="cal-day-cell" data-day="${i}" data-date="${date}" title="Show events for ${date}" style="background:${tod?'#11201C':(inm?'#14161C':'#101218')};border:1px solid ${tod?TL:'transparent'};border-radius:6px;position:relative;min-height:0;color:inherit"><span style="position:absolute;left:5px;top:3px;font-size:10px;color:${tod?TL:(inm?T:'#5D6470')}">${d}</span>${cnt?`<span style="position:absolute;left:5px;bottom:3px;font-size:9px;color:${TL}">${cnt}</span>`:''}</button>`; }).join('');
+      return head+`<div class="cal-month-preview" style="position:relative;display:flex;flex:1;min-height:0">
+        <div class="cal-month-grid-view" style="display:flex;flex-direction:column;flex:1;min-height:0;gap:5px">
+          <div style="display:flex;align-items:center;gap:8px"><span class="mdi mdi-calendar-month" style="color:var(--violet);font-size:18px"></span><span style="font-weight:700;font-size:15px;color:${T}">July 2026</span><span style="margin-left:auto;display:flex;gap:5px"><span class="mdi mdi-chevron-left" style="color:${G}"></span><span class="mdi mdi-chevron-right" style="color:${G}"></span></span></div>
+          <div style="display:flex">${dows}</div>
+          <div style="flex:1;display:grid;grid-template-columns:repeat(7,1fr);grid-template-rows:repeat(6,1fr);gap:4px;min-height:0">${cells}</div>
+        </div>
+        <div class="cal-day-detail" style="display:none;position:absolute;inset:-14px;z-index:4;background:#13151B;border-radius:17px;padding:12px 14px;flex-direction:column;min-height:0">
+          <div style="display:flex;align-items:center;gap:10px"><button type="button" class="cal-day-back" title="Back to month" style="width:40px;height:34px;border-radius:10px;background:#1B2029;color:${T};font-size:18px"><span class="mdi mdi-chevron-left"></span></button><span class="cal-day-title" style="font-size:15px;font-weight:700;color:${T}"></span><span class="cal-day-count" style="margin-left:auto;font-size:10px;color:${G}"></span></div>
+          <div class="cal-day-events" style="display:flex;flex-direction:column;gap:6px;overflow:auto;min-height:0;flex:1;margin-top:10px"></div>
+        </div>
+      </div>`; }
     if(c.ck==='cal_week'){ const chip=(ci,tm,tt)=>`<div style="background:#0F1117;border-radius:5px;padding:3px 4px 3px 7px;position:relative;overflow:hidden"><span style="position:absolute;left:2px;top:4px;bottom:4px;width:2px;border-radius:1px;background:${VC[ci]}"></span><div style="font-size:8px;color:${G}">${tm}</div><div style="font-size:9px;color:${T};white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${tt}</div></div>`;
       const day=(dl,tod,chips)=>`<div style="flex:1;min-width:0;display:flex;flex-direction:column;gap:4px"><div style="text-align:center;font-size:9px;color:${tod?TL:G}">${dl}</div>${chips}</div>`;
       const cols=[day('S 19',1,chip(1,'9:00A','Standup')+chip(0,'12:30P','Lunch')),day('M 20',0,chip(0,'All day','Trash')),day('T 21',0,chip(2,'7:00A','Gym')),day('W 22',0,chip(0,'All day','Beach')),day('T 23',0,''),day('F 24',0,chip(1,'6:30P','Date')),day('S 25',0,'')].join('');
@@ -930,13 +942,44 @@ function cardInner(c){ const def=C[c.ck], nm=c.name||def.label, big=c.w>=3, ctrl
   return head+ico+nme;
 }
 
+const CAL_PREVIEW_EVENTS={
+  4:[['9:00 AM','Dentist appointment',0]],
+  6:[['All day','Independence Day',2],['5:00 PM','Family cookout',0]],
+  9:[['10:00 AM','Project sync',1]],
+  12:[['All day','Summer camp',0],['11:00 AM','Design review',1],['6:30 PM','Dinner reservation',2]],
+  15:[['8:30 AM','School appointment',0]],
+  17:[['9:00 AM','Team standup',1],['3:00 PM','Vet appointment',2]],
+  21:[['9:00 AM','Team standup',1],['12:30 PM','Lunch with Sam',0],['7:00 PM','Dinner',1]],
+  22:[['All day','Trash pickup',0],['2:00 PM','1:1 with Alex',1]],
+  23:[['7:00 AM','Gym',2]],
+  24:[['All day','Beach trip',0],['11:00 AM','Design review',1]],
+  26:[['6:30 PM','Date night',1]],
+  30:[['4:00 PM','Haircut',2]],
+  33:[['All day','Month-end planning',0]]
+};
+function wireCalendarPreview(root){
+  const shell=root.querySelector('.cal-month-preview'); if(!shell)return;
+  const grid=shell.querySelector('.cal-month-grid-view'), detail=shell.querySelector('.cal-day-detail');
+  const title=shell.querySelector('.cal-day-title'), count=shell.querySelector('.cal-day-count'), list=shell.querySelector('.cal-day-events');
+  shell.querySelectorAll('.cal-day-cell').forEach(cell=>{
+    cell.addEventListener('pointerdown',e=>e.stopPropagation());
+    cell.onclick=(e)=>{ e.stopPropagation(); const rows=CAL_PREVIEW_EVENTS[Number(cell.dataset.day)]||[];
+      title.textContent=cell.dataset.date; count.textContent=rows.length+' event'+(rows.length===1?'':'s');
+      list.innerHTML=rows.length?rows.map(([time,name,ci])=>`<div style="position:relative;display:flex;align-items:center;min-height:46px;background:#181B22;border-radius:8px;padding:8px 12px 8px 16px;gap:12px"><span style="position:absolute;left:0;top:7px;bottom:7px;width:4px;border-radius:2px;background:${['#2ED5B8','#F2B84B','#4FA8F5','#8FA6FF'][ci]}"></span><span style="width:82px;flex:0 0 auto;font-size:10px;color:#868CA0">${time}</span><span style="font-size:12px;color:#F3F5F8;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${name}</span></div>`).join(''):`<div style="margin:auto;text-align:center;color:#868CA0;font-size:12px">No events scheduled</div>`;
+      grid.style.display='none'; detail.style.display='flex'; };
+  });
+  const back=shell.querySelector('.cal-day-back');
+  back.addEventListener('pointerdown',e=>e.stopPropagation());
+  back.onclick=(e)=>{e.stopPropagation();detail.style.display='none';grid.style.display='flex';};
+}
+
 function renderGrid(){ ROWS=rowsFor(); const g=document.getElementById('grid');
   g.style.gridTemplateRows=`repeat(${ROWS},100px)`; g.style.top=((L.pages[curPage].header&&L.pages[curPage].header.on)?96:22)+'px'; g.style.height=(ROWS*100+(ROWS-1)*14)+'px'; g.innerHTML='';
   for(let i=0;i<COLS*ROWS;i++){ const cell=document.createElement('div'); cell.className='gcell'; cell.style.gridColumn=(i%COLS)+1; cell.style.gridRow=Math.floor(i/COLS)+1; g.appendChild(cell); }
   for(const c of curCards()){ const def=C[c.ck];
     const d=document.createElement('div'); d.className='pc'+(sel===c.id?' sel':'')+(['light','dial','toggle'].includes(def.ctrl)?' on':'')+(isCutSrc(c)?' cutsrc':'');
     d.style.gridColumn=`${c.x} / span ${c.w}`; d.style.gridRow=`${c.y} / span ${c.h}`;
-    d.innerHTML=cardInner(c); d.dataset.id=c.id; d.onclick=(e)=>{e.stopPropagation(); sel=c.id; renderInspector(); markSel();}; attachDrag(d,c); attachResize(d,c); g.appendChild(d); }
+    d.innerHTML=cardInner(c); wireCalendarPreview(d); d.dataset.id=c.id; d.onclick=(e)=>{e.stopPropagation(); sel=c.id; renderInspector(); markSel();}; attachDrag(d,c); attachResize(d,c); g.appendChild(d); }
   const dots=document.getElementById('pageDots'), nsub=L.pages[curPage].subpages.length; dots.innerHTML='';
   if(nsub>1){ dots.style.display='flex';
     for(let i=0;i<nsub;i++){ const dot=document.createElement('button'); dot.className='page-dot-target'+(i===curSub?' on':''); dot.type='button'; dot.title='Sub-page '+(i+1); dot.setAttribute('aria-label','Show sub-page '+(i+1));
