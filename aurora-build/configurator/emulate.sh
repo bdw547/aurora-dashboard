@@ -8,9 +8,16 @@
 #
 # Requires: libsdl2, imagemagick, xvfb (apt). Live mode needs WSLg (Win11 WSL2).
 set -uo pipefail
-ROOT="$HOME/espcontrol"
-PY="$ROOT/.venv-dev/bin/python"
-ESPHOME="$ROOT/.venv-dev/bin/esphome"
+ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
+VENV="${AURORA_VENV:-}"
+if [ -z "$VENV" ]; then
+  for v in "$ROOT/.venv-dev" "$HOME/aurora-venv"; do
+    [ -x "$v/bin/esphome" ] && VENV="$v" && break
+  done
+fi
+[ -n "$VENV" ] || { echo "no venv with esphome found (set AURORA_VENV)"; exit 1; }
+PY="$VENV/bin/python"
+ESPHOME="$VENV/bin/esphome"
 DEV="$ROOT/devices/guition-esp32-p4-jc1060p470"
 EMUL="$DEV/aurora-emul.yaml"
 BIN="$DEV/.esphome/build/aurora-emul/.pioenvs/aurora-emul/program"

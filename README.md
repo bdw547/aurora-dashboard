@@ -77,10 +77,10 @@ The **Flash** button runs the whole `layout.json → aurora-gen.yaml → build �
 ```bash
 source ~/aurora-venv/bin/activate        # the venv with esphome installed
 python3 aurora-build/configurator/serve.py
-# then open http://localhost:8765
+# then open http://localhost:8765  (default password: Admin — change it in ⚙ Settings)
 ```
 
-<sub>See the full walkthrough in **[Web configurator](#web-configurator)** below.</sub>
+<sub>See the full walkthrough in **[Web configurator](#web-configurator)** below, or the beginner guide in **[SETUP.md](SETUP.md)**.</sub>
 
 ---
 
@@ -140,21 +140,26 @@ Aurora controls **your** Home Assistant entities, so you need HA running on your
 | Climate | A weather entity (default `weather.forecast_home`). |
 | Lights / Fans / Locks / Presence / NAS | Your own `light.*`, `fan.*`, `switch.*`, `lock.*`, `person.*`, `sensor.*` entities. |
 
-> **Important:** the entity IDs in `aurora.yaml` are currently **specific to the author's home** (e.g. `light.living_room_main`, `media_player.spotifyplus_ben_walton`, `lock.front_door`). To use Aurora in *your* home you can either rebind them by hand (see **[Customizing for your home](#customizing-for-your-home)**) or use the **[no-code web configurator](#-design-it-your-way--no-yaml-required)** — a browser app that maps the panel's entity slots to yours, lets you lay out screens by drag-and-drop, and flashes the panel for you.
+> **Important:** the entity IDs in `aurora.yaml` are currently **specific to the author's home** (e.g. `light.living_room_main`, the author's `media_player.spotifyplus_*`, `lock.front_door`). To use Aurora in *your* home you can either rebind them by hand (see **[Customizing for your home](#customizing-for-your-home)**) or use the **[no-code web configurator](#-design-it-your-way--no-yaml-required)** — a browser app that maps the panel's entity slots to yours, lets you lay out screens by drag-and-drop, and flashes the panel for you.
 
 ---
 
 ## Quick start
+
+> **New to this?** There's a hand-holding, copy-paste walkthrough in **[SETUP.md](SETUP.md)** — from a blank computer (including Windows/WSL) to a personalized, flashed panel, no coding knowledge needed. The steps below are the condensed version.
 
 ### 1. Get the toolchain
 
 On the machine you'll build from (Linux / WSL recommended):
 
 ```bash
+sudo apt update && sudo apt install -y git python3 python3-venv python3-pip libusb-1.0-0
 python3 -m venv ~/aurora-venv
 source ~/aurora-venv/bin/activate
 pip install esphome
 ```
+
+> `libusb-1.0-0` is required — the ESP-IDF toolchain installer fails without it. For the desktop emulator, also `sudo apt install -y libsdl2-2.0-0 imagemagick xvfb`.
 
 ### 2. Clone
 
@@ -179,7 +184,7 @@ This file is **gitignored** — never commit it. SSID/password do **not** need q
 The very first flash must be over USB (after that it's wireless). Easiest path — a browser:
 
 1. Build the firmware: `esphome compile devices/guition-esp32-p4-jc1060p470/aurora.yaml`
-2. This produces `…/.esphome/build/aurora-panel/.pioenvs/aurora-panel/firmware.factory.bin`.
+2. This produces `…/.esphome/build/aurora-panel/build/firmware.factory.bin`.
 3. Plug the panel into your computer via USB‑C, open **<https://web.esphome.io>** in Chrome/Edge, click **Connect**, pick the serial port, **Install**, and choose that `firmware.factory.bin`.
 
 > Notes: Flash Mode/Frequency/Size = "keep" is fine. If a USB flash *seems* to do nothing, run `esphome clean …` then recompile so the `factory.bin` is regenerated (PlatformIO sometimes skips re-merging it). The first boot briefly shows an "AURORA" splash while WiFi + HA connect.
@@ -207,16 +212,18 @@ esphome run    devices/guition-esp32-p4-jc1060p470/aurora.yaml --device <panel-i
 
 > `esphome config` does **not** type-check `!lambda` C++ — only a full `run`/`compile` catches those.
 
-**Rebinding to your entities:** search the file for the author's entity IDs and replace them with yours. The main ones:
+**Rebinding to your entities:** the file ships bound to the author's own home, so search it for each entity domain and replace the IDs with yours. The main ones:
 
-- Lights/fans/switches: `light.living_room_main`, `fan.living_room_pendant`, `switch.outdoor_patio_putting_green`, etc.
-- Media: `media_player.spotifyplus_ben_walton`
-- TV: `media_player.lg_g3_living_room_2`
+- Lights/fans/switches: the `light.*`, `fan.*`, `switch.*` IDs (e.g. `light.living_room_main`).
+- Media: the `media_player.spotifyplus_*` entity from your SpotifyPlus integration.
+- TV: your `media_player.*` entity from the webOS integration.
 - Locks: `lock.front_door`, `lock.back_door`
-- Presence: `person.ben`
+- Presence: the `person.*` entities for your household.
 - Weather: `weather.forecast_home`
-- NAS: `sensor.walton_synology_volume_1_status`
+- NAS: your Synology `sensor.*_volume_1_status` entity (or remove the card).
 - Spotify room/zone names (your Spotify Connect device names): the `src_btn_*` buttons on the Media page.
+
+> Prefer not to hand-edit? The **[web configurator](#web-configurator)** does all of this rebinding from a browser.
 
 **Common patterns in the file:**
 - **Pages** live under `lvgl: → pages:`; the persistent left nav rail is in `lvgl: → top_layer:`.
@@ -240,6 +247,8 @@ source ~/aurora-venv/bin/activate        # the venv with esphome installed
 python3 aurora-build/configurator/serve.py
 # then open http://localhost:8765
 ```
+
+Sign in with the default password **`Admin`** and **change it right away** (⚙ Settings → Change password) — the configurator is reachable from other devices on your network. Your HA URL, access token, panel IP, and password hash are stored locally in `aurora-build/configurator/config.json`, which is **gitignored** (like `secrets.yaml`) so none of it can end up in a commit.
 
 What it does:
 
@@ -269,7 +278,7 @@ The Media **Library** (browse playlists → tracks → tap to play in a room) ne
    homeassistant:
      packages: !include_dir_named packages
    ```
-3. Edit the entity in that file if your SpotifyPlus entity isn't `media_player.spotifyplus_ben_walton`.
+3. Edit the `media_player.spotifyplus_*` entity in that file to match yours (the shipped default is the author's).
 4. Check config → **Restart HA**.
 5. Run the action **`script.aurora_spotify_refresh_playlists`** once to populate your playlists.
 
@@ -436,6 +445,9 @@ RTP is sent **TCP‑interleaved**, so it works through Home Assistant / ffmpeg's
 
 ## Troubleshooting
 
+- **`esp_video_camera requires the esp-idf framework` when compiling:** the build must use the native ESP-IDF toolchain. `aurora.yaml` pins `toolchain: esp-idf`; if you're on an older copy, `git pull` or pass `--toolchain esp-idf` on the command line.
+- **`libusb-1.0.so.0: cannot open shared object file` / "ESP-IDF … framework installation failure":** `sudo apt install libusb-1.0-0`, then build again.
+- **`esphome: command not found`:** activate the venv first — `source ~/aurora-venv/bin/activate` (needed in every new terminal).
 - **OTA "connection reset by peer":** retry — usually transient. (WiFi `fast_connect` + `power_save_mode: none` are enabled to minimize this.)
 - **OTA upload succeeds but the panel keeps running the old build:** the ESP32‑P4's OTA boot‑confirm is flaky — an intermittent early‑boot reset can roll a freshly‑flashed image back to the previous partition. Re‑flash until it sticks (verify the device's `compilation_time` over the API matches your build), or — most reliably — **flash over USB‑serial** (`esphome run … --device /dev/ttyACM0`), which writes the factory image directly and bypasses the rollback entirely.
 - **A control does nothing but the clock/lights still work:** the entity ID in `aurora.yaml` doesn't match your HA entity — rebind it.
