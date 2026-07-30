@@ -32,7 +32,7 @@ Open **<http://localhost:8765>** and sign in with the default password **`Admin`
 
 - **Entity-rebind wizard** — reads the panel's entity slots, lists *your* Home Assistant entities, and lets you map each slot to one of yours: lights, locks, media, presence, weather, and the rest.
 - **Rooms wizard** — add, rename and reassign rooms and their lights, fans and switches. Room pages, the room picker and state sensors are generated for you (saved to `rooms.json`).
-- **Drag-and-drop page builder** — arrange cards on a 6×5 grid per page with a live preview that matches the panel pixel-for-pixel. Browse everything you can place in the **[Card Library](/cards/)**. Your layout is saved to `layout.json`.
+- **Drag-and-drop page builder** — pull cards from the palette onto a 6×5 grid per page, and **drag to resize**: every card redraws itself for its new footprint (a light can be a 1×1 tile or a full-width dimmer — see every size of every card in the **[Card Library](/cards/)**). The live preview matches the panel pixel-for-pixel. Your layout is saved to `layout.json`.
 - **Flash button** — runs the whole `layout.json → aurora-gen.yaml → build → OTA` pipeline and sends the personalized firmware to the panel wirelessly.
 
 Your design lives in `layout.json` and `rooms.json` on your computer, so you can tweak and re-flash any time.

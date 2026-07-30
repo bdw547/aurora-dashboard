@@ -2,7 +2,7 @@
 layout: page
 title: Aurora — a hand-crafted Home Assistant touch dashboard
 titleTemplate: :title
-description: "Hand-crafted ESPHome + LVGL firmware for the Guition 7″ ESP32-P4 panel: dark glass UI, Spotify, live camera, TV remote — designed in a no-code web configurator."
+description: "Hand-crafted ESPHome + LVGL firmware for the Guition 7″ ESP32-P4 panel: a panel for every room, custom to the room it's in — live video, Spotify, TV remote, wake-on-approach, designed in a no-code web configurator."
 sidebar: false
 ---
 
@@ -20,13 +20,40 @@ const strip = [
   { img: '0002_light_3x1.png', alt: 'Light card with dimmer' },
 ]
 
+const rooms = [
+  {
+    name: 'Living room',
+    story:
+      'Movie night without hunting for three remotes — dim the lights, drop the blinds, and drive the TV from one piece of glass on the coffee table.',
+    cards: ['0178_tvremote_3x2.png', '0025_lightgroup_3x2.png', '0050_cover_2x2.png'],
+  },
+  {
+    name: 'Kitchen',
+    story:
+      'The morning glance: tonight’s forecast hour by hour, the family calendar, and one tap to put the breakfast playlist on the kitchen speakers.',
+    cards: ['0270_wx_hourly_4x1.png', '0154_sonos_3x2.png', '0066_shortcuts_3x2.png'],
+  },
+  {
+    name: 'Bedroom',
+    story:
+      'Lights and fan from bed, volume down without a phone — then the panel fades to a photo slideshow and only lights up at night if you walk toward it.',
+    cards: ['0011_light_3x2.png', '0044_fan_2x2.png', '0166_volume_2x1.png'],
+  },
+  {
+    name: 'Entryway',
+    story:
+      'The three questions at the door: is it locked, who’s home, did anything need my attention while I was out.',
+    cards: ['0224_lock_2x1.png', '0285_person_2x1.png', '0240_notifications_2x2.png'],
+  },
+]
+
 const features = [
-  { t: 'Live camera + wake-on-approach', d: 'The onboard camera hardware-encodes H.264 and streams RTSP to Home Assistant. At night, the same frames wake the panel when you walk toward it.' },
+  { t: 'Live video on the glass', d: 'Camera cards put your Home Assistant cameras on the panel — and the panel’s own camera hardware-encodes H.264 and streams back to HA, so every room with an Aurora is also a room you can look in on.' },
+  { t: 'Wakes when you walk up', d: 'At night the onboard camera watches for approach and lights the screen before your hand gets there. No tapping dead glass, no screen burning all night.' },
+  { t: 'Screensavers that earn the wall space', d: 'Idle glass becomes a photo slideshow with the clock and outdoor temperature — or a full-screen Spotify now-playing with album art while music is on.' },
   { t: 'Spotify, done right', d: 'Now-playing with album art, a speaker picker for every Spotify Connect device, and a browsable playlist → track library. Tap a song, pick a room, it plays.' },
   { t: 'A real TV remote', d: 'Full LG webOS control — D-pad, volume, apps — plus a Magic-Remote trackpad page with a genuine drag-to-move cursor and scroll wheel.' },
-  { t: 'Designed in your browser', d: 'A no-code configurator maps every control to your own Home Assistant entities and lays out screens by drag-and-drop, with a pixel-exact live preview.' },
-  { t: 'Rooms that follow your home', d: 'Rooms are data-driven — add, rename, and reassign rooms and their lights, fans, and switches without touching a config file.' },
-  { t: 'One cable, once', d: 'Flash over USB a single time. Every update after that is wireless, and a photo screensaver with clock + temperature keeps the glass useful between touches.' },
+  { t: 'One cable, once', d: 'Flash over USB a single time. Every update after that is wireless — redesign a room’s panel from the couch and press Flash.' },
 ]
 
 const screens = [
@@ -36,6 +63,20 @@ const screens = [
   { img: 'media', cap: 'Spotify library — browse playlists, tap to play in any room' },
   { img: 'trackpad', cap: 'Magic-Remote trackpad — a real cursor, scroll & volume' },
   { img: 'settings', cap: 'On-device settings — brightness, timeout & wake-on-approach' },
+]
+
+const confPoints = [
+  ['Drag and drop', 'Pull cards from the palette and drop them anywhere on a 6×5 grid, page by page.'],
+  ['Drag to resize', 'Stretch any card and it redraws itself for its new footprint — a light is a 1×1 tile or a full-width dimmer, a media card grows from mini-player to full library.'],
+  ['Pixel-exact preview', 'The builder renders the same layout the panel will — what you see is what flashes.'],
+  ['Your entities, your rooms', 'A wizard binds every card to your own Home Assistant devices, and a rooms wizard generates per-room pages automatically.'],
+]
+
+const domains = [
+  'Lights & dimmers', 'Light groups', 'Fans', 'Switches & outlets', 'Blinds & covers',
+  'Thermostats', 'Locks', 'Alarm panels', 'Cameras', 'Vacuums', 'Scenes & scripts',
+  'Sensors & trend charts', 'Doors & windows', 'Presence', 'Weather & live radar',
+  'Notifications', 'Calendars', 'Speakers & media players',
 ]
 </script>
 
@@ -47,8 +88,8 @@ const screens = [
     <p class="av-eyebrow">ESPHome + LVGL firmware &nbsp;·&nbsp; Guition 7″ ESP32-P4</p>
     <h1 class="av-wordmark">Aurora</h1>
     <p class="av-thesis">
-      A hand-crafted <strong>Home Assistant</strong> touch dashboard — dark glass, real pixels,
-      and a no-code configurator that makes every screen yours.
+      A hand-crafted <strong>Home Assistant</strong> touch panel for every room of the house —
+      each one custom to the room it lives in, designed in your browser without a line of code.
     </p>
     <div class="av-cta">
       <a class="av-btn av-btn-solid" :href="withBase('/setup/')">Set up your panel</a>
@@ -83,6 +124,32 @@ const screens = [
 </section>
 
 <section class="av-section">
+  <p class="av-eyebrow">Room by room</p>
+  <h2 class="av-h2">Not a home controller. A panel for every room.</h2>
+  <p class="av-lede">
+    You <em>can</em> build Aurora as the one dashboard by the front door — but it's designed to be
+    built <strong>per room</strong>: the same $60 panel, wearing exactly what that room needs and
+    nothing it doesn't.
+  </p>
+  <div class="av-rooms">
+    <article v-for="r in rooms" :key="r.name" class="av-room">
+      <h3>{{ r.name }}</h3>
+      <p>{{ r.story }}</p>
+      <div class="av-room-cards">
+        <img
+          v-for="c in r.cards"
+          :key="c"
+          :src="withBase(`/cards/${c}`)"
+          :alt="`${r.name} example card`"
+          loading="lazy"
+          decoding="async"
+        />
+      </div>
+    </article>
+  </div>
+</section>
+
+<section class="av-section">
   <p class="av-eyebrow">What's inside</p>
   <div class="av-features">
     <article v-for="f in features" :key="f.t" class="av-feature">
@@ -107,10 +174,15 @@ const screens = [
     <p class="av-eyebrow">No YAML required</p>
     <h2>Design it your way</h2>
     <p>
-      The web configurator runs on your own machine. Point it at Home Assistant, map each card to
-      your entities, arrange pages on a 6×5 grid with a live preview that matches the panel
-      pixel-for-pixel — then press <strong>Flash</strong>.
+      The web configurator runs on your own machine and builds each panel's firmware around the
+      room you're putting it in.
     </p>
+    <dl class="av-points">
+      <div v-for="[t, d] in confPoints" :key="t">
+        <dt>{{ t }}</dt>
+        <dd>{{ d }}</dd>
+      </div>
+    </dl>
     <a class="av-btn av-btn-solid" :href="withBase('/setup/configurator')">See how it works</a>
   </div>
   <img
@@ -120,6 +192,26 @@ const screens = [
     loading="lazy"
     decoding="async"
   />
+</section>
+
+<section class="av-section">
+  <p class="av-eyebrow">Works with your home</p>
+  <h2 class="av-h2">If Home Assistant controls it, Aurora can put it on the glass.</h2>
+  <p class="av-lede">
+    Aurora speaks Home Assistant, so it inherits every integration you already run. Cards exist
+    for all of these today:
+  </p>
+  <ul class="av-domains">
+    <li v-for="d in domains" :key="d">{{ d }}</li>
+  </ul>
+  <p class="av-int-named">
+    Plus first-class support for <strong>Spotify</strong> (SpotifyPlus, with library browsing and
+    a speaker picker), <strong>Sonos</strong> (grouping, sources, favorites),
+    <strong>LG webOS TVs</strong> (including the Magic-Remote trackpad),
+    <strong>Google &amp; Apple calendars</strong>, <strong>RainViewer live radar</strong>, and
+    <strong>Synology NAS</strong> status — every one of them
+    <a :href="withBase('/cards/')">in the card library</a>.
+  </p>
 </section>
 
 <section class="av-section av-end">
@@ -155,6 +247,17 @@ const screens = [
   text-transform: uppercase;
   color: var(--av-teal);
   margin: 0 0 14px;
+}
+.av .av-h2 {
+  font-family: var(--vp-font-family-display);
+  font-size: clamp(24px, 3.4vw, 32px);
+  font-weight: 700;
+  letter-spacing: -0.02em;
+  line-height: 1.2;
+  margin: 0 0 14px;
+  border: none;
+  padding: 0;
+  max-width: 26ch;
 }
 
 /* ——— hero ——— */
@@ -248,9 +351,14 @@ const screens = [
   padding: 88px 24px 0;
 }
 .av-lede {
-  max-width: 58ch;
+  max-width: 60ch;
   color: var(--vp-c-text-2);
   margin: 0 0 26px;
+  line-height: 1.65;
+}
+.av-lede strong,
+.av-lede em {
+  color: var(--vp-c-text-1);
 }
 .av-lede a {
   color: var(--av-teal);
@@ -278,6 +386,56 @@ const screens = [
 }
 .av-strip img[src*='2x2'] {
   width: 196px;
+}
+
+/* ——— rooms ——— */
+.av-rooms {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(400px, 1fr));
+  gap: 16px;
+}
+.av-room {
+  background: var(--vp-c-bg-soft);
+  border: 1px solid var(--vp-c-divider);
+  border-radius: 16px;
+  padding: 24px;
+}
+.av-room h3 {
+  font-family: var(--vp-font-family-display);
+  font-size: 19px;
+  font-weight: 600;
+  margin: 0 0 8px;
+}
+.av-room p {
+  font-size: 14.5px;
+  line-height: 1.65;
+  color: var(--vp-c-text-2);
+  margin: 0 0 18px;
+  min-height: 3.4em;
+}
+.av-room-cards {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-end;
+  gap: 10px;
+}
+.av-room-cards img {
+  height: auto;
+  max-width: 100%;
+  border-radius: 9px;
+  border: 1px solid var(--vp-c-divider);
+}
+.av-room-cards img[src*='3x2'] { width: 216px; }
+.av-room-cards img[src*='2x2'] { width: 142px; }
+.av-room-cards img[src*='2x1'],
+.av-room-cards img[src*='4x1'] { width: 216px; }
+@media (max-width: 900px) {
+  .av-rooms {
+    grid-template-columns: 1fr;
+  }
+  .av-room p {
+    min-height: 0;
+  }
 }
 
 /* ——— features ——— */
@@ -332,7 +490,7 @@ const screens = [
 /* ——— configurator band ——— */
 .av-conf {
   display: grid;
-  grid-template-columns: minmax(280px, 5fr) 7fr;
+  grid-template-columns: minmax(300px, 6fr) 6fr;
   gap: 40px;
   align-items: center;
 }
@@ -348,7 +506,26 @@ const screens = [
 .av-conf p {
   color: var(--vp-c-text-2);
   line-height: 1.65;
-  margin: 0 0 22px;
+  margin: 0 0 18px;
+}
+.av-points {
+  margin: 0 0 24px;
+}
+.av-points > div {
+  padding: 10px 0;
+  border-top: 1px solid var(--vp-c-divider);
+}
+.av-points dt {
+  font-family: var(--vp-font-family-display);
+  font-size: 14.5px;
+  font-weight: 600;
+  color: var(--vp-c-text-1);
+}
+.av-points dd {
+  margin: 3px 0 0;
+  font-size: 13.5px;
+  line-height: 1.6;
+  color: var(--vp-c-text-2);
 }
 .av-conf-shot {
   width: 100%;
@@ -361,6 +538,39 @@ const screens = [
   .av-conf {
     grid-template-columns: 1fr;
   }
+}
+
+/* ——— integrations ——— */
+.av-domains {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  list-style: none;
+  margin: 0 0 26px;
+  padding: 0;
+}
+.av-domains li {
+  font-family: var(--vp-font-family-utility);
+  font-size: 12.5px;
+  padding: 6px 13px;
+  border-radius: 999px;
+  border: 1px solid var(--vp-c-divider);
+  color: var(--vp-c-text-2);
+  margin: 0;
+}
+.av-int-named {
+  max-width: 66ch;
+  color: var(--vp-c-text-2);
+  line-height: 1.7;
+  margin: 0;
+}
+.av-int-named strong {
+  color: var(--vp-c-text-1);
+}
+.av-int-named a {
+  color: var(--av-teal);
+  text-decoration: underline;
+  text-underline-offset: 3px;
 }
 
 /* ——— end band ——— */
