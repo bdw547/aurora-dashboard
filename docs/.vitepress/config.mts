@@ -1,6 +1,6 @@
 import { defineConfig } from 'vitepress'
 
-const hostname = 'https://jtenniswood.github.io/espcontrol/'
+const hostname = 'https://bdw547.github.io/aurora-dashboard/'
 const defaultImage = {
   url: `${hostname}images/home_screen_hero.jpg`,
   width: '1024',
@@ -193,7 +193,7 @@ export default defineConfig({
   title: 'Espcontrol',
   description:
     'Touchscreen control panel for Home Assistant on supported ESP32 panels — card-based controls, web configuration, automatic updates.',
-  base: '/espcontrol/',
+  base: '/aurora-dashboard/',
   lang: 'en-US',
   cleanUrls: true,
   lastUpdated: true,
@@ -204,7 +204,7 @@ export default defineConfig({
   },
 
   head: [
-    ['link', { rel: 'icon', type: 'image/svg+xml', href: '/espcontrol/favicon.svg' }],
+    ['link', { rel: 'icon', type: 'image/svg+xml', href: '/aurora-dashboard/favicon.svg' }],
     [
       'meta',
       {
@@ -365,8 +365,8 @@ export default defineConfig({
   themeConfig: {
     nav: [
       { text: 'Install', link: '/getting-started/install' },
-      { text: 'Issues', link: 'https://github.com/jtenniswood/espcontrol/issues' },
-      { text: 'GitHub', link: 'https://github.com/jtenniswood/espcontrol' },
+      { text: 'Issues', link: 'https://github.com/bdw547/aurora-dashboard/issues' },
+      { text: 'GitHub', link: 'https://github.com/bdw547/aurora-dashboard' },
     ],
 
     sidebar: [
@@ -465,11 +465,11 @@ export default defineConfig({
     ],
 
     editLink: {
-      pattern: 'https://github.com/jtenniswood/espcontrol/edit/main/docs/:path',
+      pattern: 'https://github.com/bdw547/aurora-dashboard/edit/main/docs/:path',
       text: 'Edit this page on GitHub',
     },
 
-    socialLinks: [{ icon: 'github', link: 'https://github.com/jtenniswood/espcontrol' }],
+    socialLinks: [{ icon: 'github', link: 'https://github.com/bdw547/aurora-dashboard' }],
 
     search: {
       provider: 'local',
