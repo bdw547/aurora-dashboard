@@ -52,6 +52,7 @@ const kindCount = data.reduce((n, c) => n + c.kinds.length, 0)
             <img
               :src="withBase(`/cards/${card.img}`)"
               :alt="`${kind.label} card, ${card.w} columns by ${card.h} rows`"
+              :style="{ width: card.w * 76 + 'px' }"
               loading="lazy"
               decoding="async"
             />
@@ -117,9 +118,11 @@ const kindCount = data.reduce((n, c) => n + c.kinds.length, 0)
 .cl-card {
   margin: 0;
 }
+/* width is set inline from the card's grid columns (76px per column), so a
+   6-wide card really is twice a 3-wide card; height follows the aspect ratio */
 .cl-card img {
   display: block;
-  max-width: min(100%, 460px);
+  max-width: 100%;
   height: auto;
   border-radius: 10px;
   border: 1px solid var(--vp-c-divider);

@@ -10,6 +10,19 @@
 
   --vp-font-family-display: 'Space Grotesk', var(--vp-font-family-base);
   --vp-font-family-utility: 'JetBrains Mono', ui-monospace, monospace;
+
+  /* light mode: a deeper teal so links and accents stay readable on white */
+  --vp-c-brand-1: #0b7d69;
+  --vp-c-brand-2: #0a6f5e;
+  --vp-c-brand-3: #095f51;
+  --vp-c-brand-soft: rgba(46, 213, 184, 0.16);
+
+  --vp-button-brand-bg: #0e9c84;
+  --vp-button-brand-text: #ffffff;
+  --vp-button-brand-hover-bg: #0b7d69;
+  --vp-button-brand-hover-text: #ffffff;
+  --vp-button-brand-active-bg: #0a6f5e;
+  --vp-button-brand-active-text: #ffffff;
 }
 
 .dark {
@@ -40,10 +53,10 @@
   --vp-c-indigo-3: #23a68f;
 }
 
-.dark h1,
-.dark h2,
-.dark h3,
-.dark .VPNavBarTitle .title {
+h1,
+h2,
+h3,
+.VPNavBarTitle .title {
   font-family: var(--vp-font-family-display);
   letter-spacing: -0.01em;
 }

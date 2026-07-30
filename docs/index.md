@@ -125,10 +125,10 @@ const domains = [
 
 <section class="av-section">
   <p class="av-eyebrow">Room by room</p>
-  <h2 class="av-h2">Not a home controller. A panel for every room.</h2>
+  <h2 class="av-h2">Not just a home controller — it can be built per room.</h2>
   <p class="av-lede">
     You <em>can</em> build Aurora as the one dashboard by the front door — but it's designed to be
-    built <strong>per room</strong>: the same $60 panel, wearing exactly what that room needs and
+    built <strong>per room</strong>: the same panel, wearing exactly what that room needs and
     nothing it doesn't.
   </p>
   <div class="av-rooms">
@@ -215,10 +215,10 @@ const domains = [
 </section>
 
 <section class="av-section av-end">
-  <h2>Runs on a $60 panel.</h2>
+  <h2>Put one in every room.</h2>
   <p>
-    Guition JC1060P470C — ESP32-P4, 7″ 1024×600 IPS, capacitive touch, onboard camera. One USB-C
-    cable for the first flash; wireless forever after.
+    Guition JC1060P470C — ESP32-P4, 7″ 1024×600 IPS, capacitive touch, onboard camera. One
+    USB-C cable for the first flash; wireless forever after.
   </p>
   <div class="av-cta">
     <a class="av-btn av-btn-solid" :href="withBase('/setup/')">Get started</a>
@@ -245,7 +245,7 @@ const domains = [
   font-size: 12px;
   letter-spacing: 0.14em;
   text-transform: uppercase;
-  color: var(--av-teal);
+  color: var(--vp-c-brand-1);
   margin: 0 0 14px;
 }
 .av .av-h2 {
@@ -257,7 +257,6 @@ const domains = [
   margin: 0 0 14px;
   border: none;
   padding: 0;
-  max-width: 26ch;
 }
 
 /* ——— hero ——— */
@@ -330,8 +329,8 @@ const domains = [
   color: var(--vp-c-text-1);
 }
 .av-btn-ghost:hover {
-  border-color: var(--av-teal);
-  color: var(--av-teal);
+  border-color: var(--vp-c-brand-1);
+  color: var(--vp-c-brand-1);
 }
 .av-panel {
   display: block;
@@ -351,7 +350,7 @@ const domains = [
   padding: 88px 24px 0;
 }
 .av-lede {
-  max-width: 60ch;
+  max-width: 78ch;
   color: var(--vp-c-text-2);
   margin: 0 0 26px;
   line-height: 1.65;
@@ -361,7 +360,7 @@ const domains = [
   color: var(--vp-c-text-1);
 }
 .av-lede a {
-  color: var(--av-teal);
+  color: var(--vp-c-brand-1);
   text-decoration: underline;
   text-underline-offset: 3px;
 }
@@ -559,7 +558,7 @@ const domains = [
   margin: 0;
 }
 .av-int-named {
-  max-width: 66ch;
+  max-width: 78ch;
   color: var(--vp-c-text-2);
   line-height: 1.7;
   margin: 0;
@@ -568,7 +567,7 @@ const domains = [
   color: var(--vp-c-text-1);
 }
 .av-int-named a {
-  color: var(--av-teal);
+  color: var(--vp-c-brand-1);
   text-decoration: underline;
   text-underline-offset: 3px;
 }

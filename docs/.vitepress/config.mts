@@ -16,7 +16,6 @@ export default defineConfig({
   lang: 'en-US',
   cleanUrls: true,
   lastUpdated: true,
-  appearance: 'force-dark',
   ignoreDeadLinks: [/^https?:\/\/localhost/],
 
   // The upstream espcontrol documentation is intentionally kept on disk (the
