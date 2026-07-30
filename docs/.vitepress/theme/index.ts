@@ -1,6 +1,7 @@
 import { h } from 'vue'
 import DefaultTheme from 'vitepress/theme'
 import './styles.css'
+import CardLibrary from './components/CardLibrary.vue'
 import EspInstallButton from './components/EspInstallButton.vue'
 import EspInstallSelector from './components/EspInstallSelector.vue'
 import GitHubStars from './components/GitHubStars.vue'
@@ -14,6 +15,7 @@ export default {
     })
   },
   enhanceApp({ app }) {
+    app.component('CardLibrary', CardLibrary)
     app.component('EspInstallButton', EspInstallButton)
     app.component('EspInstallSelector', EspInstallSelector)
     app.component('GitHubStars', GitHubStars)

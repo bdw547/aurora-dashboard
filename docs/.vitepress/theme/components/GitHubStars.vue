@@ -1,8 +1,8 @@
 <script setup lang="ts">
 import { computed, onMounted, ref } from 'vue'
 
-const repoUrl = 'https://github.com/jtenniswood/espcontrol'
-const apiUrl = 'https://api.github.com/repos/jtenniswood/espcontrol'
+const repoUrl = 'https://github.com/bdw547/aurora-dashboard'
+const apiUrl = 'https://api.github.com/repos/bdw547/aurora-dashboard'
 const stars = ref<number | null>(null)
 
 const starLabel = computed(() => {

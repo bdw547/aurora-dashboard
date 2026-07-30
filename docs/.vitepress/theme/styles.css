@@ -1,3 +1,62 @@
+/* ————— Aurora brand ————— */
+:root {
+  --aurora-teal: #2ed5b8;
+  --aurora-violet: #b06cff;
+  --aurora-void: #070809;
+  --aurora-glass: #101116;
+  --aurora-line: #23262f;
+  --aurora-ice: #f3f5f8;
+  --aurora-muted: #868ca0;
+
+  --vp-font-family-display: 'Space Grotesk', var(--vp-font-family-base);
+  --vp-font-family-utility: 'JetBrains Mono', ui-monospace, monospace;
+}
+
+.dark {
+  --vp-c-brand-1: var(--aurora-teal);
+  --vp-c-brand-2: #29bfa5;
+  --vp-c-brand-3: #23a68f;
+  --vp-c-brand-soft: rgba(46, 213, 184, 0.16);
+
+  --vp-c-bg: #0b0c10;
+  --vp-c-bg-alt: var(--aurora-void);
+  --vp-c-bg-soft: var(--aurora-glass);
+  --vp-c-bg-elv: var(--aurora-glass);
+  --vp-c-divider: var(--aurora-line);
+  --vp-c-gutter: var(--aurora-void);
+  --vp-c-text-1: var(--aurora-ice);
+  --vp-c-text-2: #a6acbe;
+  --vp-c-text-3: var(--aurora-muted);
+
+  --vp-button-brand-bg: var(--aurora-teal);
+  --vp-button-brand-text: #06231d;
+  --vp-button-brand-hover-bg: #4be0c6;
+  --vp-button-brand-hover-text: #06231d;
+  --vp-button-brand-active-bg: #29bfa5;
+  --vp-button-brand-active-text: #06231d;
+
+  --vp-c-indigo-1: var(--aurora-teal);
+  --vp-c-indigo-2: #29bfa5;
+  --vp-c-indigo-3: #23a68f;
+}
+
+.dark h1,
+.dark h2,
+.dark h3,
+.dark .VPNavBarTitle .title {
+  font-family: var(--vp-font-family-display);
+  letter-spacing: -0.01em;
+}
+
+/* gradient wordmark in the navbar */
+.VPNavBarTitle .title span {
+  background: linear-gradient(90deg, var(--aurora-teal), var(--aurora-violet));
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+}
+
+/* ————— inherited chrome ————— */
 .VPSidebarItem .text .sidebar-static-header {
   display: block;
   margin-top: 18px;
