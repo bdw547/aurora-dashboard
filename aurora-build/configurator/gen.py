@@ -4568,7 +4568,7 @@ SS_TEXT_SENSOR = (
 )
 SS_INTERVAL_ITEM = (
     "  - interval: 1s\n    then:\n"
-    "      - if:\n          condition:\n            lambda: 'return id(g_ss_showing) && id(g_screensaver_mode) == 0;'\n          then:\n"
+    "      - if:\n          condition:\n            lambda: 'return id(g_ss_showing) && (id(g_screensaver_mode) == 0 || id(ha_ss_spotify_state).state != \"playing\");'\n          then:\n"
     "            - lambda: 'id(g_ss_elapsed) += 1;'\n"
     "            - if:\n                condition:\n                  lambda: |-\n"
     "                    int secs = id(g_ss_seconds);\n                    if (secs < 5) secs = 30;\n                    return id(g_ss_elapsed) >= secs;\n"
