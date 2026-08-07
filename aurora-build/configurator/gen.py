@@ -4443,10 +4443,14 @@ def clock_items(clocks):
 
 
 def radar_refresh_interval():
-    """Refresh direct radar metadata and tiles every five minutes."""
-    if not RADAR_IMAGES:
-        return ""
-    return "  - interval: 5min\n    then:\n      - script.execute: radar_refresh\n"
+    """Radar refreshes on page load or from its refresh button.
+
+    Keeping the PNG decoder off the unattended interval avoids background
+    image work while the radar page is not visible.  This is especially
+    important on ESP32-P4, where an online_image decode can fault from the
+    idle task and leave no useful component frame in the crash backtrace.
+    """
+    return ""
 
 
 def radar_online_images():
