@@ -154,7 +154,10 @@ class MJPEGStream : public Component {
     size_t buf_size{0};                    // per half, 64-aligned
     uint16_t w{0}, h{0};                   // dims of the published back buffer
     int front{0};                          // half LVGL displays; written by loop() only, while pending
-    lv_img_dsc_t dsc{};                    // loop()-owned
+    // Keep a descriptor paired with each pixel buffer.  LVGL keys variable
+    // image state by the descriptor address, so mutating one shared
+    // descriptor can leave the renderer showing its previous source.
+    lv_img_dsc_t dsc[2]{};                 // loop()-owned
     std::atomic<bool> pending{false};      // task published; loop() applies + clears
   };
   static constexpr size_t STILL_QUEUE_CAP = 6;  // matches max concurrent art cards

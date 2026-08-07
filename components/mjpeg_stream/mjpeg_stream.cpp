@@ -187,14 +187,15 @@ void MJPEGStream::loop() {
     if (!s.pending.load())
       continue;
     s.front = 1 - s.front;  // safe: the task reads front only while !pending
-    s.dsc.header.magic = LV_IMAGE_HEADER_MAGIC;
-    s.dsc.header.cf = LV_COLOR_FORMAT_RGB565;
-    s.dsc.header.w = s.w;
-    s.dsc.header.h = s.h;
-    s.dsc.header.stride = (uint32_t) s.w * 2;
-    s.dsc.data = s.buf[s.front];
-    s.dsc.data_size = (uint32_t) s.w * s.h * 2;
-    lv_image_set_src(s.widget, &s.dsc);
+    lv_img_dsc_t &dsc = s.dsc[s.front];
+    dsc.header.magic = LV_IMAGE_HEADER_MAGIC;
+    dsc.header.cf = LV_COLOR_FORMAT_RGB565;
+    dsc.header.w = s.w;
+    dsc.header.h = s.h;
+    dsc.header.stride = (uint32_t) s.w * 2;
+    dsc.data = s.buf[s.front];
+    dsc.data_size = (uint32_t) s.w * s.h * 2;
+    lv_image_set_src(s.widget, &dsc);
     lv_obj_remove_flag(s.widget, LV_OBJ_FLAG_HIDDEN);
     lv_obj_invalidate(s.widget);
     s.pending.store(false);
