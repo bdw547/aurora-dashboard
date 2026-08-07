@@ -144,8 +144,11 @@ void MJPEGStream::setup() {
   this->still_queue_.reserve(STILL_QUEUE_CAP);
 
   // One task for the life of the component; it idles while !running_.
-  BaseType_t ok = xTaskCreatePinnedToCore(MJPEGStream::stream_task_, "mjpeg_cam", 12288, this, this->task_priority_,
-                                          nullptr, this->task_core_);
+  // Full-screen stills exercise the HTTP parser, JPEG decoder and PPA from
+  // this same task.  Give that path enough headroom to avoid corrupting the
+  // task context when a large image drives its deepest call chain.
+  BaseType_t ok = xTaskCreatePinnedToCore(MJPEGStream::stream_task_, "mjpeg_cam", 16384, this, this->task_priority_,
+                                          &this->task_handle_, this->task_core_);
   if (ok != pdPASS) {
     ESP_LOGE(TAG, "Failed to create stream task");
     this->mark_failed();
@@ -214,11 +217,12 @@ void MJPEGStream::loop() {
       float dt = (now - this->last_stats_ms_) / 1000.0f;
       uint32_t ok = this->frames_ok_.load();
       uint32_t net = this->frames_net_.load();
-      ESP_LOGI(TAG, "stats: %.1f fps shown, %.1f fps net, %u dropped, %u connects, %u stills (%u failed), %u KB PSRAM free",
+      ESP_LOGI(TAG, "stats: %.1f fps shown, %.1f fps net, %u dropped, %u connects, %u stills (%u failed), %u KB PSRAM free, %u stack words free",
                (ok - this->stats_last_ok_) / dt, (net - this->stats_last_net_) / dt,
                (unsigned) this->frames_dropped_.load(), (unsigned) this->connects_.load(),
                (unsigned) this->stills_ok_.load(), (unsigned) this->stills_failed_.load(),
-               (unsigned) (heap_caps_get_free_size(MALLOC_CAP_SPIRAM) / 1024));
+               (unsigned) (heap_caps_get_free_size(MALLOC_CAP_SPIRAM) / 1024),
+               this->task_handle_ == nullptr ? 0U : (unsigned) uxTaskGetStackHighWaterMark(this->task_handle_));
       this->stats_last_ok_ = ok;
       this->stats_last_net_ = net;
     } else {

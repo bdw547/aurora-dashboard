@@ -188,6 +188,7 @@ class MJPEGStream : public Component {
   std::vector<Target> targets_;
   uint8_t task_core_{1};
   uint8_t task_priority_{4};
+  TaskHandle_t task_handle_{nullptr};
   uint32_t read_timeout_ms_{10000};
 
   // ---- Shared state (main loop <-> task) ------------------------------------
