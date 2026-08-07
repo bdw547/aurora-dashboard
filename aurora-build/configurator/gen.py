@@ -3536,6 +3536,7 @@ def gen_header(key, page, layout, pid):
     greet = "Good evening, Ben" if key == first else page.get("title", "Aurora")
     room = page.get("room") or ((layout.get("install_room") or "") if key == first else "") or page.get("title") or "Home"
     tid, did = "hct_" + pid, "hcd_" + pid                 # live clock/date label ids (per page)
+    gid = "hcg_" + pid                                    # live greeting label id (home page)
     out, clocks, weather_sens, weather_ts = "", [], [], []
     if left == "time":
         out += "        - label: { id: %s, text: \"10:42 PM\", x: 96, y: 12, text_font: f_display, text_color: 0xF3F5F8 }\n" % tid
@@ -3549,7 +3550,11 @@ def gen_header(key, page, layout, pid):
         out += "        - label: { id: %s, text: \"Sunday, June 29\", x: 96, y: 50, text_font: f_body, text_color: 0x868CA0 }\n" % did
         clocks += [(tid, "time"), (did, "date_full")]
     else:                                                # greeting (+ time, + date unless greeting_nd)
-        out += "        - label: { text: %s, x: 96, y: 14, text_font: f_h1, text_color: 0xF3F5F8 }\n" % esc(greet)
+        if key == first:
+            out += "        - label: { id: %s, text: %s, x: 96, y: 14, text_font: f_h1, text_color: 0xF3F5F8 }\n" % (gid, esc(greet))
+            clocks.append((gid, "greeting"))
+        else:
+            out += "        - label: { text: %s, x: 96, y: 14, text_font: f_h1, text_color: 0xF3F5F8 }\n" % esc(greet)
         # sub-line: teal room icon + configured room + live time (+ date). Flex row so it
         # lays out regardless of room-name length; no room-switcher chevron.
         sub = ("        - obj:\n            x: 94\n            y: 50\n            width: SIZE_CONTENT\n            height: SIZE_CONTENT\n"
@@ -4420,6 +4425,13 @@ def clock_items(clocks):
         return ""
     ups = ""
     for cid, kind in clocks:
+        if kind == "greeting":
+            lam = ("auto t = id(ha_time).now(); if (!t.is_valid()) return std::string(\"Hello, Ben\"); "
+                   "const char *g = t.hour < 12 ? \"Good morning\" : "
+                   "(t.hour < 18 ? \"Good afternoon\" : \"Good evening\"); "
+                   "return std::string(g) + \", Ben\";")
+            ups += "      - lvgl.label.update: { id: " + cid + ", text: !lambda '" + lam + "' }\n"
+            continue
         fmt, strip0 = CLOCK_FMT.get(kind, CLOCK_FMT["time"])
         lam = ("auto t = id(ha_time).now(); if (!t.is_valid()) return std::string(\"\"); "
                "char b[24]; t.strftime(b, sizeof(b), \"" + fmt + "\"); std::string s(b);")

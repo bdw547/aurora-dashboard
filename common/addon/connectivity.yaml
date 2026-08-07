@@ -32,7 +32,8 @@ esphome:
 
 wifi:
   power_save_mode: none
-  reboot_timeout: 30min
+  # Keep retrying through an extended outage instead of rebooting the panel.
+  reboot_timeout: 0s
   ap:
     # Start the setup hotspot only after short WiFi outages have had time to recover.
     ap_timeout: 90s

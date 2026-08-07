@@ -7,7 +7,8 @@
 
 wifi:
   power_save_mode: none
-  reboot_timeout: 30min
+  # Keep retrying through an extended outage instead of rebooting the panel.
+  reboot_timeout: 0s
   on_connect:
     - script.execute: network_status_refresh
     - script.execute: ntp_servers_apply_after_network
