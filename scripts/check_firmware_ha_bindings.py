@@ -17,6 +17,7 @@ API_NAVIGATE_PATH = ROOT / "common" / "device" / "api_navigate.yaml"
 COVER_ART_PATH = ROOT / "common" / "device" / "screen_cover_art.yaml"
 ARTWORK_IMAGE_PATH = ROOT / "components" / "artwork_image" / "artwork_image.cpp"
 BACKLIGHT_PATH = ROOT / "common" / "addon" / "backlight.yaml"
+BACKLIGHT_SCHEDULE_PATH = ROOT / "common" / "addon" / "backlight_schedule.yaml"
 TIME_ADDON_PATH = ROOT / "common" / "addon" / "time.yaml"
 SUN_CALC_PATH = ROOT / "components" / "espcontrol" / "sun_calc.h"
 S3_DEVICE_PATH = ROOT / "devices" / "guition-esp32-s3-4848s040" / "device" / "device.yaml"
@@ -1067,6 +1068,27 @@ def firmware_screen_schedule_screensaver_override_errors(backlight_path: Path, r
     return errors
 
 
+def firmware_screen_schedule_restore_errors(schedule_path: Path, root: Path) -> list[str]:
+    errors: list[str] = []
+    if not schedule_path.exists():
+        return errors
+
+    rel = schedule_path.relative_to(root)
+    text = schedule_path.read_text(encoding="utf-8")
+    required_tokens = (
+        "!screen_schedule_disabled_trigger(id(screen_schedule_trigger).state)",
+        "return id(schedule_enabled).state != should_enable;",
+        "auto call = id(schedule_enabled).make_call();",
+        "call.set_state(should_enable);",
+    )
+    if any(token not in text for token in required_tokens):
+        errors.append(
+            f"{rel}: restore the hidden schedule enable state from the saved schedule trigger"
+        )
+
+    return errors
+
+
 def firmware_climate_step_errors(firmware_dir: Path, root: Path) -> list[str]:
     path = firmware_dir / "button_grid_climate.h"
     if not path.exists():
@@ -1213,6 +1235,7 @@ def run_scan() -> int:
     errors.extend(firmware_clock_screensaver_overlay_errors(BACKLIGHT_PATH, ROOT))
     errors.extend(firmware_screen_schedule_screensaver_overlay_errors(COVER_ART_PATH, ROOT))
     errors.extend(firmware_screen_schedule_screensaver_override_errors(BACKLIGHT_PATH, ROOT))
+    errors.extend(firmware_screen_schedule_restore_errors(BACKLIGHT_SCHEDULE_PATH, ROOT))
     errors.extend(firmware_climate_step_errors(FIRMWARE_DIR, ROOT))
     errors.extend(
         firmware_s3_api_errors(
