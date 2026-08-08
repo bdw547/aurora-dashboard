@@ -65,11 +65,16 @@ esphome:
           id(schedule_mode_clock) = screen_schedule_clock_mode(mode);
       - if:
           condition:
-            lambda: 'return id(schedule_enabled).state && screen_schedule_disabled_trigger(id(screen_schedule_trigger).state);'
+            lambda: |-
+              bool should_enable =
+                  !screen_schedule_disabled_trigger(id(screen_schedule_trigger).state);
+              return id(schedule_enabled).state != should_enable;
           then:
             - lambda: |-
-                auto call = id(screen_schedule_trigger).make_call();
-                call.set_value("time");
+                bool should_enable =
+                    !screen_schedule_disabled_trigger(id(screen_schedule_trigger).state);
+                auto call = id(schedule_enabled).make_call();
+                call.set_state(should_enable);
                 call.perform();
       - script.execute: screen_schedule_boot_guard
 
